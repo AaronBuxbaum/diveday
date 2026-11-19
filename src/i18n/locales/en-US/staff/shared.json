@@ -473,6 +473,7 @@
       "reviewPendingRollCall": "Roll-call change for reference {reference} at {checkpoint} remains on this device; acceptance could not be confirmed. Use the manual roll call and review it with the crew.",
       "reviewOriginalSubjectName": "Original subject: {name} · reference {reference}.",
       "reviewOriginalSubjectUnknown": "The original subject name is unavailable. Reference: {reference}.",
+      "reviewOriginalNameOnline": "Original person, current name: {name}.",
       "reviewSavedTrip": "Saved trip: {trip}.",
       "reviewOriginalDay": "Original meeting day: {day}.",
       "reviewUnknownDay": "Original meeting day was not recorded.",

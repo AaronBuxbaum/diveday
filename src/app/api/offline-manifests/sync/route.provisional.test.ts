@@ -2,9 +2,17 @@ import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, expect, it, vi } from "vitest";
 import { getTripManifest, recordRollCall } from "@/db/manifests";
 import { listChecklistItems } from "@/db/pre-departure-check";
-import { preDepartureCheckEvents, rollCallEvents, shops, trips } from "@/db/schema";
+import {
+  bookings,
+  people,
+  preDepartureCheckEvents,
+  rollCallEvents,
+  shops,
+  trips,
+} from "@/db/schema";
 import { editTripSection, getTripRoster } from "@/db/trips";
 import { upcomingTripsWithCounts } from "@/db/trips-queries.test-support";
+import { anonymizeDiver } from "@/features/anonymize";
 import { buildOfflineManifestCopies } from "@/features/offline-manifest-snapshots";
 import type { DiveDaySession } from "@/lib/auth";
 import { nowDate } from "@/lib/clock";
@@ -374,6 +382,9 @@ it("records an explicit current live confirmation exactly once", async () => {
     snapshotId: saved.snapshotId,
     meetingDay: saved.rollCallMeetingDay ?? 0,
     witness,
+    originalWitness: witness,
+    originalSnapshotId: saved.snapshotId,
+    originalMeetingDay: saved.rollCallMeetingDay ?? 0,
     confirmationId: id,
     confirmed: true,
   };
@@ -402,6 +413,99 @@ it("records an explicit current live confirmation exactly once", async () => {
       (diver) => diver.bookingId === booking.id,
     )?.rollCall?.state,
   ).toBe("boarded");
+});
+
+it("refuses to resolve an original observation against a different current person", async () => {
+  const { db, shop, trip, booking, staffPersonId } = await seededContext();
+  vi.mocked(getDb).mockResolvedValue(db);
+  auth.mockResolvedValue(staffSession(shop.id, staffPersonId));
+  const saved = (await buildOfflineManifestCopies(db, shop, staffPersonId, [trip.id])).payloads[0];
+  const witness = saved?.rollCallWitnesses?.[`seat:${booking.id}:after_dive_1`];
+  if (!saved?.snapshotId || !witness) throw new Error("snapshot witness missing");
+  const meetingDay = saved.rollCallMeetingDay ?? 0;
+  const originalWitness = signRollCallWitness({
+    shopId: shop.id,
+    tripId: trip.id,
+    snapshotId: saved.snapshotId,
+    subjectKind: "seat",
+    subjectId: booking.id,
+    checkpoint: "after_dive_1",
+    meetingDay,
+    meetingGeneration: 0,
+    assignmentGeneration: 0,
+    frontier: [],
+    originalPersonId: crypto.randomUUID(),
+  });
+  const confirmationId = crypto.randomUUID();
+  const { POST: confirm } = await import("../review/route");
+  const response = await confirm(
+    new Request("http://localhost/api/offline-manifests/review", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        tripId: trip.id,
+        bookingId: booking.id,
+        checkpoint: "after_dive_1",
+        status: "boarded",
+        snapshotId: saved.snapshotId,
+        meetingDay,
+        witness,
+        originalWitness,
+        originalSnapshotId: saved.snapshotId,
+        originalMeetingDay: meetingDay,
+        confirmationId,
+        confirmed: true,
+      }),
+    }),
+  );
+  expect(response.status).toBe(409);
+  expect(
+    await db.select().from(rollCallEvents).where(eq(rollCallEvents.clientEventId, confirmationId)),
+  ).toHaveLength(0);
+});
+
+it("does not create a live confirmation after the represented person was erased", async () => {
+  const { db, shop, trip, booking, staffPersonId } = await seededContext();
+  vi.mocked(getDb).mockResolvedValue(db);
+  auth.mockResolvedValue(staffSession(shop.id, staffPersonId));
+  const saved = (await buildOfflineManifestCopies(db, shop, staffPersonId, [trip.id])).payloads[0];
+  const witness = saved?.rollCallWitnesses?.[`seat:${booking.id}:after_dive_1`];
+  if (!saved?.snapshotId || !witness) throw new Error("snapshot witness missing");
+  expect(
+    (
+      await anonymizeDiver(db, {
+        shopId: shop.id,
+        personId: booking.personId,
+        actorPersonId: staffPersonId,
+      })
+    ).ok,
+  ).toBe(true);
+  const confirmationId = crypto.randomUUID();
+  const { POST: confirm } = await import("../review/route");
+  const response = await confirm(
+    new Request("http://localhost/api/offline-manifests/review", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        tripId: trip.id,
+        bookingId: booking.id,
+        checkpoint: "after_dive_1",
+        status: "boarded",
+        snapshotId: saved.snapshotId,
+        meetingDay: saved.rollCallMeetingDay ?? 0,
+        witness,
+        originalWitness: witness,
+        originalSnapshotId: saved.snapshotId,
+        originalMeetingDay: saved.rollCallMeetingDay ?? 0,
+        confirmationId,
+        confirmed: true,
+      }),
+    }),
+  );
+  expect(response.status).toBe(409);
+  expect(
+    await db.select().from(rollCallEvents).where(eq(rollCallEvents.clientEventId, confirmationId)),
+  ).toHaveLength(0);
 });
 
 it("keeps review private from signed-out, revoked and other-tenant staff", async () => {
@@ -466,12 +570,110 @@ it("keeps review private from signed-out, revoked and other-tenant staff", async
       snapshotId,
       meetingDay: 0,
       witness,
+      originalWitness: witness,
+      originalSnapshotId: snapshotId,
+      originalMeetingDay: 0,
       confirmationId: crypto.randomUUID(),
       confirmed: true,
     }),
   );
   expect(response.status).toBe(409);
   expect(response.headers.get("cache-control")).toContain("no-store");
+});
+
+it("opens only the witnessed original person for authorized review, and stops after erasure", async () => {
+  const { db, shop, trip, booking, staffPersonId } = await seededContext();
+  vi.mocked(getDb).mockResolvedValue(db);
+  auth.mockResolvedValue(staffSession(shop.id, staffPersonId));
+  const saved = (await buildOfflineManifestCopies(db, shop, staffPersonId, [trip.id])).payloads[0];
+  const witness = saved?.rollCallWitnesses?.[`seat:${booking.id}:after_dive_1`];
+  if (!saved?.snapshotId || !witness) throw new Error("snapshot witness missing");
+  const original = saved.manifests
+    .find((manifest) => manifest.checkpoint === "after_dive_1")
+    ?.divers.find((diver) => diver.bookingId === booking.id);
+  if (!original?.personId) throw new Error("represented identity missing");
+  const { POST: identify } = await import("../review/identity/route");
+  const body = {
+    tripId: trip.id,
+    bookingId: booking.id,
+    snapshotId: saved.snapshotId,
+    checkpoint: "after_dive_1",
+    meetingDay: saved.rollCallMeetingDay ?? 0,
+    witness,
+  };
+  const request = (input: unknown = body) =>
+    new Request("http://localhost/api/offline-manifests/review/identity", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(input),
+    });
+  auth.mockResolvedValue(null);
+  expect((await identify(request())).status).toBe(401);
+  auth.mockResolvedValue(staffSession(shop.id, crypto.randomUUID()));
+  expect((await identify(request())).status).toBe(401);
+  auth.mockResolvedValue(staffSession(shop.id, staffPersonId));
+  expect(await (await identify(request())).json()).toEqual({
+    name: original.fullName,
+    sameAssignment: true,
+  });
+  const [replacement] = await db
+    .insert(people)
+    .values({ shopId: shop.id, fullName: "Synthetic replacement" })
+    .returning();
+  await db.update(bookings).set({ personId: replacement.id }).where(eq(bookings.id, booking.id));
+  const before = await identify(request());
+  expect(before.headers.get("cache-control")).toContain("no-store");
+  expect(await before.json()).toEqual({ name: original.fullName, sameAssignment: false });
+  expect(await (await identify(request({ ...body, witness: `${witness}x` }))).json()).toEqual({
+    name: null,
+    sameAssignment: false,
+  });
+  expect(
+    await (await identify(request({ ...body, bookingId: crypto.randomUUID() }))).json(),
+  ).toEqual({ name: null, sameAssignment: false });
+  const otherTenantWitness = signRollCallWitness({
+    shopId: crypto.randomUUID(),
+    tripId: trip.id,
+    snapshotId: saved.snapshotId,
+    subjectKind: "seat",
+    subjectId: booking.id,
+    checkpoint: "after_dive_1",
+    meetingDay: body.meetingDay,
+    meetingGeneration: 0,
+    assignmentGeneration: 0,
+    frontier: [],
+    originalPersonId: original.personId,
+  });
+  expect(await (await identify(request({ ...body, witness: otherTenantWitness }))).json()).toEqual({
+    name: null,
+    sameAssignment: false,
+  });
+  await db.update(people).set({ deletedAt: nowDate() }).where(eq(people.id, original.personId));
+  expect(await (await identify(request())).json()).toEqual({ name: null, sameAssignment: false });
+  await db
+    .update(people)
+    .set({
+      deletedAt: nowDate(),
+      mergedIntoPersonId: replacement.id,
+      mergedAt: nowDate(),
+      mergedByPersonId: staffPersonId,
+    })
+    .where(eq(people.id, original.personId));
+  expect(await (await identify(request())).json()).toEqual({ name: null, sameAssignment: false });
+  await db
+    .update(people)
+    .set({ deletedAt: null, mergedIntoPersonId: null, mergedAt: null, mergedByPersonId: null })
+    .where(eq(people.id, original.personId));
+  expect(
+    (
+      await anonymizeDiver(db, {
+        shopId: shop.id,
+        personId: original.personId,
+        actorPersonId: staffPersonId,
+      })
+    ).ok,
+  ).toBe(true);
+  expect(await (await identify(request())).json()).toEqual({ name: null, sameAssignment: false });
 });
 
 it("does not sign off an old checklist after a schedule edit and revert", async () => {

@@ -12,7 +12,12 @@ type Scope = {
   checkpoint: string;
   meetingDay: number;
 };
-type Witness = { meetingGeneration: number; assignmentGeneration: number; frontier: string[] };
+type Witness = {
+  meetingGeneration: number;
+  assignmentGeneration: number;
+  frontier: string[];
+  originalPersonId?: string;
+};
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** Disabled on production databases; the isolated browser harness can exercise the path. */
@@ -68,11 +73,21 @@ export function signRollCallWitness(input: Scope & Witness): string {
     !validScope(input) ||
     !validGeneration(input.meetingGeneration) ||
     !validGeneration(input.assignmentGeneration) ||
-    !frontier
+    !frontier ||
+    (input.originalPersonId !== undefined && !uuid.test(input.originalPersonId))
   )
     throw new Error("Invalid roll-call witness");
   const body = Buffer.from(
-    JSON.stringify([input.meetingGeneration, input.assignmentGeneration, frontier]),
+    JSON.stringify(
+      input.originalPersonId
+        ? [
+            input.meetingGeneration,
+            input.assignmentGeneration,
+            frontier,
+            input.originalPersonId.toLowerCase(),
+          ]
+        : [input.meetingGeneration, input.assignmentGeneration, frontier],
+    ),
   ).toString("base64url");
   return `${body}.${signature(input, body)}`;
 }
@@ -97,14 +112,21 @@ export function verifyRollCallWitness(
     const decoded: unknown = JSON.parse(Buffer.from(body, "base64url").toString("utf8"));
     if (
       !Array.isArray(decoded) ||
-      decoded.length !== 3 ||
+      (decoded.length !== 3 && decoded.length !== 4) ||
       !validGeneration(decoded[0]) ||
       !validGeneration(decoded[1])
     )
       return null;
     const frontier = canonicalFrontier(decoded[2]);
     if (!frontier || JSON.stringify(frontier) !== JSON.stringify(decoded[2])) return null;
-    return { meetingGeneration: decoded[0], assignmentGeneration: decoded[1], frontier };
+    if (decoded.length === 4 && (typeof decoded[3] !== "string" || !uuid.test(decoded[3])))
+      return null;
+    return {
+      meetingGeneration: decoded[0],
+      assignmentGeneration: decoded[1],
+      frontier,
+      ...(decoded.length === 4 ? { originalPersonId: decoded[3] as string } : {}),
+    };
   } catch {
     return null;
   }

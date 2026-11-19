@@ -30,6 +30,8 @@ function observation(): OfflineRollCallEvent {
     occurredAt: "2026-08-01T13:00:00Z",
     syncStatus: "pending",
     reviewRequired: true,
+    rollCallWitness: "original-proof",
+    meetingDay: 0,
   };
 }
 
@@ -44,6 +46,9 @@ it("requires an explicit choice and matches the new live receipt before resolvin
   const context = { snapshotId: current.snapshotId, meetingDay: 0, witness: "proof" };
   const fetcher = vi
     .fn()
+    .mockResolvedValueOnce(
+      new Response(JSON.stringify({ name: "Priya Shah", sameAssignment: true }), { status: 200 }),
+    )
     .mockResolvedValueOnce(new Response(JSON.stringify({ current }), { status: 200 }))
     .mockResolvedValueOnce(
       new Response(JSON.stringify({ status: "applied", confirmationId: "confirmation-1" }), {
@@ -82,10 +87,13 @@ it("requires an explicit choice and matches the new live receipt before resolvin
       1,
     ),
   );
-  expect(JSON.parse(fetcher.mock.calls[1][1].body)).toMatchObject({
+  expect(JSON.parse(fetcher.mock.calls[2][1].body)).toMatchObject({
     status: "boarded",
     confirmationId: "confirmation-1",
     confirmed: true,
+    originalWitness: "original-proof",
+    originalSnapshotId: "old-snapshot",
+    originalMeetingDay: 0,
     ...context,
   });
   expect(onReviewEnvelope).toHaveBeenCalled();
@@ -102,6 +110,9 @@ it("does not resolve a review when the receipt does not match", async () => {
     "fetch",
     vi
       .fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ name: "Priya Shah", sameAssignment: true }), { status: 200 }),
+      )
       .mockResolvedValueOnce(new Response(JSON.stringify({ current }), { status: 200 }))
       .mockResolvedValueOnce(
         new Response(JSON.stringify({ status: "applied", confirmationId: "other" }), {
@@ -189,4 +200,115 @@ it("requires a second deliberate action before discarding an unresolved observat
     ),
   );
   expect(onReviewEnvelope).toHaveBeenCalledWith(envelope);
+});
+
+it("shows the witnessed original person's current name separately from the current roster", async () => {
+  const envelope = savedCopy();
+  const event = observation();
+  event.rollCallWitness = "original-proof";
+  event.meetingDay = 0;
+  const current = {
+    ...envelope.snapshot,
+    rollCallMeetingDay: 0,
+    rollCallWitnesses: { "seat:b-priya:departure": "current-proof" },
+  };
+  const fetcher = vi
+    .fn()
+    .mockResolvedValueOnce(
+      new Response(JSON.stringify({ name: "Original Person", sameAssignment: true }), {
+        status: 200,
+      }),
+    )
+    .mockResolvedValueOnce(new Response(JSON.stringify({ current }), { status: 200 }));
+  vi.stubGlobal("fetch", fetcher);
+  render(
+    <ReviewObservation
+      event={event}
+      controls={{
+        ...controls(),
+        reviewTenant: async () => ({ shopSlug: "blue-mantis", round: 1 }),
+        onReviewEnvelope: vi.fn(),
+      }}
+    />,
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Review current roster" }));
+  expect(await screen.findByText("Original person, current name: Original Person.")).toBeVisible();
+  expect(screen.getByText(/current seat names Priya Shah/)).toBeVisible();
+  expect(JSON.parse(fetcher.mock.calls[0][1].body)).toMatchObject({
+    snapshotId: "old-snapshot",
+    bookingId: "b-priya",
+    witness: "original-proof",
+    meetingDay: 0,
+  });
+});
+
+it("keeps a reassigned or unidentifiable original observation unresolved", async () => {
+  const envelope = savedCopy();
+  const event = observation();
+  event.rollCallWitness = "original-proof";
+  event.meetingDay = 0;
+  const current = {
+    ...envelope.snapshot,
+    rollCallMeetingDay: 0,
+    rollCallWitnesses: { "seat:b-priya:departure": "current-proof" },
+  };
+  const fetcher = vi
+    .fn()
+    .mockResolvedValueOnce(
+      new Response(JSON.stringify({ name: "Original Person", sameAssignment: false }), {
+        status: 200,
+      }),
+    )
+    .mockResolvedValueOnce(new Response(JSON.stringify({ current }), { status: 200 }));
+  vi.stubGlobal("fetch", fetcher);
+  render(
+    <ReviewObservation
+      event={event}
+      controls={{
+        ...controls(),
+        reviewTenant: async () => ({ shopSlug: "blue-mantis", round: 1 }),
+        onReviewEnvelope: vi.fn(),
+      }}
+    />,
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Review current roster" }));
+  await screen.findByText("Original person, current name: Original Person.");
+  expect(screen.queryByRole("button", { name: "Confirm new live mark" })).toBeNull();
+  expect(store.prepareOfflineRollCallConfirmation).not.toHaveBeenCalled();
+  expect(store.completeOfflineRollCallConfirmation).not.toHaveBeenCalled();
+});
+
+it("does not display a delayed identity response after the verified tenant changes", async () => {
+  const event = observation();
+  let tenantCurrent = true;
+  let answer: ((response: Response) => void) | undefined;
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(
+      () =>
+        new Promise<Response>((resolve) => {
+          answer = resolve;
+        }),
+    ),
+  );
+  render(
+    <ReviewObservation
+      event={event}
+      controls={{
+        ...controls(),
+        reviewTenant: async () => (tenantCurrent ? { shopSlug: "blue-mantis", round: 1 } : null),
+        onReviewEnvelope: vi.fn(),
+      }}
+    />,
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Review current roster" }));
+  await waitFor(() => expect(answer).toBeDefined());
+  tenantCurrent = false;
+  answer?.(
+    new Response(JSON.stringify({ name: "Original Person", sameAssignment: true }), {
+      status: 200,
+    }),
+  );
+  await screen.findByRole("alert");
+  expect(screen.queryByText("Original person, current name: Original Person.")).toBeNull();
 });

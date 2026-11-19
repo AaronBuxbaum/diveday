@@ -74,6 +74,11 @@ test("a conflict stays for review while an independent observation syncs", async
     const attention = page.locator('[data-deck-screen="attention"]');
     await expect(attention.getByText(/remains on this device/)).toBeVisible();
     await attention.getByRole("button", { name: "Review current roster" }).click();
+    await expect(
+      attention.getByText(
+        staff("shared.offlineManifest.single.reviewOriginalNameOnline", { name: "Diego Alvarez" }),
+      ),
+    ).toBeVisible();
     await expect(attention.getByText(/current seat names Diego Alvarez/)).toBeVisible();
     await expect(attention.getByText(/Tom Okafor.*Boarded/)).toBeVisible();
     await attention.getByLabel("Boarded", { exact: true }).check();

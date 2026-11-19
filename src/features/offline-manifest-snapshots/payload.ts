@@ -166,6 +166,9 @@ export async function buildOfflineManifestCopies(
                 meetingGeneration: snapshot.meetingGeneration,
                 assignmentGeneration: generation,
                 frontier,
+                ...(!diver.identityWithheld && diver.personId
+                  ? { originalPersonId: diver.personId }
+                  : {}),
               });
           }
         }

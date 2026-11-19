@@ -19,6 +19,8 @@ export function ReviewObservation({
 }) {
   const { t, reviewTenant, onReviewEnvelope } = controls;
   const [current, setCurrent] = useState<OfflineManifestPayload | null>(null);
+  const [originalName, setOriginalName] = useState<string | null>(null);
+  const [sameAssignment, setSameAssignment] = useState(false);
   const [status, setStatus] = useState<"boarded" | "not_boarded" | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(false);
@@ -28,16 +30,62 @@ export function ReviewObservation({
   async function loadCurrent() {
     setBusy(true);
     setError(false);
+    setOriginalName(null);
+    setSameAssignment(false);
     try {
       const tenant = await reviewTenant?.();
       if (!tenant) throw new Error("tenant unavailable");
+      if (event.bookingId && event.rollCallWitness && event.meetingDay !== undefined) {
+        const identity = await fetch("/api/offline-manifests/review/identity", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            tripId: event.tripId,
+            bookingId: event.bookingId,
+            snapshotId: event.snapshotId,
+            checkpoint: event.checkpoint,
+            meetingDay: event.meetingDay,
+            witness: event.rollCallWitness,
+          }),
+        });
+        if (!identity.ok) throw new Error("identity unavailable");
+        const result: unknown = await identity.json();
+        const currentTenant = await reviewTenant?.();
+        if (
+          !currentTenant ||
+          currentTenant.shopSlug !== tenant.shopSlug ||
+          currentTenant.round !== tenant.round
+        )
+          throw new Error("tenant changed");
+        if (
+          result &&
+          typeof result === "object" &&
+          "name" in result &&
+          typeof result.name === "string"
+        )
+          setOriginalName(result.name);
+        if (
+          result &&
+          typeof result === "object" &&
+          "sameAssignment" in result &&
+          result.sameAssignment === true
+        )
+          setSameAssignment(true);
+      }
       const response = await fetch(
         `/api/offline-manifests/review?tripId=${encodeURIComponent(event.tripId)}`,
         { cache: "no-store" },
       );
       if (!response.ok) throw new Error("review unavailable");
       const body = (await response.json()) as { current?: OfflineManifestPayload };
-      if (!body.current || body.current.shop.slug !== tenant.shopSlug)
+      const currentTenant = await reviewTenant?.();
+      if (
+        !currentTenant ||
+        currentTenant.shopSlug !== tenant.shopSlug ||
+        currentTenant.round !== tenant.round ||
+        !body.current ||
+        body.current.shop.slug !== tenant.shopSlug
+      )
         throw new Error("tenant changed");
       setCurrent(body.current);
     } catch {
@@ -57,7 +105,13 @@ export function ReviewObservation({
     if (!selected || !event.bookingId) return;
     if (
       !event.reviewConfirmation &&
-      (!person || !current?.snapshotId || current.rollCallMeetingDay === undefined || !witness)
+      (!sameAssignment ||
+        !event.rollCallWitness ||
+        event.meetingDay === undefined ||
+        !person ||
+        !current?.snapshotId ||
+        current.rollCallMeetingDay === undefined ||
+        !witness)
     )
       return;
     setBusy(true);
@@ -98,6 +152,9 @@ export function ReviewObservation({
           checkpoint: event.checkpoint,
           status: selected,
           ...prepared.context,
+          originalWitness: event.rollCallWitness,
+          originalSnapshotId: event.snapshotId,
+          originalMeetingDay: event.meetingDay,
           confirmationId: prepared.confirmationId,
           confirmed: true,
         }),
@@ -155,6 +212,9 @@ export function ReviewObservation({
       <button type="button" disabled={busy} onClick={() => void loadCurrent()}>
         {t("shared.offlineManifest.single.reviewLoad")}
       </button>
+      {originalName && (
+        <p>{t("shared.offlineManifest.single.reviewOriginalNameOnline", { name: originalName })}</p>
+      )}
       {current && manifest && (
         <div>
           <p>
@@ -189,6 +249,7 @@ export function ReviewObservation({
           </ul>
           {person &&
           event.bookingId &&
+          sameAssignment &&
           current.rollCallMeetingDay !== undefined &&
           current.rollCallWitnesses?.[`seat:${event.bookingId}:${event.checkpoint}`] ? (
             <div>

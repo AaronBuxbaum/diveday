@@ -72,6 +72,7 @@ import {
   replayVerdict,
   type StoredOfflineEvent,
 } from "./offline-replay";
+import { reviewPersonIsCurrent } from "./offline-review-identity";
 import { queryAll } from "./query-helpers";
 import { getBookingReadiness, listTripReadiness } from "./readiness";
 import { rentalFitByBooking } from "./rental-fit";
@@ -2145,7 +2146,7 @@ async function writeRollCall(
   const captureCards =
     source === "live" && checkpoint === "departure" && input.status === "boarded";
   const mayWriteNote = Boolean(input.note?.trim());
-  if (captureCards || mayWriteNote) {
+  if (captureCards || mayWriteNote || input.reviewWitness) {
     await lockBoardingCertificationEvidence(tx, input.shopId, "boarding");
   }
 
@@ -2271,6 +2272,18 @@ async function writeRollCall(
       !verifiedWitness ||
       verifiedWitness.meetingGeneration !== booking.offlineMeetingGeneration ||
       verifiedWitness.assignmentGeneration !== booking.offlineAssignmentGeneration
+    )
+      return refuse("review_required");
+    if (
+      source === "live" &&
+      input.reviewWitness &&
+      !(await reviewPersonIsCurrent(
+        tx,
+        input.shopId,
+        booking.personId,
+        booking.identityUnconfirmedAt,
+        verifiedWitness.originalPersonId,
+      ))
     )
       return refuse("review_required");
     const { causal } = await manifestRollCallReads(tx, input.shopId, input.tripId);

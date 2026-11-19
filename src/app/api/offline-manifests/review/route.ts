@@ -19,6 +19,9 @@ const confirmation = z.object({
   snapshotId: z.string().uuid(),
   meetingDay: z.number().int().min(0),
   witness: z.string().max(16000),
+  originalWitness: z.string().max(16000),
+  originalSnapshotId: z.string().uuid(),
+  originalMeetingDay: z.number().int().min(0),
   confirmationId: z.string().uuid(),
   confirmed: z.literal(true),
 });
@@ -81,7 +84,17 @@ export async function POST(request: Request) {
     meetingDay: input.meetingDay,
   };
   const witness = verifyRollCallWitness(input.witness, scope);
-  if (!witness)
+  const original = verifyRollCallWitness(input.originalWitness, {
+    ...scope,
+    snapshotId: input.originalSnapshotId,
+    meetingDay: input.originalMeetingDay,
+  });
+  if (
+    !witness?.originalPersonId ||
+    !original?.originalPersonId ||
+    witness.originalPersonId !== original.originalPersonId ||
+    witness.assignmentGeneration !== original.assignmentGeneration
+  )
     return Response.json(
       { error: "review_required" },
       { status: 409, headers: OFFLINE_MANIFEST_NO_STORE },

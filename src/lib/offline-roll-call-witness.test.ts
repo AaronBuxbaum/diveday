@@ -56,6 +56,27 @@ describe("offline roll-call witness", () => {
     expect(verifyRollCallWitness(`${token}x`, claim)).toBeNull();
   });
 
+  it("authenticates the represented person for later online review", () => {
+    const claim = {
+      shopId: randomUUID(),
+      tripId: randomUUID(),
+      snapshotId: randomUUID(),
+      subjectKind: "seat" as const,
+      subjectId: randomUUID(),
+      checkpoint: "departure",
+      meetingDay: 0,
+      meetingGeneration: 0,
+      assignmentGeneration: 0,
+      frontier: [],
+      originalPersonId: randomUUID(),
+    };
+    const token = signRollCallWitness(claim);
+    expect(verifyRollCallWitness(token, claim)).toMatchObject({
+      originalPersonId: claim.originalPersonId,
+    });
+    expect(verifyRollCallWitness(token, { ...claim, subjectId: randomUUID() })).toBeNull();
+  });
+
   it("refuses unknown meeting days, malformed tokens and invalid generations", () => {
     const scope = {
       shopId: randomUUID(),
