@@ -1416,6 +1416,27 @@ export function registerExpectedVisualCapture(image: string) {
   }
 }
 
+/**
+ * What a failed `page.screenshot` throws. Playwright's own 15s deadline can fire
+ * before the give-up race does (run 44555068501, #4795), and says only "Timeout
+ * exceeded". A timeout is the one failure that can be the wedge, so it earns the
+ * same probe and verdict as a hung call; any other error is ours and passes
+ * through untouched.
+ */
+export async function screenshotFailure(
+  page: Page,
+  path: string,
+  error: unknown,
+): Promise<unknown> {
+  if (!(error instanceof errors.TimeoutError) || (await probeRenderer(page))) return error;
+  await closeWedgedPage(page);
+  return new Error(
+    `visual: page.screenshot timed out at ${page.url()} (${path}) and the renderer did not ` +
+      "answer a trivial evaluate, so it is wedged, not slow — the known, unattributed " +
+      `Chromium wedge (see the debug skill's visual-capture section). ${error.message}`,
+  );
+}
+
 async function screenshotOrGiveUp(page: Page, path: string) {
   const build = await assertCaptureState(page);
   registerExpectedVisualCapture(path);
@@ -1450,21 +1471,7 @@ async function screenshotOrGiveUp(page: Page, path: string) {
     }),
   ]);
   clearTimeout(timer);
-  if (outcome.state === "failed") {
-    // Playwright's own 15s deadline can fire before the give-up race does
-    // (run 44555068501, #4795), and it says only "Timeout exceeded". A timeout
-    // is the one failure that can be the wedge, so it earns the same probe and
-    // the same verdict; any other error is ours and passes through untouched.
-    if (!(outcome.error instanceof errors.TimeoutError) || (await probeRenderer(page))) {
-      throw outcome.error;
-    }
-    await closeWedgedPage(page);
-    throw new Error(
-      `visual: page.screenshot timed out at ${page.url()} (${path}) and the renderer did not ` +
-        "answer a trivial evaluate, so it is wedged, not slow — the known, unattributed " +
-        `Chromium wedge (see the debug skill's visual-capture section). ${outcome.error.message}`,
-    );
-  }
+  if (outcome.state === "failed") throw await screenshotFailure(page, path, outcome.error);
   if (outcome.state === "done") {
     await recordCapture(page, path, build);
     return;

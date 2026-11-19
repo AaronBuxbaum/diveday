@@ -18,6 +18,7 @@ import {
   openDiverProfile,
   PHONE_VIEWPORT,
   SURFACE_TIMEOUT_MS,
+  screenshotFailure,
   settleCaptureFonts,
   VIEWPORTS,
   VISUAL_STEP_BOUNDS,
@@ -342,22 +343,20 @@ test.describe("capture harness", () => {
   test("a screenshot that hits Playwright's own timeout on a silent renderer is reported as the wedge", async ({
     page,
   }) => {
-    await page.goto("/");
+    const timeout = new errors.TimeoutError("page.screenshot: Timeout 15000ms exceeded.");
     const realWarn = console.warn;
     console.warn = () => {};
     try {
-      // Playwright's 15s screenshot deadline fires before the driver-side
-      // give-up race (#4795): the failure must still carry the probe's verdict.
-      page.screenshot = () => {
-        // From here the renderer never answers, so the probe has to say wedged.
-        page.evaluate = () => new Promise<never>(() => {});
-        return Promise.reject(
-          new errors.TimeoutError("page.screenshot: Timeout 15000ms exceeded."),
-        );
-      };
-      await expect(capture(page, "screenshot-timeout-wedge", "light")).rejects.toThrow(
-        "wedged, not slow",
-      );
+      // An answering page keeps the original error, any other error passes through,
+      // and a silent one (Playwright's deadline fires before the give-up race, #4795)
+      // carries the probe's verdict.
+      await page.goto("/");
+      expect(await screenshotFailure(page, "x.png", timeout)).toBe(timeout);
+      const other = new Error("browser has been closed");
+      expect(await screenshotFailure(page, "x.png", other)).toBe(other);
+      page.evaluate = () => new Promise<never>(() => {});
+      const verdict = await screenshotFailure(page, "x.png", timeout);
+      expect(String(verdict)).toContain("wedged, not slow");
     } finally {
       console.warn = realWarn;
     }
