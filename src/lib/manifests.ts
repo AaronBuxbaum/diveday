@@ -288,6 +288,8 @@ export type ManifestDiverInput = {
    */
   runningLateAt?: Date | null;
   rollCall?: RollCallRecord;
+  /** A prior offline presence needs a fresh count for this meeting. */
+  recountRequired?: boolean;
   rollCallContext?: RollCallCausalContext;
   /**
    * The buddy team staff put this diver on, when they did
@@ -1100,6 +1102,8 @@ export type TripManifest = {
      */
     notBackAboard: number;
     awaiting: number;
+    /** A subset of awaiting whose earlier offline observation needs a fresh count. */
+    recountRequired?: number;
     /**
      * `awaiting + notBackAboard`. The number that decides whether this
      * checkpoint's diver half is closed — never `awaiting` on its own.
@@ -1301,6 +1305,7 @@ export function buildTripManifest(input: {
     notBoarded: counted.filter((diver) => diver.rollCall?.state === "not_boarded").length,
     notBackAboard,
     awaiting,
+    recountRequired: counted.filter((diver) => diver.recountRequired).length,
     unaccountedFor: awaiting + notBackAboard,
     // Unknown capacity is silence, never an all-clear — the field's own
     // docblock says why, and a zero here reads on screen as "no line", not as

@@ -31,6 +31,7 @@
   "summaryNotBackAboard": "Not back aboard",
   "summaryAshore": "Ashore",
   "summaryAwaiting": "Awaiting",
+  "recountRequired": "{count, plural, one {# person needs a recount} other {# people need a recount}}",
   "soulsOnBoardOverlap": "{count, plural, one {# person has both roles} other {# people have both roles}}",
   "soulsOnBoardLine": "Passengers {passengers} · Crew {crew} · Souls on board {souls}",
   "soulsOnBoardLineSplit": "Passengers {passengers} ({split}) · Crew {crew} · Souls on board {souls}",
@@ -397,6 +398,7 @@
     "summary": "Conflicting marks; crew must check"
   },
   "deck": {
+    "recountRequired": "Recount required",
     "title": "Roll call",
     "start": "Start roll call",
     "next": "Next person",

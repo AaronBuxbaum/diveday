@@ -98,7 +98,7 @@ describePostgres("offline evidence across diver merge", () => {
         const result =
           order === "merge first"
             ? await mergeDiverRecords({ ...mergeInput, db: tx })
-          : await recordRollCall(tx as unknown as AppDb, input);
+            : await recordRollCall(tx as unknown as AppDb, input);
         entered();
         await gate;
         return result;

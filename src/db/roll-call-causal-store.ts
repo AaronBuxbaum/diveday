@@ -112,14 +112,42 @@ export async function effectiveCausalRowsForDb<T extends { event: CausalEvent; d
   db: DbExecutor,
   rows: readonly T[],
 ): Promise<T[]> {
+  return (await rollCallProjectionForDb(db, rows)).rows;
+}
+
+export function recountKey(event: CausalEvent, day: number): string {
+  return recountScopeKey(event.shopId, event.tripId, event.bookingId, event.checkpoint, day);
+}
+export function recountScopeKey(
+  shopId: string,
+  tripId: string,
+  bookingId: string | null,
+  checkpoint: string,
+  day: number,
+): string {
+  return JSON.stringify([
+    shopId.toLowerCase(),
+    tripId.toLowerCase(),
+    bookingId?.toLowerCase() ?? null,
+    checkpoint,
+    day,
+  ]);
+}
+
+/** Keep invalidated positive evidence visible as an unresolved count, not an older answer. */
+export async function rollCallProjectionForDb<T extends { event: CausalEvent; day: number }>(
+  db: DbExecutor,
+  rows: readonly T[],
+): Promise<{ rows: T[]; recount: Set<string> }> {
   const bound = rows.filter(
     ({ event }) =>
       event.source === "offline" &&
-      (offlineRollCallWitnessEnabled() ||
+      ((event.subjectKind === "seat" && offlineRollCallWitnessEnabled()) ||
         event.offlineMeetingGeneration !== null ||
         event.offlineAssignmentGeneration !== null),
   );
-  if (bound.length === 0) return effectiveCausalRows(rows, () => true);
+  if (bound.length === 0)
+    return { rows: effectiveCausalRows(rows, () => true), recount: new Set() };
   const ids = [
     ...new Set(bound.flatMap(({ event }) => (event.bookingId ? [event.bookingId] : []))),
   ];
@@ -138,8 +166,10 @@ export async function effectiveCausalRowsForDb<T extends { event: CausalEvent; d
           .innerJoin(trips, and(eq(trips.id, bookings.tripId), eq(trips.shopId, bookings.shopId)))
           .where(and(inArray(bookings.id, ids), liveTrip()));
   const byId = new Map(current.map((row) => [row.id, row]));
-  return effectiveCausalRows(rows, (event) => {
+  const eligible = (event: CausalEvent) => {
     if (event.source !== "offline") return true;
+    if (event.subjectKind !== "seat")
+      return event.offlineMeetingGeneration === null && event.offlineAssignmentGeneration === null;
     if (event.offlineMeetingGeneration === null && event.offlineAssignmentGeneration === null)
       return !offlineRollCallWitnessEnabled();
     if (!event.bookingId || event.subjectKind !== "seat") return false;
@@ -151,7 +181,46 @@ export async function effectiveCausalRowsForDb<T extends { event: CausalEvent; d
       event.offlineMeetingGeneration === seat.meeting &&
       event.offlineAssignmentGeneration === seat.assignment
     );
-  });
+  };
+  const recount = new Set<string>();
+  const liveByKey = new Map<string, CausalEvent[]>();
+  for (const { event, day } of rows) {
+    if (event.source !== "live") continue;
+    const key = recountKey(event, day);
+    const events = liveByKey.get(key) ?? [];
+    events.push(event);
+    liveByKey.set(key, events);
+  }
+  for (const { event, day } of bound) {
+    const statement = event.statementStatus ?? event.status;
+    if (
+      eligible(event) ||
+      !event.bookingId ||
+      statement === "cleared" ||
+      (event.checkpoint === "departure" && statement !== "boarded")
+    )
+      continue;
+    const key = recountKey(event, day);
+    const current = byId.get(event.bookingId);
+    const live = (liveByKey.get(key) ?? []).reduce<CausalEvent | undefined>(
+      (latest, candidate) => (!latest || latest.seq < candidate.seq ? candidate : latest),
+      undefined,
+    );
+    const resolved =
+      current !== undefined &&
+      current.shopId === event.shopId &&
+      current.tripId === event.tripId &&
+      live !== undefined &&
+      live.seq > event.seq &&
+      (live.statementStatus ?? live.status) !== "cleared" &&
+      live.offlineMeetingGeneration === current.meeting &&
+      live.offlineAssignmentGeneration === current.assignment;
+    if (!resolved) recount.add(key);
+  }
+  const kept = rows.filter(
+    ({ event, day }) => eligible(event) && !recount.has(recountKey(event, day)),
+  );
+  return { rows: effectiveCausalRows(kept, () => true), recount };
 }
 
 /** Unknown historical meeting days are never reconstructed from a device clock. */
@@ -273,13 +342,14 @@ export async function manifestRollCallReads(db: DbExecutor, shopId: string, trip
     .from(tripScheduleDays)
     .where(eq(tripScheduleDays.tripId, tripId))
     .orderBy(asc(tripScheduleDays.startsAt));
-  const rows = await effectiveCausalRowsForDb(
+  const projection = await rollCallProjectionForDb(
     db,
     loaded.map((row) => ({
       ...row,
       day: row.event.meetingDay ?? (windows.length > 1 ? -1 : 0),
     })),
   );
+  const { rows, recount } = projection;
   const meetingDay = rollCallDayOf(rollCallDayStarts(windows), nowDate());
   const latest = new Map<string, (typeof rows)[number]>();
   for (const row of rows) {
@@ -419,7 +489,7 @@ export async function manifestRollCallReads(db: DbExecutor, shopId: string, trip
       ...(day < meetingDay ? { fromEarlierDay: true } : {}),
     });
   }
-  return { causal: { meetingDay, contexts }, crewRollCalls };
+  return { causal: { meetingDay, contexts }, crewRollCalls, recount };
 }
 
 /** An ordinary undo names one standing statement; it is never an opinion about everybody else. */

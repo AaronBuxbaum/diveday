@@ -84,7 +84,9 @@ import {
   effectiveCausalRowsForDb,
   manifestRollCallReads,
   prepareCausalRollCall,
+  recountScopeKey,
   refreshCausalRollCall,
+  rollCallProjectionForDb,
 } from "./roll-call-causal-store";
 import { newestMarkFirst } from "./roll-call-order";
 import {
@@ -880,7 +882,8 @@ export async function onTheWaterByRollCall(
       ),
     )
     .orderBy(...newestMarkFirst());
-  const effectiveDivers = await effectiveCausalRowsForDb(db, rows);
+  const diverProjection = await rollCallProjectionForDb(db, rows);
+  const effectiveDivers = diverProjection.rows;
   const fromDivers = standingRowMeansSailed(
     effectiveDivers.map(({ event, day }) => ({
       checkpoint: event.checkpoint,
@@ -938,13 +941,13 @@ export async function onTheWaterByRollCall(
     })),
   );
   if (fromCrew) return fromCrew;
-  const eligibleIds = new Set([...effectiveDivers, ...effectiveCrew].map(({ event }) => event.id));
-  const uncertain = [...rows, ...crewRows].some(
+  const crewIds = new Set(effectiveCrew.map(({ event }) => event.id));
+  const uncertainCrew = crewRows.some(
     ({ event }) =>
-      !eligibleIds.has(event.id) &&
+      !crewIds.has(event.id) &&
       standingResultMeansSailed(event.checkpoint, event.statementStatus ?? event.status),
   );
-  return uncertain ? "uncertain" : null;
+  return diverProjection.recount.size > 0 || uncertainCrew ? "uncertain" : null;
 }
 
 /**
@@ -1138,7 +1141,7 @@ export async function getTripManifests(
   const trip = await getTripWithBooked(db, shopId, tripId);
   if (!trip) return null;
   const checkpoints = rollCallCheckpoints(trip.plannedDives);
-  const { causal, crewRollCalls } = await manifestRollCallReads(db, shopId, tripId);
+  const { causal, crewRollCalls, recount } = await manifestRollCallReads(db, shopId, tripId);
   const [
     shop,
     roster,
@@ -1501,11 +1504,18 @@ export async function getTripManifests(
       })),
       divers: diverInputs.map((diver) => ({
         ...diver,
-        rollCall: causalRecord(
-          effectiveByBooking.get(diver.bookingId)?.[index],
-          causal.contexts.get(`seat:${diver.bookingId}/${checkpoint}`),
-          checkpoint,
+        recountRequired: recount.has(
+          recountScopeKey(shopId, tripId, diver.bookingId, checkpoint, causal.meetingDay),
         ),
+        rollCall: recount.has(
+          recountScopeKey(shopId, tripId, diver.bookingId, checkpoint, causal.meetingDay),
+        )
+          ? undefined
+          : causalRecord(
+              effectiveByBooking.get(diver.bookingId)?.[index],
+              causal.contexts.get(`seat:${diver.bookingId}/${checkpoint}`),
+              checkpoint,
+            ),
         rollCallContext:
           causal.contexts.get(`seat:${diver.bookingId}/${checkpoint}`) ??
           emptyCausalContext(causal.meetingDay),
@@ -2463,8 +2473,14 @@ async function writeRollCall(
       source,
       clientEventId: input.clientEventId ?? null,
       statementStatus: input.status,
-      offlineMeetingGeneration: verifiedWitness?.meetingGeneration ?? null,
-      offlineAssignmentGeneration: verifiedWitness?.assignmentGeneration ?? null,
+      offlineMeetingGeneration:
+        source === "live"
+          ? booking.offlineMeetingGeneration
+          : (verifiedWitness?.meetingGeneration ?? null),
+      offlineAssignmentGeneration:
+        source === "live"
+          ? booking.offlineAssignmentGeneration
+          : (verifiedWitness?.assignmentGeneration ?? null),
       captureContext: {
         ...rawRollCallCapture(input),
         // Personal blocker reasons live only in readinessBlockers, whose

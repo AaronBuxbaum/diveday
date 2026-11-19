@@ -5,7 +5,7 @@ import {
 } from "@/lib/offline-roll-call-witness";
 import type { DbExecutor } from "./client";
 import { reviewPersonIsCurrent } from "./offline-review-identity";
-import { manifestRollCallReads } from "./roll-call-causal-store";
+import { manifestRollCallReads, recountScopeKey } from "./roll-call-causal-store";
 
 type Capture = {
   shopId: string;
@@ -85,7 +85,14 @@ export async function validateOfflineRollCallCapture(
     )
       return { ok: false as const };
   }
-  const { causal } = await manifestRollCallReads(tx, input.shopId, input.tripId);
+  const { causal, recount } = await manifestRollCallReads(tx, input.shopId, input.tripId);
+  if (
+    source === "offline" &&
+    recount.has(
+      recountScopeKey(input.shopId, input.tripId, input.bookingId, checkpoint, input.meetingDay),
+    )
+  )
+    return { ok: false as const };
   const frontier =
     causal.contexts.get(`seat:${input.bookingId}/${checkpoint}`)?.observedEvidenceIds ?? [];
   const observed = new Set((input.observedEvidenceIds ?? []).map((id) => id.toLowerCase()));

@@ -31,6 +31,7 @@
   "summaryNotBackAboard": "Sin regresar a bordo",
   "summaryAshore": "En tierra",
   "summaryAwaiting": "Pendientes",
+  "recountRequired": "{count, plural, one {# persona necesita un nuevo conteo} other {# personas necesitan un nuevo conteo}}",
   "soulsOnBoardOverlap": "{count, plural, one {# persona tiene ambos roles} other {# personas tienen ambos roles}}",
   "soulsOnBoardLine": "Pasajeros {passengers} · Tripulación {crew} · Personas a bordo {souls}",
   "soulsOnBoardLineSplit": "Pasajeros {passengers} ({split}) · Tripulación {crew} · Personas a bordo {souls}",
@@ -397,6 +398,7 @@
     "summary": "Marcas contradictorias; hay que resolverlas"
   },
   "deck": {
+    "recountRequired": "Requiere un nuevo conteo",
     "title": "Pase de lista",
     "start": "Pasar lista",
     "next": "Siguiente persona",

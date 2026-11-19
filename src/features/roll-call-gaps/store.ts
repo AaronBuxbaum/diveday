@@ -13,7 +13,12 @@ import { and, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
 import { liveTrip, seatNotCancelled } from "@/db/trips";
 import { hasReturned } from "@/lib/trips";
 import type { AppDb } from "../../db/client";
-import { effectiveCausalRowsForDb } from "../../db/roll-call-causal-store";
+import {
+  effectiveCausalRowsForDb,
+  recountKey,
+  recountScopeKey,
+  rollCallProjectionForDb,
+} from "../../db/roll-call-causal-store";
 import { oldestMarkFirst } from "../../db/roll-call-order";
 import { asCrewMark, asSeatMark, crewMarks, seatMarks } from "../../db/roll-call-subject";
 import {
@@ -376,7 +381,8 @@ export async function listRollCallGaps(
       )
       .orderBy(...oldestMarkFirst()),
   ]);
-  const events = (await effectiveCausalRowsForDb(db, rawEvents)).map(({ event: raw, day }) => {
+  const projection = await rollCallProjectionForDb(db, rawEvents);
+  const events = projection.rows.map(({ event: raw, day }) => {
     const event = asSeatMark(raw);
     return {
       bookingId: event.bookingId,
@@ -572,9 +578,23 @@ export async function listRollCallGaps(
         bookingIds,
         crewIds,
         turnedAwayIds,
-        diverStates: (bookingId) => diverStates(day, bookingId),
+        diverStates: (bookingId) =>
+          diverStates(day, bookingId).map((state, index) =>
+            projection.recount.has(
+              recountScopeKey(shopId, trip.id, bookingId, checkpoints[index] ?? "", day),
+            )
+              ? undefined
+              : state,
+          ),
         crewStates: (personId) => crewStates(day, personId),
         diverRisk: (id) =>
+          rawEvents.some(
+            ({ event, day: eventDay }) =>
+              event.bookingId === id &&
+              event.tripId === trip.id &&
+              eventDay === day &&
+              projection.recount.has(recountKey(event, eventDay)),
+          ) ||
           [...(diverStanding.get(-1)?.values() ?? [])].some(
             (mark) => mark.subject === id && mark.status !== "cleared",
           ),
@@ -583,6 +603,7 @@ export async function listRollCallGaps(
             (mark) => mark.subject === id && mark.status !== "cleared",
           ),
         diverProtected: (id, checkpoint) =>
+          projection.recount.has(recountScopeKey(shopId, trip.id, id, checkpoint, day)) ||
           !!diverStanding.get(day)?.get(`${id}\u0000${checkpoint}`)?.evidenceConflict ||
           diverStanding.get(-1)?.get(`${id}\u0000${checkpoint}`)?.status === "not_boarded",
         crewProtected: (id, checkpoint) =>
@@ -718,9 +739,9 @@ function dayGaps(input: {
     for (let dive = 1; dive < checkpoints.length; dive++) {
       const state = states[dive];
       population[dive] = (population[dive] ?? 0) + 1;
-      if (state !== undefined) recorded[dive] = (recorded[dive] ?? 0) + 1;
       const protectedMissing =
         input.diverProtected?.(bookingId, checkpoints[dive] as string) === true;
+      if (state !== undefined || protectedMissing) recorded[dive] = (recorded[dive] ?? 0) + 1;
       const seenLater =
         !protectedMissing && input.diverSeenLater(bookingId, checkpoints[dive] as string);
       if (isAccountedForAfterDive(state) || seenLater) continue;
@@ -737,7 +758,7 @@ function dayGaps(input: {
       if (state === "not_boarded") notBackAboard[dive] = (notBackAboard[dive] ?? 0) + 1;
       // Counted back aboard after a later dive: they are back, and the record
       // has nothing to say about them.
-      else if (!states.slice(dive + 1).includes("boarded")) {
+      else if (protectedMissing || !states.slice(dive + 1).includes("boarded")) {
         awaitingAt.set(bookingId, [...(awaitingAt.get(bookingId) ?? []), dive]);
       }
     }

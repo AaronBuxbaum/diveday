@@ -79,12 +79,20 @@ export function DeckRollCall({
       photoPath: diver.photoPath,
       role: t("manifest.deck.guest"),
       outstanding: !diver.rollCall || missing || conflict,
-      attention: missing || conflict || blocked || view.reader.alerted.has(diver.bookingId),
-      requiresReview: missing || conflict || view.reader.alerted.has(diver.bookingId),
+      attention:
+        missing ||
+        conflict ||
+        blocked ||
+        !!diver.recountRequired ||
+        view.reader.alerted.has(diver.bookingId),
+      requiresReview:
+        missing || conflict || !!diver.recountRequired || view.reader.alerted.has(diver.bookingId),
       eventId: diver.rollCall?.eventId,
       status: diver.rollCall
         ? rollCallLabelText(t, rollCallLabel(view.checkpoint, diver.rollCall))
-        : undefined,
+        : diver.recountRequired
+          ? t("manifest.deck.recountRequired")
+          : undefined,
       observed: diver.rollCall
         ? t("manifest.deck.observed", {
             time: formatDateTimeTz(
@@ -222,6 +230,11 @@ export function DeckRollCall({
       status={
         <>
           {status}
+          {(manifest.summary.recountRequired ?? 0) > 0 ? (
+            <p className="font-semibold text-danger" role="status">
+              {t("manifest.recountRequired", { count: manifest.summary.recountRequired ?? 0 })}
+            </p>
+          ) : null}
           <MixedTrainingDepthWarning
             show={mixedTrainingDepthAdvisory(
               divers.flatMap((diver) =>

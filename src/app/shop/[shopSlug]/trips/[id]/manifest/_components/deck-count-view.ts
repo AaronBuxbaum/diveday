@@ -18,5 +18,11 @@ export function deckCountView(
     manifest.crew.filter((member) => rollCallRowState(checkpoint, member.rollCall).boarded),
   );
   const counted = deckCounts.get(checkpoint) ?? null;
-  return { counted, aboard, comparison: compareDeckCount(counted, aboard) };
+  return {
+    counted,
+    aboard,
+    comparison: manifest.divers.some((diver) => diver.recountRequired)
+      ? null
+      : compareDeckCount(counted, aboard),
+  };
 }
