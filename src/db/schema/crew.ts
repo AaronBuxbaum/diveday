@@ -141,6 +141,8 @@ export const tripAssignments = pgTable(
     personId: uuid("person_id")
       .notNull()
       .references(() => people.id),
+    /** Identity of this continuous assignment, changed on removal and reassignment. */
+    offlineIncarnation: uuid("offline_incarnation").notNull().defaultRandom(),
     /**
      * The job this person is doing on this sailing, or null for **not
      * specified** (DOM-M3, ADR 20260803-per-trip-crew-role).

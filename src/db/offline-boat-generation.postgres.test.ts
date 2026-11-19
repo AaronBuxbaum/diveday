@@ -1,9 +1,13 @@
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, expect, it, vi } from "vitest";
 import { departureCounts } from "@/features/departure-counts";
-import { buildOfflineManifestCopies } from "@/features/offline-manifest-snapshots";
+import {
+  buildOfflineManifestCopies,
+  readOfflineManifestRosterWithWindows,
+} from "@/features/offline-manifest-snapshots";
 import { listRollCallGaps } from "@/features/roll-call-gaps";
 import { nowDate } from "@/lib/clock";
+import { clientRollCallEvidenceId } from "@/lib/roll-call-causality";
 import { describePostgres, postgresTestDb } from "@/test/postgres";
 import { getTripManifest, onTheWaterByRollCall, recordRollCall } from "./manifests";
 import { boats, trips } from "./schema";
@@ -99,6 +103,14 @@ describePostgres("offline evidence across a boat change", () => {
       if (order === "intake first") {
         expect(await recordRollCall(pg.db, input)).toMatchObject({ ok: true });
         expect(await recordRollCall(pg.db, input)).toMatchObject({ ok: true, duplicate: true });
+        const correction = {
+          ...input,
+          clientEventId: crypto.randomUUID(),
+          status: "not_boarded" as const,
+          physicalPresenceOnly: false,
+          observedEvidenceIds: [clientRollCallEvidenceId(input.clientEventId)],
+        };
+        expect(await recordRollCall(pg.db, correction)).toMatchObject({ ok: true });
         const current = await getTripManifest(pg.db, shop.id, trip.id, checkpoint);
         const seen = current?.divers.find((diver) => diver.bookingId === subject.booking.id)
           ?.rollCallContext?.observedEvidenceIds;
@@ -189,6 +201,15 @@ describePostgres("offline evidence across a boat change", () => {
         manifest?.divers.find((diver) => diver.bookingId === other.booking.id)?.rollCall?.state,
       ).toBe("not_boarded");
       if (order === "intake first") {
+        const readProof = async () => {
+          const page = await readOfflineManifestRosterWithWindows(pg.db, shop.id, trip.id);
+          const context = page?.manifests
+            .find((item) => item.checkpoint === checkpoint)
+            ?.divers.find((diver) => diver.bookingId === subject.booking.id)?.rollCallContext;
+          if (!context?.liveRecountProof) throw new Error("recount proof missing");
+          return context.liveRecountProof;
+        };
+        const proof = await readProof();
         expect(
           await recordRollCall(pg.db, {
             shopId: shop.id,
@@ -198,6 +219,7 @@ describePostgres("offline evidence across a boat change", () => {
             checkpoint,
             status: "not_boarded",
             source: "live",
+            liveRecountProof: proof,
           }),
         ).toMatchObject({ ok: true });
         const recounted = await getTripManifest(pg.db, shop.id, trip.id, checkpoint);
@@ -227,6 +249,7 @@ describePostgres("offline evidence across a boat change", () => {
         expect(
           retracted?.divers.find((diver) => diver.bookingId === subject.booking.id),
         ).toMatchObject({ recountRequired: true, rollCall: undefined });
+        const proofAfterUndo = await readProof();
         expect(
           await recordRollCall(pg.db, {
             shopId: shop.id,
@@ -236,6 +259,7 @@ describePostgres("offline evidence across a boat change", () => {
             checkpoint,
             status: "not_boarded",
             source: "live",
+            liveRecountProof: proofAfterUndo,
           }),
         ).toMatchObject({ ok: true });
         expect(
@@ -245,9 +269,7 @@ describePostgres("offline evidence across a boat change", () => {
         expect(
           changedAgain?.divers.find((diver) => diver.bookingId === subject.booking.id),
         ).toMatchObject({ recountRequired: true, rollCall: undefined });
-        const stalePage = changedAgain?.divers.find(
-          (diver) => diver.bookingId === subject.booking.id,
-        )?.rollCallContext;
+        const stalePage = await readProof();
         expect(
           await editTripSection(pg.db, shop.id, trip.id, { boatId: original.boatId }),
         ).toMatchObject({ ok: true });
@@ -260,7 +282,7 @@ describePostgres("offline evidence across a boat change", () => {
             checkpoint,
             status: "not_boarded",
             source: "live",
-            observedEvidenceIds: stalePage?.observedEvidenceIds ?? [],
+            liveRecountProof: stalePage,
           }),
         ).toMatchObject({ ok: false, reason: "review_required" });
         const counts = await departureCounts(pg.db, shop.id, [trip.id], { readiness: new Map() });

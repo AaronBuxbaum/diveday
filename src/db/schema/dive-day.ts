@@ -99,8 +99,11 @@ export const rollCallEvents = pgTable(
     /** Authenticated capture generations, present only for a verified offline observation. */
     offlineMeetingGeneration: integer("offline_meeting_generation"),
     offlineAssignmentGeneration: integer("offline_assignment_generation"),
+    offlineCrewAssignmentId: uuid("offline_crew_assignment_id"),
     /** Raw tap intent for replay validation; null on retained opaque evidence. */
     captureContext: jsonb("capture_context").$type<{
+      /** Set only after a signed offline witness was verified. */
+      offlineSnapshotId?: string;
       occurredAt?: string;
       meetingDay?: number;
       retractsEventId?: string;

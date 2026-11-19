@@ -3,7 +3,6 @@ import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
 import { verifyOfflineErasureEpoch } from "@/lib/offline-erasure-epoch";
 import { offlineEventInstant, offlineEventOutOfBounds } from "@/lib/offline-events";
-import { offlineRollCallWitnessEnabled } from "@/lib/offline-roll-call-witness";
 import {
   PRE_DEPARTURE_CHECK_RETRACTION_SUPERSEDED,
   type PreDepartureCheckStatus,
@@ -276,6 +275,14 @@ export async function latestPreDepartureChecksForTrip(
   return latest;
 }
 
+/**
+ * What a check event is about: the line and what was done to it. A retry may repeat an id
+ * for the same tap; an undo reusing a check's id is a different tap and must not read as a duplicate.
+ */
+function checkSubject(tripId: string, checklistItemId: string, status: PreDepartureCheckStatus) {
+  return `${tripId}/${checklistItemId}/${status}`;
+}
+
 /** The check event this shop already holds under a device's `clientEventId`, with its line. */
 async function storedCheckEvent(
   tx: DbExecutor,
@@ -287,6 +294,7 @@ async function storedCheckEvent(
       id: preDepartureCheckEvents.id,
       tripId: preDepartureCheckEvents.tripId,
       checklistItemId: preDepartureCheckEvents.checklistItemId,
+      status: preDepartureCheckEvents.status,
     })
     .from(preDepartureCheckEvents)
     .where(
@@ -296,7 +304,12 @@ async function storedCheckEvent(
       ),
     )
     .limit(1);
-  return existing && { id: existing.id, subject: `${existing.tripId}/${existing.checklistItemId}` };
+  return (
+    existing && {
+      id: existing.id,
+      subject: checkSubject(existing.tripId, existing.checklistItemId, existing.status),
+    }
+  );
 }
 
 export type RecordPreDepartureCheckOutcome =
@@ -390,14 +403,10 @@ export async function recordPreDepartureCheck(
           ...(noteDisposition ? { noteDisposition } : {}),
         });
 
-        // Checklist capture witnesses are not yet issued; do not settle the tap as an official check.
-        if (source === "offline" && offlineRollCallWitnessEnabled())
-          return refuse("review_required");
-
         if (source === "offline" && input.clientEventId) {
           const replayed = replayVerdict(
             await storedCheckEvent(tx, input.shopId, input.clientEventId),
-            `${input.tripId}/${input.checklistItemId}`,
+            checkSubject(input.tripId, input.checklistItemId, input.status),
             "pre_departure_check_events",
           );
           if (replayed) return noteDisposition ? { ...replayed, noteDisposition } : replayed;
@@ -422,7 +431,7 @@ export async function recordPreDepartureCheck(
         if (source === "offline" && input.clientEventId) {
           const replayed = replayVerdict(
             await storedCheckEvent(tx, input.shopId, input.clientEventId),
-            `${input.tripId}/${input.checklistItemId}`,
+            checkSubject(input.tripId, input.checklistItemId, input.status),
             "pre_departure_check_events",
           );
           if (replayed) return noteDisposition ? { ...replayed, noteDisposition } : replayed;
@@ -505,7 +514,7 @@ export async function recordPreDepartureCheck(
       indexName: "pre_departure_check_events_shop_client_event_unique",
       clientEventId: input.clientEventId,
       source: input.source,
-      subject: `${input.tripId}/${input.checklistItemId}`,
+      subject: checkSubject(input.tripId, input.checklistItemId, input.status),
       stored: (clientEventId) => storedCheckEvent(db, input.shopId, clientEventId),
     },
   );

@@ -360,6 +360,7 @@ export type ManifestDiverInput = {
 };
 
 export type ManifestCrewMember = {
+  recountRequired?: boolean;
   /**
    * The crew member's `people.id` — the **subject** of their roll-call result
    * (ADR 20260803-per-person-crew-roll-call). Carrying it is what made a
@@ -1305,7 +1306,10 @@ export function buildTripManifest(input: {
     notBoarded: counted.filter((diver) => diver.rollCall?.state === "not_boarded").length,
     notBackAboard,
     awaiting,
-    recountRequired: counted.filter((diver) => diver.recountRequired).length,
+    recountRequired: physicalPeople(
+      counted.filter((diver) => diver.recountRequired),
+      crew.filter((member) => member.recountRequired),
+    ),
     unaccountedFor: awaiting + notBackAboard,
     // Unknown capacity is silence, never an all-clear — the field's own
     // docblock says why, and a zero here reads on screen as "no line", not as

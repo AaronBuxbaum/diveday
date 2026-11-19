@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { expect, it } from "vitest";
 import { manifestContext } from "../test/substrate-fixtures/db/manifests-test-fixtures";
 import { getTripManifest, recordCrewRollCall } from "./manifests";
-import { effectiveCausalRowsForDb } from "./roll-call-causal-store";
+import { rollCallProjectionForDb } from "./roll-call-causal-store";
 import { rollCallEvents } from "./schema";
 
 it("does not count a generation-bound offline crew mark as a verified seat observation", async () => {
@@ -35,11 +35,12 @@ it("does not count a generation-bound offline crew mark as a verified seat obser
     source: "offline" as const,
     offlineMeetingGeneration: 0,
     offlineAssignmentGeneration: 0,
+    offlineCrewAssignmentId: null,
   };
-  const rows = await effectiveCausalRowsForDb(db, [
+  const projection = await rollCallProjectionForDb(db, [
     { event: live, day: 0 },
     { event: ambiguous, day: 0 },
   ]);
-  expect(rows.map(({ event }) => event.id)).toEqual([live.id]);
-  expect(rows[0]?.event.status).toBe("not_boarded");
+  expect(projection.rows).toEqual([]);
+  expect(projection.recount.size).toBe(1);
 });

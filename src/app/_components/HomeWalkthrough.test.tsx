@@ -117,9 +117,11 @@ describe("the homepage walkthrough", () => {
     const group = screen.getByRole("group", { name: "Walk" });
     const frame = container.querySelector("[data-walk-frame]") as HTMLElement;
     fireEvent.pointerDown(group, { clientX: 200 });
+    fireEvent.pointerMove(group, { clientX: 100 });
     fireEvent.pointerUp(group, { clientX: 100 });
     expect(screen.getByText("Second")).toBeInTheDocument();
     fireEvent.pointerDown(group, { clientX: 100 });
+    fireEvent.pointerMove(group, { clientX: 200 });
     fireEvent.pointerUp(group, { clientX: 200 });
     expect(screen.getByText("First")).toBeInTheDocument();
     fireEvent.pointerDown(frame, { clientX: 100 });
@@ -139,6 +141,31 @@ describe("the homepage walkthrough", () => {
     fireEvent.touchEnd(group, { changedTouches: [{ clientX: 100, clientY: 38 }] });
     expect(sideways).toBe(false);
     expect(screen.getByText("Second")).toBeInTheDocument();
+  });
+
+  it("never moves on or taps when a touch that began as a scroll drifts sideways", () => {
+    mockMotion(true);
+    const { container } = setup();
+    const group = screen.getByRole("group", { name: "Walk" });
+    const frame = container.querySelector("[data-walk-frame]") as HTMLElement;
+    // Mostly down, then a long sideways drift: still the page scrolling.
+    fireEvent.touchStart(frame, { touches: [{ clientX: 200, clientY: 50 }] });
+    const down = fireEvent.touchMove(frame, { touches: [{ clientX: 195, clientY: 100 }] });
+    fireEvent.touchMove(frame, { touches: [{ clientX: 90, clientY: 120 }] });
+    fireEvent.touchEnd(frame, { changedTouches: [{ clientX: 90, clientY: 120 }] });
+    expect(down).toBe(true);
+    expect(screen.getByText("First")).toBeInTheDocument();
+    // A diagonal that is not clearly sideways is a scroll too.
+    fireEvent.touchStart(group, { touches: [{ clientX: 200, clientY: 50 }] });
+    const diagonal = fireEvent.touchMove(group, { touches: [{ clientX: 140, clientY: 110 }] });
+    fireEvent.touchEnd(group, { changedTouches: [{ clientX: 100, clientY: 150 }] });
+    expect(diagonal).toBe(true);
+    expect(screen.getByText("First")).toBeInTheDocument();
+    // A short vertical scroll that ends on a screen is not a tap.
+    fireEvent.touchStart(frame, { touches: [{ clientX: 200, clientY: 50 }] });
+    fireEvent.touchMove(frame, { touches: [{ clientX: 200, clientY: 70 }] });
+    fireEvent.touchEnd(frame, { changedTouches: [{ clientX: 200, clientY: 70 }] });
+    expect(screen.getByText("First")).toBeInTheDocument();
   });
 
   it("follows a drag with the beat, moves on past the threshold and springs back short of it", () => {

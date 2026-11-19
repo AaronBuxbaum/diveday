@@ -6,7 +6,7 @@ import { departureBoatSafetyFor } from "@/db/boat-safety";
 import type { AppDb } from "@/db/client";
 import { getTripManifests } from "@/db/manifests";
 import { latestPreDepartureChecksForTrip, listChecklistItems } from "@/db/pre-departure-check";
-import { bookings } from "@/db/schema";
+import { bookings, tripAssignments } from "@/db/schema";
 import type { getShopById } from "@/db/shops";
 import { getShopOfflineErasureEpoch } from "@/db/shops";
 import { departureVessels } from "@/features/boats";
@@ -86,6 +86,18 @@ export async function buildOfflineManifestCopies(
             : []
           ).map((seat) => [seat.id, seat.generation]),
         );
+        const crewIncarnations = new Map(
+          (witnessEnabled
+            ? await tx
+                .select({
+                  personId: tripAssignments.personId,
+                  incarnation: tripAssignments.offlineIncarnation,
+                })
+                .from(tripAssignments)
+                .where(eq(tripAssignments.tripId, tripId))
+            : []
+          ).map((crew) => [crew.personId, crew.incarnation]),
+        );
         // PGlite's database type includes its client handle while the
         // transaction executor intentionally does not. The manifest readers
         // use only Drizzle query methods, which both objects implement.
@@ -143,6 +155,31 @@ export async function buildOfflineManifestCopies(
         const rollCallWitnesses: Record<string, string> = {};
         const meetingDay = payload.rollCallMeetingDay ?? 0;
         for (const manifest of witnessEnabled ? manifests : []) {
+          for (const crew of manifest.crew) {
+            const incarnation = crewIncarnations.get(crew.id);
+            const context = crew.rollCallContext;
+            const frontier = context?.observedEvidenceIds ?? [];
+            if (
+              !incarnation ||
+              context?.unknownMeetingDay ||
+              (context && context.meetingDay !== meetingDay) ||
+              frontier.length > 200
+            )
+              continue;
+            rollCallWitnesses[`crew:${crew.id}:${manifest.checkpoint}`] = signRollCallWitness({
+              shopId: shop.id,
+              tripId,
+              snapshotId,
+              subjectKind: "crew",
+              subjectId: crew.id,
+              checkpoint: manifest.checkpoint,
+              meetingDay,
+              meetingGeneration: snapshot.meetingGeneration,
+              assignmentGeneration: 0,
+              originalPersonId: incarnation,
+              frontier,
+            });
+          }
           for (const diver of manifest.divers) {
             const generation = seatGenerations.get(diver.bookingId);
             const context = diver.rollCallContext;

@@ -17,7 +17,14 @@ import { carriedMissing, manifestRollCallView, standingByDay } from "@/lib/roll-
 import { rollCallDayOf, rollCallDayStarts } from "@/lib/trip-days";
 import type { DbExecutor } from "./client";
 import { crewMarks, seatMarks } from "./roll-call-subject";
-import { bookings, people, rollCallEvents, tripScheduleDays, trips } from "./schema";
+import {
+  bookings,
+  people,
+  rollCallEvents,
+  tripAssignments,
+  tripScheduleDays,
+  trips,
+} from "./schema";
 import { liveTrip } from "./trips-live";
 
 export type RollCallCausalSubject = {
@@ -116,7 +123,13 @@ export async function effectiveCausalRowsForDb<T extends { event: CausalEvent; d
 }
 
 export function recountKey(event: CausalEvent, day: number): string {
-  return recountScopeKey(event.shopId, event.tripId, event.bookingId, event.checkpoint, day);
+  return recountScopeKey(
+    event.shopId,
+    event.tripId,
+    event.bookingId ?? (event.crewPersonId ? `crew:${event.crewPersonId}` : null),
+    event.checkpoint,
+    day,
+  );
 }
 export function recountScopeKey(
   shopId: string,
@@ -142,9 +155,10 @@ export async function rollCallProjectionForDb<T extends { event: CausalEvent; da
   const bound = rows.filter(
     ({ event }) =>
       event.source === "offline" &&
-      ((event.subjectKind === "seat" && offlineRollCallWitnessEnabled()) ||
+      (offlineRollCallWitnessEnabled() ||
         event.offlineMeetingGeneration !== null ||
-        event.offlineAssignmentGeneration !== null),
+        event.offlineAssignmentGeneration !== null ||
+        event.offlineCrewAssignmentId !== null),
   );
   if (bound.length === 0)
     return { rows: effectiveCausalRows(rows, () => true), recount: new Set() };
@@ -166,10 +180,38 @@ export async function rollCallProjectionForDb<T extends { event: CausalEvent; da
           .innerJoin(trips, and(eq(trips.id, bookings.tripId), eq(trips.shopId, bookings.shopId)))
           .where(and(inArray(bookings.id, ids), liveTrip()));
   const byId = new Map(current.map((row) => [row.id, row]));
+  const crewTripIds = [
+    ...new Set(
+      bound.filter(({ event }) => event.subjectKind === "crew").map(({ event }) => event.tripId),
+    ),
+  ];
+  const currentCrew = crewTripIds.length
+    ? await db
+        .select({
+          tripId: trips.id,
+          shopId: trips.shopId,
+          meeting: trips.offlineMeetingGeneration,
+          personId: tripAssignments.personId,
+          incarnation: tripAssignments.offlineIncarnation,
+        })
+        .from(tripAssignments)
+        .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
+        .where(and(inArray(trips.id, crewTripIds), liveTrip()))
+    : [];
+  const crewById = new Map(currentCrew.map((row) => [`${row.tripId}:${row.personId}`, row]));
   const eligible = (event: CausalEvent) => {
     if (event.source !== "offline") return true;
-    if (event.subjectKind !== "seat")
-      return event.offlineMeetingGeneration === null && event.offlineAssignmentGeneration === null;
+    if (event.subjectKind === "crew") {
+      if (event.offlineMeetingGeneration === null && event.offlineCrewAssignmentId === null)
+        return !offlineRollCallWitnessEnabled();
+      const crew = crewById.get(`${event.tripId}:${event.crewPersonId}`);
+      return (
+        crew !== undefined &&
+        crew.shopId === event.shopId &&
+        crew.meeting === event.offlineMeetingGeneration &&
+        crew.incarnation === event.offlineCrewAssignmentId
+      );
+    }
     if (event.offlineMeetingGeneration === null && event.offlineAssignmentGeneration === null)
       return !offlineRollCallWitnessEnabled();
     if (!event.bookingId || event.subjectKind !== "seat") return false;
@@ -195,26 +237,33 @@ export async function rollCallProjectionForDb<T extends { event: CausalEvent; da
     const statement = event.statementStatus ?? event.status;
     if (
       eligible(event) ||
-      !event.bookingId ||
+      (!event.bookingId && !event.crewPersonId) ||
       statement === "cleared" ||
       (event.checkpoint === "departure" && statement !== "boarded")
     )
       continue;
     const key = recountKey(event, day);
-    const current = byId.get(event.bookingId);
+    const current = event.bookingId ? byId.get(event.bookingId) : undefined;
+    const crew = event.crewPersonId
+      ? crewById.get(`${event.tripId}:${event.crewPersonId}`)
+      : undefined;
     const live = (liveByKey.get(key) ?? []).reduce<CausalEvent | undefined>(
       (latest, candidate) => (!latest || latest.seq < candidate.seq ? candidate : latest),
       undefined,
     );
     const resolved =
-      current !== undefined &&
-      current.shopId === event.shopId &&
-      current.tripId === event.tripId &&
       live !== undefined &&
       live.seq > event.seq &&
       (live.statementStatus ?? live.status) !== "cleared" &&
-      live.offlineMeetingGeneration === current.meeting &&
-      live.offlineAssignmentGeneration === current.assignment;
+      ((current !== undefined &&
+        current.shopId === event.shopId &&
+        current.tripId === event.tripId &&
+        live.offlineMeetingGeneration === current.meeting &&
+        live.offlineAssignmentGeneration === current.assignment) ||
+        (crew !== undefined &&
+          crew.shopId === event.shopId &&
+          live.offlineMeetingGeneration === crew.meeting &&
+          live.offlineCrewAssignmentId === crew.incarnation));
     if (!resolved) recount.add(key);
   }
   const kept = rows.filter(

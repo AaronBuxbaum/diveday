@@ -176,12 +176,16 @@ export function DeckRollCall({
       photoPath: member.photoPath,
       role: t("manifest.deck.crew"),
       outstanding: !member.rollCall || missing || conflict,
-      attention: missing || conflict || view.reader.alerted.has(member.id),
-      requiresReview: missing || conflict || view.reader.alerted.has(member.id),
+      attention:
+        missing || conflict || !!member.recountRequired || view.reader.alerted.has(member.id),
+      requiresReview:
+        missing || conflict || !!member.recountRequired || view.reader.alerted.has(member.id),
       eventId: member.rollCall?.eventId,
       status: member.rollCall
         ? rollCallLabelText(t, rollCallLabel(view.checkpoint, member.rollCall))
-        : undefined,
+        : member.recountRequired
+          ? t("manifest.deck.recountRequired")
+          : undefined,
       observed: member.rollCall
         ? t("manifest.deck.observed", {
             time: formatDateTimeTz(

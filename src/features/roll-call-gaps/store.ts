@@ -14,7 +14,6 @@ import { liveTrip, seatNotCancelled } from "@/db/trips";
 import { hasReturned } from "@/lib/trips";
 import type { AppDb } from "../../db/client";
 import {
-  effectiveCausalRowsForDb,
   recountKey,
   recountScopeKey,
   rollCallProjectionForDb,
@@ -395,22 +394,21 @@ export async function listRollCallGaps(
       retracts: event.retractsEventId,
     };
   });
-  const crewEvents = (await effectiveCausalRowsForDb(db, rawCrewEvents)).map(
-    ({ event: raw, day }) => {
-      const event = asCrewMark(raw);
-      return {
-        tripId: event.tripId,
-        personId: event.crewPersonId,
-        checkpoint: event.checkpoint,
-        status: event.status,
-        day,
-        evidenceConflict: event.evidenceConflict,
-        occurredAt: event.occurredAt,
-        id: event.id,
-        retracts: event.retractsEventId,
-      };
-    },
-  );
+  const crewProjection = await rollCallProjectionForDb(db, rawCrewEvents);
+  const crewEvents = crewProjection.rows.map(({ event: raw, day }) => {
+    const event = asCrewMark(raw);
+    return {
+      tripId: event.tripId,
+      personId: event.crewPersonId,
+      checkpoint: event.checkpoint,
+      status: event.status,
+      day,
+      evidenceConflict: event.evidenceConflict,
+      occurredAt: event.occurredAt,
+      id: event.id,
+      retracts: event.retractsEventId,
+    };
+  });
 
   // Seats the desk turned away: off the boat at any checkpoint nobody at the
   // boat has recorded them at (`isTurnedAwayOffBoat`, issue #2907).
@@ -468,6 +466,12 @@ export async function listRollCallGaps(
   // on every trip it ever ran.
   const crewByTripId = new Map<string, Set<string>>();
   const crewMarksByTrip = new Map<string, CrewMark[]>();
+  for (const { event, day } of rawCrewEvents) {
+    if (!event.crewPersonId || !crewProjection.recount.has(recountKey(event, day))) continue;
+    const people = crewByTripId.get(event.tripId) ?? new Set<string>();
+    people.add(event.crewPersonId);
+    crewByTripId.set(event.tripId, people);
+  }
   for (const event of crewEvents) {
     const marks = crewMarksByTrip.get(event.tripId) ?? [];
     marks.push({ ...event, subject: event.personId, day: event.day });
@@ -586,7 +590,14 @@ export async function listRollCallGaps(
               ? undefined
               : state,
           ),
-        crewStates: (personId) => crewStates(day, personId),
+        crewStates: (personId) =>
+          crewStates(day, personId).map((state, index) =>
+            crewProjection.recount.has(
+              recountScopeKey(shopId, trip.id, `crew:${personId}`, checkpoints[index] ?? "", day),
+            )
+              ? undefined
+              : state,
+          ),
         diverRisk: (id) =>
           rawEvents.some(
             ({ event, day: eventDay }) =>
@@ -599,6 +610,13 @@ export async function listRollCallGaps(
             (mark) => mark.subject === id && mark.status !== "cleared",
           ),
         crewRisk: (id) =>
+          rawCrewEvents.some(
+            ({ event, day: eventDay }) =>
+              event.crewPersonId === id &&
+              event.tripId === trip.id &&
+              eventDay === day &&
+              crewProjection.recount.has(recountKey(event, eventDay)),
+          ) ||
           [...(crewStanding.get(-1)?.values() ?? [])].some(
             (mark) => mark.subject === id && mark.status !== "cleared",
           ),
@@ -607,6 +625,9 @@ export async function listRollCallGaps(
           !!diverStanding.get(day)?.get(`${id}\u0000${checkpoint}`)?.evidenceConflict ||
           diverStanding.get(-1)?.get(`${id}\u0000${checkpoint}`)?.status === "not_boarded",
         crewProtected: (id, checkpoint) =>
+          crewProjection.recount.has(
+            recountScopeKey(shopId, trip.id, `crew:${id}`, checkpoint, day),
+          ) ||
           !!crewStanding.get(day)?.get(`${id}\u0000${checkpoint}`)?.evidenceConflict ||
           crewStanding.get(-1)?.get(`${id}\u0000${checkpoint}`)?.status === "not_boarded",
         // Somebody counted on a later meeting day at the dock, or at this
@@ -781,9 +802,10 @@ function dayGaps(input: {
     for (let dive = 1; dive < checkpoints.length; dive++) {
       const state = states[dive];
       crewPopulation[dive] = (crewPopulation[dive] ?? 0) + 1;
-      if (state !== undefined) crewRecorded[dive] = (crewRecorded[dive] ?? 0) + 1;
       const protectedMissing =
         input.crewProtected?.(personId, checkpoints[dive] as string) === true;
+      if (state !== undefined || protectedMissing)
+        crewRecorded[dive] = (crewRecorded[dive] ?? 0) + 1;
       const seenLater =
         !protectedMissing && input.crewSeenLater(personId, checkpoints[dive] as string);
       if (isAccountedForAfterDive(state) || seenLater) continue;
@@ -799,7 +821,7 @@ function dayGaps(input: {
       crewUnaccounted[dive] = (crewUnaccounted[dive] ?? 0) + 1;
       if (state === "not_boarded") crewNotBackAboard[dive] = (crewNotBackAboard[dive] ?? 0) + 1;
       // Named on the record as a diver is (dock review S1 of #3896).
-      else if (!missingCrew && !states.slice(dive + 1).includes("boarded")) {
+      else if (!missingCrew && (protectedMissing || !states.slice(dive + 1).includes("boarded"))) {
         crewAwaitingAt.set(personId, [...(crewAwaitingAt.get(personId) ?? []), dive]);
       }
     }
