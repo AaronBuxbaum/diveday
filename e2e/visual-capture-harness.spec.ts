@@ -5,7 +5,7 @@
  * `e2e/visual-harness.ts`, and the procedure is the e2e-and-visual skill.
  */
 import { readdirSync, readFileSync } from "node:fs";
-import type { Page } from "@playwright/test";
+import { errors, type Page } from "@playwright/test";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import { holdClientChunk } from "./hold-client-chunk";
 import { seedFacts } from "./shop-facts";
@@ -337,6 +337,30 @@ test.describe("capture harness", () => {
     // so the probe has to be able to say so. A wedged renderer is the *other*
     // sentence, and telling them apart is the whole point of asking.
     expect(reported).toContain("the page is alive");
+  });
+
+  test("a screenshot that hits Playwright's own timeout on a silent renderer is reported as the wedge", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    const realWarn = console.warn;
+    console.warn = () => {};
+    try {
+      // Playwright's 15s screenshot deadline fires before the driver-side
+      // give-up race (#4795): the failure must still carry the probe's verdict.
+      page.screenshot = () => {
+        // From here the renderer never answers, so the probe has to say wedged.
+        page.evaluate = () => new Promise<never>(() => {});
+        return Promise.reject(
+          new errors.TimeoutError("page.screenshot: Timeout 15000ms exceeded."),
+        );
+      };
+      await expect(capture(page, "screenshot-timeout-wedge", "light")).rejects.toThrow(
+        "wedged, not slow",
+      );
+    } finally {
+      console.warn = realWarn;
+    }
   });
 
   test("fonts that miss their bound cannot reach the screenshot", async ({ page }) => {

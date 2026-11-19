@@ -1,6 +1,12 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import type { Browser, BrowserContext, Locator, Page } from "@playwright/test";
+import {
+  type Browser,
+  type BrowserContext,
+  errors,
+  type Locator,
+  type Page,
+} from "@playwright/test";
 import { requireFreshBuild } from "../scripts/e2e-build-evidence.mjs";
 import {
   captureBuildBoundary,
@@ -1444,7 +1450,21 @@ async function screenshotOrGiveUp(page: Page, path: string) {
     }),
   ]);
   clearTimeout(timer);
-  if (outcome.state === "failed") throw outcome.error;
+  if (outcome.state === "failed") {
+    // Playwright's own 15s deadline can fire before the give-up race does
+    // (run 44555068501, #4795), and it says only "Timeout exceeded". A timeout
+    // is the one failure that can be the wedge, so it earns the same probe and
+    // the same verdict; any other error is ours and passes through untouched.
+    if (!(outcome.error instanceof errors.TimeoutError) || (await probeRenderer(page))) {
+      throw outcome.error;
+    }
+    await closeWedgedPage(page);
+    throw new Error(
+      `visual: page.screenshot timed out at ${page.url()} (${path}) and the renderer did not ` +
+        "answer a trivial evaluate, so it is wedged, not slow — the known, unattributed " +
+        `Chromium wedge (see the debug skill's visual-capture section). ${outcome.error.message}`,
+    );
+  }
   if (outcome.state === "done") {
     await recordCapture(page, path, build);
     return;
