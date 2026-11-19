@@ -88,9 +88,6 @@ const metadataFileNames = new Set(["opengraph-image.tsx", "twitter-image.tsx", "
  * exemption by taking one.
  */
 const exemptPaths = new Set([
-  // Paints the fixed materials of a boat illustration into a canvas bitmap.
-  "src/components/marketing-boat-model.ts",
-  "src/components/marketing-boat-renderer.ts",
   "src/app/_og/card.tsx",
   "src/app/_brand/colors.ts",
   // Satori's year-card palette is composited into a standalone bitmap; its

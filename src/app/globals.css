@@ -2331,6 +2331,91 @@ select:not([multiple]):not([size]):dir(rtl) {
   animation-delay: 120ms;
 }
 
+/*
+ * The homepage group chat (`MarketingGroupChat`). A line lands by growing into
+ * its place, so the lines above it are pushed up rather than jumped; the
+ * typing dots, the waiting nudge and the count's one flash are the only other
+ * motion. The reduced-motion kill-switch below covers all four, and a reader
+ * who asked for it is sent the finished chat and never the dots.
+ */
+@keyframes marketing-chat-in {
+  from {
+    max-height: 0;
+    opacity: 0;
+    transform: translateY(8px) scale(0.96);
+  }
+  to {
+    max-height: 20rem;
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes marketing-chat-dot {
+  0%,
+  60%,
+  100% {
+    opacity: 0.35;
+    transform: translateY(0);
+  }
+  30% {
+    opacity: 1;
+    transform: translateY(-3px);
+  }
+}
+
+@keyframes marketing-chat-nudge {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-primary) 35%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 6px color-mix(in srgb, var(--color-primary) 0%, transparent);
+  }
+}
+
+@keyframes marketing-chat-flash {
+  from {
+    transform: scale(1.12);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+.marketing-chat-in {
+  transform-origin: bottom left;
+  animation: marketing-chat-in 260ms var(--ease-out-soft) both;
+}
+
+.marketing-chat-in.items-end {
+  transform-origin: bottom right;
+}
+
+.marketing-chat-dot {
+  animation: marketing-chat-dot 1100ms ease-in-out infinite;
+}
+
+.marketing-chat-dot:nth-child(3) {
+  animation-delay: 150ms;
+}
+
+.marketing-chat-dot:nth-child(4) {
+  animation-delay: 300ms;
+}
+
+.marketing-chat-nudge {
+  animation: marketing-chat-nudge 1400ms ease-in-out infinite;
+}
+
+.marketing-chat-flash {
+  animation: marketing-chat-flash 420ms var(--ease-spring) both;
+}
+
+.marketing-chat-scroll {
+  scrollbar-width: none;
+}
+
 /* Toast exit — the inverse of rise-in, for a toast fading/settling down
    before it unmounts (UndoToast). Reduced-motion kill-switch below covers it;
    the unmount itself is still driven by a timer, not this animation ending,
