@@ -1101,6 +1101,16 @@ export const OXFORD_PHRASES = [
   "strobe and video light positioning",
   "first aid and wound care",
   "running over and around it",
+  "dated and marked",
+  "is trusted and marked",
+  "copied in and made",
+  "mottled brown and gray",
+  "perched on corals and sponges",
+  "draped over sponges and sea fans",
+  "dived along the wall and back",
+  "seized by US Customs and sunk",
+  "covered in soft corals and sea fans",
+  "dressed in barrel and basket sponges",
 ];
 
 function before0(value, index) {
@@ -1129,7 +1139,8 @@ export function oxfordCommas(value, key = "") {
     if (/\beither\b/i.test(`${before0(value, match.index)} ${item}`)) continue;
     if (OXFORD_DIRECTIONS.has(item.toLowerCase())) continue;
     if (/^(?:and|or)$/i.test(itemWords[0])) continue;
-    if (/ed$/i.test(itemWords[0]) || /ed$/i.test(itemWords[itemWords.length - 1])) continue;
+    const participle =
+      /ed$/i.test(itemWords[0]) || /ed$/i.test(itemWords[itemWords.length - 1]);
     // Inside an ICU argument ("{count, plural, one {…}"), the comma is syntax.
     const before = value.slice(0, match.index);
     const open = before.lastIndexOf("{");
@@ -1142,7 +1153,11 @@ export function oxfordCommas(value, key = "") {
     const previous = parts[parts.length - 2];
     let list = false;
     if (parts.length >= 3) {
+      // Three or more parts are a list even when the last two are participles
+      // ("booked, signed, checked and accounted for").
       list = wordCount(previous) <= 5;
+    } else if (participle) {
+      continue;
     } else {
       const lead = previous.trim().split(/\s+/);
       list =

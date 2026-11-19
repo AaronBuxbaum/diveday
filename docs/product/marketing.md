@@ -88,7 +88,7 @@ and listed the rest in a closed index on `/product`.
   shipped workflow joins the group of the page a buyer would look for it on, and a feature page's
   checklist is its group, whole.
 - **The homepage follows one booking** (`src/app/(marketing)/page.tsx`). The title says what the shop gets
-  ("Every diver booked, signed, checked and accounted for") and the lede says what DiveDay is: the
+  ("Every diver booked, signed, checked, and accounted for") and the lede says what DiveDay is: the
   journey from online booking to dock readiness. Beside the headline, a phone shows the demo shop's
   crew in a group chat the night before the 7:30 boat (`MarketingGroupChat`; Aaron, 2026-11-19).
   Sal, Keiko, and Marcus (`src/db/seed-cast.ts`) try to work out whether Tom signed his waiver,

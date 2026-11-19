@@ -782,6 +782,13 @@ describe("the Oxford comma", () => {
     );
   });
 
+  it("names a list of three participles, and leaves a pair of them alone", () => {
+    expect(missing("Every diver booked, signed, checked and accounted for")).toEqual([
+      ", checked and",
+    ]);
+    expect(missing("The importer brings it across, dated and marked imported.")).toEqual([]);
+  });
+
   it("accepts a list that has it", () => {
     expect(missing("Bookings, forms, and trip details stay together.")).toEqual([]);
     expect(missing("Export, import, backups, and integrations")).toEqual([]);

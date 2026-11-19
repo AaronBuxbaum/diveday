@@ -421,7 +421,7 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   await expect(
     page.getByRole("heading", {
       level: 1,
-      name: "Every diver booked, signed, checked and accounted for",
+      name: "Every diver booked, signed, checked, and accounted for",
     }),
   ).toBeVisible();
   await expect(page.getByRole("link", { name: "Product" }).first()).toBeVisible();
@@ -1931,7 +1931,7 @@ test.describe("with Accept-Language: es", () => {
   /** One phrase per page, unique to its body and absent from the chrome. */
   const bodyCopy = {
     "/": {
-      english: "Every diver booked, signed, checked and accounted for",
+      english: "Every diver booked, signed, checked, and accounted for",
       spanish: "Cada buceador reservado, firmado, verificado y localizado",
     },
     "/product": {

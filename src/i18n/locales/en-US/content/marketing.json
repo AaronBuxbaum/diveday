@@ -1,6 +1,6 @@
 {
   "home": {
-    "heroTitle": "Every diver booked, signed, checked and accounted for",
+    "heroTitle": "Every diver booked, signed, checked, and accounted for",
     "heroDescription": "Welcome the next group knowing who’s ready and what each diver still needs. Bookings, forms, and trip details stay together for the desk and dock crews.",
     "heroPriceLine": "One flat price of {price} {cadence}, and no cut of your bookings.",
     "diverDoor": "Booked a dive?",
@@ -292,7 +292,7 @@
     "courses": {
       "item1": "Course pages with prices, prerequisites, plans, and dates, one agency’s ladder at a time",
       "item2": "A course catalog that reads in the order you teach it",
-      "item3": "Starter pages from PADI, SSI or SDI, copied in and made your own",
+      "item3": "Starter pages from PADI, SSI, or SDI, copied in and made your own",
       "item4": "A cover photo and up to eight more on each course page",
       "item5": "Seats on a PADI Open Water session capped by its instructors and assistants, and on any try dive by its instructors alone",
       "item6": "A course’s minimum age confirmed by whoever books online, and checked at boarding against the date of birth on the diver’s record",
@@ -487,7 +487,7 @@
         },
         "step3": {
           "title": "Check a few returning divers",
-          "detail": "Look for their names, contact details and certification numbers. Check whether history and certifications need separate files or manual matching."
+          "detail": "Look for their names, contact details, and certification numbers. Check whether history and certifications need separate files or manual matching."
         },
         "step4": {
           "title": "Preview the sample with us",
