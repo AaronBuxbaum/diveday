@@ -35,7 +35,8 @@ export function ReviewObservation({
     setOriginalName(null);
     setSameAssignment(false);
     try {
-      const tenant = await reviewTenant?.();
+      if (!reviewTenant) throw new Error("tenant unavailable");
+      const tenant = await reviewTenant();
       if (!tenant) throw new Error("tenant unavailable");
       const current = await readReviewContext(event, tenant, reviewTenant, (name, matches) => {
         setOriginalName(name);
