@@ -7,6 +7,7 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { and, eq, isNull, sql } from "drizzle-orm";
 import { expect, it } from "vitest";
+import { departureCounts } from "@/features/departure-counts/store";
 import { nowDate } from "@/lib/clock";
 import { canonicalRollCallEvidenceId } from "@/lib/roll-call-causality";
 import { describePostgres, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
@@ -370,6 +371,10 @@ describePostgres("mixed-version offline event boundary", () => {
     expect(
       beforeIntake?.divers.find((d) => d.bookingId === subject.booking.id)?.rollCall?.state,
     ).toBe("not_boarded");
+    const beforeCounts = (
+      await departureCounts(pg.db, shop.id, [trip.id], { now: trip.startsAt })
+    ).get(trip.id);
+    if (!beforeCounts) throw new Error("departure counts missing");
     const acceptedId = crypto.randomUUID();
     let entered!: () => void;
     let release!: () => void;
@@ -398,6 +403,11 @@ describePostgres("mixed-version offline event boundary", () => {
     expect
       .soft(afterEdit?.divers.find((d) => d.bookingId === subject.booking.id)?.rollCall?.state)
       .not.toBe("boarded");
+    const afterCounts = (
+      await departureCounts(pg.db, shop.id, [trip.id], { now: trip.startsAt })
+    ).get(trip.id);
+    expect.soft(afterCounts?.back).toBe(beforeCounts.back);
+    expect.soft(afterCounts?.missing).toBe(beforeCounts.missing);
     expect(await verifyAndWrite(current, acceptedId)).toMatchObject({ ok: true, duplicate: true });
     expect(await verifyAndWrite(current, crypto.randomUUID())).toBe("review");
   });
