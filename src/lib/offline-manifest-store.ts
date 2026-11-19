@@ -32,7 +32,7 @@ import {
   sendableOfflineRollCallEvents,
   withMedicalAlertWords,
 } from "./offline-manifests";
-import { ROLL_CALL_REVIEW_HEADERS } from "./roll-call-protocol";
+import { ROLL_CALL_WITNESS_HEADERS } from "./roll-call-protocol";
 
 const DB_NAME = "diveday-offline-manifests";
 const DB_VERSION = 2;
@@ -1311,8 +1311,22 @@ export async function appendOfflineRollCall(
     if (!allowed) {
       throw new OfflineManifestError("not_allowed");
     }
+    const witnessKey =
+      subject.kind === "crew"
+        ? `crew:${subject.crewPersonId}:${input.checkpoint}`
+        : `seat:${subject.bookingId}:${input.checkpoint}`;
+    const witness =
+      !input.snapshotId || input.snapshotId === envelope.snapshot.snapshotId
+        ? envelope.snapshot.rollCallWitnesses?.[witnessKey]
+        : undefined;
     envelope.events.push({
       ...input,
+      ...(witness
+        ? {
+            rollCallWitness: witness,
+            meetingDay: input.meetingDay ?? envelope.snapshot.rollCallMeetingDay ?? 0,
+          }
+        : {}),
       clientEventId: eventIdentity,
       snapshotId: input.snapshotId ?? envelope.snapshot.snapshotId,
       snapshotSavedAt: input.snapshotSavedAt ?? envelope.snapshot.savedAt,
@@ -1466,7 +1480,7 @@ async function postPendingEvents(batch: {
   const roundTrip = (async () => {
     const response = await fetch("/api/offline-manifests/sync", {
       method: "POST",
-      headers: { ...ROLL_CALL_REVIEW_HEADERS, "content-type": "application/json" },
+      headers: { ...ROLL_CALL_WITNESS_HEADERS, "content-type": "application/json" },
       body: JSON.stringify({ ...batch, includeStoredInstants: true, includeCausalSnapshots: true }),
       signal: controller.signal,
     });
@@ -1541,7 +1555,7 @@ export async function syncOfflineManifest(
   const pending = sendableOfflineRollCallEvents(envelope.events);
   const reviewEvents = heldOfflineRollCallNotes(envelope.events);
   const pendingChecklist = envelope.checklistEvents.filter(
-    (event) => event.syncStatus === "pending",
+    (event) => event.syncStatus === "pending" && !event.reviewRequired,
   );
   const pendingArrivals = offlineArrivalEvents(envelope).filter(
     (event) => event.syncStatus === "pending",
@@ -1637,8 +1651,9 @@ export async function syncOfflineManifest(
     >(
       event: T,
       rollCall = false,
+      checklist = false,
     ) => {
-      if (rollCall && event.syncStatus !== "pending") return event;
+      if ((rollCall || checklist) && event.syncStatus !== "pending") return event;
       const result = byId.get(event.clientEventId);
       if (!result)
         return rollCall && postedIds.has(event.clientEventId)
@@ -1653,14 +1668,19 @@ export async function syncOfflineManifest(
           ? { ...event, reviewRequired: true, rejectionReason: "unrecognized_observation" }
           : event;
       const review =
-        rollCall &&
+        (rollCall || checklist) &&
         (event.reviewRequired ||
           (result.status === "rejected" &&
             [
-              "booking_unavailable",
-              "trip_unavailable",
-              "crew_not_assigned",
-              "causal_dependency_unresolved",
+              ...(rollCall
+                ? [
+                    "booking_unavailable",
+                    "trip_unavailable",
+                    "crew_not_assigned",
+                    "causal_dependency_unresolved",
+                  ]
+                : []),
+              "review_required",
             ].includes(result.reason ?? "")));
       return {
         ...event,
@@ -1686,7 +1706,9 @@ export async function syncOfflineManifest(
         ? { ...event, reviewRequired: true, rejectionReason: "causal_dependency_unresolved" }
         : event,
     );
-    current.checklistEvents = current.checklistEvents.map((event) => applyResult(event));
+    current.checklistEvents = current.checklistEvents.map((event) =>
+      applyResult(event, false, true),
+    );
     current.arrivalEvents = offlineArrivalEvents(current).map((event) => applyResult(event));
     const db = await openDatabase();
     try {

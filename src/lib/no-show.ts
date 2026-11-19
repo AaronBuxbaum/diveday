@@ -90,6 +90,7 @@ export type NoShowGate =
   | "eligible"
   | "already_boarded"
   | "already_missing_after_dive"
+  | "presence_uncertain"
   | "already_marked"
   | "not_booked"
   | "trip_cancelled"
@@ -126,7 +127,7 @@ export type NoShowGateInput = {
    * the person the crew were looking for (dive-domain-expert review, issue
    * #1704).
    */
-  onTheWater: "boarded" | "missing_after_dive" | null;
+  onTheWater: "boarded" | "missing_after_dive" | "uncertain" | null;
   tripStatus: "scheduled" | "cancelled";
   startsAt: Date;
   now: Date;
@@ -158,6 +159,7 @@ export function noShowGate(input: NoShowGateInput): NoShowGate {
   // whatever the row says.
   if (input.onTheWater === "boarded") return "already_boarded";
   if (input.onTheWater === "missing_after_dive") return "already_missing_after_dive";
+  if (input.onTheWater === "uncertain") return "presence_uncertain";
   if (input.bookingStatus === "no_show") return "already_marked";
   if (!seatIsHeld(input.bookingStatus)) return "not_booked";
   if (input.tripStatus === "cancelled") return "trip_cancelled";

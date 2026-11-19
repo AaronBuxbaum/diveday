@@ -7,6 +7,7 @@ import { tripGateBinding, verifyTripAdmissionGate } from "@/lib/trip-admission-g
 import { DETAILS_SAVE_NOTICES } from "./details-save-notices";
 import { MOVE_SEAT_NOTICES } from "./move-seat-notices";
 import { ROSTER_PAYMENT_NOTICES } from "./roster-payment-notices";
+import { ROSTER_REMOVAL_NOTICES } from "./roster-removal-notices";
 import { EDIT_TRIP_FORMS, ROSTER_FORMS } from "./trip-notice-views";
 import { TRIP_UNDO_NOTICES } from "./trip-undo-notices";
 
@@ -129,22 +130,7 @@ const NOTICE_KEYS: Record<
     key: "trips.notices.bookingRemovedRefundOwner",
   },
   "booking-restored": { form: "roster", tone: "success", key: "trips.notices.bookingRestored" },
-  // Refused: the boat carried this seat or may be carrying it (H-20261015-aboard-diver-removal-at). Nothing
-  // changed, and the row stays open on the Remove that was tapped.
-  "booking-remove-aboard": {
-    form: "roster",
-    tone: "danger",
-    key: "trips.roster.removeAboard",
-    named: true,
-  },
-  // Refused the same way for a seat nobody counted at the dock of a sailed
-  // departure: never "sailed", and the way through is the dock's Not boarded.
-  "booking-remove-uncounted": {
-    form: "roster",
-    tone: "danger",
-    key: "trips.roster.removeUncounted",
-    named: true,
-  },
+  ...ROSTER_REMOVAL_NOTICES,
   // A seat moved to another departure, or why it stayed (ADR 20261013-staff-move-a-seat).
   ...MOVE_SEAT_NOTICES,
   "seat-move-not-movable": {

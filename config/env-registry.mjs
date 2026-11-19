@@ -1346,6 +1346,13 @@ export const ENV_GROUPS = [
         absent: "the rate limiter runs",
       },
       {
+        key: "DIVEDAY_OFFLINE_ROLL_CALL_WITNESS",
+        from: "harness",
+        targets: NOWHERE,
+        forbiddenInProduction: true,
+        absent: "the experimental offline roll-call witness path stays off",
+      },
+      {
         key: "DIVEDAY_TEST_CACHE_DIR",
         from: "harness",
         targets: NOWHERE,

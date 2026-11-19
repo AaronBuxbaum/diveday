@@ -653,11 +653,14 @@ async function replaceScheduleDays(
     .for("update");
   const changed =
     before.length !== after.length ||
-    before.some(
-      (day, index) =>
-        day.startsAt.getTime() !== after[index]?.startsAt.getTime() ||
-        day.endsAt.getTime() !== after[index]?.endsAt.getTime(),
-    );
+    before.some((day, index) => {
+      const next = after[index];
+      return (
+        !next ||
+        day.startsAtMicros !== String(BigInt(next.startsAt.getTime()) * 1000n) ||
+        day.endsAtMicros !== String(BigInt(next.endsAt.getTime()) * 1000n)
+      );
+    });
   // Keep the existing normalization of any non-consecutive stored day numbers.
   if (
     after.length > 0 &&
@@ -899,11 +902,13 @@ async function lockTripForDefinitionEdit(tx: DbExecutor, shopId: string, tripId:
       // calendar client re-alerts on are when the boat leaves and where it
       // goes, so both have to be compared against what the patch asks for.
       startsAt: trips.startsAt,
+      startsAtMicros: sql<string>`((extract(epoch from ${trips.startsAt}) * 1000000)::bigint)::text`,
       // Read so a moved start time is told to the crew of a running
       // departure only (#2283).
       status: trips.status,
       // Read so a changed return time files the activity line too (#2313).
       endsAt: trips.endsAt,
+      endsAtMicros: sql<string>`((extract(epoch from ${trips.endsAt}) * 1000000)::bigint)::text`,
       meetingPointLabel: trips.meetingPointLabel,
       meetingPointAddress: trips.meetingPointAddress,
       arrivalLandmark: trips.arrivalLandmark,
@@ -1245,6 +1250,15 @@ async function updateTripRecord(
     const timesMoved =
       existing.startsAt.getTime() !== patch.startsAt.getTime() ||
       existing.endsAt.getTime() !== patch.endsAt.getTime();
+    const meetingTimesChanged =
+      existing.startsAtMicros !== String(BigInt(patch.startsAt.getTime()) * 1000n) ||
+      existing.endsAtMicros !== String(BigInt(patch.endsAt.getTime()) * 1000n);
+    if (meetingTimesChanged || scheduleDaysMoved) {
+      await tx
+        .update(trips)
+        .set({ offlineMeetingGeneration: sql`${trips.offlineMeetingGeneration} + 1` })
+        .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)));
+    }
     timesChanged = timesMoved;
     // "Working it anyway" was said about the old days (#2678 reviews).
     if (timesMoved || scheduleDaysMoved) {

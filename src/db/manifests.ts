@@ -29,6 +29,10 @@ import {
 import { seatIsHeld } from "@/lib/no-show";
 import { verifyOfflineErasureEpoch } from "@/lib/offline-erasure-epoch";
 import { offlineEventInstant } from "@/lib/offline-events";
+import {
+  offlineRollCallWitnessEnabled,
+  verifyRollCallWitness,
+} from "@/lib/offline-roll-call-witness";
 import type { ParticipantType } from "@/lib/participant-types";
 import { seatRefusal } from "@/lib/participant-types";
 import { diverPhotoDisplayPath } from "@/lib/person-photo";
@@ -74,6 +78,7 @@ import { rentalFitByBooking } from "./rental-fit";
 import {
   causalMeetingDay,
   causalRetractionTarget,
+  effectiveCausalRowsForDb,
   manifestRollCallReads,
   prepareCausalRollCall,
   refreshCausalRollCall,
@@ -267,13 +272,14 @@ async function listLatestRollCallsByCheckpoint(
       ),
     )
     .orderBy(...newestMarkFirst());
+  const effective = await effectiveCausalRowsForDb(db, rows);
   // The newest result per booking and checkpoint on the meeting day being
   // counted (#2557): a course's later day starts empty, except that an
   // earlier day's stated missing diver stays on screen until counted again,
   // and a `cleared` that names it takes an earlier mis-tap back
   // (`manifestRollCallView`). A standing `cleared` reads as awaiting.
   const view = manifestRollCallView(
-    rows
+    effective
       .map((row) => ({
         ...row,
         subject: row.event.bookingId ?? "",
@@ -371,9 +377,9 @@ export async function listDepartureRollCallByTrip(
   if (tripIds.length === 0) return byTrip;
   const rows = await db
     .select({
-      tripId: rollCallEvents.tripId,
-      bookingId: markBookingId(),
-      status: rollCallEvents.status,
+      event: rollCallEvents,
+      day: rollCallDayIndex(),
+      currentDay: rollCallCurrentDayIndex(),
     })
     .from(rollCallEvents)
     .innerJoin(bookings, and(eq(bookings.id, rollCallEvents.bookingId), seatNotCancelled))
@@ -382,23 +388,25 @@ export async function listDepartureRollCallByTrip(
         eq(rollCallEvents.shopId, shopId),
         seatMarks(),
         inArray(rollCallEvents.tripId, tripIds),
-        currentMeetingDayMarks(),
         eq(rollCallEvents.checkpoint, "departure"),
       ),
     )
     .orderBy(...newestMarkFirst());
+  const effective = await effectiveCausalRowsForDb(db, rows);
   // Newest first, so the first row seen per booking is its latest event.
   const seen = new Set<string>();
-  for (const row of rows) {
-    if (seen.has(row.bookingId)) continue;
-    seen.add(row.bookingId);
+  for (const row of effective) {
+    if (row.day !== row.currentDay) continue;
+    const event = asSeatMark(row.event);
+    if (seen.has(event.bookingId)) continue;
+    seen.add(event.bookingId);
     // A `cleared` row is staff undoing a mistake: the booking has a latest
     // event and it is neither result, so it drops out entirely rather than
     // being remembered as its previous one.
-    if (row.status !== "boarded" && row.status !== "not_boarded") continue;
-    const states = byTrip.get(row.tripId) ?? new Map<string, "boarded" | "not_boarded">();
-    states.set(row.bookingId, row.status);
-    byTrip.set(row.tripId, states);
+    if (event.status !== "boarded" && event.status !== "not_boarded") continue;
+    const states = byTrip.get(event.tripId) ?? new Map<string, "boarded" | "not_boarded">();
+    states.set(event.bookingId, event.status);
+    byTrip.set(event.tripId, states);
   }
   return byTrip;
 }
@@ -431,10 +439,9 @@ export async function listBoardedAtAnyCheckpointByTrip(
   if (tripIds.length === 0) return byTrip;
   const rows = await db
     .select({
-      tripId: rollCallEvents.tripId,
-      bookingId: markBookingId(),
-      checkpoint: rollCallEvents.checkpoint,
-      status: rollCallEvents.status,
+      event: rollCallEvents,
+      day: rollCallDayIndex(),
+      currentDay: rollCallCurrentDayIndex(),
     })
     .from(rollCallEvents)
     .innerJoin(bookings, and(eq(bookings.id, rollCallEvents.bookingId), seatNotCancelled))
@@ -443,21 +450,23 @@ export async function listBoardedAtAnyCheckpointByTrip(
         eq(rollCallEvents.shopId, shopId),
         seatMarks(),
         inArray(rollCallEvents.tripId, [...tripIds]),
-        currentMeetingDayMarks(),
       ),
     )
     .orderBy(...newestMarkFirst());
+  const effective = await effectiveCausalRowsForDb(db, rows);
   // Newest first, so the first row per booking and checkpoint is that
   // checkpoint's standing result.
   const seen = new Set<string>();
-  for (const row of rows) {
-    const key = `${row.bookingId}\u0000${row.checkpoint}`;
+  for (const row of effective) {
+    if (row.day !== row.currentDay) continue;
+    const event = asSeatMark(row.event);
+    const key = `${event.bookingId}\u0000${event.checkpoint}`;
     if (seen.has(key)) continue;
     seen.add(key);
-    if (row.status !== "boarded") continue;
-    const aboard = byTrip.get(row.tripId) ?? new Set<string>();
-    aboard.add(row.bookingId);
-    byTrip.set(row.tripId, aboard);
+    if (event.status !== "boarded") continue;
+    const aboard = byTrip.get(event.tripId) ?? new Set<string>();
+    aboard.add(event.bookingId);
+    byTrip.set(event.tripId, aboard);
   }
   return byTrip;
 }
@@ -520,16 +529,10 @@ async function seatRollCallRows(
   tripIds: readonly string[],
 ): Promise<AfterDiveRow[]> {
   if (tripIds.length === 0) return [];
-  return db
+  const rows = await db
     .select({
-      tripId: rollCallEvents.tripId,
-      bookingId: markBookingId(),
-      checkpoint: rollCallEvents.checkpoint,
-      status: rollCallEvents.status,
-      evidenceConflict: rollCallEvents.evidenceConflict,
+      event: rollCallEvents,
       day: rollCallDayIndex(),
-      id: rollCallEvents.id,
-      retracts: rollCallEvents.retractsEventId,
     })
     .from(rollCallEvents)
     .innerJoin(bookings, and(eq(bookings.id, rollCallEvents.bookingId), seatNotCancelled))
@@ -540,7 +543,21 @@ async function seatRollCallRows(
         inArray(rollCallEvents.tripId, [...tripIds]),
       ),
     )
-    .orderBy(...newestMarkFirst()) as Promise<AfterDiveRow[]>;
+    .orderBy(...newestMarkFirst());
+  const effective = await effectiveCausalRowsForDb(db, rows);
+  return effective.map(({ event: raw, day }) => {
+    const event = asSeatMark(raw);
+    return {
+      tripId: event.tripId,
+      bookingId: event.bookingId,
+      checkpoint: event.checkpoint,
+      status: event.status,
+      evidenceConflict: event.evidenceConflict,
+      day,
+      id: event.id,
+      retracts: event.retractsEventId,
+    };
+  });
 }
 
 /**
@@ -846,8 +863,7 @@ export async function onTheWaterByRollCall(
 ): Promise<OnTheWater> {
   const rows = await db
     .select({
-      checkpoint: rollCallEvents.checkpoint,
-      status: rollCallEvents.status,
+      event: rollCallEvents,
       day: rollCallDayIndex(),
     })
     .from(rollCallEvents)
@@ -861,7 +877,14 @@ export async function onTheWaterByRollCall(
       ),
     )
     .orderBy(...newestMarkFirst());
-  const fromDivers = standingRowMeansSailed(rows);
+  const effectiveDivers = await effectiveCausalRowsForDb(db, rows);
+  const fromDivers = standingRowMeansSailed(
+    effectiveDivers.map(({ event, day }) => ({
+      checkpoint: event.checkpoint,
+      status: event.status,
+      day,
+    })),
+  );
   if (fromDivers) return fromDivers;
 
   // **The crew roll call, for a staffer who holds a seat on a trip they crew.**
@@ -882,8 +905,7 @@ export async function onTheWaterByRollCall(
   // not answer for a crew list they are no longer on.
   const crewRows = await db
     .select({
-      checkpoint: rollCallEvents.checkpoint,
-      status: rollCallEvents.status,
+      event: rollCallEvents,
       day: rollCallDayIndex(),
     })
     .from(rollCallEvents)
@@ -904,7 +926,22 @@ export async function onTheWaterByRollCall(
     )
     .where(and(eq(rollCallEvents.shopId, shopId), crewMarks(), eq(rollCallEvents.tripId, tripId)))
     .orderBy(...newestMarkFirst());
-  return standingRowMeansSailed(crewRows);
+  const effectiveCrew = await effectiveCausalRowsForDb(db, crewRows);
+  const fromCrew = standingRowMeansSailed(
+    effectiveCrew.map(({ event, day }) => ({
+      checkpoint: event.checkpoint,
+      status: event.status,
+      day,
+    })),
+  );
+  if (fromCrew) return fromCrew;
+  const eligibleIds = new Set([...effectiveDivers, ...effectiveCrew].map(({ event }) => event.id));
+  const uncertain = [...rows, ...crewRows].some(
+    ({ event }) =>
+      !eligibleIds.has(event.id) &&
+      standingResultMeansSailed(event.checkpoint, event.statementStatus ?? event.status),
+  );
+  return uncertain ? "uncertain" : null;
 }
 
 /**
@@ -922,7 +959,7 @@ export async function onTheWaterByRollCall(
  * later checkpoint is aboard, and only the newest word per checkpoint is read
  * at all, so a `missing_after_dive` here is one nothing has retracted.
  */
-export type OnTheWater = "boarded" | "missing_after_dive" | null;
+export type OnTheWater = "boarded" | "missing_after_dive" | "uncertain" | null;
 
 /**
  * Newest-first rows, grouped to one standing result per checkpoint, asked
@@ -1535,6 +1572,7 @@ export type RecordRollCallOutcome =
         | "boat_full"
         | "invalid_checkpoint"
         | "newer_event_exists"
+        | "review_required"
         /**
          * The statement being retracted no longer stands — see
          * {@link causalRetractionTarget}. Spelled through
@@ -1956,7 +1994,7 @@ async function storedRollCallEvent(
   tx: DbExecutor,
   shopId: string,
   clientEventId: string,
-): Promise<StoredOfflineEvent | undefined> {
+): Promise<(StoredOfflineEvent & { witnessBound: boolean }) | undefined> {
   const [existing] = await tx
     .select({
       id: rollCallEvents.id,
@@ -1971,6 +2009,8 @@ async function storedRollCallEvent(
       captureContext: rollCallEvents.captureContext,
       retractsEventId: rollCallEvents.retractsEventId,
       source: rollCallEvents.source,
+      offlineMeetingGeneration: rollCallEvents.offlineMeetingGeneration,
+      offlineAssignmentGeneration: rollCallEvents.offlineAssignmentGeneration,
     })
     // diveday:roll-call-both-subjects: one id namespace; the kind read here decides duplicate or conflict.
     .from(rollCallEvents)
@@ -2000,6 +2040,8 @@ async function storedRollCallEvent(
   }
   return {
     id: existing.id,
+    witnessBound:
+      existing.offlineMeetingGeneration !== null && existing.offlineAssignmentGeneration !== null,
     subject: rollCallReplaySubject(existing.subjectKind, existing.tripId, markSubjectId(existing), {
       ...existing,
       meetingDay: captured?.meetingDay,
@@ -2043,6 +2085,7 @@ export async function recordRollCall(
     offlineSnapshotSavedAt?: Date;
     offlineSnapshotId?: string;
     offlineErasureEpochToken?: string;
+    rollCallWitness?: string;
     /**
      * What the crew observed about a person who is unaccounted for. Kept only
      * at an after-dive checkpoint (`rollCallNoteAllowed`) — a note posted at
@@ -2123,11 +2166,14 @@ async function writeRollCall(
   });
 
   if (input.clientEventId) {
+    const stored = await storedRollCallEvent(tx, input.shopId, input.clientEventId);
     const replayed = replayVerdict(
-      await storedRollCallEvent(tx, input.shopId, input.clientEventId),
+      stored,
       rollCallReplaySubject("seat", input.tripId, input.bookingId, input),
       "roll_call_events",
     );
+    if (replayed?.ok && offlineRollCallWitnessEnabled() && !stored?.witnessBound)
+      return refuse("review_required");
     if (replayed) return noteDisposition ? { ...replayed, noteDisposition } : replayed;
   }
 
@@ -2150,11 +2196,14 @@ async function writeRollCall(
   // as the newest row and is refused as `retraction_superseded`, and a
   // replayed mark reaches the insert and fails on the unique index.
   if (input.clientEventId) {
+    const stored = await storedRollCallEvent(tx, input.shopId, input.clientEventId);
     const replayed = replayVerdict(
-      await storedRollCallEvent(tx, input.shopId, input.clientEventId),
+      stored,
       rollCallReplaySubject("seat", input.tripId, input.bookingId, input),
       "roll_call_events",
     );
+    if (replayed?.ok && offlineRollCallWitnessEnabled() && !stored?.witnessBound)
+      return refuse("review_required");
     if (replayed) return noteDisposition ? { ...replayed, noteDisposition } : replayed;
   }
   if (lockedTripId !== input.tripId) return refuse("booking_unavailable");
@@ -2171,6 +2220,8 @@ async function writeRollCall(
       boatId: trips.boatId,
       capacity: trips.capacity,
       diverCapacity: trips.diverCapacity,
+      offlineMeetingGeneration: trips.offlineMeetingGeneration,
+      offlineAssignmentGeneration: bookings.offlineAssignmentGeneration,
     })
     .from(bookings)
     .innerJoin(trips, eq(trips.id, bookings.tripId))
@@ -2186,6 +2237,38 @@ async function writeRollCall(
     .limit(1)
     .for("update", { of: bookings });
   if (!booking) return refuse("booking_unavailable");
+  let verifiedWitness: ReturnType<typeof verifyRollCallWitness> = null;
+  if (source === "offline" && offlineRollCallWitnessEnabled() !== Boolean(input.rollCallWitness))
+    return refuse("review_required");
+  if (source === "offline" && input.rollCallWitness) {
+    if (!input.offlineSnapshotId || input.meetingDay === undefined)
+      return refuse("review_required");
+    verifiedWitness = verifyRollCallWitness(input.rollCallWitness, {
+      shopId: input.shopId,
+      tripId: input.tripId,
+      snapshotId: input.offlineSnapshotId,
+      subjectKind: "seat",
+      subjectId: input.bookingId,
+      checkpoint,
+      meetingDay: input.meetingDay,
+    });
+    if (
+      !verifiedWitness ||
+      verifiedWitness.meetingGeneration !== booking.offlineMeetingGeneration ||
+      verifiedWitness.assignmentGeneration !== booking.offlineAssignmentGeneration
+    )
+      return refuse("review_required");
+    const { causal } = await manifestRollCallReads(tx, input.shopId, input.tripId);
+    const frontier =
+      causal.contexts.get(`seat:${input.bookingId}/${checkpoint}`)?.observedEvidenceIds ?? [];
+    const observed = new Set((input.observedEvidenceIds ?? []).map((id) => id.toLowerCase()));
+    if (
+      causal.meetingDay !== input.meetingDay ||
+      JSON.stringify([...frontier].sort()) !== JSON.stringify(verifiedWitness.frontier) ||
+      verifiedWitness.frontier.some((id) => !observed.has(id))
+    )
+      return refuse("review_required");
+  }
   // Released seats have their own durable boarding-observation workflow. This
   // exception must not reclaim one or change any commercial/desk state.
   if (
@@ -2314,6 +2397,8 @@ async function writeRollCall(
       source,
       clientEventId: input.clientEventId ?? null,
       statementStatus: input.status,
+      offlineMeetingGeneration: verifiedWitness?.meetingGeneration ?? null,
+      offlineAssignmentGeneration: verifiedWitness?.assignmentGeneration ?? null,
       captureContext: {
         ...rawRollCallCapture(input),
         // Personal blocker reasons live only in readinessBlockers, whose
@@ -2426,6 +2511,7 @@ export type RecordCrewRollCallOutcome =
         | "crew_not_assigned"
         | "invalid_checkpoint"
         | "newer_event_exists"
+        | "review_required"
         /**
          * The statement being retracted no longer stands — see
          * {@link causalRetractionTarget}. Spelled through
@@ -2569,6 +2655,9 @@ export async function recordCrewRollCall(
           reason,
           ...(noteDisposition ? { noteDisposition } : {}),
         });
+        // Crew assignment generations are not yet issued; preserve the observation for review.
+        if (source === "offline" && offlineRollCallWitnessEnabled())
+          return refuse("review_required");
 
         // Idempotency first, exactly as the diver path does it: a sync the device
         // retried (the response never arrived, the tab was closed mid-flight) must

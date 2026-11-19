@@ -140,6 +140,8 @@ export const OFFLINE_MANIFEST_POST_TRIP_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
 export type OfflineManifestFreshness = "current" | "aging" | "stale";
 
 export type OfflineManifestPayload = {
+  /** Snapshot-scoped proof for offline seat observations, keyed by subject and checkpoint. */
+  rollCallWitnesses?: Record<string, string>;
   rollCallMeetingDay?: number;
   rollCallMeetingDays?: { startsAt: string; endsAt: string }[];
   selectedRollCallMeetingDay?: number;
@@ -645,6 +647,8 @@ export type OfflineManifestSnapshot = OfflineManifestPayload & {
  * no deploy that reaches a phone in a dry bag on a boat.
  */
 export type OfflineRollCallEvent = {
+  /** Snapshot-issued proof, carried unchanged with the observation. */
+  rollCallWitness?: string;
   /** Explicit per-seat physical observation; it grants no readiness or desk state. */
   physicalPresenceOnly?: boolean;
   observedEvidenceIds?: string[];
@@ -769,6 +773,8 @@ export function offlineRollCallSubject(
  * array.
  */
 export type OfflineChecklistEvent = {
+  /** The original tap is retained for staff review, not replayed automatically. */
+  reviewRequired?: boolean;
   clientEventId: string;
   snapshotId: string;
   snapshotSavedAt: string;
@@ -1021,7 +1027,9 @@ export function sendableOfflineEventCount(
 ): number {
   return (
     sendableOfflineRollCallEvents(envelope.events).length +
-    envelope.checklistEvents.filter((event) => event.syncStatus === "pending").length +
+    envelope.checklistEvents.filter(
+      (event) => event.syncStatus === "pending" && !event.reviewRequired,
+    ).length +
     offlineArrivalEvents(envelope).filter((event) => event.syncStatus === "pending").length
   );
 }
@@ -1054,7 +1062,11 @@ export function rejectedOfflineEventCount(
 ): number {
   return (
     countOfflineEvents(envelope, "rejected") +
-    envelope.events.filter((event) => event.syncStatus === "pending" && event.reviewRequired).length
+    envelope.events.filter((event) => event.syncStatus === "pending" && event.reviewRequired)
+      .length +
+    envelope.checklistEvents.filter(
+      (event) => event.syncStatus === "pending" && event.reviewRequired,
+    ).length
   );
 }
 

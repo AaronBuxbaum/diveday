@@ -6,6 +6,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { TEST_FROZEN_CLOCK } from "@/test/frozen-clock";
 import { withRefreshedSyncFrame } from "@/test/offline-sync-frame";
 import {
+  appendOfflineChecklistCheck,
   appendOfflineRollCall,
   beginOfflineTenantVerificationRound,
   loadOfflineManifest,
@@ -274,69 +275,129 @@ describe("offline roll-call review storage", () => {
       rejectionReason: "unrecognized_observation",
     });
   });
-  it("retains an unavailable subject for review while applying an independent event", async () => {
+  it.each(["booking_unavailable", "review_required"])(
+    "retains %s for review while applying an independent event",
+    async (reason) => {
+      const tripId = payload.manifests[0].trip.id;
+      await saveOfflineManifest(payload);
+      const first = await appendOfflineRollCall(tripId, {
+        bookingId: payload.manifests[0].divers[0].bookingId,
+        checkpoint: "departure",
+        status: "not_boarded",
+        note: "Synthetic observation",
+      });
+      const original = first.events[0];
+      const second = await appendOfflineRollCall(tripId, {
+        bookingId: payload.manifests[0].divers[0].bookingId,
+        checkpoint: "departure",
+        status: "not_boarded",
+      });
+      const independent = second.events[1];
+      let posts = 0;
+      server.use(
+        http.post("/api/offline-manifests/sync", () => {
+          posts++;
+          return HttpResponse.json(
+            withRefreshedSyncFrame(
+              payload,
+              {
+                results: [
+                  {
+                    clientEventId: original.clientEventId,
+                    status: "rejected",
+                    reason,
+                    noteDisposition: "discarded_unverified_snapshot",
+                  },
+                  { clientEventId: independent.clientEventId, status: "applied" },
+                ],
+              },
+              { events: second.events },
+            ),
+          );
+        }),
+      );
+      const synced = await syncOfflineManifest(tripId);
+      expect(synced?.events[0]).toMatchObject({
+        clientEventId: original.clientEventId,
+        syncStatus: "pending",
+        reviewRequired: true,
+        rejectionReason: reason,
+        note: null,
+        noteDisposition: "discarded_unverified_snapshot",
+      });
+      expect(synced?.events[1]).toMatchObject({
+        clientEventId: independent.clientEventId,
+        syncStatus: "applied",
+      });
+      expect((await loadOfflineManifest(tripId))?.events[0]).toEqual(synced?.events[0]);
+      await syncOfflineManifest(tripId);
+      expect(posts).toBe(1);
+      await patchStoredExpiresAt(tripId, EXPIRED_WITHIN_GRACE);
+      expect((await loadOfflineManifest(tripId))?.events[0]).toMatchObject({
+        clientEventId: original.clientEventId,
+        syncStatus: "pending",
+        reviewRequired: true,
+      });
+      await patchStoredExpiresAt(tripId, EXPIRED_PAST_GRACE);
+      expect(await loadOfflineManifest(tripId)).toBeNull();
+      expect(await readDiscardedOfflineRecords()).toMatchObject([{ tripId, pendingEvents: 1 }]);
+    },
+  );
+  it("retains a checklist review while an unrelated roll-call event syncs", async () => {
     const tripId = payload.manifests[0].trip.id;
-    await saveOfflineManifest(payload);
-    const first = await appendOfflineRollCall(tripId, {
-      bookingId: payload.manifests[0].divers[0].bookingId,
-      checkpoint: "departure",
-      status: "not_boarded",
-      note: "Synthetic observation",
-    });
-    const original = first.events[0];
-    const second = await appendOfflineRollCall(tripId, {
+    const checklistItemId = "44444444-4444-4444-4444-444444444444";
+    const copy = {
+      ...payload,
+      checklist: { items: [{ id: checklistItemId, label: "Oxygen aboard" }] },
+    };
+    await saveOfflineManifest(copy);
+    await appendOfflineRollCall(tripId, {
       bookingId: payload.manifests[0].divers[0].bookingId,
       checkpoint: "departure",
       status: "not_boarded",
     });
-    const independent = second.events[1];
+    const queued = await appendOfflineChecklistCheck(tripId, {
+      checklistItemId,
+      status: "checked",
+      note: "Synthetic note",
+    });
     let posts = 0;
     server.use(
       http.post("/api/offline-manifests/sync", () => {
         posts++;
         return HttpResponse.json(
           withRefreshedSyncFrame(
-            payload,
+            copy,
             {
               results: [
+                { clientEventId: queued.events[0].clientEventId, status: "applied" },
                 {
-                  clientEventId: original.clientEventId,
+                  clientEventId: queued.checklistEvents[0].clientEventId,
                   status: "rejected",
-                  reason: "booking_unavailable",
+                  reason: "review_required",
                   noteDisposition: "discarded_unverified_snapshot",
                 },
-                { clientEventId: independent.clientEventId, status: "applied" },
               ],
             },
-            { events: second.events },
+            { events: queued.events, checklistEvents: queued.checklistEvents },
           ),
         );
       }),
     );
     const synced = await syncOfflineManifest(tripId);
-    expect(synced?.events[0]).toMatchObject({
-      clientEventId: original.clientEventId,
+    expect(synced?.events[0]).toMatchObject({ syncStatus: "applied" });
+    expect(synced?.checklistEvents[0]).toMatchObject({
+      clientEventId: queued.checklistEvents[0].clientEventId,
       syncStatus: "pending",
       reviewRequired: true,
-      rejectionReason: "booking_unavailable",
+      rejectionReason: "review_required",
       note: null,
       noteDisposition: "discarded_unverified_snapshot",
     });
-    expect(synced?.events[1]).toMatchObject({
-      clientEventId: independent.clientEventId,
-      syncStatus: "applied",
-    });
-    expect((await loadOfflineManifest(tripId))?.events[0]).toEqual(synced?.events[0]);
+    expect((await loadOfflineManifest(tripId))?.checklistEvents[0]).toEqual(
+      synced?.checklistEvents[0],
+    );
     await syncOfflineManifest(tripId);
     expect(posts).toBe(1);
-    await patchStoredExpiresAt(tripId, EXPIRED_WITHIN_GRACE);
-    expect((await loadOfflineManifest(tripId))?.events[0]).toMatchObject({
-      clientEventId: original.clientEventId,
-      syncStatus: "pending",
-      reviewRequired: true,
-    });
-    await patchStoredExpiresAt(tripId, EXPIRED_PAST_GRACE);
-    expect(await loadOfflineManifest(tripId)).toBeNull();
-    expect(await readDiscardedOfflineRecords()).toMatchObject([{ tripId, pendingEvents: 1 }]);
   });
 });

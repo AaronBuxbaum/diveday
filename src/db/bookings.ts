@@ -2417,6 +2417,7 @@ async function moveBookingIn(
     .update(bookings)
     .set({
       tripId: target.id,
+      offlineAssignmentGeneration: sql`${bookings.offlineAssignmentGeneration} + 1`,
       // A plan belongs to the departure where staff made it.
       trainingPlanInstructorPersonId: null,
       trainingPlanByPersonId: null,
@@ -4271,6 +4272,7 @@ export async function splitBookingIdentity(
         .update(bookings)
         .set({
           personId: person.id,
+          offlineAssignmentGeneration: sql`case when ${bookings.personId} is distinct from ${person.id}::uuid then ${bookings.offlineAssignmentGeneration} + 1 else ${bookings.offlineAssignmentGeneration} end`,
           // A queued offline arrival saved before this was about another
           // person (issue #3830).
           seatReopenedAt: now,

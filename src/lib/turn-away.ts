@@ -146,6 +146,7 @@ export type TurnAwayGate =
   | "eligible"
   | "already_boarded"
   | "already_missing_after_dive"
+  | "presence_uncertain"
   | "already_marked"
   | "sailed"
   | "not_booked"
@@ -162,7 +163,7 @@ export type TurnAwayGateInput = {
    */
   checkedIn: boolean;
   /** As `NoShowGateInput.onTheWater`: `onTheWaterByRollCall` (src/db/manifests.ts). */
-  onTheWater: "boarded" | "missing_after_dive" | null;
+  onTheWater: "boarded" | "missing_after_dive" | "uncertain" | null;
   tripStatus: "scheduled" | "cancelled";
   startsAt: Date;
   now: Date;
@@ -190,6 +191,7 @@ function turnAwayDoor(
   // Safety first, ahead of every other condition so none of them can mask it.
   if (input.onTheWater === "boarded") return "already_boarded";
   if (input.onTheWater === "missing_after_dive") return "already_missing_after_dive";
+  if (input.onTheWater === "uncertain") return "presence_uncertain";
   if (input.bookingStatus === "no_show") return "already_marked";
   if (input.bookingStatus !== "booked") return "not_booked";
   // The scheduled start, the boundary "Not here" opens on (`noShowGate`), not

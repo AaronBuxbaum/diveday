@@ -470,6 +470,7 @@ async function claimSeatRecord(tx: DbExecutor, input: ClaimSeatInput): Promise<C
     .update(bookings)
     .set({
       personId: person.id,
+      offlineAssignmentGeneration: sql`case when ${bookings.personId} is distinct from ${person.id}::uuid then ${bookings.offlineAssignmentGeneration} + 1 else ${bookings.offlineAssignmentGeneration} end`,
       claimedAt: now,
       identityUnconfirmedAt: null,
       identityBookedAs: null,

@@ -32,6 +32,10 @@ function gate(overrides: Partial<TurnAwayGateInput> = {}) {
   });
 }
 
+it("holds an uncertain offline sighting for review", () => {
+  expect(gate({ onTheWater: "uncertain" })).toBe("presence_uncertain");
+});
+
 const rowAt = (now: Date): Omit<TurnAwayGateInput, "reason"> => ({
   bookingStatus: "booked",
   checkedIn: false,
