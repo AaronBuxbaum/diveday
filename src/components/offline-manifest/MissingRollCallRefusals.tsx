@@ -15,8 +15,8 @@ export function MissingRollCallRefusals({
   );
   if (!missing.length) return null;
   return (
-    <div role="status" className="mt-6 text-sm font-medium text-danger">
-      <ul>
+    <div className="mt-6 text-base text-foreground">
+      <ul className="space-y-4">
         {missing.map((event) => {
           const checkpoint =
             event.checkpoint === "departure"
@@ -36,18 +36,23 @@ export function MissingRollCallRefusals({
               )?.fullName
             : originalManifest?.crew.find((member) => member.id === event.crewPersonId)?.fullName;
           return (
-            <li key={event.clientEventId}>
-              {controls.t(
-                event.reviewRequired
-                  ? "shared.offlineManifest.single.reviewPendingRollCall"
-                  : "shared.offlineManifest.single.refusedMissingRollCall",
-                {
-                  reference: (event.bookingId ?? event.crewPersonId ?? event.clientEventId).slice(
-                    -8,
-                  ),
-                  checkpoint,
-                },
-              )}
+            <li
+              key={event.clientEventId}
+              className="space-y-3 rounded-panel border border-danger bg-danger/5 p-4"
+            >
+              <p role="status" className="font-semibold text-danger">
+                {controls.t(
+                  event.reviewRequired
+                    ? "shared.offlineManifest.single.reviewPendingRollCall"
+                    : "shared.offlineManifest.single.refusedMissingRollCall",
+                  {
+                    reference: (event.bookingId ?? event.crewPersonId ?? event.clientEventId).slice(
+                      -8,
+                    ),
+                    checkpoint,
+                  },
+                )}
+              </p>
               {event.reviewRequired && (
                 <p>
                   {originalName
@@ -58,9 +63,13 @@ export function MissingRollCallRefusals({
                     : controls.t("shared.offlineManifest.single.reviewOriginalSubjectUnknown", {
                         reference: event.bookingId ?? event.crewPersonId ?? event.clientEventId,
                       })}{" "}
-                  {controls.t("shared.offlineManifest.single.reviewSavedTrip", {
-                    trip: view.manifest.trip.title,
-                  })}{" "}
+                  {originalManifest
+                    ? controls.t("shared.offlineManifest.single.reviewSavedTrip", {
+                        trip: originalManifest.trip.title,
+                      })
+                    : controls.t("shared.offlineManifest.single.reviewSavedTripUnknown", {
+                        reference: event.tripId,
+                      })}{" "}
                   {event.meetingDay === undefined
                     ? controls.t("shared.offlineManifest.single.reviewUnknownDay")
                     : controls.t("shared.offlineManifest.single.reviewOriginalDay", {

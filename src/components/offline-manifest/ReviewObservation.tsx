@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { ErrorToast } from "@/components/Toast";
+import { buttonClass } from "@/components/ui/button";
 import {
   completeOfflineRollCallConfirmation,
   discardOfflineRollCallReview,
@@ -9,6 +10,7 @@ import {
 } from "@/lib/offline-manifest-store";
 import type { OfflineManifestPayload, OfflineRollCallEvent } from "@/lib/offline-manifests";
 import type { OfflineTripControls } from "./controls";
+import { ReviewRoster } from "./ReviewRoster";
 import { readReviewContext } from "./read-review-context";
 
 /** A held observation is evidence, not a live mark. Every live mark requires an explicit choice. */
@@ -187,57 +189,35 @@ export function ReviewObservation({
   const person = manifest?.divers.find((diver) => diver.bookingId === event.bookingId);
   return (
     <div className="mt-2 space-y-2 text-foreground">
-      <button type="button" disabled={busy} onClick={() => void loadCurrent()}>
+      <button
+        type="button"
+        className={buttonClass({ variant: "secondary", size: "boat" })}
+        disabled={busy}
+        onClick={() => void loadCurrent()}
+      >
         {t("shared.offlineManifest.single.reviewLoad")}
       </button>
       {originalName && (
         <p>{t("shared.offlineManifest.single.reviewOriginalNameOnline", { name: originalName })}</p>
       )}
       {current && manifest && (
-        <div>
-          <p>
-            {t("shared.offlineManifest.single.reviewCurrentTrip", {
-              trip: manifest.trip.title,
-              startsAt: manifest.trip.startsAt,
-            })}
-          </p>
-          <p>
-            {current.rollCallMeetingDay === undefined
-              ? t("shared.offlineManifest.single.reviewCurrentDayUnknown")
-              : t("shared.offlineManifest.single.reviewCurrentDay", {
-                  day: current.rollCallMeetingDay + 1,
-                })}
-          </p>
-          <p>{t("shared.offlineManifest.single.reviewCurrentRoster")}</p>
-          <ul>
-            {manifest.divers.map((diver) => (
-              <li key={diver.bookingId}>
-                {diver.fullName} —{" "}
-                {t(
-                  diver.rollCall?.state === "boarded"
-                    ? "shared.presence.boarded"
-                    : diver.rollCall?.state === "not_boarded"
-                      ? event.checkpoint === "departure"
-                        ? "shared.presence.notBoarded"
-                        : "shared.offlineManifest.single.notBackAboardActive"
-                      : "shared.offlineManifest.single.reviewAwaiting",
-                )}
-              </li>
-            ))}
-          </ul>
+        <div className="space-y-4">
+          <ReviewRoster current={current} manifest={manifest} event={event} controls={controls} />
           {person &&
           event.bookingId &&
           sameAssignment &&
           current.rollCallMeetingDay !== undefined &&
           current.rollCallWitnesses?.[`seat:${event.bookingId}:${event.checkpoint}`] ? (
-            <div>
+            <div className="space-y-3">
               <p>
                 {t("shared.offlineManifest.single.reviewVerifyPerson", { name: person.fullName })}
               </p>
               {!event.reviewConfirmation && (
-                <fieldset>
-                  <legend>{t("shared.offlineManifest.single.reviewChoose")}</legend>
-                  <label>
+                <fieldset className="space-y-2">
+                  <legend className="font-semibold">
+                    {t("shared.offlineManifest.single.reviewChoose")}
+                  </legend>
+                  <label className="flex min-h-14 items-center gap-3 rounded-lg border border-border px-4">
                     <input
                       type="radio"
                       name={`review-${event.clientEventId}`}
@@ -246,7 +226,7 @@ export function ReviewObservation({
                     />
                     {t("shared.presence.boarded")}
                   </label>
-                  <label>
+                  <label className="flex min-h-14 items-center gap-3 rounded-lg border border-border px-4">
                     <input
                       type="radio"
                       name={`review-${event.clientEventId}`}
@@ -262,7 +242,12 @@ export function ReviewObservation({
                 </fieldset>
               )}
               {!event.reviewConfirmation && (
-                <button type="button" disabled={busy || !status} onClick={() => void confirm()}>
+                <button
+                  type="button"
+                  className={buttonClass({ size: "boat" })}
+                  disabled={busy || !status}
+                  onClick={() => void confirm()}
+                >
                   {t("shared.offlineManifest.single.reviewConfirm")}
                 </button>
               )}
@@ -273,17 +258,32 @@ export function ReviewObservation({
         </div>
       )}
       {event.reviewConfirmation && (
-        <button type="button" disabled={busy} onClick={() => void confirm()}>
+        <button
+          type="button"
+          className={buttonClass({ variant: "secondary", size: "boat" })}
+          disabled={busy}
+          onClick={() => void confirm()}
+        >
           {t("shared.offlineManifest.single.reviewRetry")}
         </button>
       )}
       {!event.reviewConfirmation &&
         (discarding ? (
-          <button type="button" disabled={busy} onClick={() => void discard()}>
+          <button
+            type="button"
+            className={buttonClass({ variant: "danger", size: "boat" })}
+            disabled={busy}
+            onClick={() => void discard()}
+          >
             {t("shared.offlineManifest.single.reviewDiscardConfirm")}
           </button>
         ) : (
-          <button type="button" disabled={busy} onClick={() => setDiscarding(true)}>
+          <button
+            type="button"
+            className={buttonClass({ variant: "secondary", size: "boat" })}
+            disabled={busy}
+            onClick={() => setDiscarding(true)}
+          >
             {t("shared.offlineManifest.single.reviewDiscard")}
           </button>
         ))}

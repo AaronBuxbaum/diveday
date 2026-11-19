@@ -27,12 +27,12 @@ it("identifies an unsent observation requiring manual review", () => {
   render(<MissingRollCallRefusals view={trip} controls={controls()} />);
   expect(screen.getByRole("status")).toHaveTextContent("remains on this device");
   expect(screen.getByRole("status")).toHaveTextContent("manual roll call");
-  expect(screen.getByRole("status")).toHaveTextContent(
-    "The original subject name is unavailable. Reference: removed-booking",
+  expect(screen.getByRole("status").parentElement).toHaveTextContent(
+    "The saved copy does not contain the original subject name. Reference: removed-booking",
   );
-  expect(screen.getByRole("status")).toHaveTextContent("Recorded: Not back aboard");
-  expect(screen.getByRole("status")).toHaveTextContent("Original meeting day: 2");
-  expect(screen.getByRole("status")).toHaveTextContent("Two-Tank Reef");
+  expect(screen.getByRole("status").parentElement).toHaveTextContent("Recorded: Not back aboard");
+  expect(screen.getByRole("status").parentElement).toHaveTextContent("Original meeting day: 2");
+  expect(screen.getByRole("status").parentElement).toHaveTextContent("Two-Tank Reef");
 });
 
 it("shows a refused mark for a person no longer on the roster", () => {
@@ -94,9 +94,19 @@ it("names the original subject only when the saved copy is the capture snapshot"
     },
   ];
   const { rerender } = render(<MissingRollCallRefusals view={trip} controls={controls()} />);
-  expect(screen.getByRole("status")).toHaveTextContent("Original subject: Priya Shah");
+  expect(screen.getByRole("status").parentElement).toHaveTextContent(
+    "Original subject: Priya Shah",
+  );
   trip.envelope.snapshot.snapshotId = "different-snapshot";
   rerender(<MissingRollCallRefusals view={trip} controls={controls()} />);
-  expect(screen.getByRole("status")).toHaveTextContent("The original subject name is unavailable");
-  expect(screen.getByRole("status")).not.toHaveTextContent("Priya Shah");
+  expect(screen.getByRole("status").parentElement).toHaveTextContent(
+    "The saved copy does not contain the original subject name",
+  );
+  expect(screen.getByRole("status").parentElement).not.toHaveTextContent("Priya Shah");
+  expect(screen.getByRole("status").parentElement).toHaveTextContent(
+    "Original trip title unavailable. Trip reference: trip-1",
+  );
+  expect(screen.getByRole("status").parentElement).not.toHaveTextContent(
+    "Saved trip: Two-Tank Reef",
+  );
 });
