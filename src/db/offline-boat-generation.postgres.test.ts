@@ -245,15 +245,26 @@ describePostgres("offline evidence across a boat change", () => {
         expect(
           changedAgain?.divers.find((diver) => diver.bookingId === subject.booking.id),
         ).toMatchObject({ recountRequired: true, rollCall: undefined });
-        const stalePage = changedAgain?.divers.find((diver) => diver.bookingId === subject.booking.id)?.rollCallContext;
-        expect(await editTripSection(pg.db, shop.id, trip.id, { boatId: original.boatId })).toMatchObject({ ok: true });
-        expect(await recordRollCall(pg.db, {
-          shopId: shop.id, tripId: trip.id, bookingId: subject.booking.id,
-          recordedByPersonId: owner.person.id, checkpoint, status: "not_boarded", source: "live",
-          observedEvidenceIds: stalePage?.observedEvidenceIds ?? [],
-        })).toMatchObject({ ok: false, reason: "review_required" });
+        const stalePage = changedAgain?.divers.find(
+          (diver) => diver.bookingId === subject.booking.id,
+        )?.rollCallContext;
+        expect(
+          await editTripSection(pg.db, shop.id, trip.id, { boatId: original.boatId }),
+        ).toMatchObject({ ok: true });
+        expect(
+          await recordRollCall(pg.db, {
+            shopId: shop.id,
+            tripId: trip.id,
+            bookingId: subject.booking.id,
+            recordedByPersonId: owner.person.id,
+            checkpoint,
+            status: "not_boarded",
+            source: "live",
+            observedEvidenceIds: stalePage?.observedEvidenceIds ?? [],
+          }),
+        ).toMatchObject({ ok: false, reason: "review_required" });
         const counts = await departureCounts(pg.db, shop.id, [trip.id], { readiness: new Map() });
-        expect(counts.get(trip.id)).toMatchObject({ recountRequired: 0 });
+        expect(counts.get(trip.id)).toMatchObject({ recountRequired: 1 });
       }
     });
   }
