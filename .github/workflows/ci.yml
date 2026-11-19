@@ -552,6 +552,12 @@ jobs:
         # run, ~60 runner-minutes and six fewer jobs against the concurrent-job
         # cap. The price is a slowest shard of ~10 minutes against ~7. If
         # functional timeouts return, look at this setting before the specs.
+      - name: Exercise the isolated offline review protocol
+        if: matrix.shard == 1
+        env:
+          DIVEDAY_OFFLINE_ROLL_CALL_WITNESS: "1"
+          E2E_WORKERS: "1"
+        run: pnpm exec playwright test e2e/offline-roll-call-review.spec.ts --project=chromium --workers=1 --reporter=line,html
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:

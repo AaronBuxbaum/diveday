@@ -162,3 +162,31 @@ it("retries the exact earlier confirmation even when the subject is no longer on
   });
   expect(store.prepareOfflineRollCallConfirmation).not.toHaveBeenCalled();
 });
+
+it("requires a second deliberate action before discarding an unresolved observation", async () => {
+  const envelope = savedCopy();
+  const onReviewEnvelope = vi.fn();
+  store.discardOfflineRollCallReview.mockResolvedValue(envelope);
+  render(
+    <ReviewObservation
+      event={observation()}
+      controls={{
+        ...controls(),
+        reviewTenant: async () => ({ shopSlug: "blue-mantis", round: 1 }),
+        onReviewEnvelope,
+      }}
+    />,
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Discard observation" }));
+  expect(store.discardOfflineRollCallReview).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole("button", { name: "Confirm discard of this observation" }));
+  await waitFor(() =>
+    expect(store.discardOfflineRollCallReview).toHaveBeenCalledWith(
+      "trip-1",
+      "old-observation",
+      "blue-mantis",
+      1,
+    ),
+  );
+  expect(onReviewEnvelope).toHaveBeenCalledWith(envelope);
+});
