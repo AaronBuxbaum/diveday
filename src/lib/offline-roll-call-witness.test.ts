@@ -7,11 +7,12 @@ import {
 } from "./offline-roll-call-witness";
 
 describe("offline roll-call witness", () => {
-  it("cannot activate the experimental path in production", () => {
-    vi.stubEnv("DIVEDAY_OFFLINE_ROLL_CALL_WITNESS", "1");
+  it("enables witness validation for a production database without a flag", () => {
+    vi.stubEnv("DIVEDAY_OFFLINE_ROLL_CALL_WITNESS", "");
     vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("DATABASE_URL", "postgres://real-configured");
     try {
-      expect(offlineRollCallWitnessEnabled()).toBe(false);
+      expect(offlineRollCallWitnessEnabled()).toBe(true);
     } finally {
       vi.unstubAllEnvs();
     }
@@ -24,7 +25,7 @@ describe("offline roll-call witness", () => {
     try {
       expect(offlineRollCallWitnessEnabled()).toBe(true);
       vi.stubEnv("DATABASE_URL", "postgres://real-configured");
-      expect(offlineRollCallWitnessEnabled()).toBe(false);
+      expect(offlineRollCallWitnessEnabled()).toBe(true);
     } finally {
       vi.unstubAllEnvs();
     }

@@ -20,10 +20,10 @@ type Witness = {
 };
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-/** Disabled on production databases; the isolated browser harness can exercise the path. */
+/** Normal runtimes always validate witnesses; test fixtures can opt in independently. */
 export function offlineRollCallWitnessEnabled(): boolean {
   return (
-    (process.env.NODE_ENV !== "production" || runtimeMode().e2eHarness) &&
+    (process.env.NODE_ENV !== "test" && !runtimeMode().e2eHarness) ||
     process.env.DIVEDAY_OFFLINE_ROLL_CALL_WITNESS === "1"
   );
 }
