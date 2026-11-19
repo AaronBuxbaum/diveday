@@ -12,7 +12,7 @@ import {
   syncOfflineManifest,
 } from "./offline-manifest-store";
 import { OFFLINE_MANIFEST_RECORD_VERSION, type OfflineRollCallEvent } from "./offline-manifests";
-import { ROLL_CALL_CAUSAL_PROTOCOL_HEADER, ROLL_CALL_WITNESS_PROTOCOL } from "./roll-call-protocol";
+import { ROLL_CALL_CAUSAL_PROTOCOL_HEADER } from "./roll-call-protocol";
 
 const server = setupServer();
 beforeAll(() => server.listen({ onUnhandledFrame: "error" }));
@@ -49,7 +49,7 @@ it("retains opaque legacy queues unchanged after a protocol refusal and retries 
   expect(held?.events[0].syncStatus).toBe("pending");
   server.use(
     http.post("*/api/offline-manifests/sync", async ({ request }) => {
-      expect(request.headers.get(ROLL_CALL_CAUSAL_PROTOCOL_HEADER)).toBe(ROLL_CALL_WITNESS_PROTOCOL);
+      expect(request.headers.get(ROLL_CALL_CAUSAL_PROTOCOL_HEADER)).toBe("3");
       const body = (await request.json()) as { events: OfflineRollCallEvent[] };
       expect(body.events[0]).toEqual(original);
       return HttpResponse.json(
