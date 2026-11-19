@@ -5,7 +5,7 @@ import { Suspense } from "react";
 import { DiverDoor } from "@/app/_components/DiverDoor";
 import { ClosingCta, FunnelCtas } from "@/app/_components/FunnelCtas";
 import { HomeBodySkeleton } from "@/app/_components/HomeBodySkeleton";
-import { HomeHeroBoat } from "@/app/_components/HomeHeroBoat";
+import { HomeHeroChat } from "@/app/_components/HomeHeroChat";
 import { HomeWalkthrough, type WalkBeat } from "@/app/_components/HomeWalkthrough";
 import { HomeWalkthroughDoors } from "@/app/_components/HomeWalkthroughDoors";
 import { HomeWhyBand } from "@/app/_components/HomeWhyBand";
@@ -134,7 +134,7 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
             <FunnelCtas locale={locale} source="home-hero" hero footnotes={{}} className="mt-6" />
             <DiverDoor t={t} />
           </div>
-          <HomeHeroBoat locale={locale} />
+          <HomeHeroChat locale={locale} />
         </div>
       </section>
 

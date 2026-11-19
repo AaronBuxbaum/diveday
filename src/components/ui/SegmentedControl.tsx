@@ -208,11 +208,30 @@ export function SegmentedControl({
     // fixed. ResizeObserver then has nothing to report, but viewport pixel
     // snapping must use the option's new position.
     const onViewportResize = () => place(false);
+    // A pressed option can be measured while its transform is returning to
+    // rest. Transforms do not notify ResizeObserver, so remeasure once that
+    // option's transition ends or is interrupted.
+    const onOptionTransformSettled = (event: TransitionEvent) => {
+      if (
+        event.propertyName === "transform" &&
+        event.target instanceof HTMLElement &&
+        event.target.dataset.key === currentKey
+      ) {
+        place(false);
+      }
+    };
+    nav.addEventListener("transitionend", onOptionTransformSettled);
+    nav.addEventListener("transitioncancel", onOptionTransformSettled);
+    const removeOptionListeners = () => {
+      nav.removeEventListener("transitionend", onOptionTransformSettled);
+      nav.removeEventListener("transitioncancel", onOptionTransformSettled);
+    };
     window.addEventListener("resize", onViewportResize);
     if (typeof ResizeObserver === "undefined") {
       return () => {
         live = false;
         window.removeEventListener("resize", onViewportResize);
+        removeOptionListeners();
       };
     }
     // A wrap or a font swap moves the options; the pill follows without
@@ -225,6 +244,7 @@ export function SegmentedControl({
     return () => {
       live = false;
       window.removeEventListener("resize", onViewportResize);
+      removeOptionListeners();
       observer.disconnect();
     };
   }, [currentKey]);
