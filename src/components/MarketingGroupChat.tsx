@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { type ReactNode, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { DiveDayIcon } from "@/components/DiveDayIcon";
 import { buttonClass } from "@/components/ui/button";
 import { StatusMark } from "@/components/ui/StatusMark";
@@ -8,28 +8,68 @@ import { StatusMark } from "@/components/ui/StatusMark";
 type Crew = "sal" | "keiko" | "marcus";
 type Member = Crew | "you";
 
-/** Who sends each line, in order. The words come from the bundle; the cast and the order are the scene. */
-const SCRIPT: readonly { from: Member }[] = [
-  { from: "keiko" },
-  { from: "sal" },
-  { from: "keiko" },
-  { from: "marcus" },
-  { from: "sal" },
-  { from: "marcus" },
-  { from: "keiko" },
-  { from: "keiko" },
-  { from: "marcus" },
-  { from: "sal" },
-  { from: "marcus" },
-  { from: "sal" },
-  { from: "keiko" },
-  { from: "sal" },
-  { from: "marcus" },
-  { from: "keiko" },
-  { from: "you" },
-  { from: "keiko" },
-  { from: "marcus" },
-  { from: "sal" },
+/**
+ * How a line arrives, in ms: `wait` is the silence after the line before it,
+ * `fakeOut` is dots that start and stop again without a word, and `typing` is
+ * the dots that end in the line. A line with no `typing` just lands, as a quick
+ * reply does. The owner never shows dots: their line lands after its silence.
+ */
+type Beat =
+  | { from: "you"; wait: number }
+  | {
+      from: Crew;
+      wait: number;
+      fakeOut?: { typing: number; stop: number };
+      typing?: number;
+    };
+
+/**
+ * The scene, line by line: who sends each and how it arrives. The words come from
+ * the bundle. The first line is on screen when the chat starts, so its timing is
+ * unused. Tuned for the joke, not for realism: quick back-and-forth on which Tom,
+ * hesitation before the dumb question, long dots that end in three words, the
+ * silence before the owner, and a goodnight nobody needed to type.
+ */
+const SCRIPT: readonly Beat[] = [
+  /* 1 Did Tom ever sign his waiver? */ { from: "keiko", wait: 0 },
+  /* 2 Which Tom? */ { from: "sal", wait: 800, typing: 600 },
+  /* 3 Boat Tom, not rental Tom */ { from: "keiko", wait: 150, typing: 1000 },
+  /* 4 The tall one? */ { from: "marcus", wait: 700, typing: 650 },
+  /* 5 They're both tall: deadpan, straight back */ { from: "sal", wait: 250, typing: 450 },
+  /* 6 Is Tomasz a Tom?: he thinks better of it, then asks anyway */ {
+    from: "marcus",
+    wait: 300,
+    fakeOut: { typing: 900, stop: 700 },
+    typing: 750,
+  },
+  /* 7 He goes by Tom too */ { from: "keiko", wait: 200, typing: 650 },
+  /* 8 The signed ones are in the binder: on the heels of her last */ {
+    from: "keiko",
+    wait: 0,
+    typing: 900,
+  },
+  /* 9 Where's the binder? */ { from: "marcus", wait: 250, typing: 550 },
+  /* 10 On the boat: instant */ { from: "sal", wait: 500 },
+  /* 11 I thought it was in your truck */ { from: "marcus", wait: 300, typing: 1100 },
+  /* 12 That's the other binder: a beat too long */ { from: "sal", wait: 1500, typing: 650 },
+  /* 13 Can you go look? */ { from: "keiko", wait: 400, typing: 650 },
+  /* 14 I'm in bed: a paragraph's worth of dots for three words */ {
+    from: "sal",
+    wait: 300,
+    fakeOut: { typing: 1900, stop: 800 },
+    typing: 700,
+  },
+  /* 15 I'll just text Tom */ { from: "marcus", wait: 600, typing: 850 },
+  /* 16 Which Tom?: instant, the callback */ { from: "keiko", wait: 400 },
+  /* 17 It's in DiveDay: the room goes quiet first */ { from: "you", wait: 2000 },
+  /* 18 Wait, that's it? */ { from: "keiko", wait: 300, typing: 550 },
+  /* 19 So rental Tom is boat Tom: working it out */ {
+    from: "marcus",
+    wait: 400,
+    fakeOut: { typing: 700, stop: 500 },
+    typing: 900,
+  },
+  /* 20 Good night: lands without a word of warning */ { from: "sal", wait: 1200 },
 ];
 
 /** The line that carries the shop's list: "It's in DiveDay". */
@@ -50,39 +90,40 @@ const NUDGE_WAIT_MS = 3600;
 /** From the nudge to the signature, in ms. */
 const SIGN_MS = 1700;
 
-/** Typing takes longer for a longer line, and the owner's answer comes after a beat. */
-function paceBefore(next: (typeof SCRIPT)[number], text: string) {
-  if (next.from === "you") return 1500;
-  return Math.min(1700, 850 + text.length * 26);
+/** The moments between one line landing and the next: silence, a false start, dots. */
+function leadIn(beat: Beat, shown: number, card: CardState): Frame[] {
+  const moment = (typing: Crew | null, ms: number): Frame[] =>
+    ms > 0 ? [{ shown, typing, card, ms }] : [];
+  if (beat.from === "you") return moment(null, beat.wait);
+  return [
+    ...moment(null, beat.wait),
+    ...(beat.fakeOut
+      ? [...moment(beat.from, beat.fakeOut.typing), ...moment(null, beat.fakeOut.stop)]
+      : []),
+    ...moment(beat.from, beat.typing ?? 0),
+  ];
 }
 
-function framesFor(lines: readonly string[]): Frame[] {
+function buildFrames(): Frame[] {
   const frames: Frame[] = [];
-  const typist = (index: number): Crew | null => {
-    const from = SCRIPT[index]?.from;
-    return from && from !== "you" ? from : null;
-  };
-  for (let shown = 1; shown <= SCRIPT.length; shown += 1) {
-    const next = SCRIPT[shown];
-    const ms = next ? paceBefore(next, lines[shown] ?? "") : 0;
+  for (let shown = 1; shown < SCRIPT.length; shown += 1) {
+    const card: CardState = shown > CARD_LINE ? "signed" : "open";
     if (shown === CARD_LINE + 1) {
       frames.push({ shown, typing: null, card: "open", ms: NUDGE_WAIT_MS });
       frames.push({ shown, typing: null, card: "sent", ms: SIGN_MS });
-      frames.push({ shown, typing: typist(shown), card: "signed", ms });
-    } else {
-      frames.push({
-        shown,
-        typing: typist(shown),
-        card: shown > CARD_LINE ? "signed" : "open",
-        ms,
-      });
     }
+    const beat = SCRIPT[shown];
+    if (beat) frames.push(...leadIn(beat, shown, card));
   }
+  frames.push({ shown: SCRIPT.length, typing: null, card: "signed", ms: 0 });
   return frames;
 }
 
+/** Every moment of the chat, in order; the last is the finished chat. */
+const CHAT_FRAMES: readonly Frame[] = buildFrames();
+
 /** The moment the nudge waits for a tap: the first with the list on screen. */
-const NUDGE_FRAME = CARD_LINE;
+const NUDGE_FRAME = CHAT_FRAMES.findIndex((frame) => frame.shown === CARD_LINE + 1);
 
 export type GroupChatLabels = {
   group: string;
@@ -189,18 +230,22 @@ function ListCard({
  * The server sends the finished chat, so a reader without script, a reader who
  * asked for reduced motion and the camera all see the end: the list at nine of
  * nine. A reader with motion sees it rewound before first paint and played
- * once it is on screen, each line landing after its sender's typing dots.
+ * once it is on screen, each line on its own beat (`SCRIPT`).
  */
 export function MarketingGroupChat({ labels }: { labels: GroupChatLabels }) {
-  const frames = useMemo(() => framesFor(labels.lines), [labels.lines]);
-  const last = frames.length - 1;
+  const last = CHAT_FRAMES.length - 1;
   // `null` is the finished chat, which is what the server sends.
   const [at, setAt] = useState<number | null>(null);
   const [ready, setReady] = useState(false);
   const [onScreen, setOnScreen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const frame = at ?? last;
-  const current = frames[frame] ?? { shown: SCRIPT.length, typing: null, card: "signed", ms: 0 };
+  const current = CHAT_FRAMES[frame] ?? {
+    shown: SCRIPT.length,
+    typing: null,
+    card: "signed",
+    ms: 0,
+  };
 
   // Rewind before paint, unless motion is unwelcome.
   useLayoutEffect(() => {
@@ -303,10 +348,7 @@ export function MarketingGroupChat({ labels }: { labels: GroupChatLabels }) {
                 );
               })}
               {current.typing ? (
-                <li
-                  key={`typing-${current.shown}`}
-                  className="marketing-chat-in mt-3 flex items-end gap-2"
-                >
+                <li key={`typing-${frame}`} className="marketing-chat-in mt-3 flex items-end gap-2">
                   <Avatar>{labels.avatars[current.typing]}</Avatar>
                   <p className="flex h-9 items-center gap-1 rounded-2xl rounded-es-md bg-surface-sunken px-3">
                     <span className="sr-only">{labels.typing[current.typing]}</span>

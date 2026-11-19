@@ -32,9 +32,24 @@ const labels: GroupChatLabels = {
   note: "note",
 };
 
-/** One timer per moment, so each moment is advanced in its own act; no moment lasts longer than this. */
-const MOMENT_MS = 4000;
-const nextMoment = () => act(() => void vi.advanceTimersByTime(MOMENT_MS));
+/** The moment on screen and how long it lasts, as the chat states them. */
+function moment() {
+  const root = document.querySelector("[data-chat-frame]");
+  return {
+    frame: Number(root?.getAttribute("data-chat-frame")),
+    ms: Number(root?.getAttribute("data-chat-ms")),
+    end: root?.hasAttribute("data-chat-end") ?? false,
+  };
+}
+
+/** Run the clock for exactly the current moment, so the chat moves one moment on. */
+const nextMoment = () => act(() => void vi.advanceTimersByTime(moment().ms));
+
+/** What a visitor sees in one moment: who is typing and how many lines are up. */
+const seen = () => ({
+  typing: screen.queryByText(/is typing$/)?.textContent ?? null,
+  lines: LINES.filter((line) => screen.queryByText(line, { exact: true })).length,
+});
 
 /** jsdom has neither; the chat asks both before it moves. */
 function stubBrowser({ reducedMotion }: { reducedMotion: boolean }) {
@@ -77,30 +92,51 @@ describe("the homepage group chat", () => {
     expect(screen.queryByText("Sal is typing")).toBeNull();
   });
 
-  it("rewinds, lands each line after its sender's dots, and sends the nudge itself if nobody does", () => {
+  it("rewinds, then plays the scene in uneven beats and sends the nudge itself if nobody does", () => {
     stubBrowser({ reducedMotion: false });
     render(<MarketingGroupChat labels={labels} />);
     expect(screen.getByText("line 1")).toBeTruthy();
     expect(screen.queryByText("line 2")).toBeNull();
-    expect(screen.getByText("Sal is typing")).toBeTruthy();
 
-    nextMoment();
-    expect(screen.getByText("line 2")).toBeTruthy();
-    expect(screen.queryByText("line 3")).toBeNull();
-    expect(screen.getByText("Keiko is typing")).toBeTruthy();
-
-    for (let moment = 0; moment < 26; moment += 1) nextMoment();
+    const beats: { ms: number; typing: string | null; lines: number }[] = [];
+    while (!moment().end) {
+      beats.push({ ms: moment().ms, ...seen() });
+      nextMoment();
+    }
     expect(screen.getByText("9 of 9")).toBeTruthy();
     expect(screen.getByText("line 20")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Nudge" })).toBeNull();
+
+    // About half a minute, nudge included.
+    const total = beats.reduce((sum, beat) => sum + beat.ms, 0);
+    expect(total).toBeGreaterThanOrEqual(27_000);
+    expect(total).toBeLessThanOrEqual(35_000);
+    // Not one rhythm: the moments range from a blink to a long silence.
+    const lengths = beats.map((beat) => beat.ms);
+    expect(new Set(lengths).size).toBeGreaterThanOrEqual(10);
+    expect(Math.min(...lengths)).toBeLessThanOrEqual(300);
+    expect(Math.max(...lengths)).toBeGreaterThanOrEqual(2000);
+    // Somebody starts typing, stops, and starts again before their line lands.
+    const fakeOut = beats.some(
+      (beat, index) =>
+        beat.typing &&
+        beats[index + 1]?.typing === null &&
+        beats[index + 1]?.lines === beat.lines &&
+        beats[index + 2]?.typing === beat.typing,
+    );
+    expect(fakeOut).toBe(true);
+    // And some lines land with no dots at all.
+    const instant = beats.filter(
+      (beat, index) => beat.typing === null && (beats[index + 1]?.lines ?? 20) > beat.lines,
+    );
+    expect(instant.length).toBeGreaterThanOrEqual(3);
   });
 
   it("lets the visitor send the nudge, and plays again from the first line", () => {
     stubBrowser({ reducedMotion: false });
     render(<MarketingGroupChat labels={labels} />);
-    // Sixteen lines land after the first before the owner's answer brings the list.
-    for (let moment = 0; moment < 16; moment += 1) nextMoment();
-    expect(screen.getByText("8 of 9")).toBeTruthy();
+    while (!screen.queryByText("8 of 9")) nextMoment();
+    expect(screen.getByText("line 17")).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: "Nudge" }));
     expect(screen.getByText("Sent")).toBeTruthy();
@@ -108,7 +144,7 @@ describe("the homepage group chat", () => {
     expect(screen.getByText("9 of 9")).toBeTruthy();
     expect(screen.getByText("Signed")).toBeTruthy();
 
-    for (let moment = 0; moment < 4; moment += 1) nextMoment();
+    while (!moment().end) nextMoment();
     fireEvent.click(screen.getByRole("button", { name: "Play again" }));
     expect(screen.queryByText("line 2")).toBeNull();
     expect(screen.queryByText("9 of 9")).toBeNull();
