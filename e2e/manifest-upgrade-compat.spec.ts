@@ -30,8 +30,7 @@ test("legacy snapshot requests preserve a queued receipt and a current page can 
   await expect(page.locator('[data-deck-screen="receipt"]')).toContainText(
     staffTranslator("en-US")("manifest.deck.savedMissing"),
   );
-  const pending = page.getByRole("status").filter({ hasText: "when you’re back in service" });
-  await expect(pending).toBeVisible();
+  await expect(page.getByText("Saved here · Waiting to send", { exact: true })).toBeVisible();
   const savedRecord = async () =>
     page.evaluate(
       async ({ id, version }) => {
