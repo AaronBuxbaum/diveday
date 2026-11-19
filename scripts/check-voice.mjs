@@ -1139,8 +1139,7 @@ export function oxfordCommas(value, key = "") {
     if (/\beither\b/i.test(`${before0(value, match.index)} ${item}`)) continue;
     if (OXFORD_DIRECTIONS.has(item.toLowerCase())) continue;
     if (/^(?:and|or)$/i.test(itemWords[0])) continue;
-    const participle =
-      /ed$/i.test(itemWords[0]) || /ed$/i.test(itemWords[itemWords.length - 1]);
+    const participle = /ed$/i.test(itemWords[0]) || /ed$/i.test(itemWords[itemWords.length - 1]);
     // Inside an ICU argument ("{count, plural, one {…}"), the comma is syntax.
     const before = value.slice(0, match.index);
     const open = before.lastIndexOf("{");
