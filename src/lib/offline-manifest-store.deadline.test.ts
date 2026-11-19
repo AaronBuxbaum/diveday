@@ -449,6 +449,67 @@ describe("syncOfflineManifest on a network that never answers", () => {
   });
 });
 
+it("keeps every queued event and retries the same ids after a recovery refusal", async () => {
+  const tripId = payload.manifests[0].trip.id;
+  const serverPayload = {
+    ...payload,
+    checklist: { items: [{ id: "item-radio", label: "Radio check" }] },
+  };
+  await saveOfflineManifest(serverPayload);
+  await appendOfflineRollCall(tripId, {
+    bookingId: payload.manifests[0].divers[0].bookingId,
+    checkpoint: "departure",
+    status: "not_boarded",
+  });
+  await appendOfflineChecklistCheck(tripId, {
+    checklistItemId: "item-radio",
+    status: "checked",
+    note: null,
+  });
+  await appendOfflineArrival(tripId, {
+    bookingId: payload.manifests[0].divers[0].bookingId,
+    status: "arrived",
+  });
+  const before = await loadOfflineManifest(tripId);
+  const sent: string[][] = [];
+  let refuse = true;
+  server.use(
+    http.post("/api/offline-manifests/sync", async ({ request }) => {
+      const body = (await request.json()) as {
+        events: OfflineRollCallEvent[];
+        checklistEvents: OfflineChecklistEvent[];
+        arrivalEvents: OfflineArrivalEvent[];
+      };
+      const ids = [...body.events, ...body.checklistEvents, ...body.arrivalEvents].map(
+        (event) => event.clientEventId,
+      );
+      sent.push(ids);
+      if (refuse) return HttpResponse.json({ error: "recovery_unavailable" }, { status: 503 });
+      return HttpResponse.json(
+        withRefreshedSyncFrame(
+          serverPayload,
+          { results: ids.map((clientEventId) => ({ clientEventId, status: "duplicate" })) },
+          body,
+        ),
+      );
+    }),
+  );
+
+  await expect(syncOfflineManifest(tripId)).rejects.toMatchObject({ code: "sync_unreachable" });
+  const after = await loadOfflineManifest(tripId);
+  expect(after?.events).toEqual(before?.events);
+  expect(after?.checklistEvents).toEqual(before?.checklistEvents);
+  expect(after?.arrivalEvents).toEqual(before?.arrivalEvents);
+  expect(sent[0]).toHaveLength(3);
+
+  refuse = false;
+  const settled = await syncOfflineManifest(tripId);
+  expect(sent[1]).toEqual(sent[0]);
+  expect(settled?.events[0].syncStatus).toBe("applied");
+  expect(settled?.checklistEvents[0].syncStatus).toBe("applied");
+  expect(settled?.arrivalEvents?.[0].syncStatus).toBe("applied");
+});
+
 it("retains pending roll call when sync returns 401", async () => {
   const tripId = payload.manifests[0].trip.id;
   await saveOfflineManifest(payload);
