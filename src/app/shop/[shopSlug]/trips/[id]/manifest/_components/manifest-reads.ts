@@ -8,14 +8,13 @@ import { mayStartTripIncidentReport, openMissingAlerts } from "@/db/incident-rep
 import { rollCallOpenOnTrip } from "@/db/manifests";
 import { listBookingNotes, listDiverNotesForTrip } from "@/db/operations";
 import { latestPreDepartureChecksForTrip, listChecklistItems } from "@/db/pre-departure-check";
-import { meetingWindowsByTrip } from "@/db/trip-meeting-windows";
 import { listCatchUpSince } from "@/db/trip-read-marks";
 import { getTripMeetingPointFields, listTripDives } from "@/db/trips";
 import { openSnagsForTrip } from "@/features/boat-snags";
 import { departureVessels } from "@/features/boats";
 import { latestDeckCounts } from "@/features/deck-counts";
 import { diveIntentTallyForTrip } from "@/features/dive-intent";
-import { readOfflineManifestRoster } from "@/features/offline-manifest-snapshots";
+import { readOfflineManifestRosterWithWindows } from "@/features/offline-manifest-snapshots";
 import type { SiteHistory } from "@/features/site-history";
 import { lastAtSites } from "@/features/site-history";
 import { listShopPickedSpecies, listTripSightings } from "@/features/trip-sightings";
@@ -49,7 +48,7 @@ export async function readManifestPage(
   const shopId = shop.id;
   // All the other identity-bearing reads start after the roster has captured
   // its epoch. A later roster epoch cannot certify earlier buddy or note reads.
-  const rosterResult = await readOfflineManifestRoster(db, shopId, tripId);
+  const rosterResult = await readOfflineManifestRosterWithWindows(db, shopId, tripId);
   const readCompletedAt = nowMs();
   const renderErasureEpoch = rosterResult?.erasureEpoch ?? null;
   const roster = Promise.resolve(rosterResult);
@@ -63,10 +62,7 @@ export async function readManifestPage(
       rows.map((site) => site.id),
     ),
   );
-  const windows = roster.then(async (rows) => {
-    const trip = rows?.manifests[0]?.trip;
-    return trip ? (await meetingWindowsByTrip(db, [trip])).get(tripId) : undefined;
-  });
+  const windows = roster.then((rows) => rows?.windows);
   const history = Promise.all([roster, dives]).then(([rows, planned]) => {
     const startsAt = rows?.manifests[0]?.trip.startsAt;
     return startsAt

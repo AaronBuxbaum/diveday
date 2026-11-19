@@ -140,14 +140,14 @@ afterEach(() => {
 });
 
 describe("repeated stale roster reads", () => {
-  const SNAPSHOT_URL = `/api/offline-manifests/${TRIP_ID}/snapshot`;
+  const SNAPSHOT_URL = `/api/offline-manifests/${TRIP_ID}/snapshot/v2`;
   const pagePayload: OfflineManifestPayload = {
     ...payload,
-    readAt: { erasureEpoch: 4, snapshotRevision: 9 },
+    readAt: { erasureEpoch: 4, snapshotRevision: 9, coherentSchedule: true },
   };
   const reread: OfflineManifestPayload = {
     ...payload,
-    readAt: { erasureEpoch: 4, snapshotRevision: 10 },
+    readAt: { erasureEpoch: 4, snapshotRevision: 10, coherentSchedule: true },
   };
   const stale = () => Response.json({ error: "snapshot_superseded" }, { status: 409 });
   const issued = () =>
@@ -172,6 +172,20 @@ describe("repeated stale roster reads", () => {
     });
   }
 
+  it("claims a newly read schedule even when the epoch and revision are unchanged", async () => {
+    const fetchMock = vi.fn(async (_url: string, _init?: RequestInit) => issued());
+    vi.stubGlobal("fetch", fetchMock);
+    const first = renderPage(pagePayload);
+    await waitFor(() => expect(saveOfflineManifest).toHaveBeenCalledTimes(1));
+    first.unmount();
+    const changed = [{ startsAt: "2035-04-11T12:00:00.000Z", endsAt: "2035-04-11T16:00:00.000Z" }];
+    renderPage({ ...pagePayload, rollCallMeetingDays: changed });
+    await waitFor(() => expect(saveOfflineManifest).toHaveBeenCalledTimes(2));
+    const claims = fetchMock.mock.calls.filter(([url]) => url === SNAPSHOT_URL);
+    expect(claims).toHaveLength(2);
+    expect(JSON.parse(String(claims[1]?.[1]?.body)).schedule.meetingWindows).toEqual(changed);
+  });
+
   it("bounds consecutive stale-claim rereads", async () => {
     mountRereadOwner();
     const generation = manifestStaleGeneration(TRIP_ID);
@@ -185,7 +199,12 @@ describe("repeated stale roster reads", () => {
     rerender({ page: reread });
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
     await waitFor(() => expect(mockRouter.refresh).toHaveBeenCalledTimes(2));
-    rerender({ page: { ...payload, readAt: { erasureEpoch: 4, snapshotRevision: 11 } } });
+    rerender({
+      page: {
+        ...payload,
+        readAt: { erasureEpoch: 4, snapshotRevision: 11, coherentSchedule: true },
+      },
+    });
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3));
     expect(mockRouter.refresh).toHaveBeenCalledTimes(2);
     expect(manifestStaleGeneration(TRIP_ID)).toBe(generation + 3);
@@ -205,7 +224,12 @@ describe("repeated stale roster reads", () => {
     rerender({ page: reread });
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
     await waitFor(() => expect(mockRouter.refresh).toHaveBeenCalledTimes(2));
-    rerender({ page: { ...payload, readAt: { erasureEpoch: 4, snapshotRevision: 11 } } });
+    rerender({
+      page: {
+        ...payload,
+        readAt: { erasureEpoch: 4, snapshotRevision: 11, coherentSchedule: true },
+      },
+    });
     await waitFor(() => expect(saveOfflineManifest).toHaveBeenCalledTimes(1));
     expect(mockRouter.refresh).toHaveBeenCalledTimes(2);
   });
@@ -293,7 +317,12 @@ describe("repeated stale roster reads", () => {
     await waitFor(() => expect(mockRouter.refresh).toHaveBeenCalledTimes(2));
     page.rerender({ page: reread });
     await waitFor(() => expect(mockRouter.refresh).toHaveBeenCalledTimes(3));
-    page.rerender({ page: { ...payload, readAt: { erasureEpoch: 4, snapshotRevision: 11 } } });
+    page.rerender({
+      page: {
+        ...payload,
+        readAt: { erasureEpoch: 4, snapshotRevision: 11, coherentSchedule: true },
+      },
+    });
     await waitFor(() => expect(manifestStaleGeneration(TRIP_ID)).toBeGreaterThanOrEqual(3));
     expect(mockRouter.refresh).toHaveBeenCalledTimes(3);
     expect(screen.queryByText(status.confirmed)).toBeNull();

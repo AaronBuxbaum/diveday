@@ -6,11 +6,18 @@ export {
   signRosterHistoryScope,
   verifyRosterConfirmation,
 } from "./roster-confirmation";
-export type { IssuedOfflineManifestSnapshot, OfflineManifestReadAt } from "./store";
+export type {
+  IssuedOfflineManifestSnapshot,
+  OfflineManifestReadAt,
+  OfflineManifestSchedule,
+} from "./store";
 export {
   issueOfflineManifestSnapshot,
+  issueOfflineManifestSnapshotAtSchedule,
   latestOfflineManifestSnapshotRevisions,
   nextOfflineManifestSnapshotRevision,
+  offlineManifestTripExists,
   readOfflineManifestRoster,
+  readOfflineManifestRosterWithWindows,
 } from "./store";
 export { offlineSyncInstants } from "./sync-instants";

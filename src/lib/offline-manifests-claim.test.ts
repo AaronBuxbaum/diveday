@@ -14,7 +14,10 @@ const issued = {
   erasureEpochToken: `4.8.${"a".repeat(43)}`,
 };
 function pagePayload(): OfflineManifestPayload {
-  return { ...snapshot(), readAt: { erasureEpoch: 4, snapshotRevision: 7 } };
+  return {
+    ...snapshot(),
+    readAt: { erasureEpoch: 4, snapshotRevision: 7, coherentSchedule: true },
+  };
 }
 function radio(online: boolean) {
   vi.spyOn(navigator, "onLine", "get").mockReturnValue(online);
@@ -38,13 +41,21 @@ it("claims the displayed read under the causal protocol without posting roster d
   expect(payload).toEqual(original);
   expect(fetcher).toHaveBeenCalledTimes(1);
   const [url, init] = fetcher.mock.calls[0];
-  expect(url).toBe("/api/offline-manifests/trip-1/snapshot");
+  expect(url).toBe("/api/offline-manifests/trip-1/snapshot/v2");
   expect(init).toMatchObject({ method: "POST", credentials: "same-origin" });
   expect(new Headers(init?.headers).get(ROLL_CALL_CAUSAL_PROTOCOL_HEADER)).toBe(
     ROLL_CALL_CAUSAL_PROTOCOL,
   );
   expect(new Headers(init?.headers).get("content-type")).toBe("application/json");
-  expect(JSON.parse(String(init?.body))).toEqual({ erasureEpoch: 4, snapshotRevision: 7 });
+  expect(JSON.parse(String(init?.body))).toEqual({
+    erasureEpoch: 4,
+    snapshotRevision: 7,
+    schedule: {
+      startsAt: payload.manifests[0].trip.startsAt,
+      endsAt: payload.manifests[0].trip.endsAt,
+      meetingWindows: payload.rollCallMeetingDays ?? [],
+    },
+  });
   expect(init?.signal).toBeInstanceOf(AbortSignal);
   expect(init?.signal?.aborted).toBe(false);
 });
@@ -101,7 +112,7 @@ for (const body of [
   });
 }
 
-for (const status of [401, 426, 503]) {
+for (const status of [401, 404, 426, 503]) {
   it(`leaves a page unclaimed after HTTP${status}`, async () => {
     const payload = pagePayload(),
       original = structuredClone(payload);
@@ -113,6 +124,15 @@ for (const status of [401, 426, 503]) {
     expect(payload).toEqual(original);
   });
 }
+
+it("does not ask the versioned endpoint to certify an older page read", async () => {
+  radio(true);
+  const fetcher = vi.fn<typeof fetch>();
+  vi.stubGlobal("fetch", fetcher);
+  const payload = { ...pagePayload(), readAt: { erasureEpoch: 4, snapshotRevision: 7 } };
+  expect(await claimOfflineManifestSnapshot(payload)).toBeNull();
+  expect(fetcher).not.toHaveBeenCalled();
+});
 
 it("does not claim from a broken successful body or a rejected transport", async () => {
   const fetcher = vi
