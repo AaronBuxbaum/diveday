@@ -7,25 +7,25 @@ import { StatusMark } from "@/components/ui/StatusMark";
 
 type Crew = "sal" | "keiko" | "marcus";
 type Member = Crew | "you";
-type Photo = "tom" | "tomasz" | "boat";
 
-/**
- * Who sends each line, in order, and which carry a photo. The words come from
- * the bundle; the cast, the order and the pictures are the scene.
- */
-const SCRIPT: readonly { from: Member; photo?: Photo }[] = [
+/** Who sends each line, in order. The words come from the bundle; the cast and the order are the scene. */
+const SCRIPT: readonly { from: Member }[] = [
   { from: "keiko" },
-  { from: "sal" },
-  { from: "keiko" },
-  { from: "marcus", photo: "tom" },
-  { from: "keiko" },
-  { from: "marcus", photo: "tomasz" },
   { from: "sal" },
   { from: "keiko" },
   { from: "marcus" },
-  { from: "sal", photo: "boat" },
+  { from: "sal" },
+  { from: "marcus" },
+  { from: "keiko" },
+  { from: "keiko" },
+  { from: "marcus" },
+  { from: "sal" },
+  { from: "marcus" },
+  { from: "sal" },
   { from: "keiko" },
   { from: "sal" },
+  { from: "marcus" },
+  { from: "keiko" },
   { from: "you" },
   { from: "keiko" },
   { from: "marcus" },
@@ -33,7 +33,7 @@ const SCRIPT: readonly { from: Member; photo?: Photo }[] = [
 ];
 
 /** The line that carries the shop's list: "It's in DiveDay". */
-const CARD_LINE = 12;
+const CARD_LINE = 16;
 
 type CardState = "open" | "sent" | "signed";
 
@@ -50,10 +50,9 @@ const NUDGE_WAIT_MS = 3600;
 /** From the nudge to the signature, in ms. */
 const SIGN_MS = 1700;
 
-/** Typing takes longer for a longer line, a photo takes a moment to find, and the owner's answer comes after a beat. */
+/** Typing takes longer for a longer line, and the owner's answer comes after a beat. */
 function paceBefore(next: (typeof SCRIPT)[number], text: string) {
   if (next.from === "you") return 1500;
-  if (next.photo) return 1600;
   return Math.min(1700, 850 + text.length * 26);
 }
 
@@ -94,15 +93,13 @@ export type GroupChatLabels = {
   /** Each crew member's face, drawn by the caller at the avatar's size. */
   avatars: Record<Crew, ReactNode>;
   lines: readonly string[];
-  /** The pictures the crew sends, each with its own alt text. */
-  photos: Record<Photo, ReactNode>;
   card: {
     title: string;
     readyBefore: string;
     readyAfter: string;
     needsYou: string;
     diver: string;
-    /** The diver's face, the same one the crew sent a moment ago. */
+    /** The diver's profile picture. */
     avatar: ReactNode;
     unsigned: string;
     nudge: string;
@@ -113,8 +110,6 @@ export type GroupChatLabels = {
   replay: string;
   note: string;
 };
-
-const PHOTO_WIDTH: Record<Photo, string> = { tom: "w-36", tomasz: "w-36", boat: "w-48" };
 
 function Avatar({ children }: { children: ReactNode }) {
   return (
@@ -263,7 +258,6 @@ export function MarketingGroupChat({ labels }: { labels: GroupChatLabels }) {
               <li className="pb-2 text-center text-xs text-muted">{labels.stamp}</li>
               {lines.map((text, index) => {
                 const from: Member = SCRIPT[index]?.from ?? "you";
-                const photo = SCRIPT[index]?.photo;
                 const opensRun = SCRIPT[index - 1]?.from !== from;
                 if (from === "you") {
                   return (
@@ -300,13 +294,6 @@ export function MarketingGroupChat({ labels }: { labels: GroupChatLabels }) {
                     <div className="flex min-w-0 max-w-[80%] flex-col items-start">
                       {opensRun ? (
                         <p className="mb-0.5 ps-3 text-xs text-muted">{labels.names[from]}</p>
-                      ) : null}
-                      {photo ? (
-                        <div
-                          className={`mb-1 overflow-hidden rounded-2xl bg-surface-sunken ${PHOTO_WIDTH[photo]}`}
-                        >
-                          {labels.photos[photo]}
-                        </div>
                       ) : null}
                       <p className="rounded-2xl rounded-es-md bg-surface-sunken px-3 py-2 text-sm">
                         {text}

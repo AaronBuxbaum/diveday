@@ -108,24 +108,23 @@
         "1": "Did Tom ever sign his waiver?",
         "2": "Which Tom?",
         "3": "Boat Tom, not rental Tom",
-        "4": "This Tom?",
-        "5": "That’s rental Tom",
-        "6": "This one?",
-        "7": "That’s Tomasz. He goes by Tom too.",
+        "4": "The tall one?",
+        "5": "They’re both tall",
+        "6": "Is Tomasz a Tom?",
+        "7": "He goes by Tom too",
         "8": "The signed ones are in the binder",
         "9": "Where’s the binder?",
         "10": "On the boat",
-        "11": "Can you go look?",
-        "12": "I’m in bed",
-        "13": "It’s in DiveDay",
-        "14": "Wait, that’s it?",
-        "15": "So rental Tom is boat Tom",
-        "16": "Good night"
-      },
-      "photos": {
-        "tom": "A photo of Tom Okafor at the marina",
-        "tomasz": "A photo of Tomasz at the marina",
-        "boat": "A photo of the dive boat tied up at the dock"
+        "11": "I thought it was in your truck",
+        "12": "That’s the other binder",
+        "13": "Can you go look?",
+        "14": "I’m in bed",
+        "15": "I’ll just text Tom",
+        "16": "Which Tom?",
+        "17": "It’s in DiveDay",
+        "18": "Wait, that’s it?",
+        "19": "So rental Tom is boat Tom",
+        "20": "Good night"
       },
       "card": {
         "title": "Tomorrow’s 7:30 boat",
@@ -138,7 +137,7 @@
       },
       "composer": "Message",
       "replay": "Play again",
-      "note": "Every waiver, card, and payment is already in DiveDay, so nobody has to ask the group chat."
+      "note": "DiveDay knows who signed, who paid, and who can’t board yet. Your crew can stop asking each other."
     }
   },
   "common": {

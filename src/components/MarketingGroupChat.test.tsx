@@ -5,7 +5,7 @@ import { renderToString } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { type GroupChatLabels, MarketingGroupChat } from "./MarketingGroupChat";
 
-const LINES = Array.from({ length: 16 }, (_, index) => `line ${index + 1}`);
+const LINES = Array.from({ length: 20 }, (_, index) => `line ${index + 1}`);
 
 const labels: GroupChatLabels = {
   group: "Crew",
@@ -15,7 +15,6 @@ const labels: GroupChatLabels = {
   typing: { sal: "Sal is typing", keiko: "Keiko is typing", marcus: "Marcus is typing" },
   avatars: { sal: null, keiko: null, marcus: null },
   lines: LINES,
-  photos: { tom: <span>photo of Tom</span>, tomasz: null, boat: null },
   card: {
     title: "Tomorrow",
     readyBefore: "8 of 9",
@@ -66,7 +65,7 @@ describe("the homepage group chat", () => {
   it("is sent finished, so a reader without script sees the list at nine of nine", () => {
     const html = renderToString(<MarketingGroupChat labels={labels} />);
     expect(html).toContain("9 of 9");
-    expect(html).toContain("line 16");
+    expect(html).toContain("line 20");
     expect(html).not.toContain("8 of 9");
   });
 
@@ -87,23 +86,20 @@ describe("the homepage group chat", () => {
 
     nextMoment();
     expect(screen.getByText("line 2")).toBeTruthy();
-    // The fourth line is a photo with its caption.
-    nextMoment();
-    expect(screen.queryByText("photo of Tom")).toBeNull();
-    nextMoment();
-    expect(screen.getByText("photo of Tom")).toBeTruthy();
+    expect(screen.queryByText("line 3")).toBeNull();
+    expect(screen.getByText("Keiko is typing")).toBeTruthy();
 
-    for (let moment = 0; moment < 20; moment += 1) nextMoment();
+    for (let moment = 0; moment < 26; moment += 1) nextMoment();
     expect(screen.getByText("9 of 9")).toBeTruthy();
-    expect(screen.getByText("line 16")).toBeTruthy();
+    expect(screen.getByText("line 20")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Nudge" })).toBeNull();
   });
 
   it("lets the visitor send the nudge, and plays again from the first line", () => {
     stubBrowser({ reducedMotion: false });
     render(<MarketingGroupChat labels={labels} />);
-    // Twelve lines land after the first before the owner's answer brings the list.
-    for (let moment = 0; moment < 12; moment += 1) nextMoment();
+    // Sixteen lines land after the first before the owner's answer brings the list.
+    for (let moment = 0; moment < 16; moment += 1) nextMoment();
     expect(screen.getByText("8 of 9")).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: "Nudge" }));

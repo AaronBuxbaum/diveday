@@ -92,7 +92,7 @@ test("the crew's group chat plays to nine of nine ready, and the visitor can sen
 }) => {
   const t = diverTranslator("en-US");
   await page.emulateMedia({ reducedMotion: "no-preference" });
-  // The chat is about twenty seconds of typing; the page's clock is run by hand so the test waits for none of it.
+  // The chat is about half a minute of typing; the page's clock is run by hand so the test waits for none of it.
   await page.clock.install();
   await page.goto("/");
   const chat = page.getByRole("figure", { name: t("marketing.home.chat.region") });
@@ -111,11 +111,10 @@ test("the crew's group chat plays to nine of nine ready, and the visitor can sen
     await expect(frame).toHaveAttribute("data-chat-frame", String(at + 1));
   };
 
-  // The crew goes round on which Tom, with a photo of each, until the owner's answer brings the
-  // list, one diver short. The nudge is the visitor's to send.
+  // The crew goes round on which Tom until the owner's answer brings the list, one diver short.
+  // The nudge is the visitor's to send.
   const nudge = chat.getByRole("button", { name: t("marketing.home.chat.card.nudge") });
-  for (let line = 2; line <= 13; line += 1) await step();
-  await expect(chat.getByRole("img", { name: t("marketing.home.chat.photos.tom") })).toBeVisible();
+  for (let line = 2; line <= 17; line += 1) await step();
   await expect(ready(8)).toBeVisible();
   await nudge.click();
   await expect(chat.getByText(t("marketing.home.chat.card.sent"), { exact: true })).toBeVisible();
@@ -124,9 +123,9 @@ test("the crew's group chat plays to nine of nine ready, and the visitor can sen
   await expect(chat.getByText(t("marketing.home.chat.card.signed"), { exact: true })).toBeVisible();
 
   // It ends on the crew's last line, and can be played again from the first.
-  for (let line = 14; line <= 16; line += 1) await step();
+  for (let line = 18; line <= 20; line += 1) await step();
   await expect(frame).toHaveAttribute("data-chat-end", "");
-  await expect(chat.getByText(t("marketing.home.chat.lines.16"), { exact: true })).toBeVisible();
+  await expect(chat.getByText(t("marketing.home.chat.lines.20"), { exact: true })).toBeVisible();
   await chat.getByRole("button", { name: t("marketing.home.chat.replay") }).click();
   await expect(frame).toHaveAttribute("data-chat-frame", "0");
   await expect(ready(9)).toHaveCount(0);

@@ -2365,12 +2365,13 @@ select:not([multiple]):not([size]):dir(rtl) {
 }
 
 @keyframes marketing-chat-nudge {
-  0%,
-  100% {
+  from {
+    opacity: 0.55;
     transform: scale(1);
   }
-  50% {
-    transform: scale(1.05);
+  to {
+    opacity: 0;
+    transform: scale(1.18, 1.45);
   }
 }
 
@@ -2404,8 +2405,19 @@ select:not([multiple]):not([size]):dir(rtl) {
   animation-delay: 300ms;
 }
 
+/* The ring is its own layer, so the button under it holds still for a finger or a test. */
 .marketing-chat-nudge {
-  animation: marketing-chat-nudge 1400ms ease-in-out infinite;
+  position: relative;
+}
+
+.marketing-chat-nudge::after {
+  position: absolute;
+  inset: -1px;
+  border: 2px solid var(--color-primary);
+  border-radius: inherit;
+  content: "";
+  pointer-events: none;
+  animation: marketing-chat-nudge 1400ms ease-out infinite;
 }
 
 .marketing-chat-flash {

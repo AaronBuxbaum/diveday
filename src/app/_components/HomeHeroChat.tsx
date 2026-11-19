@@ -22,6 +22,10 @@ const LINES = [
   "14",
   "15",
   "16",
+  "17",
+  "18",
+  "19",
+  "20",
 ] as const;
 
 /** A face at the chat's avatar size; the name beside it is its label. */
@@ -29,24 +33,10 @@ function face(src: string) {
   return <Image src={src} width={56} height={56} alt="" className="size-7 object-cover" />;
 }
 
-/** A portrait someone sends into the chat. */
-function portrait(src: string, alt: string) {
-  return (
-    <Image
-      src={src}
-      width={256}
-      height={256}
-      alt={alt}
-      className="aspect-square w-36 object-cover"
-    />
-  );
-}
-
 /**
  * The demo shop's crew in a group chat the night before the 7:30 boat, beside
- * the homepage headline. The cast and the two Toms are the sample shop's own
- * (`src/db/seed-cast.ts`), so the faces here are the ones a visitor meets in
- * the demo.
+ * the homepage headline. The cast is the sample shop's own (`src/db/seed-cast.ts`),
+ * so the faces here are the ones a visitor meets in the demo.
  */
 export function HomeHeroChat({ locale }: { locale: DiverLocale }) {
   const t = diverTranslator(locale);
@@ -72,22 +62,6 @@ export function HomeHeroChat({ locale }: { locale: DiverLocale }) {
               marcus: face("/demo-staff/marcus-webb.webp"),
             },
             lines: LINES.map((line) => t(`marketing.home.chat.lines.${line}`)),
-            photos: {
-              tom: portrait("/demo-divers/tom-okafor.webp", t("marketing.home.chat.photos.tom")),
-              tomasz: portrait(
-                "/demo-divers/tomasz-wojcik.webp",
-                t("marketing.home.chat.photos.tomasz"),
-              ),
-              boat: (
-                <Image
-                  src="/demo-shop/generated/boat.webp"
-                  width={384}
-                  height={256}
-                  alt={t("marketing.home.chat.photos.boat")}
-                  className="aspect-[3/2] w-48 object-cover"
-                />
-              ),
-            },
             card: {
               title: t("marketing.home.chat.card.title"),
               readyBefore: t("marketing.home.chat.card.ready", { ready: 8 }),

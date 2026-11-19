@@ -108,24 +108,23 @@
         "1": "¿Tom llegó a firmar su exención?",
         "2": "¿Cuál Tom?",
         "3": "Tom el del barco, no Tom el del alquiler",
-        "4": "¿Este Tom?",
-        "5": "Ese es Tom el del alquiler",
-        "6": "¿Este?",
-        "7": "Ese es Tomasz. También le dicen Tom.",
+        "4": "¿El alto?",
+        "5": "Los dos son altos",
+        "6": "¿Tomasz cuenta como Tom?",
+        "7": "También le dicen Tom",
         "8": "Las firmadas están en la carpeta",
         "9": "¿Dónde está la carpeta?",
         "10": "En el barco",
-        "11": "¿Puedes ir a ver?",
-        "12": "Ya estoy en la cama",
-        "13": "Está en DiveDay",
-        "14": "¿Y eso es todo?",
-        "15": "Entonces Tom el del alquiler es Tom el del barco",
-        "16": "Buenas noches"
-      },
-      "photos": {
-        "tom": "Una foto de Tom Okafor en la marina",
-        "tomasz": "Una foto de Tomasz en la marina",
-        "boat": "Una foto del barco amarrado en el muelle"
+        "11": "Creía que estaba en tu furgoneta",
+        "12": "Esa es la otra carpeta",
+        "13": "¿Puedes ir a ver?",
+        "14": "Ya estoy en la cama",
+        "15": "Le escribo a Tom",
+        "16": "¿A cuál Tom?",
+        "17": "Está en DiveDay",
+        "18": "¿Y eso es todo?",
+        "19": "Entonces Tom el del alquiler es Tom el del barco",
+        "20": "Buenas noches"
       },
       "card": {
         "title": "La salida de mañana a las 7:30",
@@ -138,7 +137,7 @@
       },
       "composer": "Mensaje",
       "replay": "Ver de nuevo",
-      "note": "Cada exención, tarjeta y pago ya está en DiveDay, así que nadie tiene que preguntar en el chat del grupo."
+      "note": "DiveDay sabe quién firmó, quién pagó y quién aún no puede embarcar. Tu equipo puede dejar de preguntarse entre sí."
     }
   },
   "common": {

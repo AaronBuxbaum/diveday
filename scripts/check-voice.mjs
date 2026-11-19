@@ -619,7 +619,19 @@ export function exclamations(value, key = "") {
  */
 export const SHAPE_SCOPES = ["marketing.", "switching.", "account.onboard.", "metadata."];
 
+/**
+ * Values whose shape is the founder's own wording, by bundle key, each with
+ * its reason. A key here is read for typography and words, never for shape.
+ */
+export const SHAPE_ALLOWLIST = new Map([
+  [
+    "marketing.home.chat.note",
+    "'who signed, who paid, and who can’t board yet' names the three questions the chat above it asks (Aaron's wording, 2026-11-19)",
+  ],
+]);
+
 export function inShapeScope(key) {
+  if (SHAPE_ALLOWLIST.has(key)) return false;
   // A notice ("Your shop was created, but signing you in failed. Try signing
   // in below.") is the divemaster's register, where the short last sentence
   // is the next action rather than a beat.
