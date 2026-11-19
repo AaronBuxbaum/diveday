@@ -464,6 +464,52 @@ it("refuses to resolve an original observation against a different current perso
   ).toHaveLength(0);
 });
 
+it("never treats an empty review witness as an ordinary live mark", async () => {
+  const { db, shop, trip, booking, staffPersonId } = await seededContext();
+  vi.mocked(getDb).mockResolvedValue(db);
+  auth.mockResolvedValue(staffSession(shop.id, staffPersonId));
+  const confirmationId = crypto.randomUUID();
+  const snapshotId = crypto.randomUUID();
+  const { POST: confirm } = await import("../review/route");
+  const response = await confirm(
+    new Request("http://localhost/api/offline-manifests/review", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        tripId: trip.id,
+        bookingId: booking.id,
+        checkpoint: "after_dive_1",
+        status: "boarded",
+        snapshotId,
+        meetingDay: 0,
+        witness: "",
+        originalWitness: "",
+        originalSnapshotId: snapshotId,
+        originalMeetingDay: 0,
+        confirmationId,
+        confirmed: true,
+      }),
+    }),
+  );
+  expect(response.status).toBe(400);
+  expect(
+    await recordRollCall(db, {
+      shopId: shop.id,
+      tripId: trip.id,
+      bookingId: booking.id,
+      recordedByPersonId: staffPersonId,
+      checkpoint: "after_dive_1",
+      status: "boarded",
+      source: "live",
+      clientEventId: confirmationId,
+      reviewWitness: "",
+    }),
+  ).toMatchObject({ ok: false });
+  expect(
+    await db.select().from(rollCallEvents).where(eq(rollCallEvents.clientEventId, confirmationId)),
+  ).toHaveLength(0);
+});
+
 it("does not create a live confirmation after the represented person was erased", async () => {
   const { db, shop, trip, booking, staffPersonId } = await seededContext();
   vi.mocked(getDb).mockResolvedValue(db);
@@ -506,6 +552,76 @@ it("does not create a live confirmation after the represented person was erased"
   expect(
     await db.select().from(rollCallEvents).where(eq(rollCallEvents.clientEventId, confirmationId)),
   ).toHaveLength(0);
+});
+
+it("returns an exact durable refusal for a stale confirmation and never later applies its ID", async () => {
+  const { db, shop, trip, booking, staffPersonId } = await seededContext();
+  vi.mocked(getDb).mockResolvedValue(db);
+  auth.mockResolvedValue(staffSession(shop.id, staffPersonId));
+  const saved = (await buildOfflineManifestCopies(db, shop, staffPersonId, [trip.id])).payloads[0];
+  const witness = saved?.rollCallWitnesses?.[`seat:${booking.id}:after_dive_1`];
+  if (!saved?.snapshotId || !witness) throw new Error("snapshot witness missing");
+  expect(
+    (
+      await editTripSection(db, shop.id, trip.id, {
+        endsAt: new Date(trip.endsAt.getTime() + 3600000),
+      })
+    ).ok,
+  ).toBe(true);
+  const confirmationId = crypto.randomUUID();
+  const { POST: confirm } = await import("../review/route");
+  const body = {
+    tripId: trip.id,
+    bookingId: booking.id,
+    checkpoint: "after_dive_1",
+    status: "boarded",
+    snapshotId: saved.snapshotId,
+    meetingDay: saved.rollCallMeetingDay ?? 0,
+    witness,
+    originalWitness: witness,
+    originalSnapshotId: saved.snapshotId,
+    originalMeetingDay: saved.rollCallMeetingDay ?? 0,
+    confirmationId,
+    confirmed: true,
+  };
+  const request = () =>
+    new Request("http://localhost/api/offline-manifests/review", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  const first = await confirm(request());
+  expect(first.status).toBe(409);
+  expect(await first.json()).toMatchObject({ status: "not_applied", confirmationId });
+  const retry = await confirm(request());
+  expect(await retry.json()).toMatchObject({ status: "not_applied", confirmationId });
+  const fresh = (await buildOfflineManifestCopies(db, shop, staffPersonId, [trip.id])).payloads[0];
+  const freshWitness = fresh?.rollCallWitnesses?.[`seat:${booking.id}:after_dive_1`];
+  if (!fresh?.snapshotId || !freshWitness) throw new Error("fresh witness missing");
+  const refreshedBody = {
+    ...body,
+    snapshotId: fresh.snapshotId,
+    meetingDay: fresh.rollCallMeetingDay ?? 0,
+    witness: freshWitness,
+  };
+  const send = (payload: unknown) =>
+    confirm(
+      new Request("http://localhost/api/offline-manifests/review", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(payload),
+      }),
+    );
+  expect(await (await send(refreshedBody)).json()).toMatchObject({
+    status: "not_applied",
+    confirmationId,
+  });
+  expect(
+    await db.select().from(rollCallEvents).where(eq(rollCallEvents.clientEventId, confirmationId)),
+  ).toHaveLength(0);
+  expect(
+    await (await send({ ...refreshedBody, confirmationId: crypto.randomUUID() })).json(),
+  ).toMatchObject({ status: "applied" });
 });
 
 it("keeps review private from signed-out, revoked and other-tenant staff", async () => {

@@ -264,6 +264,9 @@ describePostgres("witnessed offline projection", () => {
       meetingDay: saved.rollCallMeetingDay ?? 0,
       offlineSnapshotId: saved.snapshotId,
       reviewWitness: witness,
+      reviewOriginalWitness: witness,
+      reviewOriginalSnapshotId: saved.snapshotId,
+      reviewOriginalMeetingDay: saved.rollCallMeetingDay ?? 0,
     };
     const first = await recordRollCall(pg.db, input);
     expect(first).toMatchObject({ ok: true });
@@ -317,6 +320,9 @@ describePostgres("witnessed offline projection", () => {
       meetingDay: saved.rollCallMeetingDay ?? 0,
       offlineSnapshotId: saved.snapshotId,
       reviewWitness: witness,
+      reviewOriginalWitness: witness,
+      reviewOriginalSnapshotId: saved.snapshotId,
+      reviewOriginalMeetingDay: saved.rollCallMeetingDay ?? 0,
     });
     expect(result).toMatchObject({ ok: false, reason: "review_required" });
     expect(

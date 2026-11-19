@@ -5,9 +5,11 @@ import {
   discardOfflineRollCallReview,
   loadOfflineManifest,
   prepareOfflineRollCallConfirmation,
+  releaseOfflineRollCallConfirmation,
 } from "@/lib/offline-manifest-store";
 import type { OfflineManifestPayload, OfflineRollCallEvent } from "@/lib/offline-manifests";
 import type { OfflineTripControls } from "./controls";
+import { readReviewContext } from "./read-review-context";
 
 /** A held observation is evidence, not a live mark. Every live mark requires an explicit choice. */
 export function ReviewObservation({
@@ -35,59 +37,11 @@ export function ReviewObservation({
     try {
       const tenant = await reviewTenant?.();
       if (!tenant) throw new Error("tenant unavailable");
-      if (event.bookingId && event.rollCallWitness && event.meetingDay !== undefined) {
-        const identity = await fetch("/api/offline-manifests/review/identity", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({
-            tripId: event.tripId,
-            bookingId: event.bookingId,
-            snapshotId: event.snapshotId,
-            checkpoint: event.checkpoint,
-            meetingDay: event.meetingDay,
-            witness: event.rollCallWitness,
-          }),
-        });
-        if (!identity.ok) throw new Error("identity unavailable");
-        const result: unknown = await identity.json();
-        const currentTenant = await reviewTenant?.();
-        if (
-          !currentTenant ||
-          currentTenant.shopSlug !== tenant.shopSlug ||
-          currentTenant.round !== tenant.round
-        )
-          throw new Error("tenant changed");
-        if (
-          result &&
-          typeof result === "object" &&
-          "name" in result &&
-          typeof result.name === "string"
-        )
-          setOriginalName(result.name);
-        if (
-          result &&
-          typeof result === "object" &&
-          "sameAssignment" in result &&
-          result.sameAssignment === true
-        )
-          setSameAssignment(true);
-      }
-      const response = await fetch(
-        `/api/offline-manifests/review?tripId=${encodeURIComponent(event.tripId)}`,
-        { cache: "no-store" },
-      );
-      if (!response.ok) throw new Error("review unavailable");
-      const body = (await response.json()) as { current?: OfflineManifestPayload };
-      const currentTenant = await reviewTenant?.();
-      if (
-        !currentTenant ||
-        currentTenant.shopSlug !== tenant.shopSlug ||
-        currentTenant.round !== tenant.round ||
-        !body.current ||
-        body.current.shop.slug !== tenant.shopSlug
-      )
-        throw new Error("tenant changed");
-      setCurrent(body.current);
+      const current = await readReviewContext(event, tenant, reviewTenant, (name, matches) => {
+        setOriginalName(name);
+        setSameAssignment(matches);
+      });
+      setCurrent(current);
     } catch {
       setError(true);
     } finally {
@@ -160,6 +114,29 @@ export function ReviewObservation({
         }),
       });
       const receipt: unknown = await response.json();
+      if (
+        response.status === 409 &&
+        receipt &&
+        typeof receipt === "object" &&
+        "confirmationId" in receipt &&
+        receipt.confirmationId === prepared.confirmationId &&
+        "status" in receipt &&
+        receipt.status === "not_applied"
+      ) {
+        const next = await releaseOfflineRollCallConfirmation(
+          event.tripId,
+          event.clientEventId,
+          prepared.confirmationId,
+          tenant.shopSlug,
+          tenant.round,
+        );
+        onReviewEnvelope?.(next);
+        setCurrent(null);
+        setStatus(null);
+        setOriginalName(null);
+        setSameAssignment(false);
+        throw new Error("confirmation refused");
+      }
       if (
         !response.ok ||
         !receipt ||

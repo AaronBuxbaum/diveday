@@ -15,6 +15,7 @@ import {
   OFFLINE_MANIFEST_PENDING_GRACE_MS,
   prepareOfflineRollCallConfirmation,
   readDiscardedOfflineRecords,
+  releaseOfflineRollCallConfirmation,
   saveOfflineManifest,
   syncOfflineManifest,
 } from "./offline-manifest-store";
@@ -175,6 +176,33 @@ describe("offline roll-call review storage", () => {
     );
     await syncOfflineManifest(tripId);
     const round = await beginOfflineTenantVerificationRound();
+    const reserved = await prepareOfflineRollCallConfirmation(
+      tripId,
+      original.clientEventId,
+      "boarded",
+      payload.shop.slug,
+      round,
+      { snapshotId: "current-snapshot", meetingDay: 0, witness: "current-proof" },
+    );
+    await expect(
+      discardOfflineRollCallReview(tripId, original.clientEventId, payload.shop.slug, round),
+    ).rejects.toMatchObject({ code: "not_allowed" });
+    await expect(
+      releaseOfflineRollCallConfirmation(
+        tripId,
+        original.clientEventId,
+        "different-id",
+        payload.shop.slug,
+        round,
+      ),
+    ).rejects.toMatchObject({ code: "not_allowed" });
+    await releaseOfflineRollCallConfirmation(
+      tripId,
+      original.clientEventId,
+      reserved.confirmationId,
+      payload.shop.slug,
+      round,
+    );
     await discardOfflineRollCallReview(tripId, original.clientEventId, payload.shop.slug, round);
     const saved = await loadOfflineManifest(tripId);
     expect(saved?.events).toHaveLength(1);

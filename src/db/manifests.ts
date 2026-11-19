@@ -29,10 +29,7 @@ import {
 import { seatIsHeld } from "@/lib/no-show";
 import { verifyOfflineErasureEpoch } from "@/lib/offline-erasure-epoch";
 import { offlineEventInstant } from "@/lib/offline-events";
-import {
-  offlineRollCallWitnessEnabled,
-  verifyRollCallWitness,
-} from "@/lib/offline-roll-call-witness";
+import { offlineRollCallWitnessEnabled } from "@/lib/offline-roll-call-witness";
 import type { ParticipantType } from "@/lib/participant-types";
 import { seatRefusal } from "@/lib/participant-types";
 import { diverPhotoDisplayPath } from "@/lib/person-photo";
@@ -72,7 +69,12 @@ import {
   replayVerdict,
   type StoredOfflineEvent,
 } from "./offline-replay";
-import { reviewPersonIsCurrent } from "./offline-review-identity";
+import {
+  authorizeCrewRollCallId,
+  lockReviewConfirmation,
+  refuseReviewConfirmation,
+} from "./offline-review-refusals";
+import { validateOfflineRollCallCapture } from "./offline-roll-call-capture";
 import { queryAll } from "./query-helpers";
 import { getBookingReadiness, listTripReadiness } from "./readiness";
 import { rentalFitByBooking } from "./rental-fit";
@@ -1560,6 +1562,7 @@ export type RecordRollCallOutcome =
     }
   | {
       ok: false;
+      notApplied?: true;
       noteDisposition?: "discarded_erasure_cutoff" | "discarded_unverified_snapshot";
       reason:
         | "booking_unavailable"
@@ -2063,6 +2066,16 @@ function rollCallReplaySubject(
   return `${kind}:${tripId}/${subjectId}/${rollCallIntentKey(event)}`;
 }
 
+/** Use the device instant only for offline observations, bounded by receipt time. */
+function recordedRollCallInstant(
+  input: { source?: "live" | "offline"; occurredAt?: Date },
+  now: Date,
+): Date {
+  return input.source === "offline"
+    ? offlineEventInstant(input.occurredAt, now)
+    : (input.occurredAt ?? now);
+}
+
 export async function recordRollCall(
   db: AppDb,
   input: {
@@ -2089,6 +2102,9 @@ export async function recordRollCall(
     rollCallWitness?: string;
     /** Fresh server-issued context for an explicit live review confirmation. */
     reviewWitness?: string;
+    reviewOriginalWitness?: string;
+    reviewOriginalSnapshotId?: string;
+    reviewOriginalMeetingDay?: number;
     /**
      * What the crew observed about a person who is unaccounted for. Kept only
      * at an after-dive checkpoint (`rollCallNoteAllowed`) — a note posted at
@@ -2102,12 +2118,43 @@ export async function recordRollCall(
   // One instant for the event and the boat snapshot it keeps (#2300). An
   // offline tap is never dated after its own sync (`offlineEventInstant`).
   const now = nowDate();
-  const occurredAt =
-    input.source === "offline"
-      ? offlineEventInstant(input.occurredAt, now)
-      : (input.occurredAt ?? now);
+  const occurredAt = recordedRollCallInstant(input, now);
+  const reviewRequested =
+    input.reviewWitness !== undefined ||
+    input.reviewOriginalWitness !== undefined ||
+    input.reviewOriginalSnapshotId !== undefined ||
+    input.reviewOriginalMeetingDay !== undefined;
   const outcome = await answeringReplayAsDuplicate(
-    () => db.transaction((tx) => writeRollCall(tx, input, occurredAt)),
+    () =>
+      db.transaction(async (tx) => {
+        if (
+          input.clientEventId &&
+          !(await requireActiveStaffId(tx, input.shopId, input.recordedByPersonId))
+        )
+          return { ok: false as const, reason: "staff_not_found" as const };
+        if (
+          input.clientEventId &&
+          (await lockReviewConfirmation(tx, input.shopId, input.clientEventId))
+        )
+          return reviewRequested
+            ? { ok: false as const, reason: "review_required" as const, notApplied: true as const }
+            : { ok: false as const, reason: "client_event_conflict" as const };
+        const result = await writeRollCall(tx, input, occurredAt);
+        // Every non-conflict refusal is decided before the event insert. Under
+        // the ID lock, commit the tombstone with that decision so a delayed
+        // request cannot later turn the same confirmation into a live mark.
+        if (
+          reviewRequested &&
+          input.clientEventId &&
+          !result.ok &&
+          result.reason !== "staff_not_found" &&
+          result.reason !== "client_event_conflict"
+        ) {
+          await refuseReviewConfirmation(tx, input.shopId, input.clientEventId);
+          return { ...result, notApplied: true as const };
+        }
+        return result;
+      }),
     {
       indexName: "roll_call_events_shop_client_event_unique",
       clientEventId: input.clientEventId,
@@ -2143,6 +2190,13 @@ async function writeRollCall(
   // This checks the event author; crew and divers remain historical subjects of the manifest.
   const staffId = await requireActiveStaffId(tx, input.shopId, input.recordedByPersonId);
   if (!staffId) return { ok: false, reason: "staff_not_found" };
+  const reviewRequested =
+    input.reviewWitness !== undefined ||
+    input.reviewOriginalWitness !== undefined ||
+    input.reviewOriginalSnapshotId !== undefined ||
+    input.reviewOriginalMeetingDay !== undefined;
+  if (reviewRequested && (source !== "live" || !input.reviewWitness || !input.clientEventId))
+    return { ok: false, reason: "review_required" };
   const captureCards =
     source === "live" && checkpoint === "departure" && input.status === "boarded";
   const mayWriteNote = Boolean(input.note?.trim());
@@ -2250,54 +2304,9 @@ async function writeRollCall(
     .limit(1)
     .for("update", { of: bookings });
   if (!booking) return refuse("booking_unavailable");
-  let verifiedWitness: ReturnType<typeof verifyRollCallWitness> = null;
-  if (source === "offline" && offlineRollCallWitnessEnabled() !== Boolean(input.rollCallWitness))
-    return refuse("review_required");
-  if (source === "live" && input.reviewWitness && !offlineRollCallWitnessEnabled())
-    return refuse("review_required");
-  const witness = source === "offline" ? input.rollCallWitness : input.reviewWitness;
-  if (witness) {
-    if (!input.offlineSnapshotId || input.meetingDay === undefined)
-      return refuse("review_required");
-    verifiedWitness = verifyRollCallWitness(witness, {
-      shopId: input.shopId,
-      tripId: input.tripId,
-      snapshotId: input.offlineSnapshotId,
-      subjectKind: "seat",
-      subjectId: input.bookingId,
-      checkpoint,
-      meetingDay: input.meetingDay,
-    });
-    if (
-      !verifiedWitness ||
-      verifiedWitness.meetingGeneration !== booking.offlineMeetingGeneration ||
-      verifiedWitness.assignmentGeneration !== booking.offlineAssignmentGeneration
-    )
-      return refuse("review_required");
-    if (
-      source === "live" &&
-      input.reviewWitness &&
-      !(await reviewPersonIsCurrent(
-        tx,
-        input.shopId,
-        booking.personId,
-        booking.identityUnconfirmedAt,
-        verifiedWitness.originalPersonId,
-      ))
-    )
-      return refuse("review_required");
-    const { causal } = await manifestRollCallReads(tx, input.shopId, input.tripId);
-    const frontier =
-      causal.contexts.get(`seat:${input.bookingId}/${checkpoint}`)?.observedEvidenceIds ?? [];
-    const observed = new Set((input.observedEvidenceIds ?? []).map((id) => id.toLowerCase()));
-    if (
-      causal.meetingDay !== input.meetingDay ||
-      JSON.stringify([...frontier].sort()) !== JSON.stringify(verifiedWitness.frontier) ||
-      verifiedWitness.frontier.some((id) => !observed.has(id)) ||
-      (source === "live" && observed.size !== verifiedWitness.frontier.length)
-    )
-      return refuse("review_required");
-  }
+  const capture = await validateOfflineRollCallCapture(tx, input, checkpoint, booking);
+  if (!capture.ok) return refuse("review_required");
+  const verifiedWitness = capture.witness;
   // Released seats have their own durable boarding-observation workflow. This
   // exception must not reclaim one or change any commercial/desk state.
   if (
@@ -2614,10 +2623,7 @@ export async function recordCrewRollCall(
   // One instant for the event and the boat snapshot it keeps (#2300). An
   // offline tap is never dated after its own sync (`offlineEventInstant`).
   const now = nowDate();
-  const occurredAt =
-    input.source === "offline"
-      ? offlineEventInstant(input.occurredAt, now)
-      : (input.occurredAt ?? now);
+  const occurredAt = recordedRollCallInstant(input, now);
   const outcome = await answeringReplayAsDuplicate(
     () =>
       db.transaction(async (tx): Promise<RecordCrewRollCallOutcome> => {
@@ -2625,8 +2631,14 @@ export async function recordCrewRollCall(
         const source = input.source ?? "live";
 
         // This checks the event author; crew and divers remain historical subjects of the manifest.
-        const staffId = await requireActiveStaffId(tx, input.shopId, input.recordedByPersonId);
-        if (!staffId) return { ok: false, reason: "staff_not_found" };
+        const authorization = await authorizeCrewRollCallId(
+          tx,
+          input.shopId,
+          input.recordedByPersonId,
+          input.clientEventId,
+        );
+        if (!authorization.ok) return authorization;
+        const staffId = authorization.staffId;
         const captureCredentials =
           source === "live" && checkpoint === "departure" && input.status === "boarded";
         // Acquire the shop fence before trip or seat locks: erasure takes

@@ -18,8 +18,8 @@ const confirmation = z.object({
   status: z.enum(["boarded", "not_boarded"]),
   snapshotId: z.string().uuid(),
   meetingDay: z.number().int().min(0),
-  witness: z.string().max(16000),
-  originalWitness: z.string().max(16000),
+  witness: z.string().min(1).max(16000),
+  originalWitness: z.string().min(1).max(16000),
   originalSnapshotId: z.string().uuid(),
   originalMeetingDay: z.number().int().min(0),
   confirmationId: z.string().uuid(),
@@ -84,21 +84,6 @@ export async function POST(request: Request) {
     meetingDay: input.meetingDay,
   };
   const witness = verifyRollCallWitness(input.witness, scope);
-  const original = verifyRollCallWitness(input.originalWitness, {
-    ...scope,
-    snapshotId: input.originalSnapshotId,
-    meetingDay: input.originalMeetingDay,
-  });
-  if (
-    !witness?.originalPersonId ||
-    !original?.originalPersonId ||
-    witness.originalPersonId !== original.originalPersonId ||
-    witness.assignmentGeneration !== original.assignmentGeneration
-  )
-    return Response.json(
-      { error: "review_required" },
-      { status: 409, headers: OFFLINE_MANIFEST_NO_STORE },
-    );
   const result = await recordRollCall(access.db, {
     shopId: access.shop.id,
     tripId: input.tripId,
@@ -108,15 +93,23 @@ export async function POST(request: Request) {
     status: input.status,
     source: "live",
     clientEventId: input.confirmationId,
-    observedEvidenceIds: witness.frontier,
+    observedEvidenceIds: witness?.frontier ?? [],
     reconcilesEvidence: true,
     meetingDay: input.meetingDay,
     offlineSnapshotId: input.snapshotId,
     reviewWitness: input.witness,
+    reviewOriginalWitness: input.originalWitness,
+    reviewOriginalSnapshotId: input.originalSnapshotId,
+    reviewOriginalMeetingDay: input.originalMeetingDay,
   });
   if (!result.ok)
     return Response.json(
-      { error: result.reason },
+      {
+        error: result.reason,
+        ...(result.notApplied
+          ? { status: "not_applied", confirmationId: input.confirmationId }
+          : {}),
+      },
       {
         status: result.reason === "staff_not_found" ? 401 : 409,
         headers: OFFLINE_MANIFEST_NO_STORE,

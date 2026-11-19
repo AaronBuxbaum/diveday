@@ -1866,6 +1866,37 @@ export async function completeOfflineRollCallConfirmation(
   });
 }
 
+/** Release only the exact ID for which the server committed a no-write refusal. */
+export async function releaseOfflineRollCallConfirmation(
+  tripId: string,
+  eventId: string,
+  confirmationId: string,
+  shopSlug: string,
+  tenantRound: number,
+): Promise<OfflineManifestEnvelope> {
+  return withManifestLock(tripId, async () => {
+    const envelope = await loadOfflineManifest(tripId);
+    if (!envelope || envelope.snapshot.shop.slug !== shopSlug)
+      throw new OfflineManifestError("shop_changed");
+    const event = envelope.events.find((item) => item.clientEventId === eventId);
+    if (
+      !event?.reviewRequired ||
+      event.reviewResolution ||
+      event.reviewConfirmation?.clientEventId !== confirmationId
+    )
+      throw new OfflineManifestError("not_allowed");
+    delete event.reviewConfirmation;
+    const db = await openDatabase();
+    try {
+      if (!(await persistEnvelope(db, envelope, tenantRound, "record")))
+        throw new OfflineManifestError("shop_changed");
+    } finally {
+      db.close();
+    }
+    return envelope;
+  });
+}
+
 /** Discard one explicitly selected review, without releasing dependent queued observations. */
 export async function discardOfflineRollCallReview(
   tripId: string,

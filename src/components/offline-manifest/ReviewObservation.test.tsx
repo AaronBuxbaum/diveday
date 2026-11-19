@@ -7,6 +7,7 @@ import { controls, savedCopy } from "./section-fixtures";
 
 const store = vi.hoisted(() => ({
   prepareOfflineRollCallConfirmation: vi.fn(),
+  releaseOfflineRollCallConfirmation: vi.fn(),
   completeOfflineRollCallConfirmation: vi.fn(),
   discardOfflineRollCallReview: vi.fn(),
   loadOfflineManifest: vi.fn(),
@@ -141,6 +142,66 @@ it("does not resolve a review when the receipt does not match", async () => {
   fireEvent.click(screen.getByRole("button", { name: "Confirm new live mark" }));
   await screen.findByRole("alert");
   expect(store.completeOfflineRollCallConfirmation).not.toHaveBeenCalled();
+  expect(store.releaseOfflineRollCallConfirmation).not.toHaveBeenCalled();
+});
+
+it("releases only an exact durable no-write refusal so the observation can be reviewed or discarded", async () => {
+  const envelope = savedCopy();
+  const current = {
+    ...envelope.snapshot,
+    rollCallMeetingDay: 0,
+    rollCallWitnesses: { "seat:b-priya:departure": "proof" },
+  };
+  vi.stubGlobal(
+    "fetch",
+    vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ name: "Priya Shah", sameAssignment: true }), { status: 200 }),
+      )
+      .mockResolvedValueOnce(new Response(JSON.stringify({ current }), { status: 200 }))
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            error: "review_required",
+            status: "not_applied",
+            confirmationId: "confirmation-1",
+          }),
+          { status: 409 },
+        ),
+      ),
+  );
+  store.prepareOfflineRollCallConfirmation.mockResolvedValue({
+    confirmationId: "confirmation-1",
+    context: { snapshotId: current.snapshotId, meetingDay: 0, witness: "proof" },
+  });
+  store.loadOfflineManifest.mockResolvedValue(envelope);
+  store.releaseOfflineRollCallConfirmation.mockResolvedValue(envelope);
+  render(
+    <ReviewObservation
+      event={observation()}
+      controls={{
+        ...controls(),
+        reviewTenant: async () => ({ shopSlug: "blue-mantis", round: 1 }),
+        onReviewEnvelope: vi.fn(),
+      }}
+    />,
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Review current roster" }));
+  await screen.findByText(/current seat names Priya Shah/);
+  fireEvent.click(screen.getByLabelText("Boarded"));
+  fireEvent.click(screen.getByRole("button", { name: "Confirm new live mark" }));
+  await waitFor(() =>
+    expect(store.releaseOfflineRollCallConfirmation).toHaveBeenCalledWith(
+      "trip-1",
+      "old-observation",
+      "confirmation-1",
+      "blue-mantis",
+      1,
+    ),
+  );
+  expect(store.completeOfflineRollCallConfirmation).not.toHaveBeenCalled();
+  expect(screen.getByRole("button", { name: "Discard observation" })).toBeVisible();
 });
 
 it("retries the exact earlier confirmation even when the subject is no longer on the current roster", async () => {
