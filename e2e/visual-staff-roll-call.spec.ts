@@ -435,9 +435,15 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/shop/blue-mantis");
         await page.getByRole("link", { name: AT_SEA_DAY_TITLE, exact: true }).first().click();
         await expect(page).toHaveURL(/\/trips\/[a-f0-9-]+$/);
+        // The roster's live check lands after the offline copy is saved, and
+        // until it does the deck carries "Guest list may be out of date": a
+        // shutter inside that window drew the line, or measured the page with
+        // it and painted without it (#4748).
+        const confirmed = liveRosterConfirmation(page);
         await openTripTab(page, "Manifest");
         await openDeckDetails(page);
         await offlineCopySaved(page);
+        await confirmed;
         const boarding = page.getByRole("button", { name: "Boarding", exact: true });
         const home = page
           .locator('form:has(input[name="stage"][value="home"])')
