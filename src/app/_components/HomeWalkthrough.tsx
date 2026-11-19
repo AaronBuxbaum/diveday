@@ -124,6 +124,7 @@ export function HomeWalkthrough({
   useEffect(() => {
     const list = rootRef.current?.querySelector("[data-walk-list]");
     if (!list || !beat) return;
+    const before = list.getBoundingClientRect().height;
     for (const item of list.querySelectorAll("[data-walk-step]")) {
       const current = item.getAttribute("data-walk-step") === beat.step;
       item.toggleAttribute("data-walk-current", current);
@@ -133,6 +134,24 @@ export function HomeWalkthrough({
           current && frame.getAttribute("data-walk-frame") === beat.frame,
         );
       }
+    }
+    // Slides differ in height, and the page under them would jump by the difference (a phone has
+    // no anchoring to hide it). Reserving the tallest slide's height would leave most of them
+    // with a hand's width of nothing, so the page glides the difference instead.
+    const after = list.getBoundingClientRect().height;
+    if (
+      before > 0 &&
+      Math.abs(after - before) > 1 &&
+      !window.matchMedia("(prefers-reduced-motion: reduce)").matches &&
+      typeof list.animate === "function"
+    ) {
+      list.animate(
+        [
+          { height: `${before}px`, overflow: "hidden" },
+          { height: `${after}px`, overflow: "hidden" },
+        ],
+        { duration: 240, easing: "cubic-bezier(0.2, 0.8, 0.2, 1)" },
+      );
     }
   }, [beat]);
 
@@ -227,50 +246,50 @@ export function HomeWalkthrough({
     go,
   });
 
-  const onPointerDown = (event: PointerEvent<HTMLDivElement>) => {
+  const press = (x: number, y: number) => {
     if (sliding.current) return;
-    swipeFrom.current = event.clientX;
-    swipeFromY.current = event.clientY;
+    swipeFrom.current = x;
+    swipeFromY.current = y;
     dragging.current = false;
     pressedAt.current = performance.now();
     setHeld(true);
   };
 
-  const onPointerMove = (event: PointerEvent<HTMLDivElement>) => {
+  /** Moves the drag on; true once the press has become a sideways drag. */
+  const moveTo = (x: number, y: number): boolean => {
     const from = swipeFrom.current;
-    if (from === null) return;
-    const dx = event.clientX - from;
+    if (from === null) return false;
+    const dx = x - from;
     if (!dragging.current) {
-      const dy = event.clientY - swipeFromY.current;
-      if (Math.abs(dx) < DRAG_START_PX || Math.abs(dy) > Math.abs(dx)) return;
+      const dy = y - swipeFromY.current;
+      if (Math.abs(dx) < DRAG_START_PX || Math.abs(dy) > Math.abs(dx)) return false;
       dragging.current = true;
-      // From here the drag is the walk's, wherever the finger goes.
-      event.currentTarget.setPointerCapture?.(event.pointerId);
     }
     dragBy(dx);
+    return true;
   };
 
-  const onPointerUp = (event: PointerEvent<HTMLDivElement>) => {
+  const lift = (x: number, target: EventTarget | null) => {
     const from = swipeFrom.current;
     swipeFrom.current = null;
     const wasDragging = dragging.current;
     dragging.current = false;
     setHeld(false);
     if (from === null) return;
-    const moved = event.clientX - from;
+    const moved = x - from;
     if (Math.abs(moved) >= SWIPE_PX) {
       slide(moved < 0 ? 1 : -1, wasDragging ? moved : 0);
     } else if (wasDragging) {
       springBack(moved);
     } else if (
       performance.now() - pressedAt.current < HOLD_MS &&
-      event.target instanceof HTMLElement &&
-      event.target.closest("[data-walk-frame]") &&
-      !event.target.closest("a, button")
+      target instanceof HTMLElement &&
+      target.closest("[data-walk-frame]") &&
+      !target.closest("a, button")
     ) {
       // Instagram's stories: the left edge of a screen goes back, the rest on.
-      const rect = event.target.closest("[data-walk-frame]")?.getBoundingClientRect();
-      const back = rect && rect.width > 0 && event.clientX < rect.left + rect.width * 0.3;
+      const rect = target.closest("[data-walk-frame]")?.getBoundingClientRect();
+      const back = rect && rect.width > 0 && x < rect.left + rect.width * 0.3;
       go(index + (back ? -1 : 1));
     }
   };
@@ -281,6 +300,63 @@ export function HomeWalkthrough({
     dragging.current = false;
     setHeld(false);
     if (wasDragging) springBack(0);
+  };
+
+  // A finger is read from touch events, not pointer events: the browser takes a touch for a
+  // scroll as soon as it leans up or down and cancels its pointer, so a swipe with the slightest
+  // lean never arrived. A touch move is ours to claim while it is still undecided, and a sideways
+  // one is claimed once it is clearly more sideways than up or down.
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    const onStart = (event: TouchEvent) => {
+      const t = event.touches[0];
+      if (event.touches.length > 1 || !t) return release();
+      press(t.clientX, t.clientY);
+    };
+    const onMove = (event: TouchEvent) => {
+      const t = event.touches[0];
+      if (!t || event.touches.length > 1) return release();
+      if (moveTo(t.clientX, t.clientY)) event.preventDefault();
+    };
+    const onEnd = (event: TouchEvent) => {
+      const t = event.changedTouches[0];
+      if (t) lift(t.clientX, event.target);
+      else release();
+    };
+    root.addEventListener("touchstart", onStart, { passive: true });
+    root.addEventListener("touchmove", onMove, { passive: false });
+    root.addEventListener("touchend", onEnd);
+    root.addEventListener("touchcancel", release);
+    return () => {
+      root.removeEventListener("touchstart", onStart);
+      root.removeEventListener("touchmove", onMove);
+      root.removeEventListener("touchend", onEnd);
+      root.removeEventListener("touchcancel", release);
+    };
+  });
+
+  const onPointerDown = (event: PointerEvent<HTMLDivElement>) => {
+    if (event.pointerType === "touch") return;
+    press(event.clientX, event.clientY);
+  };
+
+  const onPointerMove = (event: PointerEvent<HTMLDivElement>) => {
+    if (event.pointerType === "touch") return;
+    const wasDragging = dragging.current;
+    if (moveTo(event.clientX, event.clientY) && !wasDragging) {
+      // From here the drag is the walk's, wherever the pointer goes.
+      event.currentTarget.setPointerCapture?.(event.pointerId);
+    }
+  };
+
+  const onPointerUp = (event: PointerEvent<HTMLDivElement>) => {
+    if (event.pointerType === "touch") return;
+    lift(event.clientX, event.target);
+  };
+
+  const onPointerEnd = (event: PointerEvent<HTMLDivElement>) => {
+    if (event.pointerType !== "touch") release();
   };
 
   const toggle = (
@@ -305,9 +381,9 @@ export function HomeWalkthrough({
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
-      onPointerCancel={release}
-      onPointerLeave={release}
-      className="relative scroll-mt-20 touch-pan-y overflow-x-clip"
+      onPointerCancel={onPointerEnd}
+      onPointerLeave={onPointerEnd}
+      className="relative scroll-mt-20 overflow-x-clip"
     >
       {ready ? (
         <>
