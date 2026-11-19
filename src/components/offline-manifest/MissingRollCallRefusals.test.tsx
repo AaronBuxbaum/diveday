@@ -16,6 +16,7 @@ it("identifies an unsent observation requiring manual review", () => {
       tripId: "trip-1",
       bookingId: "removed-booking",
       checkpoint: "after_dive_1",
+      meetingDay: 1,
       status: "not_boarded",
       occurredAt: "2026-08-01T13:00:00.000Z",
       syncStatus: "pending",
@@ -26,8 +27,11 @@ it("identifies an unsent observation requiring manual review", () => {
   render(<MissingRollCallRefusals view={trip} controls={controls()} />);
   expect(screen.getByRole("status")).toHaveTextContent("remains on this device");
   expect(screen.getByRole("status")).toHaveTextContent("manual roll call");
-  expect(screen.getByRole("status")).toHaveTextContent("Original subject: removed-booking");
+  expect(screen.getByRole("status")).toHaveTextContent(
+    "The original subject name is unavailable. Reference: removed-booking",
+  );
   expect(screen.getByRole("status")).toHaveTextContent("Recorded: Not back aboard");
+  expect(screen.getByRole("status")).toHaveTextContent("Original meeting day: 2");
   expect(screen.getByRole("status")).toHaveTextContent("Two-Tank Reef");
 });
 
@@ -71,4 +75,28 @@ it("identifies a refused mark for a subject still on the roster", () => {
   expect(screen.getByRole("status")).toHaveTextContent(
     "b-priya at Before departure was not accepted",
   );
+});
+
+it("names the original subject only when the saved copy is the capture snapshot", () => {
+  const trip = view();
+  trip.envelope.events = [
+    {
+      clientEventId: "mark-review",
+      snapshotId: "snap-trip-1",
+      snapshotSavedAt: "2026-08-01T12:00:00.000Z",
+      tripId: "trip-1",
+      bookingId: "b-priya",
+      checkpoint: "departure",
+      status: "boarded",
+      occurredAt: "2026-08-01T13:00:00.000Z",
+      syncStatus: "pending",
+      reviewRequired: true,
+    },
+  ];
+  const { rerender } = render(<MissingRollCallRefusals view={trip} controls={controls()} />);
+  expect(screen.getByRole("status")).toHaveTextContent("Original subject: Priya Shah");
+  trip.envelope.snapshot.snapshotId = "different-snapshot";
+  rerender(<MissingRollCallRefusals view={trip} controls={controls()} />);
+  expect(screen.getByRole("status")).toHaveTextContent("The original subject name is unavailable");
+  expect(screen.getByRole("status")).not.toHaveTextContent("Priya Shah");
 });

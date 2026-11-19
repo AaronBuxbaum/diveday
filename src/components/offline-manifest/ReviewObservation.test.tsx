@@ -95,6 +95,7 @@ it("does not resolve a review when the receipt does not match", async () => {
   const envelope = savedCopy();
   const current = {
     ...envelope.snapshot,
+    rollCallMeetingDay: 0,
     rollCallWitnesses: { "seat:b-priya:departure": "proof" },
   };
   vi.stubGlobal(
@@ -136,13 +137,11 @@ it("retries the exact earlier confirmation even when the subject is no longer on
   const event = observation();
   const context = { snapshotId: "previous-snapshot", meetingDay: 0, witness: "previous-proof" };
   event.reviewConfirmation = { clientEventId: "confirmation-1", status: "boarded", context };
-  const fetcher = vi
-    .fn()
-    .mockResolvedValueOnce(
-      new Response(JSON.stringify({ status: "duplicate", confirmationId: "confirmation-1" }), {
-        status: 200,
-      }),
-    );
+  const fetcher = vi.fn().mockResolvedValueOnce(
+    new Response(JSON.stringify({ status: "duplicate", confirmationId: "confirmation-1" }), {
+      status: 200,
+    }),
+  );
   vi.stubGlobal("fetch", fetcher);
   store.completeOfflineRollCallConfirmation.mockResolvedValue(envelope);
   render(

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { ErrorToast } from "@/components/Toast";
 import {
   completeOfflineRollCallConfirmation,
   discardOfflineRollCallReview,
@@ -54,7 +55,11 @@ export function ReviewObservation({
     const person = checkpointManifest?.divers.find((diver) => diver.bookingId === event.bookingId);
     const witness = current?.rollCallWitnesses?.[`seat:${event.bookingId}:${event.checkpoint}`];
     if (!selected || !event.bookingId) return;
-    if (!event.reviewConfirmation && (!person || !current?.snapshotId || !witness)) return;
+    if (
+      !event.reviewConfirmation &&
+      (!person || !current?.snapshotId || current.rollCallMeetingDay === undefined || !witness)
+    )
+      return;
     setBusy(true);
     setError(false);
     try {
@@ -71,14 +76,15 @@ export function ReviewObservation({
           context: event.reviewConfirmation.context,
         };
       } else {
-        if (!current?.snapshotId || !witness) throw new Error("current context unavailable");
+        if (!current?.snapshotId || current.rollCallMeetingDay === undefined || !witness)
+          throw new Error("current context unavailable");
         prepared = await prepareOfflineRollCallConfirmation(
           event.tripId,
           event.clientEventId,
           selected,
           tenant.shopSlug,
           tenant.round,
-          { snapshotId: current.snapshotId, meetingDay: current.rollCallMeetingDay ?? 0, witness },
+          { snapshotId: current.snapshotId, meetingDay: current.rollCallMeetingDay, witness },
         );
         const retained = await loadOfflineManifest(event.tripId);
         if (retained) onReviewEnvelope?.(retained);
@@ -157,6 +163,13 @@ export function ReviewObservation({
               startsAt: manifest.trip.startsAt,
             })}
           </p>
+          <p>
+            {current.rollCallMeetingDay === undefined
+              ? t("shared.offlineManifest.single.reviewCurrentDayUnknown")
+              : t("shared.offlineManifest.single.reviewCurrentDay", {
+                  day: current.rollCallMeetingDay + 1,
+                })}
+          </p>
           <p>{t("shared.offlineManifest.single.reviewCurrentRoster")}</p>
           <ul>
             {manifest.divers.map((diver) => (
@@ -176,6 +189,7 @@ export function ReviewObservation({
           </ul>
           {person &&
           event.bookingId &&
+          current.rollCallMeetingDay !== undefined &&
           current.rollCallWitnesses?.[`seat:${event.bookingId}:${event.checkpoint}`] ? (
             <div>
               <p>
@@ -200,7 +214,11 @@ export function ReviewObservation({
                       checked={status === "not_boarded"}
                       onChange={() => setStatus("not_boarded")}
                     />
-                    {t(event.checkpoint === "departure" ? "shared.presence.notBoarded" : "shared.offlineManifest.single.notBackAboardActive")}
+                    {t(
+                      event.checkpoint === "departure"
+                        ? "shared.presence.notBoarded"
+                        : "shared.offlineManifest.single.notBackAboardActive",
+                    )}
                   </label>
                 </fieldset>
               )}
@@ -230,7 +248,7 @@ export function ReviewObservation({
             {t("shared.offlineManifest.single.reviewDiscard")}
           </button>
         ))}
-      {error && <p role="alert">{t("shared.offlineManifest.single.reviewFailed")}</p>}
+      {error && <ErrorToast message={t("shared.offlineManifest.single.reviewFailed")} />}
     </div>
   );
 }

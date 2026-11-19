@@ -67,10 +67,15 @@ describePostgres("offline writer drain primitives", () => {
       const closed = connection(newRole);
       await expect(closed.connect()).rejects.toThrow();
       await closed.end().catch(() => {});
+      const ended = Promise.all([
+        new Promise<void>((resolve) => old?.once("end", resolve)),
+        new Promise<void>((resolve) => idle?.once("end", resolve)),
+      ]);
       await admin.query(
         "select pg_terminate_backend(pid) from pg_stat_activity where usename = $1",
         [oldRole],
       );
+      await ended;
       const after = await admin.query<{ count: string }>(
         "select count(*) from pg_stat_activity where usename = $1",
         [oldRole],

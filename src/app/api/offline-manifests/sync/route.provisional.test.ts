@@ -2,13 +2,13 @@ import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, expect, it, vi } from "vitest";
 import { getTripManifest, recordRollCall } from "@/db/manifests";
 import { listChecklistItems } from "@/db/pre-departure-check";
-import { preDepartureCheckEvents, rollCallEvents, trips } from "@/db/schema";
+import { preDepartureCheckEvents, rollCallEvents, shops, trips } from "@/db/schema";
 import { editTripSection, getTripRoster } from "@/db/trips";
 import { upcomingTripsWithCounts } from "@/db/trips-queries.test-support";
 import { buildOfflineManifestCopies } from "@/features/offline-manifest-snapshots";
 import type { DiveDaySession } from "@/lib/auth";
 import { nowDate } from "@/lib/clock";
-import { verifyRollCallWitness } from "@/lib/offline-roll-call-witness";
+import { signRollCallWitness, verifyRollCallWitness } from "@/lib/offline-roll-call-witness";
 import { ROLL_CALL_REVIEW_HEADERS, ROLL_CALL_WITNESS_HEADERS } from "@/lib/roll-call-protocol";
 import { fileScopedShopContext } from "@/test/db";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
@@ -402,6 +402,76 @@ it("records an explicit current live confirmation exactly once", async () => {
       (diver) => diver.bookingId === booking.id,
     )?.rollCall?.state,
   ).toBe("boarded");
+});
+
+it("keeps review private from signed-out, revoked and other-tenant staff", async () => {
+  const { db, shop, trip, booking, staffPersonId } = await seededContext();
+  vi.mocked(getDb).mockResolvedValue(db);
+  const { GET, POST: confirm } = await import("../review/route");
+  const get = (tripId: string) =>
+    new Request(`http://localhost/api/offline-manifests/review?tripId=${tripId}`);
+  const post = (body: unknown) =>
+    new Request("http://localhost/api/offline-manifests/review", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  auth.mockResolvedValue(null);
+  for (const response of [await GET(get(trip.id)), await confirm(post({}))]) {
+    expect(response.status).toBe(401);
+    expect(response.headers.get("cache-control")).toContain("no-store");
+  }
+  auth.mockResolvedValue(staffSession(shop.id, crypto.randomUUID()));
+  expect((await GET(get(trip.id))).status).toBe(401);
+  expect((await confirm(post({}))).status).toBe(401);
+  auth.mockResolvedValue(staffSession(shop.id, staffPersonId));
+  const [otherShop] = await db
+    .insert(shops)
+    .values({ name: "Synthetic other shop", slug: `other-${crypto.randomUUID()}`, timezone: "UTC" })
+    .returning();
+  const [otherTrip] = await db
+    .insert(trips)
+    .values({
+      shopId: otherShop.id,
+      title: "Other trip",
+      startsAt: trip.startsAt,
+      endsAt: trip.endsAt,
+      capacity: 4,
+      plannedDives: 1,
+      priceCents: 0,
+    })
+    .returning();
+  const otherResponse = await GET(get(otherTrip.id));
+  expect(otherResponse.status).toBe(404);
+  expect(otherResponse.headers.get("cache-control")).toContain("no-store");
+  const snapshotId = crypto.randomUUID();
+  const witness = signRollCallWitness({
+    shopId: otherShop.id,
+    tripId: trip.id,
+    snapshotId,
+    subjectKind: "seat",
+    subjectId: booking.id,
+    checkpoint: "after_dive_1",
+    meetingDay: 0,
+    meetingGeneration: 0,
+    assignmentGeneration: 0,
+    frontier: [],
+  });
+  const response = await confirm(
+    post({
+      tripId: trip.id,
+      bookingId: booking.id,
+      checkpoint: "after_dive_1",
+      status: "boarded",
+      snapshotId,
+      meetingDay: 0,
+      witness,
+      confirmationId: crypto.randomUUID(),
+      confirmed: true,
+    }),
+  );
+  expect(response.status).toBe(409);
+  expect(response.headers.get("cache-control")).toContain("no-store");
 });
 
 it("does not sign off an old checklist after a schedule edit and revert", async () => {

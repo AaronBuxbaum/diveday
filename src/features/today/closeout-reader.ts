@@ -2,8 +2,9 @@ import { and, asc, eq, gte, inArray, isNotNull, isNull, lt, max, ne } from "driz
 import type { AppDb } from "@/db/client";
 import { isDemoShopWithDemoOwnerOrCaptainAccount } from "@/db/demo-account-guard";
 import { listDepartureRollCallByTrip, readAfterDiveRollCallByTrip } from "@/db/manifests";
+import { effectiveCausalRowsForDb } from "@/db/roll-call-causal-store";
 import { newestMarkFirst, oldestMarkFirst } from "@/db/roll-call-order";
-import { crewMarks, markCrewPersonId, seatMarks } from "@/db/roll-call-subject";
+import { crewMarks, seatMarks } from "@/db/roll-call-subject";
 import {
   bookings,
   diveSites,
@@ -16,7 +17,7 @@ import {
   trips,
 } from "@/db/schema";
 import { AT_SEA_DUSK_TITLE, DEMO_SHOP_TIMEZONE, demoFinishedDuskDeparture } from "@/db/seed";
-import { meetingWindowsByTrip } from "@/db/trip-meeting-windows";
+import { meetingWindowsByTrip, rollCallDayIndex } from "@/db/trip-meeting-windows";
 import { listShopDayDepartures, liveTrip, notRehearsal, seatNotCancelled } from "@/db/trips";
 import { listCrewRecapPhotosForTrips, listRecapPhotosForTrips } from "@/features/recap";
 import { listRollCallGaps, oneRowPerHalf } from "@/features/roll-call-gaps";
@@ -223,10 +224,8 @@ async function dayTrips(
     // walks it in.
     db
       .select({
-        tripId: rollCallEvents.tripId,
-        personId: markCrewPersonId(),
-        checkpoint: rollCallEvents.checkpoint,
-        status: rollCallEvents.status,
+        event: rollCallEvents,
+        day: rollCallDayIndex(),
       })
       .from(rollCallEvents)
       .innerJoin(
@@ -359,8 +358,12 @@ async function dayTrips(
     crewByTrip.set(row.tripId, list);
   }
   const standingCrewResult = new Map<string, "boarded" | "not_boarded">();
-  for (const event of crewResults) {
-    const key = `${event.tripId}\0${event.personId}\0${event.checkpoint}`;
+  // Past-day closeout is historical; today's operational count applies current eligibility.
+  const effectiveCrew =
+    options.rehearsals === false ? crewResults : await effectiveCausalRowsForDb(db, crewResults);
+  for (const { event } of effectiveCrew) {
+    if (!event.crewPersonId) continue;
+    const key = `${event.tripId}\0${event.crewPersonId}\0${event.checkpoint}`;
     // A `cleared` undo collapses to "no result", the same reading every other
     // reader of this trail makes, so an undone tap can never satisfy a count.
     if (event.status === "cleared") standingCrewResult.delete(key);

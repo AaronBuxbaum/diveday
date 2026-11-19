@@ -1,5 +1,5 @@
 import { and, eq } from "drizzle-orm";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { standingArrivalStatus } from "@/db/arrival-provenance";
 import type { AppDb } from "@/db/client";
 import { recordRollCall } from "@/db/manifests";
@@ -189,6 +189,34 @@ describe("day close-out (in-memory PGlite)", () => {
       // sees, and absence is awaiting, never accounted for.
       expect(completed.crew.every((member) => member.rollCall === undefined)).toBe(true);
       expect(assembleEveningClose([completed]).allHome).toBe(false);
+    });
+
+    it("does not treat an unbound offline crew exemption as a current result", async () => {
+      const { db, shop, now, completed } = await crewOfCompletedTrip();
+      const [staff] = await listStaff(db, shop.id);
+      const [assigned] = await db
+        .select({ personId: tripAssignments.personId })
+        .from(tripAssignments)
+        .where(eq(tripAssignments.tripId, completed.tripId));
+      if (!staff || !assigned) throw new Error("crew fixture missing");
+      await seedRollCallEvidence(db, {
+        shopId: shop.id,
+        tripId: completed.tripId,
+        ...crewSubject(assigned.personId),
+        recordedByPersonId: staff.person.id,
+        status: "not_boarded",
+        checkpoint: "departure",
+        source: "offline",
+        occurredAt: completed.startsAt,
+      });
+      vi.stubEnv("DIVEDAY_OFFLINE_ROLL_CALL_WITNESS", "1");
+      try {
+        const state = await getDayCloseout(db, shop.id, shop.timezone, now);
+        const departure = state.departures.find((item) => item.tripId === completed.tripId);
+        expect(departure?.crew.every((member) => member.rollCall === undefined)).toBe(true);
+      } finally {
+        vi.unstubAllEnvs();
+      }
     });
 
     it("takes the last write per person, so an undone tap satisfies nothing", async () => {

@@ -24,6 +24,17 @@ export function MissingRollCallRefusals({
               : controls.t("shared.rollCallCheckpoint.afterDive", {
                   n: Number(event.checkpoint.slice("after_dive_".length)),
                 });
+          const originalManifest =
+            event.snapshotId === view.envelope.snapshot.snapshotId
+              ? view.envelope.snapshot.manifests.find(
+                  (manifest) => manifest.checkpoint === event.checkpoint,
+                )
+              : undefined;
+          const originalName = event.bookingId
+            ? originalManifest?.divers.find(
+                (diver) => diver.bookingId === event.bookingId && !diver.identityWithheld,
+              )?.fullName
+            : originalManifest?.crew.find((member) => member.id === event.crewPersonId)?.fullName;
           return (
             <li key={event.clientEventId}>
               {controls.t(
@@ -39,12 +50,22 @@ export function MissingRollCallRefusals({
               )}
               {event.reviewRequired && (
                 <p>
-                  {controls.t("shared.offlineManifest.single.reviewOriginalSubject", {
-                    reference: event.bookingId ?? event.crewPersonId ?? event.clientEventId,
-                  })}{" "}
+                  {originalName
+                    ? controls.t("shared.offlineManifest.single.reviewOriginalSubjectName", {
+                        name: originalName,
+                        reference: event.bookingId ?? event.crewPersonId ?? event.clientEventId,
+                      })
+                    : controls.t("shared.offlineManifest.single.reviewOriginalSubjectUnknown", {
+                        reference: event.bookingId ?? event.crewPersonId ?? event.clientEventId,
+                      })}{" "}
                   {controls.t("shared.offlineManifest.single.reviewSavedTrip", {
                     trip: view.manifest.trip.title,
                   })}{" "}
+                  {event.meetingDay === undefined
+                    ? controls.t("shared.offlineManifest.single.reviewUnknownDay")
+                    : controls.t("shared.offlineManifest.single.reviewOriginalDay", {
+                        day: event.meetingDay + 1,
+                      })}{" "}
                   {controls.t("shared.offlineManifest.single.reviewRecorded", {
                     mark: controls.t(
                       event.status === "boarded"

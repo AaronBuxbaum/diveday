@@ -10,8 +10,9 @@ import { aboardAtSeaBookingIds } from "./aboard-at-sea";
 import { moveBooking } from "./bookings";
 import type { AppDb } from "./client";
 import { getTripManifest, recordRollCall } from "./manifests";
-import { bookings, rollCallEvents, tripScheduleDays, trips } from "./schema";
+import { bookings, rollCallEvents, tripAssignments, tripScheduleDays, trips } from "./schema";
 import { seedDemo } from "./seed";
+import { seedRollCallEvidence } from "./seed-roll-call-evidence";
 import { getShopBySlug } from "./shops";
 import { editTripSection, getTripRoster, listStaff, moveTrip } from "./trips";
 import { upcomingTripsWithCounts } from "./trips-queries.test-support";
@@ -271,6 +272,71 @@ describePostgres("witnessed offline projection", () => {
         .from(rollCallEvents)
         .where(eq(rollCallEvents.clientEventId, confirmationId)),
     ).toHaveLength(0);
+  });
+  it("does not let an invalidated offline dock exemption release an uncounted seat", async () => {
+    const pg = await postgresTestDb();
+    await seedDemo(pg.db, "lean");
+    const shop = await getShopBySlug(pg.db, "blue-mantis");
+    if (!shop) throw new Error("shop missing");
+    const trip = (await upcomingTripsWithCounts(pg.db, shop.id, new Date(0))).find((row) =>
+      row.title.startsWith("Two-Tank Reef — Molasses"),
+    );
+    if (!trip) throw new Error("trip missing");
+    const [subject] = await getTripRoster(pg.db, shop.id, trip.id);
+    const owner = (await listStaff(pg.db, shop.id)).find((staff) => staff.roles.includes("owner"));
+    if (!subject || !owner) throw new Error("fixture missing");
+    const saved = (await buildOfflineManifestCopies(pg.db, shop, owner.person.id, [trip.id]))
+      .payloads[0];
+    const witness = saved?.rollCallWitnesses?.[`seat:${subject.booking.id}:departure`];
+    if (!saved?.snapshotId || !witness) throw new Error("snapshot witness missing");
+    expect(
+      await recordRollCall(pg.db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        bookingId: subject.booking.id,
+        recordedByPersonId: owner.person.id,
+        checkpoint: "departure",
+        status: "not_boarded",
+        source: "offline",
+        clientEventId: crypto.randomUUID(),
+        observedEvidenceIds: [],
+        meetingDay: saved.rollCallMeetingDay ?? 0,
+        offlineSnapshotId: saved.snapshotId,
+        offlineErasureEpochToken: saved.erasureEpochToken,
+        rollCallWitness: witness,
+        offlineSnapshotSavedAt: nowDate(),
+      }),
+    ).toMatchObject({ ok: true });
+    expect(
+      (
+        await editTripSection(pg.db, shop.id, trip.id, {
+          endsAt: new Date(trip.endsAt.getTime() + 3600000),
+        })
+      ).ok,
+    ).toBe(true);
+    expect((await editTripSection(pg.db, shop.id, trip.id, { endsAt: trip.endsAt })).ok).toBe(true);
+    const held = await aboardAtSeaBookingIds(pg.db, {
+      shopId: shop.id,
+      tripId: trip.id,
+      bookingIds: [subject.booking.id],
+      now: new Date(trip.startsAt.getTime() + 3600000),
+    });
+    expect(held.get(subject.booking.id)).toBe("uncounted");
+  });
+  it("does not use an unbound crew exemption to release that person's seat", async () => {
+    const pg = await postgresTestDb();
+    await seedDemo(pg.db, "lean");
+    const shop = await getShopBySlug(pg.db, "blue-mantis");
+    if (!shop) throw new Error("shop missing");
+    const trip = (await upcomingTripsWithCounts(pg.db, shop.id, new Date(0))).find((row) => row.title.startsWith("Two-Tank Reef — Molasses"));
+    if (!trip) throw new Error("trip missing");
+    const [subject] = await getTripRoster(pg.db, shop.id, trip.id);
+    const owner = (await listStaff(pg.db, shop.id)).find((staff) => staff.roles.includes("owner"));
+    if (!subject || !owner) throw new Error("fixture missing");
+    await pg.db.insert(tripAssignments).values({ tripId: trip.id, personId: subject.booking.personId }).onConflictDoNothing();
+    await seedRollCallEvidence(pg.db, { shopId: shop.id, tripId: trip.id, subjectKind: "crew", crewPersonId: subject.booking.personId, recordedByPersonId: owner.person.id, checkpoint: "departure", status: "not_boarded", source: "offline", occurredAt: trip.startsAt });
+    const held = await aboardAtSeaBookingIds(pg.db, { shopId: shop.id, tripId: trip.id, bookingIds: [subject.booking.id], now: new Date(trip.startsAt.getTime() + 3600000) });
+    expect(held.get(subject.booking.id)).toBe("uncounted");
   });
   it("holds a stale dock sighting when crew say underway before scheduled departure", async () => {
     const pg = await postgresTestDb();

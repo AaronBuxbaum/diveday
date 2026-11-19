@@ -4,7 +4,7 @@ import { departureUnderway } from "@/lib/day-blowout";
 import { hasSailed } from "@/lib/trips";
 import type { AppDb, DbExecutor } from "./client";
 import { onTheWaterByRollCall } from "./manifests";
-import { effectiveCausalRows } from "./roll-call-causal-store";
+import { effectiveCausalRowsForDb } from "./roll-call-causal-store";
 import { newestMarkFirst } from "./roll-call-order";
 import { crewMarks, seatMarks } from "./roll-call-subject";
 import { bookings, rollCallEvents, tripAssignments, tripStageEvents, trips } from "./schema";
@@ -238,7 +238,7 @@ async function crewDockWords(
     )
     .orderBy(...newestMarkFirst());
   const seen = new Set<string>();
-  for (const row of effectiveCausalRows(rows, () => true)) {
+  for (const row of await effectiveCausalRowsForDb(db, rows)) {
     if (row.day !== row.currentDay || !row.event.crewPersonId) continue;
     const personId = row.event.crewPersonId;
     if (seen.has(personId) || !words.has(personId)) continue;
@@ -308,7 +308,7 @@ async function dockWordBySeat(
     )
     .orderBy(...newestMarkFirst());
   const dock = new Map<string, "boarded" | "not_boarded" | "cleared">();
-  for (const row of effectiveCausalRows(rows, () => true)) {
+  for (const row of await effectiveCausalRowsForDb(db, rows)) {
     const bookingId = row.event.bookingId;
     if (row.day !== row.currentDay || !bookingId || dock.has(bookingId)) continue;
     dock.set(bookingId, row.event.status);
@@ -351,7 +351,9 @@ async function crewMarkedAshore(
       ),
     )
     .orderBy(...newestMarkFirst());
-  const newest = effectiveCausalRows(rows, () => true).find((row) => row.day === row.currentDay);
+  const newest = (await effectiveCausalRowsForDb(db, rows)).find(
+    (row) => row.day === row.currentDay,
+  );
   return newest?.event.status === "not_boarded";
 }
 
