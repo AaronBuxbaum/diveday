@@ -116,11 +116,11 @@ for (const status of [401, 404, 426, 503]) {
   it(`leaves a page unclaimed after HTTP${status}`, async () => {
     const payload = pagePayload(),
       original = structuredClone(payload);
-    vi.stubGlobal(
-      "fetch",
-      vi.fn<typeof fetch>().mockResolvedValue(new Response("not-json", { status })),
-    );
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response("not-json", { status }));
+    vi.stubGlobal("fetch", fetcher);
     expect(await claimOfflineManifestSnapshot(payload)).toBeNull();
+    expect(fetcher).toHaveBeenCalledOnce();
+    expect(fetcher.mock.calls[0][0]).toBe("/api/offline-manifests/trip-1/snapshot/v2");
     expect(payload).toEqual(original);
   });
 }
