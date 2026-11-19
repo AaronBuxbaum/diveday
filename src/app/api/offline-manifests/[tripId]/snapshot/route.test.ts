@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { offlineManifestSnapshotRevisions, shops, trips } from "@/db/schema";
+import { meetingWindowsByTrip } from "@/db/trip-meeting-windows";
 import { nextOfflineManifestSnapshotRevision } from "@/features/offline-manifest-snapshots";
 import type { DiveDaySession } from "@/lib/auth";
 import type { Role } from "@/lib/authz";
@@ -23,7 +24,8 @@ const authModule = (await import("@/lib/auth")) as unknown as {
   auth: ReturnType<typeof vi.fn<() => Promise<DiveDaySession | null>>>;
 };
 const auth = authModule.auth;
-const { POST } = await import("./route");
+const { POST } = await import("./v2/route");
+const { POST: legacyPost } = await import("./route");
 
 const TITLE = "Two-Tank Reef — Molasses & French";
 
@@ -40,7 +42,7 @@ const session = (shopId: string, personId: string, roles: Role[]): DiveDaySessio
 
 function request(tripId: string, body: unknown, headers: Record<string, string> = {}) {
   return POST(
-    new Request(`http://localhost/api/offline-manifests/${tripId}/snapshot`, {
+    new Request(`http://localhost/api/offline-manifests/${tripId}/snapshot/v2`, {
       method: "POST",
       headers: { ...ROLL_CALL_CAUSAL_HEADERS, "Content-Type": "application/json", ...headers },
       body: JSON.stringify(body),
@@ -53,7 +55,7 @@ async function departure() {
   const { db, shop } = ctx;
   vi.mocked(getDb).mockResolvedValue(db);
   const [trip] = await db
-    .select({ id: trips.id })
+    .select({ id: trips.id, startsAt: trips.startsAt, endsAt: trips.endsAt })
     .from(trips)
     .where(and(eq(trips.shopId, shop.id), eq(trips.title, TITLE)))
     .limit(1);
@@ -67,7 +69,19 @@ async function departure() {
   const epoch = row?.epoch ?? 0;
   const [counter] = await revisions(trip.id);
   // What the page read its rows at.
-  const readAt = { erasureEpoch: epoch, snapshotRevision: counter?.revision ?? 0 };
+  const days = (await meetingWindowsByTrip(db, [trip])).get(trip.id) ?? [];
+  const readAt = {
+    erasureEpoch: epoch,
+    snapshotRevision: counter?.revision ?? 0,
+    schedule: {
+      startsAt: trip.startsAt.toISOString(),
+      endsAt: trip.endsAt.toISOString(),
+      meetingWindows: days.map((day) => ({
+        startsAt: day.startsAt.toISOString(),
+        endsAt: day.endsAt.toISOString(),
+      })),
+    },
+  };
   return { db, shop, tripId: trip.id, epoch, readAt };
 }
 
@@ -131,6 +145,21 @@ describe("POST /api/offline-manifests/[tripId]/snapshot (issue #4391)", () => {
     expect(await revisions(tripId)).toEqual([{ revision: newer }]);
   });
 
+  for (const changed of ["start", "end", "windows"] as const) {
+    it(`refuses a page whose ${changed} no longer matches without issuing a revision`, async () => {
+      const { tripId, readAt } = await departure();
+      const before = await revisions(tripId);
+      const schedule = structuredClone(readAt.schedule);
+      if (changed === "start") schedule.startsAt = "2035-01-01T00:00:00.000Z";
+      if (changed === "end") schedule.endsAt = "2035-01-01T01:00:00.000Z";
+      if (changed === "windows") schedule.meetingWindows = [];
+      const response = await request(tripId, { ...readAt, schedule });
+      expect(response.status).toBe(409);
+      expect(await response.json()).toEqual({ error: "snapshot_superseded" });
+      expect(await revisions(tripId)).toEqual(before);
+    });
+  }
+
   it("refuses a request from another site before reading anything", async () => {
     const { tripId, readAt } = await departure();
     const response = await request(tripId, readAt, {
@@ -163,10 +192,26 @@ describe("POST /api/offline-manifests/[tripId]/snapshot (issue #4391)", () => {
   });
 
   it("answers not found for a trip that is not this shop's, writing nothing", async () => {
-    const { epoch } = await departure();
+    const { readAt } = await departure();
     const foreign = "00000000-0000-4000-8000-000000000000";
-    expect((await request(foreign, { erasureEpoch: epoch, snapshotRevision: 0 })).status).toBe(404);
+    expect((await request(foreign, readAt)).status).toBe(404);
     expect(await revisions(foreign)).toEqual([]);
+  });
+
+  it("refuses an old client on the legacy endpoint without issuing a revision", async () => {
+    const { tripId, readAt } = await departure();
+    const before = await revisions(tripId);
+    const response = await legacyPost(
+      new Request(`http://localhost/api/offline-manifests/${tripId}/snapshot`, {
+        method: "POST",
+        headers: { ...ROLL_CALL_CAUSAL_HEADERS, "Content-Type": "application/json" },
+        body: JSON.stringify(readAt),
+      }),
+      { params: Promise.resolve({ tripId }) },
+    );
+    expect(response.status).toBe(426);
+    expect(response.headers.get("Cache-Control")).toBe("private, no-store");
+    expect(await revisions(tripId)).toEqual(before);
   });
 
   it("refuses a body without a usable epoch and revision", async () => {

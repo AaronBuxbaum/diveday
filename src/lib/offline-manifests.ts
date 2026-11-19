@@ -1187,7 +1187,11 @@ export async function fetchOfflineManifestShopSlug(): Promise<string | null> {
  * its rows at, the shop erasure epoch and the trip's snapshot revision (0
  * before any copy was issued).
  */
-export type OfflineManifestSnapshotRequest = { erasureEpoch: number; snapshotRevision: number };
+export type OfflineManifestSnapshotRequest = {
+  erasureEpoch: number;
+  snapshotRevision: number;
+  coherentSchedule?: true;
+};
 
 /** Its 200 answer: what makes the page's rows a saved, ordered, epoch-signed copy. */
 export type OfflineManifestSnapshotResponse = { snapshotId: string; erasureEpochToken: string };
@@ -1226,23 +1230,33 @@ export async function claimOfflineManifestSnapshot(
 ): Promise<OfflineManifestPayload | typeof OFFLINE_MANIFEST_STALE_READ | null> {
   const { readAt, ...rest } = payload;
   if (readAt === undefined) return payload;
-  const tripId = payload.manifests[0]?.trip.id;
+  const trip = payload.manifests[0]?.trip;
+  const tripId = trip?.id;
   if (!tripId) return null;
+  if (readAt.coherentSchedule !== true) return null;
   if (typeof navigator !== "undefined" && navigator.onLine === false) return null;
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), TENANT_LOOKUP_TIMEOUT_MS);
   try {
-    const body: OfflineManifestSnapshotRequest = {
+    const body = {
       erasureEpoch: readAt.erasureEpoch,
       snapshotRevision: readAt.snapshotRevision,
+      schedule: {
+        startsAt: trip.startsAt,
+        endsAt: trip.endsAt,
+        meetingWindows: payload.rollCallMeetingDays ?? [],
+      },
     };
-    const response = await fetch(`/api/offline-manifests/${encodeURIComponent(tripId)}/snapshot`, {
-      method: "POST",
-      credentials: "same-origin",
-      headers: { ...ROLL_CALL_CAUSAL_HEADERS, "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-      signal: controller.signal,
-    });
+    const response = await fetch(
+      `/api/offline-manifests/${encodeURIComponent(tripId)}/snapshot/v2`,
+      {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { ...ROLL_CALL_CAUSAL_HEADERS, "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      },
+    );
     if (response.status === 409) {
       options?.onStale?.();
       return OFFLINE_MANIFEST_STALE_READ;

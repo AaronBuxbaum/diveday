@@ -15,7 +15,7 @@ function deviceCopyClaimed(page: Page) {
     (response) =>
       response.request().method() === "POST" &&
       response.url().includes("/api/offline-manifests/") &&
-      response.url().endsWith("/snapshot") &&
+      response.url().endsWith("/snapshot/v2") &&
       response.ok(),
   );
 }
@@ -285,7 +285,7 @@ test("a superseded snapshot and roster refresh preserve an open person sheet", a
   page.on("response", (response) => {
     if (
       new URL(response.url()).pathname.endsWith(
-        `/offline-manifests/${DEMO_TODAY_TRIP_ID}/snapshot`,
+        `/offline-manifests/${DEMO_TODAY_TRIP_ID}/snapshot/v2`,
       ) &&
       response.status() === 409
     )
@@ -294,7 +294,7 @@ test("a superseded snapshot and roster refresh preserve an open person sheet", a
   await page.route("**/*", async (route) => {
     const request = route.request();
     const url = new URL(request.url());
-    if (url.pathname.endsWith(`/offline-manifests/${DEMO_TODAY_TRIP_ID}/snapshot`)) {
+    if (url.pathname.endsWith(`/offline-manifests/${DEMO_TODAY_TRIP_ID}/snapshot/v2`)) {
       claims++;
       if (claims === 1) {
         await claimHeld;
@@ -365,7 +365,7 @@ test("two stale snapshot refusals recover only after the latest roster verifies"
   });
   await page.route("**/*", async (route) => {
     const path = new URL(route.request().url()).pathname;
-    if (path.endsWith(`/offline-manifests/${DEMO_TODAY_TRIP_ID}/snapshot`) && refusals < 2) {
+    if (path.endsWith(`/offline-manifests/${DEMO_TODAY_TRIP_ID}/snapshot/v2`) && refusals < 2) {
       refusals += 1;
       await route.fulfill({ status: 409, json: { error: "snapshot_superseded" } });
       return;

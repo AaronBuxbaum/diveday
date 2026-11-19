@@ -5,13 +5,18 @@ import { and, eq } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { getTripManifests } from "@/db/manifests";
 import { bookings, people, trips } from "@/db/schema";
+import { meetingWindowsByTrip } from "@/db/trip-meeting-windows";
 import {
   nextOfflineManifestSnapshotRevision,
   readOfflineManifestRoster,
 } from "@/features/offline-manifest-snapshots";
 import type { DiveDaySession } from "@/lib/auth";
 import { signOfflineErasureEpoch } from "@/lib/offline-erasure-epoch";
-import { loadOfflineManifest, saveOfflineManifest } from "@/lib/offline-manifest-store";
+import {
+  appendOfflineRollCall,
+  loadOfflineManifest,
+  saveOfflineManifest,
+} from "@/lib/offline-manifest-store";
 import {
   claimOfflineManifestSnapshot,
   OFFLINE_MANIFEST_STALE_READ,
@@ -33,7 +38,7 @@ const { getDb } = await import("@/db/client");
 const authModule = (await import("@/lib/auth")) as unknown as {
   auth: ReturnType<typeof vi.fn<() => Promise<DiveDaySession | null>>>;
 };
-const { POST } = await import("./route");
+const { POST } = await import("./v2/route");
 
 const TITLE = "Two-Tank Reef — Molasses & French";
 const WALK_UP = "Wren Walk-Up";
@@ -59,7 +64,7 @@ describe("a page save that lands after a newer copy (dock-operator review, issue
     });
     // The page's claim goes to the real route handler.
     vi.stubGlobal("fetch", async (url: string, init?: RequestInit) => {
-      const tripId = /\/api\/offline-manifests\/([^/]+)\/snapshot$/.exec(url)?.[1] ?? "";
+      const tripId = /\/api\/offline-manifests\/([^/]+)\/snapshot\/v2$/.exec(url)?.[1] ?? "";
       return POST(new Request(`http://localhost${url}`, init), {
         params: Promise.resolve({ tripId }),
       });
@@ -85,9 +90,18 @@ describe("a page save that lands after a newer copy (dock-operator review, issue
     const r1 = await readOfflineManifestRoster(db, shop.id, trip.id);
     if (!r1) throw new Error("roster missing");
     expect(r1.snapshotRevision).toBe(9);
+    const days = (await meetingWindowsByTrip(db, [trip])).get(trip.id) ?? [];
     const pagePayload: OfflineManifestPayload = {
       ...serializeManifests(r1.manifests, identity, () => ""),
-      readAt: { erasureEpoch: r1.erasureEpoch, snapshotRevision: r1.snapshotRevision },
+      rollCallMeetingDays: days.map((day) => ({
+        startsAt: day.startsAt.toISOString(),
+        endsAt: day.endsAt.toISOString(),
+      })),
+      readAt: {
+        erasureEpoch: r1.erasureEpoch,
+        snapshotRevision: r1.snapshotRevision,
+        coherentSchedule: true,
+      },
     };
 
     // Another phone seats the walk-up diver.
@@ -123,6 +137,15 @@ describe("a page save that lands after a newer copy (dock-operator review, issue
     const seatedOn = (envelope: Awaited<ReturnType<typeof loadOfflineManifest>>) =>
       envelope?.snapshot.manifests[0]?.divers.some((diver) => diver.bookingId === seat.id);
     expect(seatedOn(await loadOfflineManifest(trip.id))).toBe(true);
+    const queued = await appendOfflineRollCall(trip.id, {
+      bookingId: seat.id,
+      checkpoint: "departure",
+      status: "boarded",
+      physicalPresenceOnly: true,
+      observedEvidenceIds: [],
+      meetingDay: 0,
+    });
+    expect(queued.events).toHaveLength(1);
 
     // The page's slow save of R1 lands after: the hook's claim, then its save.
     const claimed = await claimOfflineManifestSnapshot(pagePayload);
@@ -132,5 +155,6 @@ describe("a page save that lands after a newer copy (dock-operator review, issue
     const kept = await loadOfflineManifest(trip.id);
     expect(seatedOn(kept)).toBe(true);
     expect(kept?.snapshot.snapshotId).toBe(boardSnapshotId);
+    expect(kept?.events).toEqual(queued.events);
   });
 });

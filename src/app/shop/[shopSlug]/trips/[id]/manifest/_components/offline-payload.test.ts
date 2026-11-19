@@ -32,7 +32,11 @@ describe("offlineManifestPayload", () => {
     expect(payload.shop.slug).toBe("blue-mantis");
     // The epoch and revision the rows were read at, for the device to trade for a signed
     // token when it saves; the page itself issues no snapshot (issue #4391).
-    expect(payload.readAt).toEqual({ erasureEpoch: 3, snapshotRevision: 9 });
+    expect(payload.readAt).toEqual({
+      erasureEpoch: 3,
+      snapshotRevision: 9,
+      coherentSchedule: true,
+    });
     expect(payload).not.toHaveProperty("snapshotId");
     expect(payload).not.toHaveProperty("erasureEpochToken");
     expect(payload.manifests.map((entry) => entry.checkpoint)).toEqual([

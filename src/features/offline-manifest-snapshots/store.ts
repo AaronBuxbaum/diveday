@@ -24,6 +24,19 @@ async function lockOwnedTrip(db: DbExecutor, shopId: string, tripId: string): Pr
   return ownedTrip !== undefined;
 }
 
+export async function offlineManifestTripExists(
+  db: AppDb,
+  shopId: string,
+  tripId: string,
+): Promise<boolean> {
+  const [trip] = await db
+    .select({ id: trips.id })
+    .from(trips)
+    .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
+    .limit(1);
+  return trip !== undefined;
+}
+
 /**
  * The next revision, unconditionally: for a saver that reads its rows *after*
  * taking it, inside the same fenced transaction (the background board,
@@ -170,8 +183,60 @@ export async function readOfflineManifestRoster(db: AppDb, shopId: string, tripI
   return { manifests, erasureEpoch, snapshotRevision };
 }
 
+/** Read the roster and its schedule from one read-only database snapshot. */
+export async function readOfflineManifestRosterWithWindows(
+  db: AppDb,
+  shopId: string,
+  tripId: string,
+  options?: { afterScheduleRead?: () => Promise<void> },
+) {
+  const erasureEpoch = await getShopOfflineErasureEpoch(db, shopId);
+  if (erasureEpoch === null) return null;
+  return db.transaction(
+    async (tx) => {
+      const revisions = offlineManifestSnapshotRevisions;
+      const [state] = await tx
+        .select({
+          revision: revisions.revision,
+          windows: sql<{ startsAt: string; endsAt: string }[]>`coalesce((
+        select json_agg(json_build_object('startsAt', d.starts_at, 'endsAt', d.ends_at) order by d.starts_at)
+        from ${tripScheduleDays} d where d.trip_id = ${tripId}
+      ), '[]'::json)`,
+        })
+        .from(trips)
+        .leftJoin(
+          revisions,
+          and(eq(revisions.tripId, trips.id), eq(revisions.shopId, trips.shopId)),
+        )
+        .where(and(eq(trips.shopId, shopId), eq(trips.id, tripId), liveTrip()))
+        .limit(1);
+      if (!state) return null;
+      await options?.afterScheduleRead?.();
+      const manifests = await getTripManifests(tx as unknown as AppDb, shopId, tripId);
+      if (!manifests) return null;
+      const windows = state.windows.map((day) => ({
+        startsAt: new Date(day.startsAt),
+        endsAt: new Date(day.endsAt),
+      }));
+      return {
+        manifests,
+        erasureEpoch,
+        snapshotRevision: state.revision ?? 0,
+        windows: windows.length ? windows : undefined,
+      };
+    },
+    { isolationLevel: "repeatable read", accessMode: "read only" },
+  );
+}
+
 /** What a page read was taken at: `readOfflineManifestRoster`'s epoch and revision. */
 export type OfflineManifestReadAt = { erasureEpoch: number; snapshotRevision: number };
+
+export type OfflineManifestSchedule = {
+  startsAt: string;
+  endsAt: string;
+  meetingWindows: { startsAt: string; endsAt: string }[];
+};
 
 export type IssuedOfflineManifestSnapshot =
   | { ok: true; snapshotId: string; erasureEpochToken: string; snapshotRevision: number }
@@ -198,6 +263,26 @@ export async function issueOfflineManifestSnapshot(
   tripId: string,
   readAt: OfflineManifestReadAt,
 ): Promise<IssuedOfflineManifestSnapshot> {
+  return issueOfflineManifestSnapshotInternal(db, shopId, tripId, readAt);
+}
+
+export async function issueOfflineManifestSnapshotAtSchedule(
+  db: AppDb,
+  shopId: string,
+  tripId: string,
+  readAt: OfflineManifestReadAt,
+  schedule: OfflineManifestSchedule,
+): Promise<IssuedOfflineManifestSnapshot> {
+  return issueOfflineManifestSnapshotInternal(db, shopId, tripId, readAt, schedule);
+}
+
+async function issueOfflineManifestSnapshotInternal(
+  db: AppDb,
+  shopId: string,
+  tripId: string,
+  readAt: OfflineManifestReadAt,
+  schedule?: OfflineManifestSchedule,
+): Promise<IssuedOfflineManifestSnapshot> {
   return db.transaction(async (tx) => {
     await lockBoardingCertificationEvidence(tx, shopId, "boarding");
     const epoch = await getShopOfflineErasureEpoch(tx, shopId);
@@ -205,6 +290,36 @@ export async function issueOfflineManifestSnapshot(
     if (epoch !== readAt.erasureEpoch) return { ok: false, reason: "erasure_epoch_moved" } as const;
     if (!(await lockOwnedTrip(tx, shopId, tripId)))
       return { ok: false, reason: "not_found" } as const;
+    if (schedule) {
+      // A statement after the lock sees a writer that committed while the lock waited.
+      const [current] = await tx
+        .select({
+          startsAt: trips.startsAt,
+          endsAt: trips.endsAt,
+          windows: sql<{ startsAt: string; endsAt: string }[]>`coalesce((
+          select json_agg(json_build_object('startsAt', d.starts_at, 'endsAt', d.ends_at) order by d.starts_at)
+          from ${tripScheduleDays} d where d.trip_id = ${tripId}
+        ), '[]'::json)`,
+        })
+        .from(trips)
+        .where(and(eq(trips.shopId, shopId), eq(trips.id, tripId), liveTrip()))
+        .limit(1);
+      const normalized = (windows: { startsAt: string; endsAt: string }[]) =>
+        windows
+          .map((day) => ({
+            startsAt: new Date(day.startsAt).toISOString(),
+            endsAt: new Date(day.endsAt).toISOString(),
+          }))
+          .sort((a, b) => a.startsAt.localeCompare(b.startsAt));
+      if (
+        !current ||
+        current.startsAt.toISOString() !== schedule.startsAt ||
+        current.endsAt.toISOString() !== schedule.endsAt ||
+        JSON.stringify(normalized(current.windows)) !==
+          JSON.stringify(normalized(schedule.meetingWindows))
+      )
+        return { ok: false, reason: "snapshot_superseded" } as const;
+    }
     const snapshotRevision = await claimOfflineManifestSnapshotRevision(
       tx,
       shopId,

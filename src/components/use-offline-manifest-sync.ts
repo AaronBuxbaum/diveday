@@ -37,6 +37,20 @@ const AUTO_REFRESH_MS = 5 * 60 * 1000;
 /** The reads (`trip:epoch:revision`) this tab already saved as an offline copy. */
 const savedReads = new Set<string>();
 
+function savedReadKey(tripId: string, payload: OfflineManifestPayload): string | null {
+  return payload.readAt
+    ? JSON.stringify([
+        tripId,
+        payload.readAt.erasureEpoch,
+        payload.readAt.snapshotRevision,
+        payload.manifests[0]?.trip.startsAt,
+        payload.manifests[0]?.trip.endsAt,
+        payload.rollCallMeetingDays ?? [],
+        payload.readAt.coherentSchedule,
+      ])
+    : null;
+}
+
 /** Forget which reads this tab saved (a test starting clean). */
 export function forgetSavedOfflineReads() {
   savedReads.clear();
@@ -331,9 +345,7 @@ export function useOfflineManifestSync(
         // An erasure since the first save reaches the device through the next
         // refresh trigger (push, interval, reconnect), a new read, not through
         // a back or forward.
-        const readKey = currentPayload.readAt
-          ? `${tripId}:${currentPayload.readAt.erasureEpoch}:${currentPayload.readAt.snapshotRevision}`
-          : null;
+        const readKey = savedReadKey(tripId, currentPayload);
         if (readKey && savedReads.has(readKey)) {
           const existing = await loadOfflineManifest(tripId).catch(() => null);
           if (existing) {
