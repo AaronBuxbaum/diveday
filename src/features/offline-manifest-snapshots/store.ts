@@ -5,7 +5,7 @@ import { liveTrip } from "@/db/trips";
 import { lockBoardingCertificationEvidence } from "../../db/boarding-certification-snapshot";
 import type { AppDb, DbExecutor } from "../../db/client";
 import { getTripManifests } from "../../db/manifests";
-import { offlineManifestSnapshotRevisions, trips } from "../../db/schema/index";
+import { offlineManifestSnapshotRevisions, tripScheduleDays, trips } from "../../db/schema/index";
 import { getShopOfflineErasureEpoch } from "../../db/shops";
 import { signOfflineErasureEpoch } from "../../lib/offline-erasure-epoch";
 
@@ -35,8 +35,19 @@ export async function nextOfflineManifestSnapshotRevision(
   shopId: string,
   tripId: string,
 ): Promise<number | null> {
+  return (await nextOfflineManifestSnapshotWithWindows(db, shopId, tripId))?.revision ?? null;
+}
+
+/** Issue a revision and read its meeting windows after the owned-trip lock. */
+export async function nextOfflineManifestSnapshotWithWindows(
+  db: DbExecutor,
+  shopId: string,
+  tripId: string,
+): Promise<{ revision: number; meetingWindows: { startsAt: string; endsAt: string }[] } | null> {
   if (!(await lockOwnedTrip(db, shopId, tripId))) return null;
   const revisions = offlineManifestSnapshotRevisions;
+  // Keep the window read in this later statement: under READ COMMITTED a
+  // statement that waits for the trip lock keeps its earlier statement snapshot.
   const [row] = await db
     .insert(revisions)
     .values({ shopId, tripId, revision: 1 })
@@ -44,9 +55,15 @@ export async function nextOfflineManifestSnapshotRevision(
       target: [revisions.shopId, revisions.tripId],
       set: { revision: sql`${revisions.revision} + 1` },
     })
-    .returning({ revision: revisions.revision });
+    .returning({
+      revision: revisions.revision,
+      meetingWindows: sql<{ startsAt: string; endsAt: string }[]>`coalesce((
+        select json_agg(json_build_object('startsAt', d.starts_at, 'endsAt', d.ends_at) order by d.starts_at)
+        from ${tripScheduleDays} d where d.trip_id = ${tripId}
+      ), '[]'::json)`,
+    });
   if (!row) throw new Error("offline manifest snapshot revision was not returned");
-  return row.revision;
+  return row;
 }
 
 /** The trip's latest issued revision, 0 before any; a plain read that writes nothing. */
