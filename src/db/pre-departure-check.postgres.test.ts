@@ -104,4 +104,22 @@ describePostgres("a resent checklist sync overlapping the request it gave up on"
     });
     expect(await rowsCarrying(pg.db, undo.clientEventId)).toBe(1);
   });
+
+  it("refuses an undo that reuses a check's id instead of calling it a duplicate", async () => {
+    const pg = await postgresTestDb();
+    const { shopId, tripId, checklistItemId, staffId } = await aChecklistLineOnTheReef(pg.db);
+    const common = { shopId, tripId, checklistItemId, recordedByPersonId: staffId };
+    const checked = offlineEvent(1);
+    await recordPreDepartureCheck(pg.db, { ...common, ...checked, status: "checked" });
+
+    const reused = await recordPreDepartureCheck(pg.db, {
+      ...common,
+      ...offlineEvent(2),
+      clientEventId: checked.clientEventId,
+      status: "cleared",
+    });
+
+    expect(reused).toEqual({ ok: false, reason: "client_event_conflict" });
+    expect(await rowsCarrying(pg.db, checked.clientEventId)).toBe(1);
+  });
 });
