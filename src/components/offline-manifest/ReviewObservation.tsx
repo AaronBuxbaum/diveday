@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ErrorToast } from "@/components/Toast";
 import { buttonClass } from "@/components/ui/button";
+import { radioClass, radioRingClass } from "@/components/ui/form";
 import {
   completeOfflineRollCallConfirmation,
   discardOfflineRollCallReview,
@@ -217,18 +218,24 @@ export function ReviewObservation({
                   <legend className="font-semibold">
                     {t("shared.offlineManifest.single.reviewChoose")}
                   </legend>
-                  <label className="flex min-h-14 items-center gap-3 rounded-lg border border-border px-4">
+                  <label
+                    className={`flex min-h-14 items-center gap-3 rounded-lg border border-border px-4 ${radioRingClass}`}
+                  >
                     <input
                       type="radio"
+                      className={radioClass}
                       name={`review-${event.clientEventId}`}
                       checked={status === "boarded"}
                       onChange={() => setStatus("boarded")}
                     />
                     {t("shared.presence.boarded")}
                   </label>
-                  <label className="flex min-h-14 items-center gap-3 rounded-lg border border-border px-4">
+                  <label
+                    className={`flex min-h-14 items-center gap-3 rounded-lg border border-border px-4 ${radioRingClass}`}
+                  >
                     <input
                       type="radio"
+                      className={radioClass}
                       name={`review-${event.clientEventId}`}
                       checked={status === "not_boarded"}
                       onChange={() => setStatus("not_boarded")}
