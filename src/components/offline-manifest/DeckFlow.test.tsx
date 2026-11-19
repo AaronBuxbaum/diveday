@@ -13,7 +13,7 @@ import { deckCopy } from "./deck-copy";
 afterEach(cleanup);
 const copy = deckCopy(offlineManifestTranslator("en-US"));
 
-function setup(outcome: RollCallResult = { ok: true }, attention = false) {
+function setup(outcome: RollCallResult = { ok: true }, attention = false, withHomeNotice = false) {
   const action = vi.fn<RollCallAction>(async () => outcome);
   const people: DeckPerson[] = ["Maya Ruiz", "Jordan Lee"].map((name, index) => ({
     id: `person-${index}`,
@@ -57,12 +57,25 @@ function setup(outcome: RollCallResult = { ok: true }, attention = false) {
       timeZone="America/New_York"
       locale="en-US"
       attention={attention ? <p>Missing-person report</p> : undefined}
+      homeNotice={withHomeNotice ? <p role="status">Pending roll-call warning</p> : undefined}
     />,
   );
   return { action, ...result };
 }
 
 describe("Deck individual recording", () => {
+  it("shows the pending warning on home without crowding the recording receipt", async () => {
+    setup({ ok: true }, false, true);
+    expect(screen.getByText("Pending roll-call warning")).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Start roll call" }));
+    await act(async () =>
+      fireEvent.click(screen.getByRole("button", { name: "Record Maya Ruiz aboard" })),
+    );
+    expect(screen.queryByText("Pending roll-call warning")).toBeNull();
+    expect(screen.getByRole("button", { name: "Next person" })).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: copy.home }));
+    expect(screen.getByText("Pending roll-call warning")).toBeVisible();
+  });
   it("Start, skip, Find and selecting a person never submit evidence", () => {
     const { action } = setup();
     fireEvent.click(screen.getByRole("button", { name: "Start roll call" }));

@@ -14,6 +14,7 @@ import { OfflineDeckDelivery, OfflineDeckReference, OfflineDeckSafety } from "./
 import { OfflineDiverRow } from "./DiverRollCall";
 import { deckCopy } from "./deck-copy";
 import { offlineDiverRowFacts } from "./diver-row-facts";
+import { PendingRollCallWarning } from "./PendingRollCallWarning";
 import type { OfflineStatement } from "./shared";
 import type { OfflineTripView } from "./trip-view";
 
@@ -368,6 +369,12 @@ export function OfflineDeckRollCall({
       isDeparture={view.isDeparture}
       status={<OfflineDeckSafety view={view} controls={controls} />}
       delivery={<OfflineDeckDelivery view={view} controls={controls} />}
+      homeNotice={
+        <PendingRollCallWarning
+          t={t}
+          pending={view.envelope.events.some((event) => event.syncStatus === "pending")}
+        />
+      }
       attention={attention}
       details={
         <>

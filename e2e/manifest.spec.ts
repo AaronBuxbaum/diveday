@@ -282,6 +282,7 @@ test("captain saves the full checkpoint manifest, reloads it offline, and reconc
   await expect(
     page.getByRole("status").filter({ hasText: "when you’re back in service" }),
   ).toBeVisible();
+  await page.getByRole("button", { name: staff("manifest.deck.home"), exact: true }).click();
   const expiryWarning = staff("shared.offlineManifest.reconcile.pendingExpiryWarning");
   const tripWarning = page.getByRole("status").filter({ hasText: expiryWarning });
   await expect(tripWarning).toBeVisible();
