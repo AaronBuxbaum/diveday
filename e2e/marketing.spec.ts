@@ -92,30 +92,40 @@ test("the crew's group chat plays to nine of nine ready, and the visitor can sen
 }) => {
   const t = diverTranslator("en-US");
   await page.emulateMedia({ reducedMotion: "no-preference" });
+  // The chat is about twenty seconds of typing; the page's clock is run by hand so the test waits for none of it.
+  await page.clock.install();
   await page.goto("/");
   const chat = page.getByRole("figure", { name: t("marketing.home.chat.region") });
   const frame = chat.locator("[data-chat-frame]");
-  await frame.scrollIntoViewIfNeeded();
-  // It opens rewound: the first question, and the list not sent yet.
-  await expect(chat.getByText(t("marketing.home.chat.lines.1"), { exact: true })).toBeVisible();
   const ready = (count: number) =>
     chat.getByText(t("marketing.home.chat.card.ready", { ready: count }), { exact: true });
-  await expect(ready(9)).toHaveCount(0);
+  // It opens rewound: the first question, and the list not sent yet.
+  await expect(frame).toHaveAttribute("data-chat-frame", "0");
+  await expect(chat.getByText(t("marketing.home.chat.lines.1"), { exact: true })).toBeVisible();
+  await expect(ready(8)).toHaveCount(0);
 
   // The owner's answer carries the list, one diver short, and the nudge is the visitor's to send.
   const nudge = chat.getByRole("button", { name: t("marketing.home.chat.card.nudge") });
-  await expect(nudge).toBeVisible({ timeout: 20_000 });
+  for (const moment of ["1", "2", "3", "4", "5", "6"]) {
+    await page.clock.runFor(2000);
+    await expect(frame).toHaveAttribute("data-chat-frame", moment);
+  }
   await expect(ready(8)).toBeVisible();
   await nudge.click();
   await expect(chat.getByText(t("marketing.home.chat.card.sent"), { exact: true })).toBeVisible();
+  await page.clock.runFor(2000);
   await expect(ready(9)).toBeVisible();
   await expect(chat.getByText(t("marketing.home.chat.card.signed"), { exact: true })).toBeVisible();
 
   // It ends on the crew's last line, and can be played again from the first.
-  await expect(frame).toHaveAttribute("data-chat-end", "", { timeout: 15_000 });
+  for (const moment of ["9", "10", "11"]) {
+    await page.clock.runFor(2000);
+    await expect(frame).toHaveAttribute("data-chat-frame", moment);
+  }
+  await expect(frame).toHaveAttribute("data-chat-end", "");
   await expect(chat.getByText(t("marketing.home.chat.lines.10"), { exact: true })).toBeVisible();
   await chat.getByRole("button", { name: t("marketing.home.chat.replay") }).click();
-  await expect(frame).not.toHaveAttribute("data-chat-end", "");
+  await expect(frame).toHaveAttribute("data-chat-frame", "0");
   await expect(ready(9)).toHaveCount(0);
 });
 
