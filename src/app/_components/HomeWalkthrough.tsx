@@ -1,15 +1,8 @@
 "use client";
 
-import {
-  type KeyboardEvent,
-  type PointerEvent,
-  type ReactNode,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import { type KeyboardEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import { DiveDayIcon } from "@/components/DiveDayIcon";
-import { useWalkSwipe } from "./useWalkSwipe";
+import { useWalkPress } from "./useWalkPress";
 
 /**
  * One moment of the walkthrough: which step's list item to show, which of its
@@ -50,15 +43,6 @@ const TAP_MS = 1800;
 
 /** How long the finished screen stays for reading (ms), about a hundred seconds a walk (Aaron, 2026-11-18). */
 const HOLD_AFTER_MS = 4200;
-
-/** Fewer than this many pixels sideways is a tap, not a swipe. */
-const SWIPE_PX = 40;
-
-/** A press that has moved this far sideways, more than up or down, is a drag. */
-const DRAG_START_PX = 8;
-
-/** A press held this long is a hold (it pauses, and its release is not a tap). */
-const HOLD_MS = 250;
 
 /**
  * **The homepage's booking, one step at a time.** It wraps the server-rendered
@@ -101,11 +85,7 @@ export function HomeWalkthrough({
   // The controls are for a reader whose script ran; without it they are not drawn.
   const [ready, setReady] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
-  const swipeFrom = useRef<number | null>(null);
-  const swipeFromY = useRef(0);
-  const dragging = useRef(false);
   const sliding = useRef(false);
-  const pressedAt = useRef(0);
   // How full the current beat's segment is, 0 to 1. Written straight to the
   // segment so a frame of the fill is not a render of the page.
   const progress = useRef(0);
@@ -124,6 +104,7 @@ export function HomeWalkthrough({
   useEffect(() => {
     const list = rootRef.current?.querySelector("[data-walk-list]");
     if (!list || !beat) return;
+    const before = list.getBoundingClientRect().height;
     for (const item of list.querySelectorAll("[data-walk-step]")) {
       const current = item.getAttribute("data-walk-step") === beat.step;
       item.toggleAttribute("data-walk-current", current);
@@ -133,6 +114,24 @@ export function HomeWalkthrough({
           current && frame.getAttribute("data-walk-frame") === beat.frame,
         );
       }
+    }
+    // Slides differ in height, and the page under them would jump by the difference (a phone has
+    // no anchoring to hide it). Reserving the tallest slide's height would leave most of them
+    // with a hand's width of nothing, so the page glides the difference instead.
+    const after = list.getBoundingClientRect().height;
+    if (
+      before > 0 &&
+      Math.abs(after - before) > 1 &&
+      !window.matchMedia("(prefers-reduced-motion: reduce)").matches &&
+      typeof list.animate === "function"
+    ) {
+      list.animate(
+        [
+          { height: `${before}px`, overflow: "hidden" },
+          { height: `${after}px`, overflow: "hidden" },
+        ],
+        { duration: 240, easing: "cubic-bezier(0.2, 0.8, 0.2, 1)" },
+      );
     }
   }, [beat]);
 
@@ -218,70 +217,15 @@ export function HomeWalkthrough({
     event.preventDefault();
   };
 
-  const { dragBy, springBack, slide } = useWalkSwipe({
+  const { onPointerDown, onPointerMove, onPointerUp, onPointerEnd } = useWalkPress({
     rootRef,
     sliding,
     index,
     total,
     beats,
     go,
+    onHeld: setHeld,
   });
-
-  const onPointerDown = (event: PointerEvent<HTMLDivElement>) => {
-    if (sliding.current) return;
-    swipeFrom.current = event.clientX;
-    swipeFromY.current = event.clientY;
-    dragging.current = false;
-    pressedAt.current = performance.now();
-    setHeld(true);
-  };
-
-  const onPointerMove = (event: PointerEvent<HTMLDivElement>) => {
-    const from = swipeFrom.current;
-    if (from === null) return;
-    const dx = event.clientX - from;
-    if (!dragging.current) {
-      const dy = event.clientY - swipeFromY.current;
-      if (Math.abs(dx) < DRAG_START_PX || Math.abs(dy) > Math.abs(dx)) return;
-      dragging.current = true;
-      // From here the drag is the walk's, wherever the finger goes.
-      event.currentTarget.setPointerCapture?.(event.pointerId);
-    }
-    dragBy(dx);
-  };
-
-  const onPointerUp = (event: PointerEvent<HTMLDivElement>) => {
-    const from = swipeFrom.current;
-    swipeFrom.current = null;
-    const wasDragging = dragging.current;
-    dragging.current = false;
-    setHeld(false);
-    if (from === null) return;
-    const moved = event.clientX - from;
-    if (Math.abs(moved) >= SWIPE_PX) {
-      slide(moved < 0 ? 1 : -1, wasDragging ? moved : 0);
-    } else if (wasDragging) {
-      springBack(moved);
-    } else if (
-      performance.now() - pressedAt.current < HOLD_MS &&
-      event.target instanceof HTMLElement &&
-      event.target.closest("[data-walk-frame]") &&
-      !event.target.closest("a, button")
-    ) {
-      // Instagram's stories: the left edge of a screen goes back, the rest on.
-      const rect = event.target.closest("[data-walk-frame]")?.getBoundingClientRect();
-      const back = rect && rect.width > 0 && event.clientX < rect.left + rect.width * 0.3;
-      go(index + (back ? -1 : 1));
-    }
-  };
-
-  const release = () => {
-    const wasDragging = dragging.current;
-    swipeFrom.current = null;
-    dragging.current = false;
-    setHeld(false);
-    if (wasDragging) springBack(0);
-  };
 
   const toggle = (
     <button
@@ -305,9 +249,9 @@ export function HomeWalkthrough({
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
-      onPointerCancel={release}
-      onPointerLeave={release}
-      className="relative scroll-mt-20 touch-pan-y overflow-x-clip"
+      onPointerCancel={onPointerEnd}
+      onPointerLeave={onPointerEnd}
+      className="relative scroll-mt-20 overflow-x-clip"
     >
       {ready ? (
         <>

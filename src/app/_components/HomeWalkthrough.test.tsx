@@ -130,6 +130,17 @@ describe("the homepage walkthrough", () => {
     expect(screen.getByText("Second")).toBeInTheDocument();
   });
 
+  it("moves on a finger swipe that leans a little up, and claims the sideways move", () => {
+    mockMotion(true);
+    setup();
+    const group = screen.getByRole("group", { name: "Walk" });
+    fireEvent.touchStart(group, { touches: [{ clientX: 200, clientY: 50 }] });
+    const sideways = fireEvent.touchMove(group, { touches: [{ clientX: 120, clientY: 40 }] });
+    fireEvent.touchEnd(group, { changedTouches: [{ clientX: 100, clientY: 38 }] });
+    expect(sideways).toBe(false);
+    expect(screen.getByText("Second")).toBeInTheDocument();
+  });
+
   it("follows a drag with the beat, moves on past the threshold and springs back short of it", () => {
     mockMotion(true);
     const { container } = setup();
