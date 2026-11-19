@@ -1350,7 +1350,7 @@ export const ENV_GROUPS = [
         from: "harness",
         targets: NOWHERE,
         forbiddenInProduction: true,
-        absent: "the experimental offline roll-call witness path stays off",
+        absent: "the isolated test harness uses its ordinary fixture behavior",
       },
       {
         key: "DIVEDAY_TEST_CACHE_DIR",

@@ -280,10 +280,12 @@ describe("createBooking (in-memory PGlite)", () => {
       email: "mae-current@example.com",
     });
     if (!again.ok) throw new Error("reactivation failed");
+    expect(again.bookingId).toBe(first.bookingId);
     const roster = await getTripRoster(db, shop.id, open.id);
     const seat = roster.find(({ booking }) => booking.id === again.bookingId)?.booking;
     expect(seat?.diveIntent).toBeNull();
     expect(seat?.reEntryAsk).toBeNull();
+    expect(seat?.offlineAssignmentGeneration).toBe(2);
   });
 
   it("rejects booking the same trip twice", async () => {

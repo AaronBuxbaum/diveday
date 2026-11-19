@@ -202,7 +202,11 @@ export async function cancelDeparturesBelowMinimum(
         // the `where` below (still scheduled, still short of its minimum) is what
         // makes this sweep safe to run concurrently, and a two-step read-then-set
         // through that seam would lose it. The stamp itself is the same act.
-        .set({ status: "cancelled", cancelledAt: now })
+        .set({
+          status: "cancelled",
+          cancelledAt: now,
+          offlineMeetingGeneration: sql`${trips.offlineMeetingGeneration} + 1`,
+        })
         .where(
           and(
             eq(trips.id, departure.tripId),
@@ -333,6 +337,7 @@ export async function reinstateTrip(
       .set({
         status: "scheduled",
         cancelledAt: null,
+        offlineMeetingGeneration: sql`case when ${trips.status} is distinct from 'scheduled' then ${trips.offlineMeetingGeneration} + 1 else ${trips.offlineMeetingGeneration} end`,
         minimumBookings: null,
         minimumDecisionHours: null,
       })

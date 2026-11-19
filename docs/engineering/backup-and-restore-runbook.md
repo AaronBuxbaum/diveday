@@ -83,35 +83,9 @@ branch overrides is a trap.
 > and partial restores affecting authorization, erasure or safety evidence; isolated
 > scratch-only drills that do not promote data or admit production writers may continue.
 
-During ordinary reconnect, an unavailable roll-call subject can leave a change on the device for manual review. Use the shop's manual roll-call process and review the indicated reference and checkpoint with the crew; the device's review marker is not proof the server accepted the observation. Independent observations can sync. Keep the device and original shop context available. The existing expiry and pending grace still apply: after that ceiling, the device removes the saved envelope and displays a loss notice, which cannot reconstruct the original observation. A cached older shell must update before it can open version-2 storage or use the updated sync endpoint. This reconnect behavior does not establish meeting identity after an edit and revert, eliminate every erasure race, fence old deployments or make a restore safe ([ADR 20261119](../architecture/decisions/20261119-offline-roll-call-review.md)).
+During ordinary reconnect, a witnessed seat observation syncs automatically only while its meeting, assignment and causal context still match. An ambiguous observation remains on the device for review; it is not proof the server accepted it. Staff can review the current roster and explicitly record a new live mark, or use manual roll call. Offline crew and checklist observations without a verifiable capture witness require a fresh live check; they are not automatically signed off. Independent observations can sync. The saved envelope and its pending grace still expire at the existing ceiling, after which only a loss notice remains.
 
-#### Offline witness rollout and rollback prerequisite
-
-The experimental witness path is closed against a production database. A reviewed future change
-must explicitly enable it; setting its development flag alone cannot do so. Before proposing that
-change, rehearse the following on a separately authorized disposable environment. A green local
-PostgreSQL test is evidence only for PostgreSQL login and transaction primitives, not for Neon
-poolers, Vercel functions, scheduled jobs, credentials, or a restored database.
-
-1. Inventory every old app revision, pooled and direct database connection, background job,
-   scheduled invocation, and rollback path that can write schedules or offline evidence. Identify
-   the exact database target and the separate credentials for the old and replacement writers.
-2. Close admission for both writer generations. Disable fresh old-writer logins, stop old jobs and
-   traffic, and explicitly terminate or wait out all existing old sessions and transactions.
-   Independently verify that fresh physical old logins fail and that no old sessions remain;
-   preserve and reconcile already committed evidence. If any check fails, keep admission closed.
-3. Only after the drain and verification, admit the replacement writer and verify its current
-   schema, protocol, guarded reads and writes on synthetic data. Confirm stale browser and worker
-   requests are refused without settling or purging their queued observations. Staff must review
-   unresolved observations rather than treating them as accepted.
-4. For rollback, first close admission again and drain the replacement writers. Do not send traffic
-   back to an old binary while it can accept an unversioned offline write or mutate schedule context
-   without the new boundary. Preserve queued evidence and use manual roll call until a separately
-   tested compatible version is available.
-
-This checklist does not authorize a live cutover. A restore can rewind the very evidence and
-authorization being checked; the restore stop above still applies, and automatic replay after a
-restore remains unsupported.
+Sync requires protocol 3; an older client receives a whole-request refusal before any event is written or settled. Current snapshot, upcoming and medical readers continue to use their existing protocol. Keep the same stable `AUTH_SECRET` across serving revisions: changing it invalidates outstanding witnesses, which must remain for review. Roll back only to code that enforces the same witness and generation checks; an older writer can accept an unverified mark or change a meeting without invalidating it. The restore stop above remains in force: automatic replay after restore is unsupported.
 
 Neon restores by **branching**, not by rewinding in place. The live database remains untouched
 until it is repointed; creating a branch does not make a production cutover safe.

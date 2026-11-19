@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, expect, it, vi } from "vitest";
 import { buildOfflineManifestCopies } from "@/features/offline-manifest-snapshots";
 import { nowDate } from "@/lib/clock";
-import { describePostgres, postgresTestDb } from "@/test/postgres";
+import { describePostgres, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
 import { getDiverMergePreview, mergeDiverRecords } from "./diver-merge";
 import { getTripManifest, recordRollCall } from "./manifests";
 import { bookings, people, personRoles, rollCallEvents } from "./schema";
@@ -76,25 +76,51 @@ describePostgres("offline evidence across diver merge", () => {
         rollCallWitness: witness,
         offlineSnapshotSavedAt: nowDate(),
       };
-      if (order === "intake first")
-        expect(await recordRollCall(pg.db, input)).toMatchObject({ ok: true });
       const preview = await getDiverMergePreview(pg.db, shop.id, source.id, survivor.id);
       expect(preview?.refusal).toBeNull();
-      expect(
-        await mergeDiverRecords({
-          db: pg.db,
-          shopId: shop.id,
-          personId: source.id,
-          survivorId: survivor.id,
-          actorPersonId: owner.person.id,
-          acknowledged: preview?.acknowledgement || undefined,
+      const mergeInput = {
+        shopId: shop.id,
+        personId: source.id,
+        survivorId: survivor.id,
+        actorPersonId: owner.person.id,
+        acknowledged: preview?.acknowledgement || undefined,
+      };
+      let entered!: () => void;
+      let release!: () => void;
+      const holding = new Promise<void>((resolve) => {
+        entered = resolve;
+      });
+      const gate = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      const first = pg.connect().transaction(async (tx) => {
+        const result =
+          order === "merge first"
+            ? await mergeDiverRecords({ ...mergeInput, db: tx })
+            : await recordRollCall(tx, input);
+        entered();
+        await gate;
+        return result;
+      });
+      await Promise.race([
+        holding,
+        first.then(() => {
+          throw new Error("first transaction ended early");
         }),
-      ).toMatchObject({ ok: true });
-      if (order === "merge first")
-        expect(await recordRollCall(pg.db, input)).toMatchObject({
-          ok: false,
-          reason: "review_required",
-        });
+      ]);
+      const second =
+        order === "merge first"
+          ? recordRollCall(pg.connect(), input)
+          : mergeDiverRecords({ ...mergeInput, db: pg.connect() });
+      try {
+        await waitForLockWaiters(pg.db, 1);
+      } finally {
+        release();
+      }
+      expect(await first).toMatchObject({ ok: true });
+      expect(await second).toMatchObject(
+        order === "merge first" ? { ok: false, reason: "review_required" } : { ok: true },
+      );
       const [seat] = await pg.db.select().from(bookings).where(eq(bookings.id, booking.id));
       expect(seat?.personId).toBe(survivor.id);
       expect(seat?.offlineAssignmentGeneration).toBe(1);

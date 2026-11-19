@@ -1,11 +1,7 @@
-# Unsafe activation checkpoint
+# Offline activation checkpoint
 
-This branch is an incomplete local checkpoint, not a pull request or deployment candidate. The production-enabling change is unsafe until the boundaries below are resolved. No production state was changed.
+This is work in progress, not a pull request or deployment candidate. No production state was changed. The normal runtime enables witnessed sync; tests use a fixture switch. Sync protocol 2 is refused while protocol 1 remains in use by snapshot readers.
 
-- A real PostgreSQL regression reproduced an offline observation captured for one person being accepted after a diver merge repointed the booking. The local merge generation increment makes the two sequential order tests pass; concurrent lock ordering remains unverified.
-- Source review found that hull/mode and meeting-location edits, booking cancellation/reactivation, and trip cancellation/reinstatement do not advance the relevant witness generation. Dive-plan edit/revert also needs a checkpoint-identity decision. These paths are not fixed here.
-- Witness mode holds all offline crew marks and checklist events. There is no complete checklist resolution flow; safe routine marks do not all auto-sync.
-- The production-mode gate test passes, but the protocol-2 refusal regression is intentionally red in the test fixture's disabled mode. The protocol change and dependent current-client tests are not finished.
-- Existing unbound accepted evidence requires a safe, explicit treatment. Preserve the restore stop and do not infer identity or replay safety from a timestamp.
+The local changes advance generation for diver merges, material boat changes, trip cancellation/reinstatement, and seat cancellation/restoration/rebooking. Eight disposable PostgreSQL cases passed, including gated merge transactions, boat swap and revert, trip cancellation/reinstatement, and seat restore. Existing live evidence must remain authoritative; excluded offline evidence remains history and may still require an at-sea uncertainty hold.
 
-Tests: `/tmp/4787-merge-red.log` reproduces both orders; `/tmp/4787-merge-green.log` passes the sequential regression after the local merge change; `/tmp/4787-enable-protocol-red.log` records the remaining protocol refusal failure. No gated concurrency or CI has been run on this checkpoint.
+Open work at this checkpoint: broader unit, browser and CI verification has not completed. Offline crew and checklist captures have no verified witness and remain for manual live review; the checklist does not yet have a local resolution control. Snapshot acquisition and mixed queue must be checked end-to-end. Restore cutover remains unsupported. Do not use the checkpoint as evidence of a safe deployment.
