@@ -27,6 +27,7 @@ The harness discipline that contains it, which any new capture code must keep:
   every such call goes through a driver-side `Promise.race` bound: `withRendererBound` for
   evaluates, `screenshotOrGiveUp` for screenshots. A new screenshot call site in
   `e2e/visual-*.spec.ts` must use `screenshotOrGiveUp`, never bare `page.screenshot`.
+- **A Playwright screenshot timeout is probed too.** Its own 15s deadline can fire before the give-up race (#4795); `screenshotOrGiveUp` then asks the same probe and words the failure "wedged, not slow" when the page is silent.
 - **On a stall, probe before blaming.** Both helpers ask the page `evaluate(() => true)` with a
   5s bound and word their message by the answer: alive means our wait leaked (investigate);
   "wedged, not slow" means the known wedge.
