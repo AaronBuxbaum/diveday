@@ -88,6 +88,7 @@ import { storedPhone } from "./person-phone";
 import { isUniqueConstraintViolation, queryAll } from "./query-helpers";
 import { getBookingReadiness, getTripRequirements, getTripSiteRequirement } from "./readiness";
 import { rearmTripReminders } from "./reminder-rearm";
+import { effectiveCausalRowsForDb } from "./roll-call-causal-store";
 import { newestMarkFirst } from "./roll-call-order";
 import { seatMarks } from "./roll-call-subject";
 import {
@@ -122,6 +123,7 @@ import {
   releaseTripCreditForBooking,
   resetReturnedTripCreditForReopenedBooking,
 } from "./trip-credit-release";
+import { rollCallDayIndex } from "./trip-meeting-windows";
 import { type SendRescheduleNoticesOptions, sendMissedRescheduleNotice } from "./trip-rescheduled";
 import { liveTrip } from "./trips-live";
 import {
@@ -2924,8 +2926,8 @@ async function boardedAtDeparture(
   tripId: string,
   bookingId: string,
 ): Promise<boolean> {
-  const [newest] = await tx
-    .select({ status: rollCallEvents.status })
+  const rows = await tx
+    .select({ event: rollCallEvents, day: rollCallDayIndex() })
     .from(rollCallEvents)
     .where(
       and(
@@ -2936,9 +2938,9 @@ async function boardedAtDeparture(
         eq(rollCallEvents.checkpoint, "departure"),
       ),
     )
-    .orderBy(...newestMarkFirst())
-    .limit(1);
-  return newest?.status === "boarded";
+    .orderBy(...newestMarkFirst());
+  const [newest] = await effectiveCausalRowsForDb(tx, rows);
+  return newest?.event.status === "boarded";
 }
 
 async function changeParticipantType(
