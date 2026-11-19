@@ -947,6 +947,64 @@ describe("a counter arrival queued with no signal", () => {
     expect(saved?.status).toBe("booked");
   });
 
+  it("refuses an undo that reuses the arrival's own event id, and leaves the diver arrived", async () => {
+    const { db, shop, staff, booking } = await readySeat();
+    const arrival = queued({ occurredAt: new Date(nowDate().getTime() - 3 * HOUR) });
+    await checkInBooking(db, {
+      shopId: shop.id,
+      bookingId: booking.id,
+      recordedByPersonId: staff.id,
+      ...arrival,
+    });
+
+    const outcome = await undoCheckInBooking(db, {
+      shopId: shop.id,
+      bookingId: booking.id,
+      recordedByPersonId: staff.id,
+      ...arrival,
+      occurredAt: new Date(nowDate().getTime() - MINUTE),
+      retractsClientEventId: arrival.clientEventId,
+    });
+
+    expect(outcome).toEqual({ ok: false, reason: "snapshot_invalid" });
+    expect(await standingArrivalStatus(db, shop.id, booking.tripId, booking.id)).toBe("arrived");
+    const trail = await db
+      .select()
+      .from(bookingArrivalEvents)
+      .where(eq(bookingArrivalEvents.bookingId, booking.id));
+    expect(trail).toHaveLength(1);
+  });
+
+  it("refuses an arrival that reuses the event id of an undo", async () => {
+    const { db, shop, staff, booking } = await readySeat();
+    const arrival = queued({ occurredAt: new Date(nowDate().getTime() - 3 * HOUR) });
+    await checkInBooking(db, {
+      shopId: shop.id,
+      bookingId: booking.id,
+      recordedByPersonId: staff.id,
+      ...arrival,
+    });
+    const undo = queued({ occurredAt: new Date(nowDate().getTime() - 2 * MINUTE) });
+    await undoCheckInBooking(db, {
+      shopId: shop.id,
+      bookingId: booking.id,
+      recordedByPersonId: staff.id,
+      ...undo,
+      retractsClientEventId: arrival.clientEventId,
+    });
+
+    const outcome = await checkInBooking(db, {
+      shopId: shop.id,
+      bookingId: booking.id,
+      recordedByPersonId: staff.id,
+      ...undo,
+      occurredAt: new Date(nowDate().getTime() - MINUTE),
+    });
+
+    expect(outcome).toEqual({ ok: false, reason: "snapshot_invalid" });
+    expect(await standingArrivalStatus(db, shop.id, booking.tripId, booking.id)).toBe("cleared");
+  });
+
   /**
    * An undo that names nothing keeps the pre-change path, exactly as roll
    * call's does: it was queued by a build that predates the field, on a phone
