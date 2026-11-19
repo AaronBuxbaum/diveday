@@ -9,67 +9,89 @@ type Crew = "sal" | "keiko" | "marcus";
 type Member = Crew | "you";
 
 /**
- * How a line arrives, in ms: `wait` is the silence after the line before it,
- * `fakeOut` is dots that start and stop again without a word, and `typing` is
- * the dots that end in the line. A line with no `typing` just lands, as a quick
- * reply does. The owner never shows dots: their line lands after its silence.
+ * How a line arrives, in ms. `after` is how long after the line before it this
+ * one lands. `typing` is the dots that end in the line, and `fakeOut` is dots
+ * that started earlier and stopped `stop` ms before those (or before the line,
+ * when it has no `typing`). Dots longer than `after` began before the previous
+ * line landed, which is how two or three people end up typing at once and land
+ * in a different order than they started. The owner never shows dots.
  */
 type Beat =
-  | { from: "you"; wait: number }
+  | { from: "you"; after: number }
   | {
       from: Crew;
-      wait: number;
-      fakeOut?: { typing: number; stop: number };
+      after: number;
       typing?: number;
+      fakeOut?: { typing: number; stop: number };
     };
 
 /**
  * The scene, line by line: who sends each and how it arrives. The words come from
  * the bundle. The first line is on screen when the chat starts, so its timing is
- * unused. Tuned for the joke, not for realism: quick back-and-forth on which Tom,
- * hesitation before the dumb question, long dots that end in three words, the
- * silence before the owner, and a goodnight nobody needed to type.
+ * unused. Paced to be read, and tuned for the joke: Keiko and Marcus both
+ * answering "Which Tom?", dots that stop before "Is Tomasz a Tom?", long dots
+ * that end in three words, Keiko's "Which Tom?" overtaking Marcus, the silence
+ * before the owner, and everyone reacting to the list at once.
  */
 const SCRIPT: readonly Beat[] = [
-  /* 1 Did Tom ever sign his waiver? */ { from: "keiko", wait: 0 },
-  /* 2 Which Tom? */ { from: "sal", wait: 800, typing: 600 },
-  /* 3 Boat Tom, not rental Tom */ { from: "keiko", wait: 150, typing: 1000 },
-  /* 4 The tall one? */ { from: "marcus", wait: 700, typing: 650 },
-  /* 5 They're both tall: deadpan, straight back */ { from: "sal", wait: 250, typing: 450 },
+  /* 1 Did Tom ever sign his waiver? */ { from: "keiko", after: 0 },
+  /* 2 Which Tom? */ { from: "sal", after: 2600, typing: 1300 },
+  /* 3 Boat Tom, not rental Tom: Keiko and Marcus both start answering */ {
+    from: "keiko",
+    after: 2400,
+    typing: 2000,
+  },
+  /* 4 The tall one?: he started just after her */ {
+    from: "marcus",
+    after: 1000,
+    typing: 2800,
+  },
+  /* 5 They're both tall: deadpan, straight back */ { from: "sal", after: 1300, typing: 900 },
   /* 6 Is Tomasz a Tom?: he thinks better of it, then asks anyway */ {
     from: "marcus",
-    wait: 300,
-    fakeOut: { typing: 900, stop: 700 },
-    typing: 750,
+    after: 4800,
+    fakeOut: { typing: 1800, stop: 1200 },
+    typing: 1300,
   },
-  /* 7 He goes by Tom too */ { from: "keiko", wait: 200, typing: 650 },
+  /* 7 He goes by Tom too */ { from: "keiko", after: 1700, typing: 1200 },
   /* 8 The signed ones are in the binder: on the heels of her last */ {
     from: "keiko",
-    wait: 0,
-    typing: 900,
+    after: 1900,
+    typing: 1900,
   },
-  /* 9 Where's the binder? */ { from: "marcus", wait: 250, typing: 550 },
-  /* 10 On the boat: instant */ { from: "sal", wait: 500 },
-  /* 11 I thought it was in your truck */ { from: "marcus", wait: 300, typing: 1100 },
-  /* 12 That's the other binder: a beat too long */ { from: "sal", wait: 1500, typing: 650 },
-  /* 13 Can you go look? */ { from: "keiko", wait: 400, typing: 650 },
+  /* 9 Where's the binder? */ { from: "marcus", after: 2400, typing: 1400 },
+  /* 10 On the boat: instant */ { from: "sal", after: 900 },
+  /* 11 I thought it was in your truck */ { from: "marcus", after: 2400, typing: 1700 },
+  /* 12 That's the other binder: a beat too long */ { from: "sal", after: 3600, typing: 1100 },
+  /* 13 Can you go look? */ { from: "keiko", after: 2200, typing: 1300 },
   /* 14 I'm in bed: a paragraph's worth of dots for three words */ {
     from: "sal",
-    wait: 300,
-    fakeOut: { typing: 1900, stop: 800 },
-    typing: 700,
+    after: 6500,
+    fakeOut: { typing: 3000, stop: 1500 },
+    typing: 1400,
   },
-  /* 15 I'll just text Tom */ { from: "marcus", wait: 600, typing: 850 },
-  /* 16 Which Tom?: instant, the callback */ { from: "keiko", wait: 400 },
-  /* 17 It's in DiveDay: the room goes quiet first */ { from: "you", wait: 2000 },
-  /* 18 Wait, that's it? */ { from: "keiko", wait: 300, typing: 550 },
-  /* 19 So rental Tom is boat Tom: working it out */ {
+  /* 15 I'll just text Tom: Marcus and Keiko both typing */ {
     from: "marcus",
-    wait: 400,
-    fakeOut: { typing: 700, stop: 500 },
-    typing: 900,
+    after: 2600,
+    typing: 2000,
   },
-  /* 20 Good night: lands without a word of warning */ { from: "sal", wait: 1200 },
+  /* 16 Which Tom?: hers was already on its way */ { from: "keiko", after: 700, typing: 2200 },
+  /* 17 It's in DiveDay: the room goes quiet first */ { from: "you", after: 3200 },
+  /* 18 Wait, that's it?: everyone types at once, Keiko lands first */ {
+    from: "keiko",
+    after: 1800,
+    typing: 1100,
+  },
+  /* 19 So rental Tom is boat Tom: Marcus started first */ {
+    from: "marcus",
+    after: 1800,
+    typing: 3300,
+  },
+  /* 20 Good night: Sal's dots gave up long ago; it lands without a word of warning */ {
+    from: "sal",
+    after: 2600,
+    fakeOut: { typing: 1400, stop: 3600 },
+  },
 ];
 
 /** The line that carries the shop's list: "It's in DiveDay". */
@@ -77,53 +99,89 @@ const CARD_LINE = 16;
 
 type CardState = "open" | "sent" | "signed";
 
+/** Someone's dots, and the line (by index) they turn into. */
+type Typist = { from: Crew; line: number };
+
 /**
- * One moment of the chat: how many lines have landed, who is typing, and where
- * the list is. `ms` is how long the moment lasts before the next one; the
- * moment that waits for the visitor's tap on the nudge takes it for them when
- * it runs out.
+ * One moment of the chat: how many lines have landed, whose dots are showing in
+ * the order they started, and where the list is. `ms` is how long the moment
+ * lasts before the next one; the moment that waits for the visitor's tap on the
+ * nudge takes it for them when it runs out.
  */
-type Frame = { shown: number; typing: Crew | null; card: CardState; ms: number };
+type Frame = { shown: number; typing: readonly Typist[]; card: CardState; ms: number };
 
 /** How long the nudge waits for the visitor before the chat sends it, in ms. */
 const NUDGE_WAIT_MS = 3600;
 /** From the nudge to the signature, in ms. */
 const SIGN_MS = 1700;
 
-/** The moments between one line landing and the next: silence, a false start, dots. */
-function leadIn(beat: Beat, shown: number, card: CardState): Frame[] {
-  const moment = (typing: Crew | null, ms: number): Frame[] =>
-    ms > 0 ? [{ shown, typing, card, ms }] : [];
-  if (beat.from === "you") return moment(null, beat.wait);
-  return [
-    ...moment(null, beat.wait),
-    ...(beat.fakeOut
-      ? [...moment(beat.from, beat.fakeOut.typing), ...moment(null, beat.fakeOut.stop)]
-      : []),
-    ...moment(beat.from, beat.typing ?? 0),
-  ];
-}
-
-function buildFrames(): Frame[] {
-  const frames: Frame[] = [];
-  for (let shown = 1; shown < SCRIPT.length; shown += 1) {
-    const card: CardState = shown > CARD_LINE ? "signed" : "open";
-    if (shown === CARD_LINE + 1) {
-      frames.push({ shown, typing: null, card: "open", ms: NUDGE_WAIT_MS });
-      frames.push({ shown, typing: null, card: "sent", ms: SIGN_MS });
+/**
+ * The moments while lines `from` up to `to` (indexes, `to` excluded) land, cut
+ * wherever a line lands or someone's dots start or stop. Dots that would start
+ * before the first of these lines' clock are clipped to it.
+ */
+function play(from: number, to: number, card: CardState): Frame[] {
+  const lands: number[] = [];
+  const dots: { start: number; end: number; who: Typist }[] = [];
+  let clock = 0;
+  for (let line = from; line < to; line += 1) {
+    const beat = SCRIPT[line];
+    if (!beat) continue;
+    clock += beat.after;
+    lands.push(clock);
+    if (beat.from === "you") continue;
+    const who = { from: beat.from, line };
+    const typing = beat.typing ?? 0;
+    if (typing > 0) dots.push({ start: clock - typing, end: clock, who });
+    if (beat.fakeOut) {
+      const end = clock - typing - beat.fakeOut.stop;
+      dots.push({ start: end - beat.fakeOut.typing, end, who });
     }
-    const beat = SCRIPT[shown];
-    if (beat) frames.push(...leadIn(beat, shown, card));
   }
-  frames.push({ shown: SCRIPT.length, typing: null, card: "signed", ms: 0 });
+  const cuts = [...new Set([0, ...lands, ...dots.flatMap((dot) => [dot.start, dot.end])])]
+    .filter((at) => at >= 0 && at <= clock)
+    .sort((a, b) => a - b);
+  const frames: Frame[] = [];
+  for (const [index, at] of cuts.entries()) {
+    const next = cuts[index + 1];
+    if (next === undefined) break;
+    const typing: Typist[] = [];
+    for (const dot of dots
+      .filter((dot) => dot.start <= at && at < dot.end)
+      .sort((a, b) => a.start - b.start)) {
+      if (!typing.some((who) => who.from === dot.who.from)) typing.push(dot.who);
+    }
+    const shown = from + lands.filter((land) => land <= at).length;
+    frames.push({ shown, typing, card, ms: next - at });
+  }
   return frames;
 }
 
 /** Every moment of the chat, in order; the last is the finished chat. */
-const CHAT_FRAMES: readonly Frame[] = buildFrames();
+const CHAT_FRAMES: readonly Frame[] = [
+  ...play(1, CARD_LINE + 1, "open"),
+  { shown: CARD_LINE + 1, typing: [], card: "open", ms: NUDGE_WAIT_MS },
+  { shown: CARD_LINE + 1, typing: [], card: "sent", ms: SIGN_MS },
+  ...play(CARD_LINE + 1, SCRIPT.length, "signed"),
+  { shown: SCRIPT.length, typing: [], card: "signed", ms: 0 },
+];
 
 /** The moment the nudge waits for a tap: the first with the list on screen. */
 const NUDGE_FRAME = CHAT_FRAMES.findIndex((frame) => frame.shown === CARD_LINE + 1);
+
+/**
+ * How far a row is drawn from where it is laid out, mid-slide: the vertical part
+ * of its transform, so a slide that is interrupted carries on from where it is.
+ */
+function drawnOffset(row: HTMLElement) {
+  const matrix = getComputedStyle(row).transform.match(/^matrix(3d)?\((.+)\)$/);
+  if (!matrix?.[2]) return 0;
+  const values = matrix[2].split(",").map(Number);
+  return (matrix[1] ? values[13] : values[5]) ?? 0;
+}
+
+/** A row's slide to its new place: the length of a line unfolding, on the house curve. */
+const SLIDE = { duration: 280, easing: "cubic-bezier(0.22, 1, 0.36, 1)" } as const;
 
 export type GroupChatLabels = {
   group: string;
@@ -242,10 +300,14 @@ export function MarketingGroupChat({ labels }: { labels: GroupChatLabels }) {
   const frame = at ?? last;
   const current = CHAT_FRAMES[frame] ?? {
     shown: SCRIPT.length,
-    typing: null,
+    typing: [],
     card: "signed",
     ms: 0,
   };
+  const listRef = useRef<HTMLOListElement>(null);
+  /** Where each row was laid out at the last moment, from the top of the box. */
+  const placed = useRef(new Map<string, number>());
+  const placedAt = useRef<number | null>(null);
 
   // Rewind before paint, unless motion is unwelcome.
   useLayoutEffect(() => {
@@ -270,7 +332,40 @@ export function MarketingGroupChat({ labels }: { labels: GroupChatLabels }) {
     return () => window.clearTimeout(timer);
   }, [ready, onScreen, frame, last, current.ms]);
 
-  const lines = labels.lines.slice(0, current.shown);
+  // Moving on a moment, every row that changed place slides there from where it was drawn: a
+  // landing line pushes the chat up rather than jumping it, and lines overtaking dots swap smoothly.
+  useLayoutEffect(() => {
+    const list = listRef.current;
+    if (!list) return;
+    const forward = placedAt.current !== null && frame > placedAt.current;
+    placedAt.current = frame;
+    const top = list.parentElement?.getBoundingClientRect().top ?? 0;
+    const next = new Map<string, number>();
+    for (const row of list.querySelectorAll<HTMLElement>("[data-chat-row]")) {
+      const key = row.dataset.chatRow ?? "";
+      const drawn = drawnOffset(row);
+      const laid = row.getBoundingClientRect().top - drawn - top;
+      next.set(key, laid);
+      const was = placed.current.get(key);
+      if (!forward || was === undefined || typeof row.animate !== "function") continue;
+      const from = was - laid + drawn;
+      if (Math.abs(from) < 0.5) continue;
+      for (const slide of row.getAnimations()) if (slide.id === "chat-slide") slide.cancel();
+      const slide = row.animate(
+        [{ transform: `translateY(${from}px)` }, { transform: "translateY(0)" }],
+        SLIDE,
+      );
+      slide.id = "chat-slide";
+    }
+    placed.current = next;
+  }, [frame]);
+
+  const rows: { line: number; from: Member; text: string | null }[] = [
+    ...labels.lines
+      .slice(0, current.shown)
+      .map((text, line) => ({ line, from: SCRIPT[line]?.from ?? "you", text })),
+    ...current.typing.map(({ from, line }) => ({ line, from, text: null })),
+  ];
 
   return (
     <div
@@ -299,22 +394,22 @@ export function MarketingGroupChat({ labels }: { labels: GroupChatLabels }) {
 
           {/* Reversed, so the newest line is what the box rests on with or without script. */}
           <div className="marketing-chat-scroll flex h-[27rem] flex-col-reverse overflow-y-auto px-3 py-3">
-            <ol className="flex flex-col">
+            <ol ref={listRef} className="flex flex-col">
               <li className="pb-2 text-center text-xs text-muted">{labels.stamp}</li>
-              {lines.map((text, index) => {
-                const from: Member = SCRIPT[index]?.from ?? "you";
-                const opensRun = SCRIPT[index - 1]?.from !== from;
-                if (from === "you") {
+              {rows.map((row, index) => {
+                const opensRun = rows[index - 1]?.from !== row.from;
+                const spacing = opensRun ? "mt-3" : "mt-1";
+                if (row.from === "you") {
                   return (
                     <li
-                      // biome-ignore lint/suspicious/noArrayIndexKey: the script is fixed and only grows
-                      key={index}
-                      className={`marketing-chat-in flex flex-col items-end ${opensRun ? "mt-3" : "mt-1"}`}
+                      key={`line-${row.line}`}
+                      data-chat-row={row.line}
+                      className={`marketing-chat-in flex flex-col items-end ${spacing}`}
                     >
                       <p className="max-w-[85%] rounded-2xl rounded-ee-md bg-primary px-3 py-2 text-sm text-primary-foreground">
-                        {text}
+                        {row.text}
                       </p>
-                      {index === CARD_LINE ? (
+                      {row.line === CARD_LINE ? (
                         <ListCard
                           labels={labels.card}
                           state={current.card}
@@ -325,43 +420,48 @@ export function MarketingGroupChat({ labels }: { labels: GroupChatLabels }) {
                     </li>
                   );
                 }
+                // A line's dots and the line share one row, so the line lands where its dots were.
                 return (
                   <li
-                    // biome-ignore lint/suspicious/noArrayIndexKey: the script is fixed and only grows
-                    key={index}
-                    className={`marketing-chat-in flex items-end gap-2 ${opensRun ? "mt-3" : "mt-1"}`}
+                    key={`line-${row.line}`}
+                    data-chat-row={row.line}
+                    className={`marketing-chat-in flex items-end gap-2 ${spacing}`}
                   >
                     {opensRun ? (
-                      <Avatar>{labels.avatars[from]}</Avatar>
+                      <Avatar>{labels.avatars[row.from]}</Avatar>
                     ) : (
                       <span className="w-7 shrink-0" />
                     )}
                     <div className="flex min-w-0 max-w-[80%] flex-col items-start">
                       {opensRun ? (
-                        <p className="mb-0.5 ps-3 text-xs text-muted">{labels.names[from]}</p>
+                        <p className="mb-0.5 ps-3 text-xs text-muted">{labels.names[row.from]}</p>
                       ) : null}
-                      <p className="rounded-2xl rounded-es-md bg-surface-sunken px-3 py-2 text-sm">
-                        {text}
-                      </p>
+                      {row.text === null ? (
+                        <p
+                          key="dots"
+                          className="flex h-9 items-center gap-1 rounded-2xl rounded-es-md bg-surface-sunken px-3"
+                        >
+                          <span className="sr-only">{labels.typing[row.from]}</span>
+                          {[0, 1, 2].map((dot) => (
+                            <span
+                              key={dot}
+                              aria-hidden="true"
+                              className="marketing-chat-dot size-1.5 rounded-full bg-muted"
+                            />
+                          ))}
+                        </p>
+                      ) : (
+                        <p
+                          key="text"
+                          className="rounded-2xl rounded-es-md bg-surface-sunken px-3 py-2 text-sm"
+                        >
+                          <span className="marketing-chat-reveal">{row.text}</span>
+                        </p>
+                      )}
                     </div>
                   </li>
                 );
               })}
-              {current.typing ? (
-                <li key={`typing-${frame}`} className="marketing-chat-in mt-3 flex items-end gap-2">
-                  <Avatar>{labels.avatars[current.typing]}</Avatar>
-                  <p className="flex h-9 items-center gap-1 rounded-2xl rounded-es-md bg-surface-sunken px-3">
-                    <span className="sr-only">{labels.typing[current.typing]}</span>
-                    {[0, 1, 2].map((dot) => (
-                      <span
-                        key={dot}
-                        aria-hidden="true"
-                        className="marketing-chat-dot size-1.5 rounded-full bg-muted"
-                      />
-                    ))}
-                  </p>
-                </li>
-              ) : null}
             </ol>
           </div>
 

@@ -45,9 +45,9 @@ function moment() {
 /** Run the clock for exactly the current moment, so the chat moves one moment on. */
 const nextMoment = () => act(() => void vi.advanceTimersByTime(moment().ms));
 
-/** What a visitor sees in one moment: who is typing and how many lines are up. */
+/** What a visitor sees in one moment: whose dots are up, top to bottom, and how many lines. */
 const seen = () => ({
-  typing: screen.queryByText(/is typing$/)?.textContent ?? null,
+  typing: screen.queryAllByText(/is typing$/).map((dots) => dots.textContent ?? ""),
   lines: LINES.filter((line) => screen.queryByText(line, { exact: true })).length,
 });
 
@@ -98,7 +98,7 @@ describe("the homepage group chat", () => {
     expect(screen.getByText("line 1")).toBeTruthy();
     expect(screen.queryByText("line 2")).toBeNull();
 
-    const beats: { ms: number; typing: string | null; lines: number }[] = [];
+    const beats: { ms: number; typing: string[]; lines: number }[] = [];
     while (!moment().end) {
       beats.push({ ms: moment().ms, ...seen() });
       nextMoment();
@@ -107,29 +107,47 @@ describe("the homepage group chat", () => {
     expect(screen.getByText("line 20")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Nudge" })).toBeNull();
 
-    // About half a minute, nudge included.
+    // Long enough to read every line: most of a minute, nudge included.
     const total = beats.reduce((sum, beat) => sum + beat.ms, 0);
-    expect(total).toBeGreaterThanOrEqual(27_000);
-    expect(total).toBeLessThanOrEqual(35_000);
+    expect(total).toBeGreaterThanOrEqual(45_000);
+    expect(total).toBeLessThanOrEqual(55_000);
     // Not one rhythm: the moments range from a blink to a long silence.
     const lengths = beats.map((beat) => beat.ms);
     expect(new Set(lengths).size).toBeGreaterThanOrEqual(10);
     expect(Math.min(...lengths)).toBeLessThanOrEqual(300);
-    expect(Math.max(...lengths)).toBeGreaterThanOrEqual(2000);
-    // Somebody starts typing, stops, and starts again before their line lands.
-    const fakeOut = beats.some(
-      (beat, index) =>
-        beat.typing &&
-        beats[index + 1]?.typing === null &&
-        beats[index + 1]?.lines === beat.lines &&
-        beats[index + 2]?.typing === beat.typing,
+    expect(Math.max(...lengths)).toBeGreaterThanOrEqual(3000);
+    // Sometimes two people type at once, and once all three do.
+    expect(beats.filter((beat) => beat.typing.length >= 2).length).toBeGreaterThanOrEqual(3);
+    expect(beats.some((beat) => beat.typing.length === 3)).toBe(true);
+    // Whoever started typing second can land first, and the first keeps typing.
+    const overtaken = beats.some((beat, index) => {
+      const after = beats[index + 1];
+      const [first, second] = beat.typing;
+      return (
+        first &&
+        second &&
+        after &&
+        after.lines > beat.lines &&
+        after.typing.includes(first) &&
+        !after.typing.includes(second)
+      );
+    });
+    expect(overtaken).toBe(true);
+    // Somebody starts typing, stops, and starts again before a new line lands.
+    const fakeOut = beats.some((beat, index) =>
+      beat.typing.some(
+        (who) =>
+          !beats[index + 1]?.typing.includes(who) &&
+          beats[index + 1]?.lines === beat.lines &&
+          beats[index + 2]?.typing.includes(who),
+      ),
     );
     expect(fakeOut).toBe(true);
-    // And some lines land with no dots at all.
-    const instant = beats.filter(
-      (beat, index) => beat.typing === null && (beats[index + 1]?.lines ?? 20) > beat.lines,
+    // And some lines land with nobody's dots before them.
+    const unannounced = beats.filter(
+      (beat, index) => beat.typing.length === 0 && (beats[index + 1]?.lines ?? 20) > beat.lines,
     );
-    expect(instant.length).toBeGreaterThanOrEqual(3);
+    expect(unannounced.length).toBeGreaterThanOrEqual(3);
   });
 
   it("lets the visitor send the nudge, and plays again from the first line", () => {
