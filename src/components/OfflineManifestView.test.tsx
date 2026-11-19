@@ -93,7 +93,7 @@ describe("OfflineManifestView — list mode (no ?trip=)", () => {
     // badge rule — so that a pill appearing anywhere on this list means one
     // copy needs a look. Freshness is still stated, once, for the group.
     expect(screen.queryByText("Fresh copy")).not.toBeInTheDocument();
-    expect(screen.getByText("All up to date.")).toBeInTheDocument();
+    expect(screen.getByText("Saved copies are recent.")).toBeInTheDocument();
     // Still shown, and still unconditionally — this view has no reliable way
     // to know "the current shop" while genuinely offline, so the boundary has
     // to be visible rather than inferred (see the cross-shop test below for
@@ -121,7 +121,7 @@ describe("OfflineManifestView — list mode (no ?trip=)", () => {
     expect(screen.queryByText("Aging copy")).not.toBeInTheDocument();
     // The header stops claiming everything is fine the moment one copy isn't,
     // and counts only the copies that need a look.
-    expect(screen.queryByText("All up to date.")).not.toBeInTheDocument();
+    expect(screen.queryByText("Saved copies are recent.")).not.toBeInTheDocument();
     expect(screen.getByText("1 copy needs refreshing.")).toBeInTheDocument();
   });
 
@@ -245,6 +245,9 @@ describe("OfflineManifestView — list mode (no ?trip=)", () => {
     ).toBeInTheDocument();
     expect(screen.queryByText("Shop A's Trip")).not.toBeInTheDocument();
     expect(screen.queryByText(/Reef Runners/)).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/These roll-call changes may exist only on this device/),
+    ).not.toBeInTheDocument();
     // The store still returns the original pending envelope after the purge
     // attempt; the UI hides it under another verified tenant without deleting
     // or submitting its event.
@@ -306,6 +309,9 @@ describe("OfflineManifestView — list mode (no ?trip=)", () => {
     expect(screen.queryByText("Private synthetic shop trip")).not.toBeInTheDocument();
     expect(screen.queryByText("Private synthetic shop")).not.toBeInTheDocument();
     expect(screen.queryByText("booking-private")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/These roll-call changes may exist only on this device/),
+    ).not.toBeInTheDocument();
     expect(syncOfflineManifest).not.toHaveBeenCalled();
   });
 
@@ -602,12 +608,12 @@ describe("OfflineManifestView — list mode (no ?trip=)", () => {
       ]);
 
       render(<OfflineManifestView />);
-      expect(await screen.findByText("All up to date.")).toBeInTheDocument();
+      expect(await screen.findByText("Saved copies are recent.")).toBeInTheDocument();
 
       // 20 minutes later — past the 15-minute "current" threshold — but
       // nothing has re-rendered yet, so the row should still read stale info.
       process.env.DIVEDAY_CLOCK = new Date(FROZEN_MS + 20 * 60 * 1000).toISOString();
-      expect(screen.getByText("All up to date.")).toBeInTheDocument();
+      expect(screen.getByText("Saved copies are recent.")).toBeInTheDocument();
 
       expect(tick).toBeDefined();
       act(() => tick?.());
@@ -616,7 +622,7 @@ describe("OfflineManifestView — list mode (no ?trip=)", () => {
       // its age — and the group line stops saying everything is fine.
       expect(await screen.findByText("Saved 20 minutes ago")).toBeInTheDocument();
       expect(screen.getByText("1 copy needs refreshing.")).toBeInTheDocument();
-      expect(screen.queryByText("All up to date.")).not.toBeInTheDocument();
+      expect(screen.queryByText("Saved copies are recent.")).not.toBeInTheDocument();
     } finally {
       process.env.DIVEDAY_CLOCK = originalClock;
     }

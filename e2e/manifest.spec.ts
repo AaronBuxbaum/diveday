@@ -34,6 +34,7 @@ import {
   tripPathByTitle,
   waiverRequestLinkAfterSend,
 } from "./helpers";
+import { IDENTITY_ROUTE, rewriteSavedOfflineRecord, savedOfflineRecordFor } from "./visual-harness";
 
 const staff = staffTranslator("en-US");
 
@@ -281,16 +282,57 @@ test("captain saves the full checkpoint manifest, reloads it offline, and reconc
   await expect(
     page.getByRole("status").filter({ hasText: "when you’re back in service" }),
   ).toBeVisible();
+  const expiryWarning = staff("shared.offlineManifest.reconcile.pendingExpiryWarning");
+  const tripWarning = page.getByRole("status").filter({ hasText: expiryWarning });
+  await expect(tripWarning).toBeVisible();
+  await expect(tripWarning).toHaveAttribute("aria-live", "polite");
+
+  // The same pending evidence is actionable from the saved-trip list.
+  await page.goto("/offline-manifest");
+  await expect(page.getByRole("heading", { name: "Saved on this device" })).toBeVisible();
+  const listWarning = page.getByRole("status").filter({ hasText: expiryWarning });
+  await expect(listWarning).toBeVisible();
+  await expect(listWarning).toHaveAttribute("aria-live", "polite");
+  await expect(page.getByText("Saved copies are recent.", { exact: true })).toBeVisible();
+  await expect(page.getByText("All up to date.", { exact: true })).toHaveCount(0);
+  await page.goto(`/offline-manifest?trip=${DEMO_TODAY_TRIP_ID}&checkpoint=after_dive_1`);
+  await expect(page.getByRole("status").filter({ hasText: expiryWarning })).toBeVisible();
   await context.setOffline(false);
   await expect(
     page
       .locator('[data-deck-screen] > [role="status"]')
       .getByText(staff("shared.offlineManifest.reconcile.allCaughtUp"), { exact: true }),
   ).toBeVisible();
+  await expect(page.getByRole("status").filter({ hasText: expiryWarning })).toHaveCount(0);
   const crewRow = await savedPersonDetails(page, CAPTAIN_NAME);
   await expect(
     crewRow.getByRole("button", { name: "Aboard — tap again to undo", exact: true }),
   ).toBeVisible();
+});
+
+test("a verified different shop does not show another shop’s pending warning", async ({ page }) => {
+  const tripId = await savedOfflineRecordFor(page);
+  await rewriteSavedOfflineRecord(page, tripId, {
+    shop: { slug: "synthetic-other-shop", name: "Synthetic Other Shop" },
+    pendingRollCalls: 1,
+  });
+  // The helper holds tenant verification unavailable, so the offline copy is
+  // initially visible. Restore verification and let the real signed-in shop
+  // be the authority for whether that copy can be displayed.
+  await page.goto(`/offline-manifest?trip=${tripId}`);
+  const warning = page.getByRole("status").filter({
+    hasText: staff("shared.offlineManifest.reconcile.pendingExpiryWarning"),
+  });
+  await expect(warning).toBeVisible();
+  await page.unroute(IDENTITY_ROUTE);
+  await page.evaluate(() => window.dispatchEvent(new Event("online")));
+  await expect(
+    page.getByRole("heading", {
+      name: staff("shared.offlineManifest.single.removedOtherShopHeading"),
+    }),
+  ).toBeVisible();
+  await expect(warning).toHaveCount(0);
+  await expect(page.getByText("Synthetic Other Shop")).toHaveCount(0);
 });
 
 test("a new shell worker replaces the older cache without losing encrypted roll call", async ({

@@ -22,6 +22,7 @@ import { OfflineDeckSafety } from "./DeckNotices";
 import { OfflineDeckRollCall } from "./DeckRollCall";
 import { OfflineManifestSheet } from "./ManifestSheet";
 import { MissingRollCallRefusals } from "./MissingRollCallRefusals";
+import { PendingRollCallWarning } from "./PendingRollCallWarning";
 import { StatusMessage } from "./StatusMessage";
 import { OfflineTripFoot } from "./TripFoot";
 import { OfflineTripHeader } from "./TripHeader";
@@ -152,6 +153,10 @@ export function OfflineTripScreen({
           <PullToRefresh onRefresh={reconcile}>
             <OfflineShellVersionBanner copy={shellVersionCopy} />
             {discardNotice}
+            <PendingRollCallWarning
+              t={t}
+              pending={envelope.events.some((event) => event.syncStatus === "pending")}
+            />
             {foreignPendingChanges ? (
               <p
                 className={`${OFFLINE_NOTICE_CLASS} border-warning/40 bg-warning/10 text-pretty`}

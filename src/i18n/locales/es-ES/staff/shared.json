@@ -376,6 +376,7 @@
       "reachError": "No se pudo contactar con DiveDay en este momento. Tus cambios siguen guardados en este teléfono e intentarán enviarse de nuevo en el próximo cambio o al reconectar.",
       "pendingRejectedSingle": "{count, plural, one {# cambio necesita revisión. Abre el manifiesto en vivo para resolverlo.} other {# cambios necesitan revisión. Abre el manifiesto en vivo para resolverlo.}}",
       "pendingWaiting": "{count, plural, one {# cambio todavía se está enviando.} other {# cambios todavía se están enviando.}}",
+      "pendingExpiryWarning": "Estos cambios del pase de lista podrían existir solo en este dispositivo y podrían eliminarse automáticamente si no se envían. Vuelve a conectarte, inicia sesión en el centro original y comprueba que se hayan sincronizado. Si no puedes sincronizar, usa el procedimiento manual de pase de lista.",
       "allCaughtUp": "Todo enviado.",
       "noteDiscarded": "Cada línea corresponde a una marca cuya nota sin conexión anterior se eliminó tras borrar datos. Revisa todas las marcas en el manifiesto en vivo; este aviso permanece en el dispositivo después de sincronizar y recargar.",
       "noteUnverified": "Cada línea corresponde a una marca cuya nota sin conexión no verificada se eliminó. Revisa todas las marcas en el manifiesto en vivo; este aviso permanece en el dispositivo después de sincronizar y recargar.",
@@ -408,7 +409,7 @@
       "expiredViewOnly": "Caducado — solo lectura",
       "emptyHint": "Abre el manifiesto de una salida mientras tengas conexión y se guarda aquí.",
       "unansweredEmpty": "DiveDay no respondió.",
-      "freshnessAllCurrent": "Todas al día.",
+      "freshnessAllCurrent": "Las copias guardadas son recientes.",
       "freshnessNeedRefresh": "{count, plural, one {# copia necesita actualizarse.} other {# copias necesitan actualizarse.}}",
       "savedAgo": "Guardada {ago}",
       "refreshBeforeRelying": "Actualízala antes de confiar en ella"
