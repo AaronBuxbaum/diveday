@@ -7,8 +7,11 @@ import { useWalkSwipe } from "./useWalkSwipe";
 /** Fewer than this many pixels sideways is a tap, not a swipe. */
 const SWIPE_PX = 40;
 
-/** A press that has moved this far sideways, more than up or down, is a drag. */
-const DRAG_START_PX = 8;
+/** A press must move this far, in any direction, before it is read as a drag or a scroll. */
+const SLOP_PX = 8;
+
+/** A drag is a swipe only when it goes this many times further sideways than up or down. */
+const SIDEWAYS_RATIO = 2;
 
 /** A press held this long is a hold (it pauses, and its release is not a tap). */
 const HOLD_MS = 250;
@@ -37,6 +40,8 @@ export function useWalkPress({
   const swipeFrom = useRef<number | null>(null);
   const swipeFromY = useRef(0);
   const dragging = useRef(false);
+  /** Set once a press has moved up or down: it is the page scrolling, and never a swipe or a tap. */
+  const scrolling = useRef(false);
   const pressedAt = useRef(0);
   const setHeld = onHeld;
 
@@ -54,6 +59,7 @@ export function useWalkPress({
     swipeFrom.current = x;
     swipeFromY.current = y;
     dragging.current = false;
+    scrolling.current = false;
     pressedAt.current = performance.now();
     setHeld(true);
   };
@@ -62,10 +68,18 @@ export function useWalkPress({
   const moveTo = (x: number, y: number): boolean => {
     const from = swipeFrom.current;
     if (from === null) return false;
+    if (scrolling.current) return false;
     const dx = x - from;
     if (!dragging.current) {
-      const dy = y - swipeFromY.current;
-      if (Math.abs(dx) < DRAG_START_PX || Math.abs(dy) > Math.abs(dx)) return false;
+      const ax = Math.abs(dx);
+      const ay = Math.abs(y - swipeFromY.current);
+      if (Math.max(ax, ay) < SLOP_PX) return false;
+      if (ax < ay * SIDEWAYS_RATIO) {
+        // Decided once: a press that began as a scroll stays one, however far it drifts sideways.
+        scrolling.current = true;
+        setHeld(false);
+        return false;
+      }
       dragging.current = true;
     }
     dragBy(dx);
@@ -76,15 +90,18 @@ export function useWalkPress({
     const from = swipeFrom.current;
     swipeFrom.current = null;
     const wasDragging = dragging.current;
+    const wasScrolling = scrolling.current;
     dragging.current = false;
+    scrolling.current = false;
     setHeld(false);
-    if (from === null) return;
+    if (from === null || wasScrolling) return;
     const moved = x - from;
-    if (Math.abs(moved) >= SWIPE_PX) {
-      slide(moved < 0 ? 1 : -1, wasDragging ? moved : 0);
+    if (wasDragging && Math.abs(moved) >= SWIPE_PX) {
+      slide(moved < 0 ? 1 : -1, moved);
     } else if (wasDragging) {
       springBack(moved);
     } else if (
+      Math.abs(moved) < SLOP_PX &&
       performance.now() - pressedAt.current < HOLD_MS &&
       target instanceof HTMLElement &&
       target.closest("[data-walk-frame]") &&
@@ -101,6 +118,7 @@ export function useWalkPress({
     const wasDragging = dragging.current;
     swipeFrom.current = null;
     dragging.current = false;
+    scrolling.current = false;
     setHeld(false);
     if (wasDragging) springBack(0);
   };
