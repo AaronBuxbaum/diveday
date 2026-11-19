@@ -79,8 +79,10 @@ describePostgres("offline evidence across a boat change", () => {
         rollCallWitness: witness,
         offlineSnapshotSavedAt: nowDate(),
       };
-      if (order === "intake first")
+      if (order === "intake first") {
         expect(await recordRollCall(pg.db, input)).toMatchObject({ ok: true });
+        expect(await recordRollCall(pg.db, input)).toMatchObject({ ok: true, duplicate: true });
+      }
       expect(
         await editTripSection(pg.db, shop.id, trip.id, { boatId: replacement.id }),
       ).toMatchObject({ ok: true });
@@ -90,6 +92,11 @@ describePostgres("offline evidence across a boat change", () => {
       const [restored] = await pg.db.select().from(trips).where(eq(trips.id, trip.id));
       expect(restored?.offlineMeetingGeneration).toBe(original.offlineMeetingGeneration + 2);
       if (order === "boat first")
+        expect(await recordRollCall(pg.db, input)).toMatchObject({
+          ok: false,
+          reason: "review_required",
+        });
+      if (order === "intake first")
         expect(await recordRollCall(pg.db, input)).toMatchObject({
           ok: false,
           reason: "review_required",

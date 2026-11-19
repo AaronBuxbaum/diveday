@@ -5,7 +5,7 @@
 
 ## Current implementation
 
-The later witnessed sync protocol 3 supersedes the protocol-2 rollout described below. New seat observations reconcile only when their signed meeting, assignment and causal context remains current; other observations remain for review. Snapshot and medical readers retain protocol 1. A previously accepted unbound offline mark is not proof of the current meeting. The restore stop remains in the [runbook](../engineering/backup-and-restore-runbook.md).
+The later witnessed sync protocol 3 supersedes the protocol-2 rollout described below. New seat observations reconcile only when their signed meeting, assignment and causal context remains current; other observations remain for review. Snapshot and medical readers retain protocol 1. A previously accepted unbound offline mark is not proof of the current meeting. The restore stop remains in the [runbook](../../engineering/backup-and-restore-runbook.md).
 
 ## Context
 

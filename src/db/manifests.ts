@@ -1998,7 +1998,14 @@ async function storedRollCallEvent(
   tx: DbExecutor,
   shopId: string,
   clientEventId: string,
-): Promise<(StoredOfflineEvent & { witnessBound: boolean }) | undefined> {
+): Promise<
+  | (StoredOfflineEvent & {
+      witnessBound: boolean;
+      offlineMeetingGeneration: number | null;
+      offlineAssignmentGeneration: number | null;
+    })
+  | undefined
+> {
   const [existing] = await tx
     .select({
       id: rollCallEvents.id,
@@ -2044,6 +2051,8 @@ async function storedRollCallEvent(
   }
   return {
     id: existing.id,
+    offlineMeetingGeneration: existing.offlineMeetingGeneration,
+    offlineAssignmentGeneration: existing.offlineAssignmentGeneration,
     witnessBound:
       existing.offlineMeetingGeneration !== null && existing.offlineAssignmentGeneration !== null,
     subject: rollCallReplaySubject(existing.subjectKind, existing.tripId, markSubjectId(existing), {
@@ -2236,7 +2245,8 @@ async function writeRollCall(
       !stored?.witnessBound
     )
       return refuse("review_required");
-    if (replayed) return noteDisposition ? { ...replayed, noteDisposition } : replayed;
+    if (replayed && !(source === "offline" && replayed.ok && offlineRollCallWitnessEnabled()))
+      return noteDisposition ? { ...replayed, noteDisposition } : replayed;
   }
 
   // The departure, then the seat — the one order every seat writer takes
@@ -2271,7 +2281,8 @@ async function writeRollCall(
       !stored?.witnessBound
     )
       return refuse("review_required");
-    if (replayed) return noteDisposition ? { ...replayed, noteDisposition } : replayed;
+    if (replayed && !(source === "offline" && replayed.ok && offlineRollCallWitnessEnabled()))
+      return noteDisposition ? { ...replayed, noteDisposition } : replayed;
   }
   if (lockedTripId !== input.tripId) return refuse("booking_unavailable");
   const [booking] = await tx
@@ -2304,6 +2315,23 @@ async function writeRollCall(
     .limit(1)
     .for("update", { of: bookings });
   if (!booking) return refuse("booking_unavailable");
+  if (source === "offline" && input.clientEventId && offlineRollCallWitnessEnabled()) {
+    const stored = await storedRollCallEvent(tx, input.shopId, input.clientEventId);
+    const replayed = replayVerdict(
+      stored,
+      rollCallReplaySubject("seat", input.tripId, input.bookingId, input),
+      "roll_call_events",
+    );
+    if (replayed?.ok) {
+      if (
+        !stored?.witnessBound ||
+        stored.offlineMeetingGeneration !== booking.offlineMeetingGeneration ||
+        stored.offlineAssignmentGeneration !== booking.offlineAssignmentGeneration
+      )
+        return refuse("review_required");
+      return noteDisposition ? { ...replayed, noteDisposition } : replayed;
+    }
+  }
   const capture = await validateOfflineRollCallCapture(tx, input, checkpoint, booking);
   if (!capture.ok) return refuse("review_required");
   const verifiedWitness = capture.witness;

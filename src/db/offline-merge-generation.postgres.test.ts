@@ -3,6 +3,7 @@ import { afterAll, beforeAll, expect, it, vi } from "vitest";
 import { buildOfflineManifestCopies } from "@/features/offline-manifest-snapshots";
 import { nowDate } from "@/lib/clock";
 import { describePostgres, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
+import type { AppDb } from "./client";
 import { getDiverMergePreview, mergeDiverRecords } from "./diver-merge";
 import { getTripManifest, recordRollCall } from "./manifests";
 import { bookings, people, personRoles, rollCallEvents } from "./schema";
@@ -97,7 +98,7 @@ describePostgres("offline evidence across diver merge", () => {
         const result =
           order === "merge first"
             ? await mergeDiverRecords({ ...mergeInput, db: tx })
-            : await recordRollCall(tx, input);
+          : await recordRollCall(tx as unknown as AppDb, input);
         entered();
         await gate;
         return result;
