@@ -2086,6 +2086,8 @@ export async function recordRollCall(
     offlineSnapshotId?: string;
     offlineErasureEpochToken?: string;
     rollCallWitness?: string;
+    /** Fresh server-issued context for an explicit live review confirmation. */
+    reviewWitness?: string;
     /**
      * What the crew observed about a person who is unaccounted for. Kept only
      * at an after-dive checkpoint (`rollCallNoteAllowed`) — a note posted at
@@ -2172,7 +2174,12 @@ async function writeRollCall(
       rollCallReplaySubject("seat", input.tripId, input.bookingId, input),
       "roll_call_events",
     );
-    if (replayed?.ok && offlineRollCallWitnessEnabled() && !stored?.witnessBound)
+    if (
+      source === "offline" &&
+      replayed?.ok &&
+      offlineRollCallWitnessEnabled() &&
+      !stored?.witnessBound
+    )
       return refuse("review_required");
     if (replayed) return noteDisposition ? { ...replayed, noteDisposition } : replayed;
   }
@@ -2202,7 +2209,12 @@ async function writeRollCall(
       rollCallReplaySubject("seat", input.tripId, input.bookingId, input),
       "roll_call_events",
     );
-    if (replayed?.ok && offlineRollCallWitnessEnabled() && !stored?.witnessBound)
+    if (
+      source === "offline" &&
+      replayed?.ok &&
+      offlineRollCallWitnessEnabled() &&
+      !stored?.witnessBound
+    )
       return refuse("review_required");
     if (replayed) return noteDisposition ? { ...replayed, noteDisposition } : replayed;
   }
@@ -2240,10 +2252,13 @@ async function writeRollCall(
   let verifiedWitness: ReturnType<typeof verifyRollCallWitness> = null;
   if (source === "offline" && offlineRollCallWitnessEnabled() !== Boolean(input.rollCallWitness))
     return refuse("review_required");
-  if (source === "offline" && input.rollCallWitness) {
+  if (source === "live" && input.reviewWitness && !offlineRollCallWitnessEnabled())
+    return refuse("review_required");
+  const witness = source === "offline" ? input.rollCallWitness : input.reviewWitness;
+  if (witness) {
     if (!input.offlineSnapshotId || input.meetingDay === undefined)
       return refuse("review_required");
-    verifiedWitness = verifyRollCallWitness(input.rollCallWitness, {
+    verifiedWitness = verifyRollCallWitness(witness, {
       shopId: input.shopId,
       tripId: input.tripId,
       snapshotId: input.offlineSnapshotId,
@@ -2265,7 +2280,8 @@ async function writeRollCall(
     if (
       causal.meetingDay !== input.meetingDay ||
       JSON.stringify([...frontier].sort()) !== JSON.stringify(verifiedWitness.frontier) ||
-      verifiedWitness.frontier.some((id) => !observed.has(id))
+      verifiedWitness.frontier.some((id) => !observed.has(id)) ||
+      (source === "live" && observed.size !== verifiedWitness.frontier.length)
     )
       return refuse("review_required");
   }

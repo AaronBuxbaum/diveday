@@ -357,6 +357,53 @@ it("keeps an unwitnessed crew observation pending for review", async () => {
   ).toHaveLength(0);
 });
 
+it("records an explicit current live confirmation exactly once", async () => {
+  const { db, shop, trip, booking, staffPersonId } = await seededContext();
+  vi.mocked(getDb).mockResolvedValue(db);
+  auth.mockResolvedValue(staffSession(shop.id, staffPersonId));
+  const saved = (await buildOfflineManifestCopies(db, shop, staffPersonId, [trip.id])).payloads[0];
+  if (!saved?.snapshotId) throw new Error("snapshot missing");
+  const witness = saved.rollCallWitnesses?.[`seat:${booking.id}:after_dive_1`];
+  if (!witness) throw new Error("witness missing");
+  const id = crypto.randomUUID();
+  const body = {
+    tripId: trip.id,
+    bookingId: booking.id,
+    checkpoint: "after_dive_1",
+    status: "boarded",
+    snapshotId: saved.snapshotId,
+    meetingDay: saved.rollCallMeetingDay ?? 0,
+    witness,
+    confirmationId: id,
+    confirmed: true,
+  };
+  const { POST: confirm } = await import("../review/route");
+  const request = () =>
+    new Request("http://localhost/api/offline-manifests/review", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  const first = await confirm(request());
+  expect(first.status).toBe(200);
+  const firstBody = await first.json();
+  expect(firstBody).toMatchObject({ status: "applied", confirmationId: id });
+  const retry = await confirm(request());
+  expect(await retry.json()).toMatchObject({
+    status: "duplicate",
+    eventId: firstBody.eventId,
+    confirmationId: id,
+  });
+  const rows = await db.select().from(rollCallEvents).where(eq(rollCallEvents.clientEventId, id));
+  expect(rows).toHaveLength(1);
+  expect(rows[0]).toMatchObject({ source: "live", statementStatus: "boarded" });
+  expect(
+    (await getTripManifest(db, shop.id, trip.id, "after_dive_1"))?.divers.find(
+      (diver) => diver.bookingId === booking.id,
+    )?.rollCall?.state,
+  ).toBe("boarded");
+});
+
 it("does not sign off an old checklist after a schedule edit and revert", async () => {
   const { db, shop, trip, staffPersonId } = await seededContext();
   vi.mocked(getDb).mockResolvedValue(db);

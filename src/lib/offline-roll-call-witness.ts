@@ -1,5 +1,6 @@
 import { authSecret } from "./auth-secret";
 import { rollCallEvidenceIdPattern } from "./roll-call-causality";
+import { runtimeMode } from "./runtime-mode";
 import { deriveLabelKey, signPayload, tagMatches } from "./signed-token";
 
 type Scope = {
@@ -14,10 +15,11 @@ type Scope = {
 type Witness = { meetingGeneration: number; assignmentGeneration: number; frontier: string[] };
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-/** Local development gate; activation requires a verified old-writer drain and the remaining readers. */
+/** Disabled on production databases; the isolated browser harness can exercise the path. */
 export function offlineRollCallWitnessEnabled(): boolean {
   return (
-    process.env.NODE_ENV !== "production" && process.env.DIVEDAY_OFFLINE_ROLL_CALL_WITNESS === "1"
+    (process.env.NODE_ENV !== "production" || runtimeMode().e2eHarness) &&
+    process.env.DIVEDAY_OFFLINE_ROLL_CALL_WITNESS === "1"
   );
 }
 

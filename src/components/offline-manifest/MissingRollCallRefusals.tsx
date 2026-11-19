@@ -1,4 +1,5 @@
 import type { OfflineTripControls } from "./controls";
+import { ReviewObservation } from "./ReviewObservation";
 import type { OfflineTripView } from "./trip-view";
 
 /** Identify each refused mark without changing the causal roll-call rows. */
@@ -10,7 +11,7 @@ export function MissingRollCallRefusals({
   controls: OfflineTripControls;
 }) {
   const missing = view.envelope.events.filter(
-    (event) => event.syncStatus === "rejected" || event.reviewRequired,
+    (event) => (event.syncStatus === "rejected" || event.reviewRequired) && !event.reviewResolution,
   );
   if (!missing.length) return null;
   return (
@@ -36,6 +37,28 @@ export function MissingRollCallRefusals({
                   checkpoint,
                 },
               )}
+              {event.reviewRequired && (
+                <p>
+                  {controls.t("shared.offlineManifest.single.reviewOriginalSubject", {
+                    reference: event.bookingId ?? event.crewPersonId ?? event.clientEventId,
+                  })}{" "}
+                  {controls.t("shared.offlineManifest.single.reviewSavedTrip", {
+                    trip: view.manifest.trip.title,
+                  })}{" "}
+                  {controls.t("shared.offlineManifest.single.reviewRecorded", {
+                    mark: controls.t(
+                      event.status === "boarded"
+                        ? "shared.presence.boarded"
+                        : event.status === "not_boarded"
+                          ? event.checkpoint === "departure"
+                            ? "shared.presence.notBoarded"
+                            : "shared.offlineManifest.single.notBackAboardActive"
+                          : "shared.offlineManifest.single.reviewWithdrawal",
+                    ),
+                  })}
+                </p>
+              )}
+              {event.reviewRequired && <ReviewObservation event={event} controls={controls} />}
             </li>
           );
         })}

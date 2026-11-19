@@ -723,6 +723,14 @@ export type OfflineRollCallEvent = {
   syncStatus: "pending" | "applied" | "rejected";
   /** The server could not place this observation; keep it pending for manual review. */
   reviewRequired?: boolean;
+  /** Separate id for a deliberate live confirmation; retries reuse the same id. */
+  reviewConfirmation?: {
+    clientEventId: string;
+    status: "boarded" | "not_boarded";
+    context: { snapshotId: string; meetingDay: number; witness: string };
+  };
+  /** The original observation remains on the device after live confirmation. */
+  reviewResolution?: "confirmed";
   rejectionReason?: string;
   noteDisposition?: "discarded_erasure_cutoff" | "discarded_unverified_snapshot";
   /**
@@ -1062,8 +1070,9 @@ export function rejectedOfflineEventCount(
 ): number {
   return (
     countOfflineEvents(envelope, "rejected") +
-    envelope.events.filter((event) => event.syncStatus === "pending" && event.reviewRequired)
-      .length +
+    envelope.events.filter(
+      (event) => event.syncStatus === "pending" && event.reviewRequired && !event.reviewResolution,
+    ).length +
     envelope.checklistEvents.filter(
       (event) => event.syncStatus === "pending" && event.reviewRequired,
     ).length
@@ -1976,6 +1985,7 @@ export function latestOfflineChecklistCheck(
     (event) =>
       event.checklistItemId === checklistItemId &&
       event.syncStatus !== "rejected" &&
+      !event.reviewRequired &&
       // A tap the copy already holds is the copy's to answer (`offlineEventInCopy`).
       !offlineEventInCopy(snapshot, event),
   );

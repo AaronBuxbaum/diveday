@@ -180,6 +180,98 @@ describePostgres("offline seat assignment generation", () => {
 });
 
 describePostgres("witnessed offline projection", () => {
+  it("writes an explicitly confirmed current live mark once", async () => {
+    const pg = await postgresTestDb();
+    await seedDemo(pg.db, "lean");
+    const shop = await getShopBySlug(pg.db, "blue-mantis");
+    if (!shop) throw new Error("shop missing");
+    const trip = (await upcomingTripsWithCounts(pg.db, shop.id, new Date(0))).find((row) =>
+      row.title.startsWith("Two-Tank Reef — Molasses"),
+    );
+    if (!trip) throw new Error("trip missing");
+    const [subject] = await getTripRoster(pg.db, shop.id, trip.id);
+    const owner = (await listStaff(pg.db, shop.id)).find((staff) => staff.roles.includes("owner"));
+    if (!subject || !owner) throw new Error("fixture missing");
+    const saved = (await buildOfflineManifestCopies(pg.db, shop, owner.person.id, [trip.id]))
+      .payloads[0];
+    const witness = saved?.rollCallWitnesses?.[`seat:${subject.booking.id}:after_dive_1`];
+    if (!saved?.snapshotId || !witness) throw new Error("snapshot witness missing");
+    const confirmationId = crypto.randomUUID();
+    const input = {
+      shopId: shop.id,
+      tripId: trip.id,
+      bookingId: subject.booking.id,
+      recordedByPersonId: owner.person.id,
+      checkpoint: "after_dive_1" as const,
+      status: "boarded" as const,
+      source: "live" as const,
+      clientEventId: confirmationId,
+      observedEvidenceIds: [],
+      meetingDay: saved.rollCallMeetingDay ?? 0,
+      offlineSnapshotId: saved.snapshotId,
+      reviewWitness: witness,
+    };
+    const first = await recordRollCall(pg.db, input);
+    expect(first).toMatchObject({ ok: true });
+    expect(await recordRollCall(pg.db, input)).toMatchObject({ ok: true, duplicate: true });
+    expect(
+      await pg.db
+        .select()
+        .from(rollCallEvents)
+        .where(eq(rollCallEvents.clientEventId, confirmationId)),
+    ).toHaveLength(1);
+    expect(
+      (await getTripManifest(pg.db, shop.id, trip.id, "after_dive_1"))?.divers.find(
+        (diver) => diver.bookingId === subject.booking.id,
+      )?.rollCall?.state,
+    ).toBe("boarded");
+  });
+  it("refuses a deliberate live confirmation when the reviewed meeting changed", async () => {
+    const pg = await postgresTestDb();
+    await seedDemo(pg.db, "lean");
+    const shop = await getShopBySlug(pg.db, "blue-mantis");
+    if (!shop) throw new Error("shop missing");
+    const trip = (await upcomingTripsWithCounts(pg.db, shop.id, new Date(0))).find((row) =>
+      row.title.startsWith("Two-Tank Reef — Molasses"),
+    );
+    if (!trip) throw new Error("trip missing");
+    const [subject] = await getTripRoster(pg.db, shop.id, trip.id);
+    const owner = (await listStaff(pg.db, shop.id)).find((staff) => staff.roles.includes("owner"));
+    if (!subject || !owner) throw new Error("fixture missing");
+    const saved = (await buildOfflineManifestCopies(pg.db, shop, owner.person.id, [trip.id]))
+      .payloads[0];
+    const witness = saved?.rollCallWitnesses?.[`seat:${subject.booking.id}:after_dive_1`];
+    if (!saved?.snapshotId || !witness) throw new Error("snapshot witness missing");
+    expect(
+      (
+        await editTripSection(pg.db, shop.id, trip.id, {
+          endsAt: new Date(trip.endsAt.getTime() + 3600000),
+        })
+      ).ok,
+    ).toBe(true);
+    const confirmationId = crypto.randomUUID();
+    const result = await recordRollCall(pg.db, {
+      shopId: shop.id,
+      tripId: trip.id,
+      bookingId: subject.booking.id,
+      recordedByPersonId: owner.person.id,
+      checkpoint: "after_dive_1",
+      status: "boarded",
+      source: "live",
+      clientEventId: confirmationId,
+      observedEvidenceIds: [],
+      meetingDay: saved.rollCallMeetingDay ?? 0,
+      offlineSnapshotId: saved.snapshotId,
+      reviewWitness: witness,
+    });
+    expect(result).toMatchObject({ ok: false, reason: "review_required" });
+    expect(
+      await pg.db
+        .select()
+        .from(rollCallEvents)
+        .where(eq(rollCallEvents.clientEventId, confirmationId)),
+    ).toHaveLength(0);
+  });
   it("holds a stale dock sighting when crew say underway before scheduled departure", async () => {
     const pg = await postgresTestDb();
     await seedDemo(pg.db, "lean");

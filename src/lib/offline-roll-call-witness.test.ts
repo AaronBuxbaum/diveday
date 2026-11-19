@@ -16,6 +16,19 @@ describe("offline roll-call witness", () => {
       vi.unstubAllEnvs();
     }
   });
+  it("permits only the database-free E2E harness to exercise it in a production build", () => {
+    vi.stubEnv("DIVEDAY_OFFLINE_ROLL_CALL_WITNESS", "1");
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("DIVEDAY_E2E", "1");
+    vi.stubEnv("DATABASE_URL", "");
+    try {
+      expect(offlineRollCallWitnessEnabled()).toBe(true);
+      vi.stubEnv("DATABASE_URL", "postgres://real-configured");
+      expect(offlineRollCallWitnessEnabled()).toBe(false);
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
   it("authenticates the snapshot, subject, meeting, assignment and causal frontier", () => {
     const claim = {
       shopId: randomUUID(),

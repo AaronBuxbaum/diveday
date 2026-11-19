@@ -1795,6 +1795,115 @@ export async function getActiveOfflineShellVersion(): Promise<string | null> {
   });
 }
 
+/** Reserve the live confirmation identity durably before any request is sent. */
+export async function prepareOfflineRollCallConfirmation(
+  tripId: string,
+  eventId: string,
+  status: "boarded" | "not_boarded",
+  shopSlug: string,
+  tenantRound: number,
+  context: { snapshotId: string; meetingDay: number; witness: string },
+): Promise<{
+  confirmationId: string;
+  event: OfflineRollCallEvent;
+  context: { snapshotId: string; meetingDay: number; witness: string };
+}> {
+  return withManifestLock(tripId, async () => {
+    const envelope = await loadOfflineManifest(tripId);
+    if (!envelope || envelope.snapshot.shop.slug !== shopSlug)
+      throw new OfflineManifestError("shop_changed");
+    const event = envelope.events.find((item) => item.clientEventId === eventId);
+    if (!event) throw new OfflineManifestError("not_allowed");
+    if (
+      event.syncStatus !== "pending" ||
+      !event.reviewRequired ||
+      event.reviewResolution ||
+      (status !== "boarded" && status !== "not_boarded") ||
+      (event.reviewConfirmation && event.reviewConfirmation.status !== status)
+    )
+      throw new OfflineManifestError("not_allowed");
+    event.reviewConfirmation ??= { clientEventId: crypto.randomUUID(), status, context };
+    const db = await openDatabase();
+    try {
+      if (!(await persistEnvelope(db, envelope, tenantRound, "record")))
+        throw new OfflineManifestError("shop_changed");
+    } finally {
+      db.close();
+    }
+    return {
+      confirmationId: event.reviewConfirmation.clientEventId,
+      context: event.reviewConfirmation.context,
+      event,
+    };
+  });
+}
+
+/** Record a confirmed live receipt without calling the original offline observation synced. */
+export async function completeOfflineRollCallConfirmation(
+  tripId: string,
+  eventId: string,
+  confirmationId: string,
+  shopSlug: string,
+  tenantRound: number,
+): Promise<OfflineManifestEnvelope> {
+  return withManifestLock(tripId, async () => {
+    const envelope = await loadOfflineManifest(tripId);
+    if (!envelope || envelope.snapshot.shop.slug !== shopSlug)
+      throw new OfflineManifestError("shop_changed");
+    const event = envelope.events.find((item) => item.clientEventId === eventId);
+    if (!event) throw new OfflineManifestError("not_allowed");
+    if (!event.reviewRequired || event.reviewConfirmation?.clientEventId !== confirmationId)
+      throw new OfflineManifestError("not_allowed");
+    event.reviewResolution = "confirmed";
+    const db = await openDatabase();
+    try {
+      if (!(await persistEnvelope(db, envelope, tenantRound, "record")))
+        throw new OfflineManifestError("shop_changed");
+    } finally {
+      db.close();
+    }
+    return envelope;
+  });
+}
+
+/** Discard one explicitly selected review, without releasing dependent queued observations. */
+export async function discardOfflineRollCallReview(
+  tripId: string,
+  eventId: string,
+  shopSlug: string,
+  tenantRound: number,
+): Promise<OfflineManifestEnvelope> {
+  return withManifestLock(tripId, async () => {
+    const envelope = await loadOfflineManifest(tripId);
+    if (!envelope || envelope.snapshot.shop.slug !== shopSlug)
+      throw new OfflineManifestError("shop_changed");
+    const event = envelope.events.find((item) => item.clientEventId === eventId);
+    // A confirmation request may have committed even if its response was lost.
+    if (!event?.reviewRequired || event.reviewConfirmation)
+      throw new OfflineManifestError("not_allowed");
+    const held = heldOfflineRollCallIds(envelope.events);
+    envelope.events = envelope.events
+      .filter((item) => item.clientEventId !== eventId)
+      .map((item) =>
+        item.syncStatus === "pending" && held.has(item.clientEventId.toLowerCase())
+          ? {
+              ...item,
+              reviewRequired: true,
+              rejectionReason: item.rejectionReason ?? "causal_dependency_unresolved",
+            }
+          : item,
+      );
+    const db = await openDatabase();
+    try {
+      if (!(await persistEnvelope(db, envelope, tenantRound, "record")))
+        throw new OfflineManifestError("shop_changed");
+    } finally {
+      db.close();
+    }
+    return envelope;
+  });
+}
+
 /** Keep the crew's explicit meeting-day choice across reloads without recording a mark. */
 export async function selectOfflineRollCallDay(
   tripId: string,

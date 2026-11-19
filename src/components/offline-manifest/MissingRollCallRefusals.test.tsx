@@ -26,6 +26,9 @@ it("identifies an unsent observation requiring manual review", () => {
   render(<MissingRollCallRefusals view={trip} controls={controls()} />);
   expect(screen.getByRole("status")).toHaveTextContent("remains on this device");
   expect(screen.getByRole("status")).toHaveTextContent("manual roll call");
+  expect(screen.getByRole("status")).toHaveTextContent("Original subject: removed-booking");
+  expect(screen.getByRole("status")).toHaveTextContent("Recorded: Not back aboard");
+  expect(screen.getByRole("status")).toHaveTextContent("Two-Tank Reef");
 });
 
 it("shows a refused mark for a person no longer on the roster", () => {

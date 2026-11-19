@@ -9,8 +9,11 @@ import {
   appendOfflineChecklistCheck,
   appendOfflineRollCall,
   beginOfflineTenantVerificationRound,
+  completeOfflineRollCallConfirmation,
+  discardOfflineRollCallReview,
   loadOfflineManifest,
   OFFLINE_MANIFEST_PENDING_GRACE_MS,
+  prepareOfflineRollCallConfirmation,
   readDiscardedOfflineRecords,
   saveOfflineManifest,
   syncOfflineManifest,
@@ -130,6 +133,136 @@ afterEach(
 );
 
 describe("offline roll-call review storage", () => {
+  it("discards only the selected review and keeps dependent observations pending", async () => {
+    const tripId = payload.manifests[0].trip.id;
+    await saveOfflineManifest(payload);
+    const first = await appendOfflineRollCall(tripId, {
+      bookingId: payload.manifests[0].divers[0].bookingId,
+      checkpoint: "departure",
+      status: "not_boarded",
+    });
+    const original = first.events[0];
+    const queued = await appendOfflineRollCall(tripId, {
+      bookingId: payload.manifests[0].divers[0].bookingId,
+      checkpoint: "departure",
+      status: "boarded",
+      observedEvidenceIds: [`client:${original.clientEventId}`],
+    });
+    const dependent = queued.events[1];
+    server.use(
+      http.post("/api/offline-manifests/sync", () =>
+        HttpResponse.json(
+          withRefreshedSyncFrame(
+            payload,
+            {
+              results: [
+                {
+                  clientEventId: original.clientEventId,
+                  status: "rejected",
+                  reason: "review_required",
+                },
+                {
+                  clientEventId: dependent.clientEventId,
+                  status: "rejected",
+                  reason: "causal_dependency_unresolved",
+                },
+              ],
+            },
+            { events: queued.events },
+          ),
+        ),
+      ),
+    );
+    await syncOfflineManifest(tripId);
+    const round = await beginOfflineTenantVerificationRound();
+    await discardOfflineRollCallReview(tripId, original.clientEventId, payload.shop.slug, round);
+    const saved = await loadOfflineManifest(tripId);
+    expect(saved?.events).toHaveLength(1);
+    expect(saved?.events[0]).toMatchObject({
+      clientEventId: dependent.clientEventId,
+      syncStatus: "pending",
+      reviewRequired: true,
+      rejectionReason: "causal_dependency_unresolved",
+    });
+  });
+  it("durably reuses one confirmation identity and keeps the original observation", async () => {
+    const tripId = payload.manifests[0].trip.id;
+    await saveOfflineManifest(payload);
+    const queued = await appendOfflineRollCall(tripId, {
+      bookingId: payload.manifests[0].divers[0].bookingId,
+      checkpoint: "departure",
+      status: "not_boarded",
+    });
+    const original = queued.events[0];
+    server.use(
+      http.post("/api/offline-manifests/sync", () =>
+        HttpResponse.json(
+          withRefreshedSyncFrame(
+            payload,
+            {
+              results: [
+                {
+                  clientEventId: original.clientEventId,
+                  status: "rejected",
+                  reason: "review_required",
+                },
+              ],
+            },
+            { events: queued.events },
+          ),
+        ),
+      ),
+    );
+    await syncOfflineManifest(tripId);
+    const round = await beginOfflineTenantVerificationRound();
+    const context = { snapshotId: "review-snapshot", meetingDay: 0, witness: "first-proof" };
+    const first = await prepareOfflineRollCallConfirmation(
+      tripId,
+      original.clientEventId,
+      "boarded",
+      payload.shop.slug,
+      round,
+      context,
+    );
+    const again = await prepareOfflineRollCallConfirmation(
+      tripId,
+      original.clientEventId,
+      "boarded",
+      payload.shop.slug,
+      round,
+      { ...context, witness: "later-proof" },
+    );
+    expect(first.confirmationId).not.toBe(original.clientEventId);
+    expect(again.confirmationId).toBe(first.confirmationId);
+    expect(again.context).toEqual(context);
+    expect((await loadOfflineManifest(tripId))?.events[0]).toMatchObject({
+      clientEventId: original.clientEventId,
+      reviewRequired: true,
+      reviewConfirmation: { clientEventId: first.confirmationId, status: "boarded" },
+    });
+    await expect(
+      prepareOfflineRollCallConfirmation(
+        tripId,
+        original.clientEventId,
+        "not_boarded",
+        payload.shop.slug,
+        round,
+        context,
+      ),
+    ).rejects.toMatchObject({ code: "not_allowed" });
+    await completeOfflineRollCallConfirmation(
+      tripId,
+      original.clientEventId,
+      first.confirmationId,
+      payload.shop.slug,
+      round,
+    );
+    expect((await loadOfflineManifest(tripId))?.events[0]).toMatchObject({
+      clientEventId: original.clientEventId,
+      reviewResolution: "confirmed",
+      reviewConfirmation: { clientEventId: first.confirmationId, status: "boarded" },
+    });
+  });
   it("does not upgrade storage later after an older tab blocks and the save fails", async () => {
     const old = await new Promise<IDBDatabase>((resolve, reject) => {
       const open = indexedDB.open("diveday-offline-manifests", 1);

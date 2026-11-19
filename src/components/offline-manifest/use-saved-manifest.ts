@@ -861,6 +861,23 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
   const verifiedTenantSlug = verifiedTenantRevision > 0 ? verifiedTenantSlugRef.current : null;
   const tripNoteLossMessage = selectedTripNoteLossMessage(envelope, verifiedTenantSlug, t);
 
+  async function reviewTenant() {
+    const shopSlug = await resolveTenant();
+    const round = getTenantRound();
+    if (!shopSlug || round === null || shopSlug !== verifiedTenantSlugRef.current) return null;
+    return { shopSlug, round };
+  }
+
+  function onReviewEnvelope(next: OfflineManifestEnvelope) {
+    if (
+      next.snapshot.shop.slug !== verifiedTenantSlugRef.current ||
+      next.snapshot.manifests[0]?.trip.id !== tripId
+    )
+      return;
+    selectedTripStorageRef.current.changeRevision += 1;
+    dispatchSaved({ type: "loaded", envelope: next });
+  }
+
   return {
     tripId,
     envelope,
@@ -883,5 +900,7 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
     fallback,
     servedWithoutAnswer,
     copyCaveat,
+    reviewTenant,
+    onReviewEnvelope,
   };
 }
