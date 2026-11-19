@@ -130,7 +130,7 @@ it("quarantines the root list as soon as one trip detects a shop switch", async 
 
   render(<OfflineManifestView />);
   await waitFor(() => expect(syncOfflineManifest).toHaveBeenCalledTimes(2));
-  expect(screen.getByText(/Saved/)).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "Saved on this device" })).toBeInTheDocument();
 
   mismatch = true;
   await act(async () => rejectFirst(new OfflineManifestError("shop_changed")));
@@ -239,7 +239,7 @@ it("keeps the recovery notice and suppresses caught-up copy after current-shop s
     expect(syncOfflineManifest).toHaveBeenCalledWith("current-trip-34", "reef-runners", 1),
   );
   expect(screen.queryByText("Everything’s sent across these trips.")).not.toBeInTheDocument();
-  expect(screen.queryByText("All up to date.")).not.toBeInTheDocument();
+  expect(screen.queryByText("Saved copies are recent.")).not.toBeInTheDocument();
   expect(screen.queryByText("Private A departure")).not.toBeInTheDocument();
   expect(screen.queryByText("Blue Mantis Divers")).not.toBeInTheDocument();
   expect(screen.queryByText("sensitive-person")).not.toBeInTheDocument();
@@ -745,7 +745,7 @@ it("keeps a newer sync failure authoritative over inventory captured before it",
   await act(async () => inventoryReads[0]?.([saved]));
 
   expect((await routineStatus()).getByText(/Couldn’t reach DiveDay just now/)).toBeVisible();
-  expect(screen.queryByText("All up to date.")).not.toBeInTheDocument();
+  expect(screen.queryByText("Saved copies are recent.")).not.toBeInTheDocument();
   expect(screen.queryByText("Everything’s sent.")).not.toBeInTheDocument();
   expect(saved.events[0]?.syncStatus).toBe("pending");
 });

@@ -103,6 +103,24 @@ describe("OfflineManifestView — Deck and saved reference", () => {
     await screen.findByRole("heading", { name: t("manifest.deck.title") });
   }
 
+  it("warns when this device has an unsent roll-call update", async () => {
+    const envelope = richEnvelope("trip-1");
+    envelope.events.push({
+      clientEventId: "evt-1",
+      snapshotId: envelope.snapshot.snapshotId,
+      snapshotSavedAt: envelope.snapshot.savedAt,
+      tripId: "trip-1",
+      bookingId: envelope.snapshot.manifests[0].divers[0].bookingId,
+      checkpoint: "departure",
+      status: "boarded",
+      occurredAt: envelope.snapshot.savedAt,
+      syncStatus: "pending",
+    });
+    await renderTrip(envelope);
+    const notice = screen.getByText(t("shared.offlineManifest.reconcile.pendingExpiryWarning"));
+    expect(notice.closest('[role="status"]')).toBeInTheDocument();
+  });
+
   function openDetails() {
     const summary = screen.getByText(t("manifest.deck.details"), { selector: "summary" });
     if (!summary.closest("details")?.open) fireEvent.click(summary);

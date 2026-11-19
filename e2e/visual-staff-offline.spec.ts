@@ -58,6 +58,36 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "offline-manifest-list", scheme);
       });
 
+      test(`the saved list warns about unsent roll call (${scheme})`, async ({ page }) => {
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        const tripId = await savedOfflineRecordFor(page);
+        await rewriteSavedOfflineRecord(page, tripId, { pendingRollCalls: 1 });
+        await page.reload();
+        await expect(
+          page.getByRole("status").filter({
+            hasText: staffTranslator("en-US")(
+              "shared.offlineManifest.reconcile.pendingExpiryWarning",
+            ),
+          }),
+        ).toBeVisible();
+        await capture(page, "offline-manifest-list-pending-warning", scheme);
+      });
+
+      test(`the saved trip warns about unsent roll call (${scheme})`, async ({ page }) => {
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        const tripId = await savedOfflineRecordFor(page);
+        await rewriteSavedOfflineRecord(page, tripId, { pendingRollCalls: 1 });
+        await page.goto(`/offline-manifest?trip=${tripId}`);
+        await expect(
+          page.getByRole("status").filter({
+            hasText: staffTranslator("en-US")(
+              "shared.offlineManifest.reconcile.pendingExpiryWarning",
+            ),
+          }),
+        ).toBeVisible();
+        await capture(page, "offline-manifest-trip-pending-warning", scheme);
+      });
+
       test(`the saved list says when DiveDay did not answer (${scheme})`, async ({ page }) => {
         test.setTimeout(FLOW_TIMEOUT_MS);
         await openReefTrip(page);

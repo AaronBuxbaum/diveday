@@ -75,7 +75,7 @@ describe("OfflineManifestView note-loss status", () => {
     expect(
       await screen.findByText(/Older offline note text was removed after a data erasure/),
     ).toBeInTheDocument();
-    expect(screen.queryByText("All up to date.")).not.toBeInTheDocument();
+    expect(screen.queryByText("Saved copies are recent.")).not.toBeInTheDocument();
     expect(screen.queryByText("Everything’s sent across these trips.")).not.toBeInTheDocument();
     expect(screen.getByText(/Saved trip .*Diver record 12345678/)).toBeInTheDocument();
 
@@ -85,7 +85,7 @@ describe("OfflineManifestView note-loss status", () => {
     expect(
       await screen.findByText(/Older offline note text was removed after a data erasure/),
     ).toBeInTheDocument();
-    expect(screen.queryByText("All up to date.")).not.toBeInTheDocument();
+    expect(screen.queryByText("Saved copies are recent.")).not.toBeInTheDocument();
     expect(screen.queryByText("Everything’s sent across these trips.")).not.toBeInTheDocument();
   });
 
@@ -130,7 +130,7 @@ describe("OfflineManifestView note-loss status", () => {
       await screen.findByText(/Older offline note text was removed after a data erasure/),
     ).toBeInTheDocument();
     expect(await screen.findByText("1 change is still sending.")).toBeInTheDocument();
-    expect(screen.queryByText("All up to date.")).not.toBeInTheDocument();
+    expect(screen.queryByText("Saved copies are recent.")).not.toBeInTheDocument();
     expect(screen.queryByText("Everything’s sent across these trips.")).not.toBeInTheDocument();
   });
 

@@ -280,6 +280,7 @@ export function DeckFlow({
   attention,
   details,
   delivery,
+  homeNotice,
   timeZone,
   status,
   exit,
@@ -294,6 +295,7 @@ export function DeckFlow({
   attention?: ReactNode;
   details?: ReactNode;
   delivery?: ReactNode;
+  homeNotice?: ReactNode;
   timeZone: string;
   status?: ReactNode;
   exit?: ReactNode;
@@ -407,6 +409,7 @@ export function DeckFlow({
               {delivery}
             </div>
           ) : null}
+          {screen === "home" ? homeNotice : null}
           {hasAttention && screen !== "attention" ? (
             <button
               type="button"

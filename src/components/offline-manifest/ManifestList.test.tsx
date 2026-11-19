@@ -19,6 +19,105 @@ afterEach(() => {
 });
 
 describe("OfflineManifestList", () => {
+  for (const locale of ["en-US", "es-ES"] as const) {
+    it(`warns about pending roll call on this device (${locale})`, () => {
+      const saved = savedCopy();
+      saved.events.push({
+        clientEventId: "evt-1",
+        snapshotId: "snap-trip-1",
+        snapshotSavedAt: saved.snapshot.savedAt,
+        tripId: saved.snapshot.manifests[0].trip.id,
+        bookingId: "booking-1",
+        checkpoint: "departure",
+        status: "boarded",
+        occurredAt: saved.snapshot.savedAt,
+        syncStatus: "pending",
+      });
+      const t = offlineManifestTranslator(locale);
+      const { getByText } = render(
+        <OfflineManifestList
+          t={t}
+          shellVersionCopy={{ staleBanner: "", updateBanner: "", refreshButton: "" }}
+          list={[saved]}
+          message=""
+          discardNotice={null}
+        />,
+      );
+      const notice = getByText(t("shared.offlineManifest.reconcile.pendingExpiryWarning"));
+      expect(notice.closest('[role="status"]')).not.toBeNull();
+      expect(
+        getByText(
+          locale === "en-US" ? "Saved copies are recent." : "Las copias guardadas son recientes.",
+        ),
+      ).not.toBeNull();
+    });
+  }
+
+  it("removes the warning after the roll-call update is confirmed", () => {
+    const saved = savedCopy();
+    saved.events.push({
+      clientEventId: "evt-1",
+      snapshotId: "snap-trip-1",
+      snapshotSavedAt: saved.snapshot.savedAt,
+      tripId: saved.snapshot.manifests[0].trip.id,
+      bookingId: "booking-1",
+      checkpoint: "departure",
+      status: "boarded",
+      occurredAt: saved.snapshot.savedAt,
+      syncStatus: "pending",
+    });
+    const t = offlineManifestTranslator("en-US");
+    const { queryByText, rerender } = render(
+      <OfflineManifestList
+        t={t}
+        shellVersionCopy={{ staleBanner: "", updateBanner: "", refreshButton: "" }}
+        list={[saved]}
+        message=""
+        discardNotice={null}
+      />,
+    );
+    expect(queryByText(t("shared.offlineManifest.reconcile.pendingExpiryWarning"))).not.toBeNull();
+    const settled = {
+      ...saved,
+      events: saved.events.map((event) => ({ ...event, syncStatus: "applied" as const })),
+    };
+    rerender(
+      <OfflineManifestList
+        t={t}
+        shellVersionCopy={{ staleBanner: "", updateBanner: "", refreshButton: "" }}
+        list={[settled]}
+        message=""
+        discardNotice={null}
+      />,
+    );
+    expect(queryByText(t("shared.offlineManifest.reconcile.pendingExpiryWarning"))).toBeNull();
+  });
+
+  it("does not describe a checklist-only pending item as roll call", () => {
+    const saved = savedCopy();
+    saved.checklistEvents.push({
+      clientEventId: "check-1",
+      snapshotId: "snap-trip-1",
+      snapshotSavedAt: saved.snapshot.savedAt,
+      tripId: saved.snapshot.manifests[0].trip.id,
+      checklistItemId: "oxygen",
+      status: "checked",
+      note: null,
+      occurredAt: saved.snapshot.savedAt,
+      syncStatus: "pending",
+    });
+    const t = offlineManifestTranslator("en-US");
+    const { queryByText } = render(
+      <OfflineManifestList
+        t={t}
+        shellVersionCopy={{ staleBanner: "", updateBanner: "", refreshButton: "" }}
+        list={[saved]}
+        message=""
+        discardNotice={null}
+      />,
+    );
+    expect(queryByText(t("shared.offlineManifest.reconcile.pendingExpiryWarning"))).toBeNull();
+  });
   for (const [locale, dates] of [
     [
       "en-US",

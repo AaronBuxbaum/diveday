@@ -17,6 +17,7 @@ import {
   offlineManifestFreshness,
   offlineTripHref,
 } from "@/lib/offline-manifests";
+import { PendingRollCallWarning } from "./PendingRollCallWarning";
 import { StatusMessage } from "./StatusMessage";
 import { deviceLocale, relativeAge } from "./shared";
 
@@ -157,6 +158,12 @@ export function OfflineManifestList({
     <main className="boat-mode mx-auto w-full max-w-3xl flex-1 px-6 py-16">
       <OfflineShellVersionBanner copy={shellVersionCopy} />
       {discardNotice}
+      <PendingRollCallWarning
+        t={t}
+        pending={savedRows.some(({ saved }) =>
+          saved.events.some((event) => event.syncStatus === "pending"),
+        )}
+      />
       <ShopPageHeader
         eyebrow={t("shared.offlineManifest.list.eyebrow")}
         title={t("shared.offlineManifest.list.headingWithTrips")}
