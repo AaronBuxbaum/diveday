@@ -105,8 +105,6 @@ export const ERASURE_KEEPS: Record<string, string> = {
     "the hull's papers, radio and notices as they stood when the boat left: the boat's record, no diver",
   offline_manifest_snapshot_revisions:
     "a revision counter per departure that tells an offline manifest it is stale; it holds no manifest and no person",
-  offline_review_refusals:
-    "random confirmation IDs that prevent a refused write, with no subject, roster or note",
   trip_conservation:
     "measured actions from a departure: kind, quantity, place and staff prose, attributed to the shop. Its only person key names the staff recorder; a mention of an erased diver in staff prose stays (owner, 2026-11-01)",
   trip_dives: "the dives inside a departure, by site and order",
