@@ -3,6 +3,7 @@ import { DAY_MS, nowMs } from "@/lib/clock";
 import { log } from "@/lib/log";
 import type { AppDb, DbExecutor } from "./client";
 import { DEMO_SHOP_SLUG } from "./demo-shop";
+import { DemoSightingCleanupBlocked, refuseEncounteredDockSightings } from "./demo-sighting-guard";
 import { deleteHeldSendsAndDeskRows } from "./departure-notes";
 import {
   clearCompletedDemoPhotoObligations,
@@ -17,7 +18,6 @@ import {
   activityEvents,
   authProviderAccounts,
   authVerifications,
-  boardingObservations,
   boatSnags,
   boats,
   bookingArrivalEvents,
@@ -231,7 +231,7 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   // lever W) — two of them, and neither is deleted first — so it goes before them.
   await db.delete(bookingReferrals).where(eq(bookingReferrals.shopId, shopId));
   await db.delete(bookingArrivalEvents).where(eq(bookingArrivalEvents.shopId, shopId));
-  await db.delete(boardingObservations).where(eq(boardingObservations.shopId, shopId));
+  await refuseEncounteredDockSightings(db, shopId);
   // Incident reports name bookings, people and the departure, so they go first.
   await db.delete(incidentReportAddenda).where(eq(incidentReportAddenda.shopId, shopId));
   // Each report takes its people rows with it (cascade): a raised report
@@ -516,6 +516,10 @@ export async function reapExpiredDemoShops(
       await db.transaction(async (tx) => deleteDemoShopCascade(tx, shop.id));
       slugs.push(shop.slug);
     } catch (error) {
+      if (error instanceof DemoSightingCleanupBlocked) {
+        log("demo_sighting_cleanup_blocked", "warn", { shopId: shop.id });
+        continue;
+      }
       if (!(error instanceof Error) || error.message !== DEMO_PRIVATE_PHOTO_CLEANUP_REQUIRED)
         throw error;
       log("demo_private_photo_cleanup_pending", "warn", { shopId: shop.id });
@@ -559,8 +563,8 @@ function mintedDemoCap(): number {
  * Evict the longest-idle minted demos until there is room for one more under the cap.
  * Only minted demos are ever eligible — the canonical blue-mantis demo (by slug)
  * and every real shop (`isDemo:false`) are excluded, so this can never delete a
- * real tenant. Runs inside the caller's transaction so the eviction and the new
- * mint commit together.
+ * real tenant. When the caller supplies a transaction, eviction and the new
+ * mint can commit together. A root-handle call commits the eviction separately.
  *
  * **`id` breaks the `createdAt` tie, and that second key is load-bearing.** Two
  * demos minted inside the same clock tick sort equally on `createdAt` alone,
@@ -574,6 +578,7 @@ function mintedDemoCap(): number {
  * an order to chance.
  */
 export async function enforceMintedDemoCap(db: DbExecutor): Promise<void> {
+  if (!isTransactionExecutor(db)) return db.transaction((tx) => enforceMintedDemoCap(tx));
   const cap = mintedDemoCap();
   const live = await db
     .select({ id: shops.id })
@@ -581,8 +586,20 @@ export async function enforceMintedDemoCap(db: DbExecutor): Promise<void> {
     .where(and(eq(shops.isDemo, true), ne(shops.slug, DEMO_SHOP_SLUG)))
     // diveday:allow-time-id-order: an eviction order, not a list; the id makes it total (above).
     .orderBy(asc(demoLastActiveAt()), asc(shops.id));
-  const toEvict = live.length - (cap - 1);
-  for (let i = 0; i < toEvict; i++) {
-    await deleteDemoShopCascade(db, live[i].id);
+  let remaining = live.length - (cap - 1);
+  let protectedShop: DemoSightingCleanupBlocked | undefined;
+  for (const shop of live) {
+    if (remaining <= 0) break;
+    try {
+      // A savepoint restores the entire failed cleanup before trying another shop.
+      await db.transaction((tx) => deleteDemoShopCascade(tx, shop.id));
+      remaining--;
+    } catch (error) {
+      if (!(error instanceof DemoSightingCleanupBlocked)) throw error;
+      protectedShop = error;
+    }
   }
+  // Do not mint beyond the cap when no more eligible shops remain. The caller
+  // must let this error escape the enclosing transaction to roll back evictions.
+  if (remaining > 0) throw protectedShop ?? new Error("Demo shop capacity unavailable");
 }

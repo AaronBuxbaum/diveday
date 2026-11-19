@@ -141,8 +141,9 @@ export const boardingObservationState = pgEnum("boarding_observation_state", [
  * **"They're here": a released diver seen at the dock** (issue #4474).
  *
  * Intake and allocation are two steps. The desk's tap writes this row and
- * commits without waiting on the departure, the seat or any schedule write, so
- * the physical observation is never lost behind a move or a crew edit. The seat
+ * attempts to commit without explicitly locking the departure or seat. Parent
+ * foreign-key checks can still wait behind reset or erasure; a timeout before
+ * commit is not a durable receipt. The seat
  * is then allocated under the departure's lock (`settleBoardingObservations`,
  * `src/db/boarding-observations.ts`): at once when the lock is free, otherwise
  * by the retry after the response and the shop tick.
@@ -156,8 +157,8 @@ export const boardingObservationState = pgEnum("boarding_observation_state", [
  * takes `FOR KEY SHARE` on every referenced row, and a move or a sale holds
  * that departure and seat `FOR UPDATE`, so a key would make the observation
  * wait behind exactly the schedule writes it must never wait behind. Both ids
- * are read and proven this shop's before the insert, and neither row is ever
- * hard-deleted.
+ * are read and proven this shop's before the insert. Demo cleanup can hard-delete
+ * those rows; protecting later intake across cleanup remains unresolved.
  *
  * `client_key` makes intake idempotent: a retried or replayed tap names the
  * same key and writes nothing new; the same key for another seat is refused.

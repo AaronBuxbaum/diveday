@@ -64,7 +64,9 @@ const { auth } = await import("@/lib/auth");
 const { cookies } = await import("next/headers");
 const { DEMO_SEAT_COOKIE, signDemoSeat } = await import("../../features/demo-seat/rules");
 const { resetDemoAction, switchDemoRoleAction } = await import("./demo");
-const { people, personRoles, trips, userAccounts } = await import("@/db/schema");
+const { boardingObservations, bookings, people, personRoles, trips, userAccounts } = await import(
+  "@/db/schema"
+);
 
 /** Where the action sent the caller, or the error it failed with instead. */
 async function landing(role: string, start?: string): Promise<string> {
@@ -215,6 +217,34 @@ describe("switchDemoRoleAction", () => {
 describe("resetDemoAction", () => {
   it("redirects with the success notice only after a guarded reset completes", async () => {
     await expect(resetDemoAction()).rejects.toThrow("REDIRECT:/shop/blue-mantis?reset=1");
+  });
+
+  it("reports refusal and preserves a dock sighting", async () => {
+    const { db } = ctx;
+    const [booking] = await db.select().from(bookings).where(eq(bookings.shopId, shopId));
+    const [staff] = await db
+      .select({ id: personRoles.personId })
+      .from(personRoles)
+      .innerJoin(people, eq(people.id, personRoles.personId))
+      .where(and(eq(people.shopId, shopId), eq(personRoles.role, "owner")));
+    if (!booking || !staff) throw new Error("fixture missing");
+    const [observation] = await db
+      .insert(boardingObservations)
+      .values({
+        shopId,
+        bookingId: booking.id,
+        tripId: booking.tripId,
+        recordedByPersonId: staff.id,
+        clientKey: crypto.randomUUID(),
+      })
+      .returning();
+    await expect(resetDemoAction()).rejects.toThrow("REDIRECT:/shop/blue-mantis?reset=refused");
+    expect(
+      await db
+        .select()
+        .from(boardingObservations)
+        .where(eq(boardingObservations.id, observation.id)),
+    ).toEqual([observation]);
   });
 
   it("uses a refusal notice and leaves the schedule untouched when a staff identity is real", async () => {

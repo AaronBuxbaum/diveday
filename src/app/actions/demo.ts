@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { after } from "next/server";
 import { getDb } from "@/db/client";
 import { isDemoShopWithDemoOwnerOrCaptainAccount } from "@/db/demo-account-guard";
+import { DemoSightingCleanupBlocked } from "@/db/demo-sighting-guard";
 import { demoRoleEmail } from "@/db/people";
 import { createDemoShop, resetDemoSchedule } from "@/db/seed";
 import { dismissDemoStarts, getShopById, getShopBySlug } from "@/db/shops";
@@ -156,6 +157,9 @@ export async function enterDemoAction(formData?: FormData) {
         createDemoShop(tx, { brand: true, onTiming: timing?.record }),
       );
     } catch (err) {
+      // Protected evidence leaves no safe slot to mint. Do not retry or count
+      // a demo entry; the normal unavailable redirect runs after this loop.
+      if (err instanceof DemoSightingCleanupBlocked) break;
       const isUniqueViolation = (err as { code?: string } | null)?.code === "23505";
       if (attempt === 0 && isUniqueViolation) continue;
       throw err;
@@ -257,13 +261,18 @@ export async function enterPreviewAction(formData: FormData) {
 
   const quiet = isQuietDemoDevice((await cookies()).get(QUIET_DEMO_COOKIE)?.value);
   if (!quiet) {
-    const { first } = await recordPreviewOpen(db, id, now);
-    if (first) {
+    try {
       await db.transaction(async (tx) => {
-        if (await isDemoShopWithDemoOwnerOrCaptainAccount(tx, shop.id)) {
-          await resetDemoSchedule(tx, shop.id, "history");
+        const { first } = await recordPreviewOpen(tx, id, now);
+        if (first) {
+          if (await isDemoShopWithDemoOwnerOrCaptainAccount(tx, shop.id)) {
+            await resetDemoSchedule(tx, shop.id, "history");
+          }
         }
       });
+    } catch (error) {
+      if (!(error instanceof DemoSightingCleanupBlocked)) throw error;
+      redirect(DEMO_UNAVAILABLE_PATH);
     }
   }
 
@@ -289,13 +298,18 @@ export async function resetDemoAction() {
   const session = await requireStaffSession();
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
-  const reset =
-    shop?.isDemo &&
-    (await db.transaction(async (tx) => {
-      if (!(await isDemoShopWithDemoOwnerOrCaptainAccount(tx, shop.id))) return false;
-      await resetDemoSchedule(tx, shop.id, "history");
-      return true;
-    }));
+  let reset = false;
+  if (shop?.isDemo) {
+    try {
+      reset = await db.transaction(async (tx) => {
+        if (!(await isDemoShopWithDemoOwnerOrCaptainAccount(tx, shop.id))) return false;
+        await resetDemoSchedule(tx, shop.id, "history");
+        return true;
+      });
+    } catch (error) {
+      if (!(error instanceof DemoSightingCleanupBlocked)) throw error;
+    }
+  }
   redirect(`/shop/${session.user.shopSlug}?reset=${reset ? "1" : "refused"}`);
 }
 
