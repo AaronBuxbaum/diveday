@@ -1,10 +1,12 @@
 import { randomUUID } from "node:crypto";
+import { and, eq } from "drizzle-orm";
 import { canPersonReadMedicalAlertOnTrip } from "@/db/authz";
 import { lockBoardingCertificationEvidence } from "@/db/boarding-certification-snapshot";
 import { departureBoatSafetyFor } from "@/db/boat-safety";
 import type { AppDb } from "@/db/client";
 import { getTripManifests } from "@/db/manifests";
 import { latestPreDepartureChecksForTrip, listChecklistItems } from "@/db/pre-departure-check";
+import { bookings } from "@/db/schema";
 import type { getShopById } from "@/db/shops";
 import { getShopOfflineErasureEpoch } from "@/db/shops";
 import { departureVessels } from "@/features/boats";
@@ -24,6 +26,10 @@ import type {
   OfflineManifestUpcomingResponse,
 } from "@/lib/offline-manifests";
 import { serializeManifests } from "@/lib/offline-manifests";
+import {
+  offlineRollCallWitnessEnabled,
+  signRollCallWitness,
+} from "@/lib/offline-roll-call-witness";
 import { rollCallDayBoundariesOf } from "@/lib/trip-days";
 import { nextOfflineManifestSnapshotWithWindows } from "./store";
 
@@ -68,6 +74,18 @@ export async function buildOfflineManifestCopies(
             }))
           : undefined;
         const snapshotId = randomUUID();
+        const witnessEnabled = offlineRollCallWitnessEnabled();
+        // Read generations before the roster. A concurrent seat edit can make
+        // a witness stale, never make a stale roster appear current.
+        const seatGenerations = new Map(
+          (witnessEnabled
+            ? await tx
+                .select({ id: bookings.id, generation: bookings.offlineAssignmentGeneration })
+                .from(bookings)
+                .where(and(eq(bookings.shopId, shop.id), eq(bookings.tripId, tripId)))
+            : []
+          ).map((seat) => [seat.id, seat.generation]),
+        );
         // PGlite's database type includes its client handle while the
         // transaction executor intentionally does not. The manifest readers
         // use only Drizzle query methods, which both objects implement.
@@ -122,8 +140,41 @@ export async function buildOfflineManifestCopies(
               : depthWarningText(t, advisory),
         );
         const boundaries = rollCallDayBoundariesOf(meetingWindows);
+        const rollCallWitnesses: Record<string, string> = {};
+        const meetingDay = payload.rollCallMeetingDay ?? 0;
+        for (const manifest of witnessEnabled ? manifests : []) {
+          for (const diver of manifest.divers) {
+            const generation = seatGenerations.get(diver.bookingId);
+            const context = diver.rollCallContext;
+            const frontier = context?.observedEvidenceIds ?? [];
+            if (
+              generation === undefined ||
+              context?.unknownMeetingDay ||
+              (context && context.meetingDay !== meetingDay) ||
+              frontier.length > 200
+            )
+              continue;
+            rollCallWitnesses[`seat:${diver.bookingId}:${manifest.checkpoint}`] =
+              signRollCallWitness({
+                shopId: shop.id,
+                tripId,
+                snapshotId,
+                subjectKind: "seat",
+                subjectId: diver.bookingId,
+                checkpoint: manifest.checkpoint,
+                meetingDay,
+                meetingGeneration: snapshot.meetingGeneration,
+                assignmentGeneration: generation,
+                frontier,
+                ...(!diver.identityWithheld && diver.personId
+                  ? { originalPersonId: diver.personId }
+                  : {}),
+              });
+          }
+        }
         return {
           ...payload,
+          ...(witnessEnabled ? { rollCallWitnesses } : {}),
           ...(boundaries ? { rollCallDayBoundaries: boundaries } : {}),
           rollCallMeetingDays: meetingWindows?.map((day) => ({
             startsAt: day.startsAt.toISOString(),

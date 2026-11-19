@@ -32,3 +32,20 @@ export const offlineManifestSnapshotRevisions = pgTable(
     check("offline_manifest_snapshot_revisions_positive", sql`${table.revision} > 0`),
   ],
 );
+
+/** A refused live review ID can never later create a mark, even after a retry. */
+export const offlineReviewRefusals = pgTable(
+  "offline_review_refusals",
+  {
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id, { onDelete: "cascade" }),
+    clientEventId: uuid("client_event_id").notNull(),
+  },
+  (table) => [
+    primaryKey({
+      name: "offline_review_refusals_pk",
+      columns: [table.shopId, table.clientEventId],
+    }),
+  ],
+);

@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { backAboardNow, notBackAboardSince, type TimedDayMark } from "@/lib/roll-call-days";
 import type { DbExecutor } from "./client";
+import { effectiveCausalRowsForDb } from "./roll-call-causal-store";
 import { oldestMarkFirst } from "./roll-call-order";
 import { crewMarks, seatMarks } from "./roll-call-subject";
 import { bookings, incidentReportPeople, people, rollCallEvents, tripAssignments } from "./schema";
@@ -61,12 +62,7 @@ export async function subjectRollCallEvents(
   const { subject } = input;
   const rows = await tx
     .select({
-      id: rollCallEvents.id,
-      retracts: rollCallEvents.retractsEventId,
-      checkpoint: rollCallEvents.checkpoint,
-      status: rollCallEvents.status,
-      evidenceConflict: rollCallEvents.evidenceConflict,
-      occurredAt: rollCallEvents.occurredAt,
+      event: rollCallEvents,
       day: rollCallDayIndex(),
       currentDay: rollCallCurrentDayIndex(),
     })
@@ -81,7 +77,17 @@ export async function subjectRollCallEvents(
       ),
     )
     .orderBy(...oldestMarkFirst());
-  return rows.map((row) => ({ ...row, subject: "subject" }));
+  return (await effectiveCausalRowsForDb(tx, rows)).map(({ event, day, currentDay }) => ({
+    id: event.id,
+    retracts: event.retractsEventId,
+    checkpoint: event.checkpoint,
+    status: event.status,
+    evidenceConflict: event.evidenceConflict,
+    occurredAt: event.occurredAt,
+    day,
+    currentDay,
+    subject: "subject",
+  }));
 }
 
 /** Whether the subject is on this departure: a seat booked on it, or its crew. */

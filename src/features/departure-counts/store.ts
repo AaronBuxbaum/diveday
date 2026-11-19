@@ -5,10 +5,11 @@ import { seatSailed } from "@/features/seat-sailed";
 import type { DbExecutor } from "../../db/client";
 import { queryAll } from "../../db/query-helpers";
 import { listTripsReadiness } from "../../db/readiness";
+import { effectiveCausalRowsForDb } from "../../db/roll-call-causal-store";
 import { newestMarkFirst } from "../../db/roll-call-order";
-import { markBookingId, seatMarks } from "../../db/roll-call-subject";
+import { seatMarks } from "../../db/roll-call-subject";
 import { bookings, rollCallEvents, trips } from "../../db/schema/index";
-import { currentMeetingDayMarks } from "../../db/trip-meeting-windows";
+import { rollCallCurrentDayIndex, rollCallDayIndex } from "../../db/trip-meeting-windows";
 
 import { nowDate } from "../../lib/clock";
 import { seatIsHeld } from "../../lib/no-show";
@@ -141,25 +142,19 @@ export async function departureCounts(
     () =>
       db
         .select({
-          tripId: rollCallEvents.tripId,
-          bookingId: markBookingId(),
-          checkpoint: rollCallEvents.checkpoint,
-          status: rollCallEvents.status,
+          event: rollCallEvents,
+          day: rollCallDayIndex(),
+          currentDay: rollCallCurrentDayIndex(options.now),
         })
         .from(rollCallEvents)
         .innerJoin(bookings, and(eq(bookings.id, rollCallEvents.bookingId), seatNotCancelled))
         .where(
-          and(
-            eq(rollCallEvents.shopId, shopId),
-            seatMarks(),
-            inArray(rollCallEvents.tripId, ids),
-            // The meeting day being counted, as the manifest shows it (#2557).
-            currentMeetingDayMarks(options.now),
-          ),
+          and(eq(rollCallEvents.shopId, shopId), seatMarks(), inArray(rollCallEvents.tripId, ids)),
         )
         .orderBy(...newestMarkFirst()),
   ]);
   const readiness = await readinessFor(db, shopId, roster, options);
+  const effective = await effectiveCausalRowsForDb(db, events);
 
   // Newest first, so the first event per seat and checkpoint is its standing word.
   // Keyed by departure too: a word recorded on another departure (an offline
@@ -171,7 +166,10 @@ export async function departureCounts(
   // "after_dive_2", from imported or hand-written rows) are one checkpoint, and
   // the newest word at it stands.
   const seen = new Set<string>();
-  for (const event of events) {
+  for (const row of effective) {
+    if (row.day !== row.currentDay) continue;
+    const event = row.event;
+    if (!event.bookingId) continue;
     const ordinal = rollCallCheckpointOrdinal(event.checkpoint as RollCallCheckpoint);
     // A checkpoint with no place in the day is not read, as `listUnaccountedForByTrip` does.
     if (!Number.isInteger(ordinal) || ordinal < 0) continue;

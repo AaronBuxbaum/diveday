@@ -13,7 +13,13 @@ export const EXCLUDED_COLUMNS: Record<string, string[]> = {
   recovery_activity_events: ["request_hash", "result_revision"], // durable retry machinery, not the shop’s activity evidence
 
   inbound_messages: ["email_message_id", "in_reply_to_delivery_id", "assisted_at"], // threading plumbing
-  roll_call_events: [...ROLL_CALL_SPLIT, "seq"], // seq: as GLOBAL_SEQ_TABLES
+  // Capture generations are local database authority, not portable evidence of a restored target.
+  roll_call_events: [
+    ...ROLL_CALL_SPLIT,
+    "seq",
+    "offline_meeting_generation",
+    "offline_assignment_generation",
+  ],
   // `shop_id` is the same value on every row of a single-shop bundle.
   shops: [
     "jurisdiction",
@@ -74,6 +80,7 @@ export const EXCLUDED_COLUMNS: Record<string, string[]> = {
     // A re-imported bundle mints new trip ids and so new UIDs, and no subscriber
     // holds a revision to compare. Same class as `pending_checkout_intent_id`.
     "revision",
+    "offline_meeting_generation", // local generation is not authority for a restored database
     // A pending "the divers still have the old time" between a move and its
     // notice: in-flight messaging state on this installation, cleared by the
     // send, and a re-imported departure has no divers who were told anything.
@@ -89,6 +96,7 @@ export const EXCLUDED_COLUMNS: Record<string, string[]> = {
   trip_assignments: [],
   bookings: [
     "shop_id",
+    "offline_assignment_generation", // local generation is not authority for a restored database
     "pending_checkout_intent_id", // in-flight Stripe attempt, meaningless elsewhere
     ...["arrival_trail_after_seq", "seat_reopened_at"], // this database's arrival trail (#2702, #3830)
     "identity_unconfirmed_at", // H-20260724-one-person-per-email review state, not a shop record

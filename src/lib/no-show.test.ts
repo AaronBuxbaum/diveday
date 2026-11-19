@@ -24,6 +24,9 @@ function gate(overrides: Partial<NoShowGateInput> = {}) {
 }
 
 describe("noShowGate", () => {
+  it("holds an uncertain offline sighting for review", () => {
+    expect(gate({ onTheWater: "uncertain" })).toBe("presence_uncertain");
+  });
   /**
    * **The opening the dive-domain-expert review moved** (2026-09-11). It sat at
    * the shop's dock call, which is when the diver was *asked* to be there —

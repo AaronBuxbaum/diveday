@@ -269,6 +269,7 @@ export async function moveTrip(
         // time. Safe to write unconditionally here — the equal-instant case
         // returned above, so reaching this line means the boat really moved.
         revision: sql`${trips.revision} + 1`,
+        offlineMeetingGeneration: sql`${trips.offlineMeetingGeneration} + 1`,
       })
       .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)))
       .returning();

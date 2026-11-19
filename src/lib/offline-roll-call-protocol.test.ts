@@ -49,7 +49,7 @@ it("retains opaque legacy queues unchanged after a protocol refusal and retries 
   expect(held?.events[0].syncStatus).toBe("pending");
   server.use(
     http.post("*/api/offline-manifests/sync", async ({ request }) => {
-      expect(request.headers.get(ROLL_CALL_CAUSAL_PROTOCOL_HEADER)).toBe("2");
+      expect(request.headers.get(ROLL_CALL_CAUSAL_PROTOCOL_HEADER)).toBe("3");
       const body = (await request.json()) as { events: OfflineRollCallEvent[] };
       expect(body.events[0]).toEqual(original);
       return HttpResponse.json(

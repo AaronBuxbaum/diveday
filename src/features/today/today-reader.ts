@@ -33,8 +33,9 @@ import {
 import { listNotificationDeliveryIssues } from "@/db/notifications";
 import { openOrdersForBookings } from "@/db/orders";
 import { listTripsReadiness } from "@/db/readiness";
+import { effectiveCausalRowsForDb } from "@/db/roll-call-causal-store";
 import { newestMarkFirst } from "@/db/roll-call-order";
-import { markBookingId, seatMarks } from "@/db/roll-call-subject";
+import { seatMarks } from "@/db/roll-call-subject";
 import {
   boats,
   bookings,
@@ -53,7 +54,11 @@ import {
   paymentsRestrictedSince,
   shopStripeAccountForRender,
 } from "@/db/stripe-accounts";
-import { currentMeetingDayMarks, meetingWindowsByTrip } from "@/db/trip-meeting-windows";
+import {
+  currentMeetingDayMarks,
+  meetingWindowsByTrip,
+  rollCallDayIndex,
+} from "@/db/trip-meeting-windows";
 import {
   boatClashesByTrip,
   countShopTrips,
@@ -615,10 +620,8 @@ async function boardedAfterLastDive(
   );
   const rows = await db
     .select({
-      tripId: rollCallEvents.tripId,
-      bookingId: markBookingId(),
-      checkpoint: rollCallEvents.checkpoint,
-      status: rollCallEvents.status,
+      event: rollCallEvents,
+      day: rollCallDayIndex(),
     })
     .from(rollCallEvents)
     .where(
@@ -635,11 +638,11 @@ async function boardedAfterLastDive(
     )
     .orderBy(...newestMarkFirst());
   const seen = new Set<string>();
-  for (const row of rows) {
-    if (row.checkpoint !== lastCheckpoint.get(row.tripId)) continue;
-    if (seen.has(row.bookingId)) continue;
-    seen.add(row.bookingId);
-    if (row.status === "boarded") counted.add(row.bookingId);
+  for (const { event } of await effectiveCausalRowsForDb(db, rows)) {
+    if (!event.bookingId || event.checkpoint !== lastCheckpoint.get(event.tripId)) continue;
+    if (seen.has(event.bookingId)) continue;
+    seen.add(event.bookingId);
+    if (event.status === "boarded") counted.add(event.bookingId);
   }
   return counted;
 }

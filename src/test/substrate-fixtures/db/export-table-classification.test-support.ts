@@ -146,6 +146,7 @@ export const EXCLUDED_TABLES = [
   // out of `activity_events.csv` (#2701), and is not portable to another system.
   "trip_read_marks",
   "offline_manifest_snapshot_revisions", // monotone device-snapshot ordering machinery, not a shop record
+  "offline_review_refusals", // internal no-write receipt fence, not portable shop data
   "today_read_marks",
   "today_read_mark_events",
   // What one staffer had typed into a form when the phone rang (same ADR,

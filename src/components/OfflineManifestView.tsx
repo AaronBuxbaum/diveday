@@ -79,6 +79,8 @@ function OfflineManifestScreen() {
     fallback,
     servedWithoutAnswer,
     copyCaveat,
+    reviewTenant,
+    onReviewEnvelope,
   } = useSavedManifest(t);
   // A marker for the tools that photograph this page (`scripts/screenshot.mjs`,
   // issue #2235): set on the document once the store has been read, so a
@@ -253,6 +255,8 @@ function OfflineManifestScreen() {
     record,
     recordChecklistCheck,
     recordArrival,
+    reviewTenant,
+    onReviewEnvelope,
   };
   return (
     <OfflineTripScreen

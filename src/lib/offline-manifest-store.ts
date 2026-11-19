@@ -32,7 +32,7 @@ import {
   sendableOfflineRollCallEvents,
   withMedicalAlertWords,
 } from "./offline-manifests";
-import { ROLL_CALL_REVIEW_HEADERS } from "./roll-call-protocol";
+import { ROLL_CALL_WITNESS_HEADERS } from "./roll-call-protocol";
 
 const DB_NAME = "diveday-offline-manifests";
 const DB_VERSION = 2;
@@ -1311,8 +1311,22 @@ export async function appendOfflineRollCall(
     if (!allowed) {
       throw new OfflineManifestError("not_allowed");
     }
+    const witnessKey =
+      subject.kind === "crew"
+        ? `crew:${subject.crewPersonId}:${input.checkpoint}`
+        : `seat:${subject.bookingId}:${input.checkpoint}`;
+    const witness =
+      !input.snapshotId || input.snapshotId === envelope.snapshot.snapshotId
+        ? envelope.snapshot.rollCallWitnesses?.[witnessKey]
+        : undefined;
     envelope.events.push({
       ...input,
+      ...(witness
+        ? {
+            rollCallWitness: witness,
+            meetingDay: input.meetingDay ?? envelope.snapshot.rollCallMeetingDay ?? 0,
+          }
+        : {}),
       clientEventId: eventIdentity,
       snapshotId: input.snapshotId ?? envelope.snapshot.snapshotId,
       snapshotSavedAt: input.snapshotSavedAt ?? envelope.snapshot.savedAt,
@@ -1466,7 +1480,7 @@ async function postPendingEvents(batch: {
   const roundTrip = (async () => {
     const response = await fetch("/api/offline-manifests/sync", {
       method: "POST",
-      headers: { ...ROLL_CALL_REVIEW_HEADERS, "content-type": "application/json" },
+      headers: { ...ROLL_CALL_WITNESS_HEADERS, "content-type": "application/json" },
       body: JSON.stringify({ ...batch, includeStoredInstants: true, includeCausalSnapshots: true }),
       signal: controller.signal,
     });
@@ -1541,7 +1555,7 @@ export async function syncOfflineManifest(
   const pending = sendableOfflineRollCallEvents(envelope.events);
   const reviewEvents = heldOfflineRollCallNotes(envelope.events);
   const pendingChecklist = envelope.checklistEvents.filter(
-    (event) => event.syncStatus === "pending",
+    (event) => event.syncStatus === "pending" && !event.reviewRequired,
   );
   const pendingArrivals = offlineArrivalEvents(envelope).filter(
     (event) => event.syncStatus === "pending",
@@ -1637,8 +1651,9 @@ export async function syncOfflineManifest(
     >(
       event: T,
       rollCall = false,
+      checklist = false,
     ) => {
-      if (rollCall && event.syncStatus !== "pending") return event;
+      if ((rollCall || checklist) && event.syncStatus !== "pending") return event;
       const result = byId.get(event.clientEventId);
       if (!result)
         return rollCall && postedIds.has(event.clientEventId)
@@ -1653,14 +1668,19 @@ export async function syncOfflineManifest(
           ? { ...event, reviewRequired: true, rejectionReason: "unrecognized_observation" }
           : event;
       const review =
-        rollCall &&
+        (rollCall || checklist) &&
         (event.reviewRequired ||
           (result.status === "rejected" &&
             [
-              "booking_unavailable",
-              "trip_unavailable",
-              "crew_not_assigned",
-              "causal_dependency_unresolved",
+              ...(rollCall
+                ? [
+                    "booking_unavailable",
+                    "trip_unavailable",
+                    "crew_not_assigned",
+                    "causal_dependency_unresolved",
+                  ]
+                : []),
+              "review_required",
             ].includes(result.reason ?? "")));
       return {
         ...event,
@@ -1686,7 +1706,9 @@ export async function syncOfflineManifest(
         ? { ...event, reviewRequired: true, rejectionReason: "causal_dependency_unresolved" }
         : event,
     );
-    current.checklistEvents = current.checklistEvents.map((event) => applyResult(event));
+    current.checklistEvents = current.checklistEvents.map((event) =>
+      applyResult(event, false, true),
+    );
     current.arrivalEvents = offlineArrivalEvents(current).map((event) => applyResult(event));
     const db = await openDatabase();
     try {
@@ -1770,6 +1792,146 @@ export async function getActiveOfflineShellVersion(): Promise<string | null> {
       resolve(typeof event.data?.version === "string" ? event.data.version : null);
     };
     active.postMessage({ type: "GET_SHELL_VERSION" }, [channel.port2]);
+  });
+}
+
+/** Reserve the live confirmation identity durably before any request is sent. */
+export async function prepareOfflineRollCallConfirmation(
+  tripId: string,
+  eventId: string,
+  status: "boarded" | "not_boarded",
+  shopSlug: string,
+  tenantRound: number,
+  context: { snapshotId: string; meetingDay: number; witness: string },
+): Promise<{
+  confirmationId: string;
+  event: OfflineRollCallEvent;
+  context: { snapshotId: string; meetingDay: number; witness: string };
+}> {
+  return withManifestLock(tripId, async () => {
+    const envelope = await loadOfflineManifest(tripId);
+    if (!envelope || envelope.snapshot.shop.slug !== shopSlug)
+      throw new OfflineManifestError("shop_changed");
+    const event = envelope.events.find((item) => item.clientEventId === eventId);
+    if (!event) throw new OfflineManifestError("not_allowed");
+    if (
+      event.syncStatus !== "pending" ||
+      !event.reviewRequired ||
+      event.reviewResolution ||
+      (status !== "boarded" && status !== "not_boarded") ||
+      (event.reviewConfirmation && event.reviewConfirmation.status !== status)
+    )
+      throw new OfflineManifestError("not_allowed");
+    event.reviewConfirmation ??= { clientEventId: crypto.randomUUID(), status, context };
+    const db = await openDatabase();
+    try {
+      if (!(await persistEnvelope(db, envelope, tenantRound, "record")))
+        throw new OfflineManifestError("shop_changed");
+    } finally {
+      db.close();
+    }
+    return {
+      confirmationId: event.reviewConfirmation.clientEventId,
+      context: event.reviewConfirmation.context,
+      event,
+    };
+  });
+}
+
+/** Record a confirmed live receipt without calling the original offline observation synced. */
+export async function completeOfflineRollCallConfirmation(
+  tripId: string,
+  eventId: string,
+  confirmationId: string,
+  shopSlug: string,
+  tenantRound: number,
+): Promise<OfflineManifestEnvelope> {
+  return withManifestLock(tripId, async () => {
+    const envelope = await loadOfflineManifest(tripId);
+    if (!envelope || envelope.snapshot.shop.slug !== shopSlug)
+      throw new OfflineManifestError("shop_changed");
+    const event = envelope.events.find((item) => item.clientEventId === eventId);
+    if (!event) throw new OfflineManifestError("not_allowed");
+    if (!event.reviewRequired || event.reviewConfirmation?.clientEventId !== confirmationId)
+      throw new OfflineManifestError("not_allowed");
+    event.reviewResolution = "confirmed";
+    const db = await openDatabase();
+    try {
+      if (!(await persistEnvelope(db, envelope, tenantRound, "record")))
+        throw new OfflineManifestError("shop_changed");
+    } finally {
+      db.close();
+    }
+    return envelope;
+  });
+}
+
+/** Release only the exact ID for which the server committed a no-write refusal. */
+export async function releaseOfflineRollCallConfirmation(
+  tripId: string,
+  eventId: string,
+  confirmationId: string,
+  shopSlug: string,
+  tenantRound: number,
+): Promise<OfflineManifestEnvelope> {
+  return withManifestLock(tripId, async () => {
+    const envelope = await loadOfflineManifest(tripId);
+    if (!envelope || envelope.snapshot.shop.slug !== shopSlug)
+      throw new OfflineManifestError("shop_changed");
+    const event = envelope.events.find((item) => item.clientEventId === eventId);
+    if (
+      !event?.reviewRequired ||
+      event.reviewResolution ||
+      event.reviewConfirmation?.clientEventId !== confirmationId
+    )
+      throw new OfflineManifestError("not_allowed");
+    delete event.reviewConfirmation;
+    const db = await openDatabase();
+    try {
+      if (!(await persistEnvelope(db, envelope, tenantRound, "record")))
+        throw new OfflineManifestError("shop_changed");
+    } finally {
+      db.close();
+    }
+    return envelope;
+  });
+}
+
+/** Discard one explicitly selected review, without releasing dependent queued observations. */
+export async function discardOfflineRollCallReview(
+  tripId: string,
+  eventId: string,
+  shopSlug: string,
+  tenantRound: number,
+): Promise<OfflineManifestEnvelope> {
+  return withManifestLock(tripId, async () => {
+    const envelope = await loadOfflineManifest(tripId);
+    if (!envelope || envelope.snapshot.shop.slug !== shopSlug)
+      throw new OfflineManifestError("shop_changed");
+    const event = envelope.events.find((item) => item.clientEventId === eventId);
+    // A confirmation request may have committed even if its response was lost.
+    if (!event?.reviewRequired || event.reviewConfirmation)
+      throw new OfflineManifestError("not_allowed");
+    const held = heldOfflineRollCallIds(envelope.events);
+    envelope.events = envelope.events
+      .filter((item) => item.clientEventId !== eventId)
+      .map((item) =>
+        item.syncStatus === "pending" && held.has(item.clientEventId.toLowerCase())
+          ? {
+              ...item,
+              reviewRequired: true,
+              rejectionReason: item.rejectionReason ?? "causal_dependency_unresolved",
+            }
+          : item,
+      );
+    const db = await openDatabase();
+    try {
+      if (!(await persistEnvelope(db, envelope, tenantRound, "record")))
+        throw new OfflineManifestError("shop_changed");
+    } finally {
+      db.close();
+    }
+    return envelope;
   });
 }
 

@@ -3,6 +3,7 @@ import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
 import { verifyOfflineErasureEpoch } from "@/lib/offline-erasure-epoch";
 import { offlineEventInstant, offlineEventOutOfBounds } from "@/lib/offline-events";
+import { offlineRollCallWitnessEnabled } from "@/lib/offline-roll-call-witness";
 import {
   PRE_DEPARTURE_CHECK_RETRACTION_SUPERSEDED,
   type PreDepartureCheckStatus,
@@ -313,6 +314,7 @@ export type RecordPreDepartureCheckOutcome =
         | "item_unavailable"
         | "staff_not_found"
         | "newer_event_exists"
+        | "review_required"
         | typeof PRE_DEPARTURE_CHECK_RETRACTION_SUPERSEDED
         | typeof CLIENT_EVENT_CONFLICT
         | "snapshot_invalid";
@@ -387,6 +389,10 @@ export async function recordPreDepartureCheck(
           reason,
           ...(noteDisposition ? { noteDisposition } : {}),
         });
+
+        // Checklist capture witnesses are not yet issued; do not settle the tap as an official check.
+        if (source === "offline" && offlineRollCallWitnessEnabled())
+          return refuse("review_required");
 
         if (source === "offline" && input.clientEventId) {
           const replayed = replayVerdict(

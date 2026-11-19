@@ -96,6 +96,9 @@ export const rollCallEvents = pgTable(
     status: rollCallStatus("effective_status").notNull(),
     /** Original crew intent; status above is the separately maintained risk projection. */
     statementStatus: rollCallStatus("statement_status").notNull(),
+    /** Authenticated capture generations, present only for a verified offline observation. */
+    offlineMeetingGeneration: integer("offline_meeting_generation"),
+    offlineAssignmentGeneration: integer("offline_assignment_generation"),
     /** Raw tap intent for replay validation; null on retained opaque evidence. */
     captureContext: jsonb("capture_context").$type<{
       occurredAt?: string;

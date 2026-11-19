@@ -50,6 +50,7 @@ export const DESK_NOTICES: DeskNoticeMap = {
   invalid: { tone: "danger", key: "checkIn.notice.invalid" },
   // These outcomes distinguish boarded from not-back-aboard roll call states.
   "no-show-already-boarded": { tone: "danger", key: "checkIn.notice.noShowAlreadyBoarded" },
+  "no-show-presence-uncertain": { tone: "danger", key: "checkIn.notice.presenceUncertain" },
   "no-show-already-missing-after-dive": {
     tone: "danger",
     key: "checkIn.notice.noShowAlreadyMissingAfterDive",
@@ -88,6 +89,7 @@ export const DESK_NOTICES: DeskNoticeMap = {
   },
   // Turn-away outcomes distinguish roll-call state and row changes.
   "turn-away-already-boarded": { tone: "danger", key: "checkIn.notice.turnAwayAlreadyBoarded" },
+  "turn-away-presence-uncertain": { tone: "danger", key: "checkIn.notice.presenceUncertain" },
   "turn-away-already-missing-after-dive": {
     tone: "danger",
     key: "checkIn.notice.noShowAlreadyMissingAfterDive",

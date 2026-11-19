@@ -50,7 +50,9 @@ export function OfflineChecklist({
   const { envelope, expired } = view;
   const { t, busyChecklistItem, recordChecklistCheck } = controls;
   const items = envelope.snapshot.checklist?.items ?? [];
-  const rejected = envelope.checklistEvents.filter((event) => event.syncStatus === "rejected");
+  const rejected = envelope.checklistEvents.filter(
+    (event) => event.syncStatus === "rejected" || event.reviewRequired,
+  );
   return items.length > 0 || rejected.length > 0 ? (
     <section
       className={sectionCardClass({ padding: "none", className: "mt-6" })}
@@ -73,7 +75,12 @@ export function OfflineChecklist({
                 });
               return (
                 <li key={event.clientEventId}>
-                  {t("shared.offlineManifest.single.checklist.rejectedItem", { item: label })}
+                  {t(
+                    event.reviewRequired
+                      ? "shared.offlineManifest.single.checklist.reviewItem"
+                      : "shared.offlineManifest.single.checklist.rejectedItem",
+                    { item: label },
+                  )}
                 </li>
               );
             })}

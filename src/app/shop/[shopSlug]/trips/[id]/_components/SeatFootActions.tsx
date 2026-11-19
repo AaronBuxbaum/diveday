@@ -155,9 +155,14 @@ function RemoveRefusedAboard({
         {t("trips.roster.removeBooking")}
       </summary>
       <p role="status" className="mt-2 text-sm font-medium text-danger">
-        {t(hold === "uncounted" ? "trips.roster.removeUncounted" : "trips.roster.removeAboard", {
-          name,
-        })}
+        {t(
+          hold === "uncertain"
+            ? "trips.roster.removePresenceUncertain"
+            : hold === "uncounted"
+              ? "trips.roster.removeUncounted"
+              : "trips.roster.removeAboard",
+          { name },
+        )}
       </p>
     </details>
   );

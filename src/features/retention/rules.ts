@@ -60,6 +60,12 @@
  * review may need later (ADR 20260824-pre-departure-safety-check; dive-domain
  * review, 2026-10-13).
  *
+ * **`offline_review_refusals` is deliberately unbounded.** Its random
+ * confirmation IDs contain no roster or note; removing a refusal would allow
+ * the same delayed request to write after a no-write receipt. The shop delete
+ * cascades it. This is required by the refusal contract (#4787, 2026-11-19),
+ * until a separately verified expiry protocol makes pruning safe.
+ *
  * **`roll_call_deck_counts` is deliberately unbounded**, for the same reason
  * as the checklist above: it is what the crew counted on deck at each
  * checkpoint, beside the per-person roll call it was compared with, and an
@@ -179,6 +185,7 @@ export const UNBOUNDED_BY_DECISION: readonly string[] = [
   "booking_arrival_events",
   "boarding_observations",
   "pre_departure_check_events",
+  "offline_review_refusals",
   "roll_call_deck_counts",
   "trip_change_events",
   "review_moderation_events",

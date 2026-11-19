@@ -274,6 +274,7 @@ export function diverExportFileName(
  */
 const NOT_INCLUDED = [
   "Offline manifest snapshots (device-side copies of the live records exported here).",
+  "Offline review refusal IDs, which prevent delayed requests from writing in DiveDay and are not portable shop records.",
   "Notification retry queues, per-attempt logs, and provider rate-limit state — plumbing behind notification_deliveries.csv, which carries the outcome that actually happened.",
   "DiveDay's per-shop platform-backup scheduling checkpoint — it stores attempt and success times for the cron, not portable shop data.",
   "Stripe account linkage — the Stripe account itself already belongs to the shop, and an account id means nothing anywhere else.",

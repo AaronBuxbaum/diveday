@@ -83,6 +83,7 @@
     "waiverIdentityUnconfirmed": "This seat is held until somebody confirms who this diver is, so a paper release can’t go on their record yet. Confirm it on their row, then record the release.",
     "waiverError": "That paper waiver couldn’t be recorded. Try again.",
     "noShowAlreadyBoarded": "The crew boarded that diver, so they can’t be marked as not diving. Open the trip’s manifest.",
+    "presenceUncertain": "An offline observation needs review before this seat can be released. Contact the boat and open the manifest.",
     "noShowAlreadyMissingAfterDive": "The crew recorded that diver as not back aboard after a dive. Call the boat and open the trip’s manifest.",
     "noShowAlreadyMarked": "That diver is already marked not here.",
     "noShowNotBooked": "That seat was given up, so there is nothing to mark.",

@@ -19,7 +19,7 @@ async function lockOwnedTrip(db: DbExecutor, shopId: string, tripId: string): Pr
     .select({ id: trips.id })
     .from(trips)
     .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
-    .for("key share")
+    .for("share")
     .limit(1);
   return ownedTrip !== undefined;
 }
@@ -56,7 +56,11 @@ export async function nextOfflineManifestSnapshotWithWindows(
   db: DbExecutor,
   shopId: string,
   tripId: string,
-): Promise<{ revision: number; meetingWindows: { startsAt: string; endsAt: string }[] } | null> {
+): Promise<{
+  revision: number;
+  meetingGeneration: number;
+  meetingWindows: { startsAt: string; endsAt: string }[];
+} | null> {
   if (!(await lockOwnedTrip(db, shopId, tripId))) return null;
   const revisions = offlineManifestSnapshotRevisions;
   // Keep the window read in this later statement: under READ COMMITTED a
@@ -70,6 +74,7 @@ export async function nextOfflineManifestSnapshotWithWindows(
     })
     .returning({
       revision: revisions.revision,
+      meetingGeneration: sql<number>`(select ${trips.offlineMeetingGeneration} from ${trips} where ${trips.id} = ${tripId})`,
       meetingWindows: sql<{ startsAt: string; endsAt: string }[]>`coalesce((
         select json_agg(json_build_object('startsAt', d.starts_at, 'endsAt', d.ends_at) order by d.starts_at)
         from ${tripScheduleDays} d where d.trip_id = ${tripId}

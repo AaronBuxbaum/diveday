@@ -4,11 +4,12 @@ import { departureUnderway } from "@/lib/day-blowout";
 import { hasSailed } from "@/lib/trips";
 import type { AppDb, DbExecutor } from "./client";
 import { onTheWaterByRollCall } from "./manifests";
+import { effectiveCausalRowsForDb } from "./roll-call-causal-store";
 import { newestMarkFirst } from "./roll-call-order";
-import { crewMarks, markBookingId, markCrewPersonId, seatMarks } from "./roll-call-subject";
+import { crewMarks, seatMarks } from "./roll-call-subject";
 import { bookings, rollCallEvents, tripAssignments, tripStageEvents, trips } from "./schema";
 import { tripHasFinalHome } from "./trip-editability";
-import { currentMeetingDayMarks } from "./trip-meeting-windows";
+import { rollCallCurrentDayIndex, rollCallDayIndex } from "./trip-meeting-windows";
 import { lockTripRevisionNotificationFence } from "./trip-revision-notification-fence";
 import { liveTrip } from "./trips-live";
 import { seatNotCancelled } from "./trips-queries";
@@ -20,7 +21,7 @@ import { setTripStatus } from "./trips-record";
  * nobody at the dock spoke for the seat, so the boat may have carried them;
  * the dock's "not boarded" lets it go.
  */
-export type AboardHold = "on_the_water" | "uncounted";
+export type AboardHold = "on_the_water" | "uncounted" | "uncertain";
 
 /**
  * **Which seats on this departure the boat carried, or may be carrying**
@@ -84,8 +85,9 @@ export async function aboardAtSeaBookingIds(
       ),
     );
   for (const seat of seats) {
-    if ((await onTheWaterByRollCall(db, shopId, tripId, seat.id)) !== null) {
-      held.set(seat.id, "on_the_water");
+    const presence = await onTheWaterByRollCall(db, shopId, tripId, seat.id);
+    if (presence !== null) {
+      held.set(seat.id, presence === "uncertain" ? "uncertain" : "on_the_water");
       continue;
     }
     if (!sailed || seat.status === "no_show") continue;
@@ -220,7 +222,11 @@ async function crewDockWords(
   );
   if (words.size === 0) return words;
   const rows = await db
-    .select({ personId: markCrewPersonId(), status: rollCallEvents.status })
+    .select({
+      event: rollCallEvents,
+      day: rollCallDayIndex(),
+      currentDay: rollCallCurrentDayIndex(),
+    })
     .from(rollCallEvents)
     .where(
       and(
@@ -228,15 +234,16 @@ async function crewDockWords(
         crewMarks(),
         eq(rollCallEvents.tripId, tripId),
         eq(rollCallEvents.checkpoint, "departure"),
-        currentMeetingDayMarks(),
       ),
     )
     .orderBy(...newestMarkFirst());
   const seen = new Set<string>();
-  for (const row of rows) {
-    if (seen.has(row.personId) || !words.has(row.personId)) continue;
-    seen.add(row.personId);
-    words.set(row.personId, row.status);
+  for (const row of await effectiveCausalRowsForDb(db, rows)) {
+    if (row.day !== row.currentDay || !row.event.crewPersonId) continue;
+    const personId = row.event.crewPersonId;
+    if (seen.has(personId) || !words.has(personId)) continue;
+    seen.add(personId);
+    words.set(personId, row.event.status);
   }
   return words;
 }
@@ -284,7 +291,11 @@ async function dockWordBySeat(
   bookingIds: readonly string[] | undefined,
 ): Promise<Map<string, "boarded" | "not_boarded" | "cleared">> {
   const rows = await db
-    .select({ bookingId: markBookingId(), status: rollCallEvents.status })
+    .select({
+      event: rollCallEvents,
+      day: rollCallDayIndex(),
+      currentDay: rollCallCurrentDayIndex(),
+    })
     .from(rollCallEvents)
     .where(
       and(
@@ -292,13 +303,16 @@ async function dockWordBySeat(
         seatMarks(),
         eq(rollCallEvents.tripId, tripId),
         eq(rollCallEvents.checkpoint, "departure"),
-        currentMeetingDayMarks(),
         bookingIds ? inArray(rollCallEvents.bookingId, [...bookingIds]) : undefined,
       ),
     )
     .orderBy(...newestMarkFirst());
   const dock = new Map<string, "boarded" | "not_boarded" | "cleared">();
-  for (const row of rows) if (!dock.has(row.bookingId)) dock.set(row.bookingId, row.status);
+  for (const row of await effectiveCausalRowsForDb(db, rows)) {
+    const bookingId = row.event.bookingId;
+    if (row.day !== row.currentDay || !bookingId || dock.has(bookingId)) continue;
+    dock.set(bookingId, row.event.status);
+  }
   return dock;
 }
 
@@ -313,8 +327,12 @@ async function crewMarkedAshore(
   tripId: string,
   personId: string,
 ): Promise<boolean> {
-  const [newest] = await db
-    .select({ status: rollCallEvents.status })
+  const rows = await db
+    .select({
+      event: rollCallEvents,
+      day: rollCallDayIndex(),
+      currentDay: rollCallCurrentDayIndex(),
+    })
     .from(rollCallEvents)
     .innerJoin(
       tripAssignments,
@@ -330,12 +348,13 @@ async function crewMarkedAshore(
         eq(rollCallEvents.tripId, tripId),
         eq(rollCallEvents.crewPersonId, personId),
         eq(rollCallEvents.checkpoint, "departure"),
-        currentMeetingDayMarks(),
       ),
     )
-    .orderBy(...newestMarkFirst())
-    .limit(1);
-  return newest?.status === "not_boarded";
+    .orderBy(...newestMarkFirst());
+  const newest = (await effectiveCausalRowsForDb(db, rows)).find(
+    (row) => row.day === row.currentDay,
+  );
+  return newest?.event.status === "not_boarded";
 }
 
 /**

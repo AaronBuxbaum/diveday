@@ -302,7 +302,6 @@ export function OfflineTripScreen({
           step toward a queue answering the second. */}
                   <OfflineCounter view={view} controls={controls} />
                   <OfflineArrivalRefusals view={view} controls={controls} />
-                  <MissingRollCallRefusals view={view} controls={controls} />
 
                   <section id="offline-roll-call-context" tabIndex={-1} className="scroll-mt-24">
                     <OfflineCheckpointNav view={view} controls={controls} />

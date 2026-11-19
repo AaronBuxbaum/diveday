@@ -60,6 +60,29 @@ it("retains ordinary offline readiness refusal", async () => {
   expect((await loadOfflineManifest("trip-1"))?.events).toEqual([]);
 });
 
+it("durably keeps the snapshot witness with the original queued observation", async () => {
+  const copy = snapshot();
+  await saveOfflineManifest({
+    shop: copy.shop,
+    manifests: copy.manifests,
+    rollCallWitnesses: { "seat:ready:departure": "signed-witness" },
+  });
+  const queued = await appendOfflineRollCall("trip-1", {
+    bookingId: "ready",
+    checkpoint: "departure",
+    status: "boarded",
+    meetingDay: 0,
+  });
+  expect(queued.events[0]).toMatchObject({
+    rollCallWitness: "signed-witness",
+    syncStatus: "pending",
+  });
+  expect((await loadOfflineManifest("trip-1"))?.events[0]).toMatchObject({
+    clientEventId: queued.events[0]?.clientEventId,
+    rollCallWitness: "signed-witness",
+  });
+});
+
 it("refuses malformed or future selected observation instants without storing evidence", async () => {
   const copy = snapshot();
   await saveOfflineManifest({ shop: copy.shop, manifests: copy.manifests });

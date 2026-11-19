@@ -3,7 +3,7 @@ import type { OfflineManifestTranslator } from "@/i18n/offline-manifest-messages
 import type { DiverLocale } from "@/i18n/settings";
 import type { ArrivalStatus } from "@/lib/arrival";
 import type { RollCallCheckpoint } from "@/lib/manifests";
-import type { OfflineRollCallResult } from "@/lib/offline-manifests";
+import type { OfflineManifestEnvelope, OfflineRollCallResult } from "@/lib/offline-manifests";
 import type { PreDepartureCheckStatus } from "@/lib/pre-departure-check";
 import type { OfflineStatement } from "./shared";
 
@@ -62,4 +62,6 @@ export type OfflineTripControls = {
   ) => Promise<OfflineRecordReceipt | boolean | void>;
   recordChecklistCheck: (checklistItemId: string, status: PreDepartureCheckStatus) => Promise<void>;
   recordArrival: (bookingId: string, status: ArrivalStatus) => Promise<void>;
+  reviewTenant?: () => Promise<{ shopSlug: string; round: number } | null>;
+  onReviewEnvelope?: (envelope: OfflineManifestEnvelope) => void;
 };

@@ -1,0 +1,149 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "9ec3ff61-8716-4fd0-8aad-e7b1b47cb79d",
+  "prevIds": [
+    "f049dba9-f819-4606-9405-a9143f08fa02"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "bookings",
+        "offline_assignment_generation"
+      ],
+      "writes": [
+        "s|col|public.bookings.offline_assignment_generation",
+        "n|col|public.bookings.offline_assignment_generation",
+        "e|col|public.bookings.offline_assignment_generation"
+      ],
+      "reads": [
+        "n|tbl|public.bookings",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "roll_call_events",
+        "offline_meeting_generation"
+      ],
+      "writes": [
+        "s|col|public.roll_call_events.offline_meeting_generation",
+        "n|col|public.roll_call_events.offline_meeting_generation",
+        "e|col|public.roll_call_events.offline_meeting_generation"
+      ],
+      "reads": [
+        "n|tbl|public.roll_call_events",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "roll_call_events",
+        "offline_assignment_generation"
+      ],
+      "writes": [
+        "s|col|public.roll_call_events.offline_assignment_generation",
+        "n|col|public.roll_call_events.offline_assignment_generation",
+        "e|col|public.roll_call_events.offline_assignment_generation"
+      ],
+      "reads": [
+        "n|tbl|public.roll_call_events",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "trips",
+        "offline_meeting_generation"
+      ],
+      "writes": [
+        "s|col|public.trips.offline_meeting_generation",
+        "n|col|public.trips.offline_meeting_generation",
+        "e|col|public.trips.offline_meeting_generation"
+      ],
+      "reads": [
+        "n|tbl|public.trips",
+        "n|sch|public"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "bookings",
+        "name": "offline_assignment_generation",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "0",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "roll_call_events",
+        "name": "offline_meeting_generation",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "roll_call_events",
+        "name": "offline_assignment_generation",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "trips",
+        "name": "offline_meeting_generation",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "0",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    }
+  ]
+}

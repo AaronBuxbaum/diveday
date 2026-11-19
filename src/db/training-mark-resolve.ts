@@ -16,8 +16,9 @@ import {
 } from "@/lib/training-mark";
 import type { DbExecutor } from "./client";
 import { queryAll } from "./query-helpers";
+import { effectiveCausalRowsForDb } from "./roll-call-causal-store";
 import { oldestMarkFirst } from "./roll-call-order";
-import { crewMarks, markCrewPersonId } from "./roll-call-subject";
+import { crewMarks } from "./roll-call-subject";
 import {
   bookings,
   courses,
@@ -28,6 +29,7 @@ import {
   tripDives,
   trips,
 } from "./schema";
+import { rollCallDayIndex } from "./trip-meeting-windows";
 import { liveTrip } from "./trips-live";
 import { seatNotCancelled } from "./trips-queries";
 
@@ -189,9 +191,8 @@ export async function trustedCrewOfTrips(
     () =>
       db
         .select({
-          tripId: rollCallEvents.tripId,
-          personId: markCrewPersonId(),
-          status: rollCallEvents.status,
+          event: rollCallEvents,
+          day: rollCallDayIndex(),
         })
         .from(rollCallEvents)
         .where(
@@ -207,7 +208,9 @@ export async function trustedCrewOfTrips(
   ]);
   // The latest crew-count mark per (trip, person): "not boarded" keeps them off.
   const latest = new Map<string, string>();
-  for (const event of counted) latest.set(`${event.tripId}:${event.personId}`, event.status);
+  for (const { event } of await effectiveCausalRowsForDb(db, counted)) {
+    if (event.crewPersonId) latest.set(`${event.tripId}:${event.crewPersonId}`, event.status);
+  }
   const rowsByTrip = new Map<string, typeof rows>();
   for (const row of rows) {
     if (latest.get(`${row.tripId}:${row.personId}`) === "not_boarded") continue;

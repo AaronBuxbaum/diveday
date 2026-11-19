@@ -13,8 +13,9 @@ import { and, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
 import { liveTrip, seatNotCancelled } from "@/db/trips";
 import { hasReturned } from "@/lib/trips";
 import type { AppDb } from "../../db/client";
+import { effectiveCausalRowsForDb } from "../../db/roll-call-causal-store";
 import { oldestMarkFirst } from "../../db/roll-call-order";
-import { crewMarks, markBookingId, markCrewPersonId, seatMarks } from "../../db/roll-call-subject";
+import { asCrewMark, asSeatMark, crewMarks, seatMarks } from "../../db/roll-call-subject";
 import {
   bookings,
   courses,
@@ -316,7 +317,7 @@ export async function listRollCallGaps(
   if (sailed.length === 0) return [];
   const tripIds = sailed.map((trip) => trip.id);
 
-  const [roster, events, crewEvents] = await Promise.all([
+  const [roster, rawEvents, rawCrewEvents] = await Promise.all([
     db
       .select({
         tripId: bookings.tripId,
@@ -328,14 +329,8 @@ export async function listRollCallGaps(
       .where(and(eq(bookings.shopId, shopId), inArray(bookings.tripId, tripIds), seatNotCancelled)),
     db
       .select({
-        bookingId: markBookingId(),
-        checkpoint: rollCallEvents.checkpoint,
-        status: rollCallEvents.status,
+        event: rollCallEvents,
         day: rollCallDayIndex(),
-        evidenceConflict: rollCallEvents.evidenceConflict,
-        occurredAt: rollCallEvents.occurredAt,
-        id: rollCallEvents.id,
-        retracts: rollCallEvents.retractsEventId,
       })
       .from(rollCallEvents)
       // Same guard `boardedCountsByTrip` applies: a booking cancelled after the
@@ -356,15 +351,8 @@ export async function listRollCallGaps(
       .orderBy(...oldestMarkFirst()),
     db
       .select({
-        tripId: rollCallEvents.tripId,
-        personId: markCrewPersonId(),
-        checkpoint: rollCallEvents.checkpoint,
-        status: rollCallEvents.status,
+        event: rollCallEvents,
         day: rollCallDayIndex(),
-        evidenceConflict: rollCallEvents.evidenceConflict,
-        occurredAt: rollCallEvents.occurredAt,
-        id: rollCallEvents.id,
-        retracts: rollCallEvents.retractsEventId,
       })
       .from(rollCallEvents)
       // The crew counterpart of the cancelled-booking guard above: a person
@@ -388,6 +376,35 @@ export async function listRollCallGaps(
       )
       .orderBy(...oldestMarkFirst()),
   ]);
+  const events = (await effectiveCausalRowsForDb(db, rawEvents)).map(({ event: raw, day }) => {
+    const event = asSeatMark(raw);
+    return {
+      bookingId: event.bookingId,
+      checkpoint: event.checkpoint,
+      status: event.status,
+      day,
+      evidenceConflict: event.evidenceConflict,
+      occurredAt: event.occurredAt,
+      id: event.id,
+      retracts: event.retractsEventId,
+    };
+  });
+  const crewEvents = (await effectiveCausalRowsForDb(db, rawCrewEvents)).map(
+    ({ event: raw, day }) => {
+      const event = asCrewMark(raw);
+      return {
+        tripId: event.tripId,
+        personId: event.crewPersonId,
+        checkpoint: event.checkpoint,
+        status: event.status,
+        day,
+        evidenceConflict: event.evidenceConflict,
+        occurredAt: event.occurredAt,
+        id: event.id,
+        retracts: event.retractsEventId,
+      };
+    },
+  );
 
   // Seats the desk turned away: off the boat at any checkpoint nobody at the
   // boat has recorded them at (`isTurnedAwayOffBoat`, issue #2907).

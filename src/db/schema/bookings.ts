@@ -156,6 +156,8 @@ export const bookings = pgTable(
     personId: uuid("person_id")
       .notNull()
       .references(() => people.id),
+    /** Advances when the person or departure represented by this seat changes. */
+    offlineAssignmentGeneration: integer("offline_assignment_generation").notNull().default(0),
     /**
      * The diver asked for enriched air on this trip — billed per dive. Only
      * written for a diver with a verified nitrox card (src/db/nitrox.ts); the
