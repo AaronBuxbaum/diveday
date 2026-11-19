@@ -1,28 +1,39 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { DiveDayIcon } from "@/components/DiveDayIcon";
 import { buttonClass } from "@/components/ui/button";
 import { StatusMark } from "@/components/ui/StatusMark";
 
-type Member = "dana" | "rob" | "mia" | "you";
+type Crew = "sal" | "keiko" | "marcus";
+type Member = Crew | "you";
+type Photo = "tom" | "tomasz" | "boat";
 
-/** Who sends each line, in order. The words come from the bundle; the cast and the order are the scene. */
-const SENDERS = [
-  "dana",
-  "rob",
-  "dana",
-  "mia",
-  "mia",
-  "rob",
-  "you",
-  "dana",
-  "rob",
-  "mia",
-] as const satisfies readonly Member[];
+/**
+ * Who sends each line, in order, and which carry a photo. The words come from
+ * the bundle; the cast, the order and the pictures are the scene.
+ */
+const SCRIPT: readonly { from: Member; photo?: Photo }[] = [
+  { from: "keiko" },
+  { from: "sal" },
+  { from: "keiko" },
+  { from: "marcus", photo: "tom" },
+  { from: "keiko" },
+  { from: "marcus", photo: "tomasz" },
+  { from: "sal" },
+  { from: "keiko" },
+  { from: "marcus" },
+  { from: "sal", photo: "boat" },
+  { from: "keiko" },
+  { from: "sal" },
+  { from: "you" },
+  { from: "keiko" },
+  { from: "marcus" },
+  { from: "sal" },
+];
 
-/** The line that carries the shop's list: "It's on the list". */
-const CARD_LINE = 6;
+/** The line that carries the shop's list: "It's in DiveDay". */
+const CARD_LINE = 12;
 
 type CardState = "open" | "sent" | "signed";
 
@@ -32,41 +43,67 @@ type CardState = "open" | "sent" | "signed";
  * moment that waits for the visitor's tap on the nudge takes it for them when
  * it runs out.
  */
-type Frame = { shown: number; typing: Member | null; card: CardState; ms: number };
+type Frame = { shown: number; typing: Crew | null; card: CardState; ms: number };
 
-const FRAMES: readonly Frame[] = [
-  { shown: 1, typing: "rob", card: "open", ms: 1300 },
-  { shown: 2, typing: "dana", card: "open", ms: 1500 },
-  { shown: 3, typing: "mia", card: "open", ms: 1400 },
-  { shown: 4, typing: "mia", card: "open", ms: 1300 },
-  { shown: 5, typing: "rob", card: "open", ms: 1900 },
-  { shown: 6, typing: null, card: "open", ms: 1600 },
-  { shown: 7, typing: null, card: "open", ms: 3600 },
-  { shown: 7, typing: null, card: "sent", ms: 1700 },
-  { shown: 7, typing: "dana", card: "signed", ms: 1700 },
-  { shown: 8, typing: "rob", card: "signed", ms: 1300 },
-  { shown: 9, typing: "mia", card: "signed", ms: 1500 },
-  { shown: 10, typing: null, card: "signed", ms: 0 },
-];
+/** How long the nudge waits for the visitor before the chat sends it, in ms. */
+const NUDGE_WAIT_MS = 3600;
+/** From the nudge to the signature, in ms. */
+const SIGN_MS = 1700;
 
-const LAST = FRAMES.length - 1;
-/** The moment the nudge waits for a tap. */
-const NUDGE_FRAME = FRAMES.findIndex((frame) => frame.shown > CARD_LINE);
+/** Typing takes longer for a longer line, a photo takes a moment to find, and the owner's answer comes after a beat. */
+function paceBefore(next: (typeof SCRIPT)[number], text: string) {
+  if (next.from === "you") return 1500;
+  if (next.photo) return 1600;
+  return Math.min(1700, 850 + text.length * 26);
+}
+
+function framesFor(lines: readonly string[]): Frame[] {
+  const frames: Frame[] = [];
+  const typist = (index: number): Crew | null => {
+    const from = SCRIPT[index]?.from;
+    return from && from !== "you" ? from : null;
+  };
+  for (let shown = 1; shown <= SCRIPT.length; shown += 1) {
+    const next = SCRIPT[shown];
+    const ms = next ? paceBefore(next, lines[shown] ?? "") : 0;
+    if (shown === CARD_LINE + 1) {
+      frames.push({ shown, typing: null, card: "open", ms: NUDGE_WAIT_MS });
+      frames.push({ shown, typing: null, card: "sent", ms: SIGN_MS });
+      frames.push({ shown, typing: typist(shown), card: "signed", ms });
+    } else {
+      frames.push({
+        shown,
+        typing: typist(shown),
+        card: shown > CARD_LINE ? "signed" : "open",
+        ms,
+      });
+    }
+  }
+  return frames;
+}
+
+/** The moment the nudge waits for a tap: the first with the list on screen. */
+const NUDGE_FRAME = CARD_LINE;
 
 export type GroupChatLabels = {
-  region: string;
   group: string;
   members: string;
   stamp: string;
-  names: Record<Exclude<Member, "you">, string>;
-  typing: Record<Exclude<Member, "you">, string>;
+  names: Record<Crew, string>;
+  typing: Record<Crew, string>;
+  /** Each crew member's face, drawn by the caller at the avatar's size. */
+  avatars: Record<Crew, ReactNode>;
   lines: readonly string[];
+  /** The pictures the crew sends, each with its own alt text. */
+  photos: Record<Photo, ReactNode>;
   card: {
     title: string;
     readyBefore: string;
     readyAfter: string;
     needsYou: string;
     diver: string;
+    /** The diver's face, the same one the crew sent a moment ago. */
+    avatar: ReactNode;
     unsigned: string;
     nudge: string;
     sent: string;
@@ -77,19 +114,15 @@ export type GroupChatLabels = {
   note: string;
 };
 
-const AVATAR_TONE: Record<Exclude<Member, "you">, string> = {
-  dana: "bg-primary-tint text-primary",
-  rob: "bg-accent-tint text-accent-deep",
-  mia: "bg-shallows text-foreground",
-};
+const PHOTO_WIDTH: Record<Photo, string> = { tom: "w-36", tomasz: "w-36", boat: "w-48" };
 
-function Avatar({ member, name }: { member: Exclude<Member, "you">; name: string }) {
+function Avatar({ children }: { children: ReactNode }) {
   return (
     <span
       aria-hidden="true"
-      className={`grid size-7 shrink-0 place-items-center rounded-full text-xs font-semibold ${AVATAR_TONE[member]}`}
+      className="block size-7 shrink-0 overflow-hidden rounded-full bg-surface-sunken"
     >
-      {name.slice(0, 1)}
+      {children}
     </span>
   );
 }
@@ -122,12 +155,15 @@ function ListCard({
       </p>
       <p className="mt-3 text-xs font-semibold text-muted">{labels.needsYou}</p>
       <div className="mt-1 flex min-h-11 items-center gap-2 border-t border-border pt-2">
-        <StatusMark variant={signed ? "success" : "pending"} size="md" />
+        <Avatar>{labels.avatar}</Avatar>
         <div className="min-w-0 flex-1">
           <p className={`text-sm font-semibold ${signed ? "text-muted line-through" : ""}`}>
             {labels.diver}
           </p>
-          <p className="text-xs text-muted">{signed ? labels.signed : labels.unsigned}</p>
+          <p className="flex items-center gap-1 text-xs text-muted">
+            {signed ? <StatusMark variant="success" size="sm" /> : null}
+            {signed ? labels.signed : labels.unsigned}
+          </p>
         </div>
         {state === "open" ? (
           <button
@@ -161,15 +197,19 @@ function ListCard({
  * once it is on screen, each line landing after its sender's typing dots.
  */
 export function MarketingGroupChat({ labels }: { labels: GroupChatLabels }) {
-  const [frame, setFrame] = useState(LAST);
+  const frames = useMemo(() => framesFor(labels.lines), [labels.lines]);
+  const last = frames.length - 1;
+  // `null` is the finished chat, which is what the server sends.
+  const [at, setAt] = useState<number | null>(null);
   const [ready, setReady] = useState(false);
   const [onScreen, setOnScreen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
-  const current = FRAMES[frame] ?? FRAMES[LAST];
+  const frame = at ?? last;
+  const current = frames[frame] ?? { shown: SCRIPT.length, typing: null, card: "signed", ms: 0 };
 
   // Rewind before paint, unless motion is unwelcome.
   useLayoutEffect(() => {
-    if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) setFrame(0);
+    if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) setAt(0);
     setReady(true);
   }, []);
 
@@ -185,24 +225,29 @@ export function MarketingGroupChat({ labels }: { labels: GroupChatLabels }) {
   }, []);
 
   useEffect(() => {
-    if (!ready || !onScreen || frame >= LAST) return;
-    const timer = window.setTimeout(() => setFrame((at) => Math.min(LAST, at + 1)), current.ms);
+    if (!ready || !onScreen || frame >= last) return;
+    const timer = window.setTimeout(() => setAt(frame + 1), current.ms);
     return () => window.clearTimeout(timer);
-  }, [ready, onScreen, frame, current.ms]);
+  }, [ready, onScreen, frame, last, current.ms]);
 
   const lines = labels.lines.slice(0, current.shown);
 
   return (
-    <div ref={rootRef} data-chat-frame={frame} data-chat-end={frame === LAST ? "" : undefined}>
+    <div
+      ref={rootRef}
+      data-chat-frame={frame}
+      data-chat-ms={current.ms}
+      data-chat-end={frame === last ? "" : undefined}
+    >
       <div className="marketing-roll-call-frame mx-auto w-full max-w-[22.5rem] rounded-[2.5rem] border-[9px] border-device-frame bg-device-frame p-1.5">
         <div className="mx-auto mb-1.5 h-1.5 w-20 rounded-full bg-muted/50" />
         <div className="overflow-hidden rounded-[calc(2.5rem-9px-var(--spacing)*1.5)] bg-surface text-start">
           <div className="flex items-center gap-2 border-b border-border px-3 py-2.5">
             <DiveDayIcon name="chevron-left" className="size-5 shrink-0 text-primary" />
             <span aria-hidden="true" className="flex shrink-0 -space-x-2">
-              {(["dana", "rob", "mia"] as const).map((member) => (
+              {(["sal", "keiko", "marcus"] as const).map((member) => (
                 <span key={member} className="rounded-full ring-2 ring-surface">
-                  <Avatar member={member} name={labels.names[member]} />
+                  <Avatar>{labels.avatars[member]}</Avatar>
                 </span>
               ))}
             </span>
@@ -217,8 +262,9 @@ export function MarketingGroupChat({ labels }: { labels: GroupChatLabels }) {
             <ol className="flex flex-col">
               <li className="pb-2 text-center text-xs text-muted">{labels.stamp}</li>
               {lines.map((text, index) => {
-                const from: Member = SENDERS[index] ?? "you";
-                const opensRun = SENDERS[index - 1] !== from;
+                const from: Member = SCRIPT[index]?.from ?? "you";
+                const photo = SCRIPT[index]?.photo;
+                const opensRun = SCRIPT[index - 1]?.from !== from;
                 if (from === "you") {
                   return (
                     <li
@@ -234,7 +280,7 @@ export function MarketingGroupChat({ labels }: { labels: GroupChatLabels }) {
                           labels={labels.card}
                           state={current.card}
                           waiting={frame === NUDGE_FRAME}
-                          onNudge={() => setFrame(NUDGE_FRAME + 1)}
+                          onNudge={() => setAt(NUDGE_FRAME + 1)}
                         />
                       ) : null}
                     </li>
@@ -247,13 +293,20 @@ export function MarketingGroupChat({ labels }: { labels: GroupChatLabels }) {
                     className={`marketing-chat-in flex items-end gap-2 ${opensRun ? "mt-3" : "mt-1"}`}
                   >
                     {opensRun ? (
-                      <Avatar member={from} name={labels.names[from]} />
+                      <Avatar>{labels.avatars[from]}</Avatar>
                     ) : (
                       <span className="w-7 shrink-0" />
                     )}
-                    <div className="min-w-0 max-w-[80%]">
+                    <div className="flex min-w-0 max-w-[80%] flex-col items-start">
                       {opensRun ? (
                         <p className="mb-0.5 ps-3 text-xs text-muted">{labels.names[from]}</p>
+                      ) : null}
+                      {photo ? (
+                        <div
+                          className={`mb-1 overflow-hidden rounded-2xl bg-surface-sunken ${PHOTO_WIDTH[photo]}`}
+                        >
+                          {labels.photos[photo]}
+                        </div>
                       ) : null}
                       <p className="rounded-2xl rounded-es-md bg-surface-sunken px-3 py-2 text-sm">
                         {text}
@@ -262,12 +315,12 @@ export function MarketingGroupChat({ labels }: { labels: GroupChatLabels }) {
                   </li>
                 );
               })}
-              {current.typing && current.typing !== "you" ? (
+              {current.typing ? (
                 <li
                   key={`typing-${current.shown}`}
                   className="marketing-chat-in mt-3 flex items-end gap-2"
                 >
-                  <Avatar member={current.typing} name={labels.names[current.typing]} />
+                  <Avatar>{labels.avatars[current.typing]}</Avatar>
                   <p className="flex h-9 items-center gap-1 rounded-2xl rounded-es-md bg-surface-sunken px-3">
                     <span className="sr-only">{labels.typing[current.typing]}</span>
                     {[0, 1, 2].map((dot) => (
@@ -300,9 +353,9 @@ export function MarketingGroupChat({ labels }: { labels: GroupChatLabels }) {
         <button
           type="button"
           data-try-tap
-          onClick={() => setFrame(0)}
+          onClick={() => setAt(0)}
           className={`${buttonClass({ variant: "link", size: "sm" })} ${
-            ready && frame === LAST ? "" : "invisible"
+            ready && frame === last ? "" : "invisible"
           }`}
         >
           {labels.replay}

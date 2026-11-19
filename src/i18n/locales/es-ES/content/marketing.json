@@ -99,22 +99,33 @@
     "stepLink": "{name}",
     "percentArm": {},
     "chat": {
-      "region": "El chat de grupo de un centro de buceo la noche antes de la salida de las 7:30.",
+      "region": "El equipo de un centro de buceo en un chat de grupo la noche antes de la salida de las 7:30.",
       "group": "Equipo de Blue Mantis",
-      "members": "Dana, Rob, Mia y tú",
+      "members": "Sal, Keiko, Marcus y tú",
       "stamp": "Martes, 9:42 de la noche",
       "typing": "{name} está escribiendo",
       "lines": {
         "1": "¿Tom llegó a firmar su exención?",
         "2": "¿Cuál Tom?",
         "3": "Tom el del barco, no Tom el del alquiler",
-        "4": "Reviso la carpeta",
-        "5": "La carpeta está en el barco",
-        "6": "El barco está cerrado. Tengo la llave y ya estoy en la cama.",
-        "7": "Está en la lista",
-        "8": "¿Y eso es todo?",
-        "9": "Me vuelvo a dormir",
-        "10": "Dejo la carpeta en el barco"
+        "4": "¿Este Tom?",
+        "5": "Ese es Tom el del alquiler",
+        "6": "¿Este?",
+        "7": "Ese es Tomasz. También le dicen Tom.",
+        "8": "Las firmadas están en la carpeta",
+        "9": "¿Dónde está la carpeta?",
+        "10": "En el barco",
+        "11": "¿Puedes ir a ver?",
+        "12": "Ya estoy en la cama",
+        "13": "Está en DiveDay",
+        "14": "¿Y eso es todo?",
+        "15": "Entonces Tom el del alquiler es Tom el del barco",
+        "16": "Buenas noches"
+      },
+      "photos": {
+        "tom": "Una foto de Tom Okafor en la marina",
+        "tomasz": "Una foto de Tomasz en la marina",
+        "boat": "Una foto del barco amarrado en el muelle"
       },
       "card": {
         "title": "La salida de mañana a las 7:30",
@@ -127,7 +138,7 @@
       },
       "composer": "Mensaje",
       "replay": "Ver de nuevo",
-      "note": "Esa lista viene de DiveDay. Muestra quién aún no puede embarcar, y un toque envía el recordatorio."
+      "note": "Cada exención, tarjeta y pago ya está en DiveDay, así que nadie tiene que preguntar en el chat del grupo."
     }
   },
   "common": {

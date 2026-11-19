@@ -89,15 +89,19 @@ and listed the rest in a closed index on `/product`.
   checklist is its group, whole.
 - **The homepage follows one booking** (`src/app/(marketing)/page.tsx`). The title says what the shop gets
   ("Every diver booked, signed, checked and accounted for") and the lede says what DiveDay is: the
-  journey from online booking to dock readiness. Beside the headline, a phone shows a dive shop's
-  group chat the night before the 7:30 boat (`MarketingGroupChat`; Aaron, 2026-11-19). The crew
-  asks who signed a waiver, each line landing after its sender's typing dots, until the owner
-  answers with the shop's list: eight of nine divers ready, and Tom Okafor's waiver not signed. The
-  visitor can tap "Nudge waiver", or the chat taps it for them. The row then reads signed, the count
-  reads nine of nine, and the crew signs off. One note under the phone says what the list is. The
-  server sends the finished chat, so a reader without script or with reduced motion sees the end,
-  and "Play again" runs it from the first line. The chat is a joke at the shop's old evening, never
-  a claim about a customer: it names no real shop and counts only the sample boat. Below the hero,
+  journey from online booking to dock readiness. Beside the headline, a phone shows the demo shop's
+  crew in a group chat the night before the 7:30 boat (`MarketingGroupChat`; Aaron, 2026-11-19).
+  Sal, Keiko, and Marcus (`src/db/seed-cast.ts`) try to work out whether Tom signed his waiver,
+  and which Tom: they trade photos of Tom Okafor and Tomasz, and the signed forms are in a binder
+  on the boat while the captain is in bed. Each line lands after its sender's typing dots. The
+  owner answers "It's in DiveDay" with the shop's list: eight of nine divers ready, and Tom
+  Okafor's waiver not signed. The visitor can tap "Nudge waiver", or the chat taps it for them.
+  The row then reads signed, the count reads nine of nine, and the crew says good night. One note
+  under the phone makes the claim the joke sets up. The pictures in the chat are the demo's own
+  generated portraits and boat. The server sends the finished chat, so a reader without script or
+  with reduced motion sees the end, and "Play again" runs it from the first line. The chat is a
+  joke at the shop's old evening, never a claim about a customer: it names no real shop and counts
+  only the sample boat. Below the hero,
   the walkthrough follows Priya’s booking from the storefront to the recap and review. Its check-in
   step shows the arrivals desk and its roll-call step shows the captain’s screen.
   A step ends in its feature page rather than in a door into the demo, because that page's own door

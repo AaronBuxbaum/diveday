@@ -5,20 +5,24 @@ import { renderToString } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { type GroupChatLabels, MarketingGroupChat } from "./MarketingGroupChat";
 
+const LINES = Array.from({ length: 16 }, (_, index) => `line ${index + 1}`);
+
 const labels: GroupChatLabels = {
-  region: "chat",
   group: "Crew",
-  members: "Dana, Rob, Mia, and you",
+  members: "Sal, Keiko, Marcus, and you",
   stamp: "Tuesday",
-  names: { dana: "Dana", rob: "Rob", mia: "Mia" },
-  typing: { dana: "Dana is typing", rob: "Rob is typing", mia: "Mia is typing" },
-  lines: ["one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"],
+  names: { sal: "Sal", keiko: "Keiko", marcus: "Marcus" },
+  typing: { sal: "Sal is typing", keiko: "Keiko is typing", marcus: "Marcus is typing" },
+  avatars: { sal: null, keiko: null, marcus: null },
+  lines: LINES,
+  photos: { tom: <span>photo of Tom</span>, tomasz: null, boat: null },
   card: {
     title: "Tomorrow",
     readyBefore: "8 of 9",
     readyAfter: "9 of 9",
     needsYou: "Needs you",
     diver: "Tom",
+    avatar: null,
     unsigned: "Not signed",
     nudge: "Nudge",
     sent: "Sent",
@@ -28,6 +32,10 @@ const labels: GroupChatLabels = {
   replay: "Play again",
   note: "note",
 };
+
+/** One timer per moment, so each moment is advanced in its own act; no moment lasts longer than this. */
+const MOMENT_MS = 4000;
+const nextMoment = () => act(() => void vi.advanceTimersByTime(MOMENT_MS));
 
 /** jsdom has neither; the chat asks both before it moves. */
 function stubBrowser({ reducedMotion }: { reducedMotion: boolean }) {
@@ -58,50 +66,55 @@ describe("the homepage group chat", () => {
   it("is sent finished, so a reader without script sees the list at nine of nine", () => {
     const html = renderToString(<MarketingGroupChat labels={labels} />);
     expect(html).toContain("9 of 9");
-    expect(html).toContain("ten");
+    expect(html).toContain("line 16");
     expect(html).not.toContain("8 of 9");
   });
 
   it("stays finished for a reader who asked for reduced motion", () => {
     stubBrowser({ reducedMotion: true });
     render(<MarketingGroupChat labels={labels} />);
-    act(() => void vi.advanceTimersByTime(60_000));
+    act(() => void vi.advanceTimersByTime(120_000));
     expect(screen.getByText("9 of 9")).toBeTruthy();
-    expect(screen.queryByText("Rob is typing")).toBeNull();
+    expect(screen.queryByText("Sal is typing")).toBeNull();
   });
 
-  it("rewinds, lands each line after its sender's dots, and takes the nudge itself if nobody does", () => {
+  it("rewinds, lands each line after its sender's dots, and sends the nudge itself if nobody does", () => {
     stubBrowser({ reducedMotion: false });
     render(<MarketingGroupChat labels={labels} />);
-    expect(screen.getByText("one")).toBeTruthy();
-    expect(screen.queryByText("two")).toBeNull();
-    expect(screen.getByText("Rob is typing")).toBeTruthy();
+    expect(screen.getByText("line 1")).toBeTruthy();
+    expect(screen.queryByText("line 2")).toBeNull();
+    expect(screen.getByText("Sal is typing")).toBeTruthy();
 
-    act(() => void vi.advanceTimersByTime(1300));
-    expect(screen.getByText("two")).toBeTruthy();
+    nextMoment();
+    expect(screen.getByText("line 2")).toBeTruthy();
+    // The fourth line is a photo with its caption.
+    nextMoment();
+    expect(screen.queryByText("photo of Tom")).toBeNull();
+    nextMoment();
+    expect(screen.getByText("photo of Tom")).toBeTruthy();
 
-    // One timer per moment, so each is advanced in its own act.
-    for (let moment = 0; moment < 12; moment += 1) act(() => void vi.advanceTimersByTime(4000));
+    for (let moment = 0; moment < 20; moment += 1) nextMoment();
     expect(screen.getByText("9 of 9")).toBeTruthy();
-    expect(screen.getByText("ten")).toBeTruthy();
+    expect(screen.getByText("line 16")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Nudge" })).toBeNull();
   });
 
   it("lets the visitor send the nudge, and plays again from the first line", () => {
     stubBrowser({ reducedMotion: false });
     render(<MarketingGroupChat labels={labels} />);
-    for (let moment = 0; moment < 6; moment += 1) act(() => void vi.advanceTimersByTime(1900));
+    // Twelve lines land after the first before the owner's answer brings the list.
+    for (let moment = 0; moment < 12; moment += 1) nextMoment();
     expect(screen.getByText("8 of 9")).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: "Nudge" }));
     expect(screen.getByText("Sent")).toBeTruthy();
-    act(() => void vi.advanceTimersByTime(1700));
+    nextMoment();
     expect(screen.getByText("9 of 9")).toBeTruthy();
     expect(screen.getByText("Signed")).toBeTruthy();
 
-    for (let moment = 0; moment < 4; moment += 1) act(() => void vi.advanceTimersByTime(4000));
+    for (let moment = 0; moment < 4; moment += 1) nextMoment();
     fireEvent.click(screen.getByRole("button", { name: "Play again" }));
-    expect(screen.queryByText("two")).toBeNull();
+    expect(screen.queryByText("line 2")).toBeNull();
     expect(screen.queryByText("9 of 9")).toBeNull();
   });
 });

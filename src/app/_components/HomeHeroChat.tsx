@@ -1,32 +1,93 @@
+import Image from "next/image";
 import { MarketingGroupChat } from "@/components/MarketingGroupChat";
 import { MarketingHeroMotion } from "@/components/MarketingReveal";
 import { diverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
 
 /** The crew's lines in order; `marketing.home.chat.lines` holds one key per line. */
-const LINES = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"] as const;
+const LINES = [
+  "1",
+  "2",
+  "3",
+  "4",
+  "5",
+  "6",
+  "7",
+  "8",
+  "9",
+  "10",
+  "11",
+  "12",
+  "13",
+  "14",
+  "15",
+  "16",
+] as const;
 
-/** The crew's group chat the night before the 7:30 boat, beside the homepage headline. */
+/** A face at the chat's avatar size; the name beside it is its label. */
+function face(src: string) {
+  return <Image src={src} width={56} height={56} alt="" className="size-7 object-cover" />;
+}
+
+/** A portrait someone sends into the chat. */
+function portrait(src: string, alt: string) {
+  return (
+    <Image
+      src={src}
+      width={256}
+      height={256}
+      alt={alt}
+      className="aspect-square w-36 object-cover"
+    />
+  );
+}
+
+/**
+ * The demo shop's crew in a group chat the night before the 7:30 boat, beside
+ * the homepage headline. The cast and the two Toms are the sample shop's own
+ * (`src/db/seed-cast.ts`), so the faces here are the ones a visitor meets in
+ * the demo.
+ */
 export function HomeHeroChat({ locale }: { locale: DiverLocale }) {
   const t = diverTranslator(locale);
-  // i18n-exempt: sample crew names
-  const names = { dana: "Dana", rob: "Rob", mia: "Mia" };
+  // i18n-exempt: sample crew names shared with the demo shop
+  const names = { sal: "Sal", keiko: "Keiko", marcus: "Marcus" };
   return (
     <MarketingHeroMotion>
       <figure aria-label={t("marketing.home.chat.region")}>
         <MarketingGroupChat
           labels={{
-            region: t("marketing.home.chat.region"),
             group: t("marketing.home.chat.group"),
             members: t("marketing.home.chat.members"),
             stamp: t("marketing.home.chat.stamp"),
             names,
             typing: {
-              dana: t("marketing.home.chat.typing", { name: names.dana }),
-              rob: t("marketing.home.chat.typing", { name: names.rob }),
-              mia: t("marketing.home.chat.typing", { name: names.mia }),
+              sal: t("marketing.home.chat.typing", { name: names.sal }),
+              keiko: t("marketing.home.chat.typing", { name: names.keiko }),
+              marcus: t("marketing.home.chat.typing", { name: names.marcus }),
+            },
+            avatars: {
+              sal: face("/demo-staff/sal-moretti.webp"),
+              keiko: face("/demo-staff/keiko-tanaka.webp"),
+              marcus: face("/demo-staff/marcus-webb.webp"),
             },
             lines: LINES.map((line) => t(`marketing.home.chat.lines.${line}`)),
+            photos: {
+              tom: portrait("/demo-divers/tom-okafor.webp", t("marketing.home.chat.photos.tom")),
+              tomasz: portrait(
+                "/demo-divers/tomasz-wojcik.webp",
+                t("marketing.home.chat.photos.tomasz"),
+              ),
+              boat: (
+                <Image
+                  src="/demo-shop/generated/boat.webp"
+                  width={384}
+                  height={256}
+                  alt={t("marketing.home.chat.photos.boat")}
+                  className="aspect-[3/2] w-48 object-cover"
+                />
+              ),
+            },
             card: {
               title: t("marketing.home.chat.card.title"),
               readyBefore: t("marketing.home.chat.card.ready", { ready: 8 }),
@@ -34,6 +95,7 @@ export function HomeHeroChat({ locale }: { locale: DiverLocale }) {
               needsYou: t("marketing.home.chat.card.needsYou"),
               // i18n-exempt: sample diver name shared with the booking walkthrough
               diver: "Tom Okafor",
+              avatar: face("/demo-divers/tom-okafor.webp"),
               unsigned: t("marketing.home.chat.card.unsigned"),
               nudge: t("marketing.home.chat.card.nudge"),
               sent: t("marketing.home.chat.card.sent"),

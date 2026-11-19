@@ -104,26 +104,29 @@ test("the crew's group chat plays to nine of nine ready, and the visitor can sen
   await expect(chat.getByText(t("marketing.home.chat.lines.1"), { exact: true })).toBeVisible();
   await expect(ready(8)).toHaveCount(0);
 
-  // The owner's answer carries the list, one diver short, and the nudge is the visitor's to send.
+  // Each moment says how long it lasts, so the clock is stepped by exactly that and never by a guess.
+  const step = async () => {
+    const at = Number(await frame.getAttribute("data-chat-frame"));
+    await page.clock.runFor(Number(await frame.getAttribute("data-chat-ms")));
+    await expect(frame).toHaveAttribute("data-chat-frame", String(at + 1));
+  };
+
+  // The crew goes round on which Tom, with a photo of each, until the owner's answer brings the
+  // list, one diver short. The nudge is the visitor's to send.
   const nudge = chat.getByRole("button", { name: t("marketing.home.chat.card.nudge") });
-  for (const moment of ["1", "2", "3", "4", "5", "6"]) {
-    await page.clock.runFor(2000);
-    await expect(frame).toHaveAttribute("data-chat-frame", moment);
-  }
+  for (let line = 2; line <= 13; line += 1) await step();
+  await expect(chat.getByRole("img", { name: t("marketing.home.chat.photos.tom") })).toBeVisible();
   await expect(ready(8)).toBeVisible();
   await nudge.click();
   await expect(chat.getByText(t("marketing.home.chat.card.sent"), { exact: true })).toBeVisible();
-  await page.clock.runFor(2000);
+  await step();
   await expect(ready(9)).toBeVisible();
   await expect(chat.getByText(t("marketing.home.chat.card.signed"), { exact: true })).toBeVisible();
 
   // It ends on the crew's last line, and can be played again from the first.
-  for (const moment of ["9", "10", "11"]) {
-    await page.clock.runFor(2000);
-    await expect(frame).toHaveAttribute("data-chat-frame", moment);
-  }
+  for (let line = 14; line <= 16; line += 1) await step();
   await expect(frame).toHaveAttribute("data-chat-end", "");
-  await expect(chat.getByText(t("marketing.home.chat.lines.10"), { exact: true })).toBeVisible();
+  await expect(chat.getByText(t("marketing.home.chat.lines.16"), { exact: true })).toBeVisible();
   await chat.getByRole("button", { name: t("marketing.home.chat.replay") }).click();
   await expect(frame).toHaveAttribute("data-chat-frame", "0");
   await expect(ready(9)).toHaveCount(0);
