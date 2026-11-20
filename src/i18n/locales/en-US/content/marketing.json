@@ -974,38 +974,6 @@
     "lockNote": "Today’s price, locked for one year for founding shops.",
     "trialNote": "Try a shop of your own free for 2 weeks, with no card. Your shop keeps working after the trial while you arrange the move to a paid plan with {email}.",
     "earlyAccessBadge": "Early access",
-    "invoice": {
-      "title": "The invoice",
-      "setup": {
-        "label": "Setup",
-        "value": "None"
-      },
-      "logins": {
-        "label": "Staff logins",
-        "value": "All of them"
-      },
-      "tiers": {
-        "label": "Feature tiers",
-        "value": "One plan"
-      },
-      "cut": {
-        "label": "Cut of your bookings",
-        "value": "None"
-      },
-      "cards": {
-        "label": "Card processing",
-        "value": "Stripe’s fee, paid to Stripe"
-      },
-      "contract": {
-        "label": "Contract",
-        "value": "Month to month"
-      },
-      "leaving": {
-        "label": "Data export",
-        "value": "A ZIP from Settings, any day",
-        "pointer": "Your records go with you. See below."
-      }
-    },
     "notes": {
       "title": "Notes",
       "note1": "Every staff login is in the price, front desk to captain. Nothing is counted per seat.",
@@ -1080,8 +1048,6 @@
     "closingTitle": "Every feature and every staff login are in the price",
     "percentArm": {
       "cadence": "of money recorded as received in DiveDay{hasBase, select, yes {, plus {base} a month} other {, with no monthly fee}}",
-      "invoiceFeeLabel": "DiveDay’s fee",
-      "invoiceFeeValue": "{percent} of money recorded as received in DiveDay",
       "whatCountsQuestion": "What counts toward the {percent}?",
       "whatCountsAnswer": "Money recorded as received in DiveDay, whether paid online, in cash, by bank transfer, on your own card machine or another method. Deposits count when received; an unpaid booking does not. Packages count when sold, never again when redeemed. Separately recorded tips, tax and pass-through fees, and imported history, are excluded. An amount without a separate tax breakdown counts in full. Refunds receive a credit at the original rate."
     },
