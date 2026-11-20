@@ -207,7 +207,9 @@ export function YearReport({
               ]}
             />
             {(money.counterTaxIncludedCents ?? 0) > 0 ? (
-              <p className="mt-1 text-end text-sm text-muted">{t("reports.counterTaxIncluded")}</p>
+              <p className="mt-1 text-sm text-muted sm:text-end">
+                {t("reports.counterTaxIncluded")}
+              </p>
             ) : null}
           </div>
         ) : null}
@@ -227,7 +229,7 @@ export function YearReport({
               ))}
             </ul>
             {restSites.length > 0 ? (
-              <p className="mt-3 text-end text-sm text-muted tabular-nums">
+              <p className="mt-3 text-sm text-muted sm:text-end tabular-nums">
                 {t("reports.year.sitesRest", { count: restSites.length, dives: restDives })}
               </p>
             ) : null}

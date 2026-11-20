@@ -8,19 +8,18 @@ import { Badge } from "@/components/ui/badge";
 import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
 import { LedgerGroup } from "@/components/ui/ledger";
 import { ShopNotice } from "@/components/ui/outcome";
-import { RowLink, Table, TBody, Td, THead, Th, Tr } from "@/components/ui/table";
 import { getOrdersIndex, ORDER_DEFAULT_RANGE_DAYS, ORDER_STATUSES } from "@/features/orders-index";
 import { requireShopSurface } from "@/features/session";
 import { ORDER_STATUS_KEYS } from "@/i18n/order-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
-import { formatCalendarDate, isValidCalendarDate } from "@/lib/calendar-date";
+import { isValidCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { formatShortDate } from "@/lib/format";
 import { noticeFromParam } from "@/lib/staff-notices";
-import { isManagedStorageUrl } from "@/lib/storage/blob-host";
 import { StaffListPagination } from "../_components/StaffListPagination";
 import { StaffSectionTabs } from "../_components/StaffSectionTabs";
+import { ImportedHistoryTable } from "./_components/ImportedHistoryTable";
 import { newOrderDoorFor, OrdersAddPanel } from "./_components/NewOrderPanel";
 import {
   FACT_SEPARATOR,
@@ -55,18 +54,6 @@ const OPERATION_UNFINISHED_KEYS: Record<string, StaffMessageKey> = {
   refund: "orders.index.paymentOps.unfinished.refund",
 };
 const OPERATION_UNFINISHED_FALLBACK: StaffMessageKey = "orders.index.paymentOps.unfinished.other";
-
-const IMPORTED_PAYMENT_DIRECTION_KEYS: Record<"payment" | "refund" | "unknown", StaffMessageKey> = {
-  payment: "orders.index.importedHistory.direction.payment",
-  refund: "orders.index.importedHistory.direction.refund",
-  unknown: "orders.index.importedHistory.direction.unknown",
-};
-
-/** A source URL is rendered only after import re-stored it, or when it is a same-origin legacy path. */
-function safeImportedDocumentUrl(url: string | null): string | null {
-  if (!url) return null;
-  return url.startsWith("/") || isManagedStorageUrl(url) ? url : null;
-}
 
 /** Keep refusals from creating an order on the order surface, where every staff
  * role can still read orders and find payment guidance. */
@@ -416,84 +403,12 @@ export default async function OrdersIndexPage({
             <p className="mt-2 max-w-3xl text-sm text-muted">
               {t("orders.index.importedHistory.detail")}
             </p>
-            <Table shellClassName="mt-4">
-              <THead>
-                <Th>{t("orders.index.table.diver")}</Th>
-                <Th hideBelow="sm">{t("orders.index.importedHistory.table.source")}</Th>
-                <Th hideBelow="sm">{t("orders.index.importedHistory.table.status")}</Th>
-                <Th>{t("orders.index.table.date")}</Th>
-                <Th numeric>{t("orders.index.table.amount")}</Th>
-              </THead>
-              <TBody>
-                {importedHistoryPage.rows.map(({ history, person }) => {
-                  const receiptDocumentUrl = safeImportedDocumentUrl(history.receiptDocumentUrl);
-                  return (
-                    <Tr key={history.id}>
-                      <Td align="middle">
-                        <RowLink
-                          href={`/shop/${shopSlug}/divers/${person.id}`}
-                          className="text-base font-medium text-foreground hover:text-primary hover:underline sm:text-sm"
-                        >
-                          {person.fullName}
-                        </RowLink>
-                        <div className="mt-1 text-base text-muted sm:hidden">
-                          {history.title ?? history.sourceReference ?? "—"}
-                        </div>
-                      </Td>
-                      {/* The section badge marks all rows as unverified; the receipt
-                          reference labels its document link when available. */}
-                      <Td muted hideBelow="sm" align="middle">
-                        <div className="text-base sm:text-sm">
-                          {history.title ?? history.sourceReference ?? "—"}
-                        </div>
-                        <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
-                          {history.sourceLabel ? <span>{history.sourceLabel}</span> : null}
-                          {receiptDocumentUrl ? (
-                            <a
-                              href={receiptDocumentUrl}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="font-medium text-primary underline underline-offset-2"
-                            >
-                              {history.receiptReference
-                                ? t("orders.index.importedHistory.receiptReference", {
-                                    reference: history.receiptReference,
-                                  })
-                                : t("orders.index.importedHistory.openReceipt")}
-                            </a>
-                          ) : history.receiptReference ? (
-                            <span>
-                              {t("orders.index.importedHistory.receiptReference", {
-                                reference: history.receiptReference,
-                              })}
-                            </span>
-                          ) : null}
-                        </div>
-                      </Td>
-                      <Td hideBelow="sm" align="middle">
-                        <div>{t(IMPORTED_PAYMENT_DIRECTION_KEYS[history.direction])}</div>
-                        {history.statusLabel ? (
-                          <div className="mt-1 text-xs text-muted">{history.statusLabel}</div>
-                        ) : null}
-                        {history.stripeReference ? (
-                          <div className="mt-1 text-xs text-muted">
-                            {t("orders.index.importedHistory.stripeReference", {
-                              reference: history.stripeReference,
-                            })}
-                          </div>
-                        ) : null}
-                      </Td>
-                      <Td muted align="middle" className="whitespace-nowrap tabular-nums">
-                        {formatCalendarDate(history.occurredOn, locale)}
-                      </Td>
-                      <Td numeric align="middle" className="text-base sm:text-sm">
-                        {history.amountLabel ?? t("orders.index.importedHistory.amountNotProvided")}
-                      </Td>
-                    </Tr>
-                  );
-                })}
-              </TBody>
-            </Table>
+            <ImportedHistoryTable
+              rows={importedHistoryPage.rows}
+              shopSlug={shopSlug}
+              locale={locale}
+              t={t}
+            />
             <StaffListPagination
               t={t}
               pagination={importedHistoryPage}

@@ -141,14 +141,23 @@ export function CounterRentalPicker({
                   <span className="min-w-0">
                     <span className="block font-medium">
                       {unit.label}
+                      {/* The size rides with the tag, never alone on a line of
+                          its own ("BCD #1 / · XS", `counter-rental-form`). */}
                       {unit.size ? (
-                        <span className="font-normal text-muted"> · {unit.size}</span>
+                        <span className="font-normal whitespace-nowrap text-muted">
+                          {"\u00A0· "}
+                          {unit.size}
+                        </span>
                       ) : null}
                     </span>
+                    {/* At 14px, so a half-width tile on a phone holds the
+                        reason in two lines rather than four. */}
                     {unit.blocked ? (
-                      <span className="block text-muted">{unit.blocked}</span>
+                      <span className="mt-0.5 block text-sm text-muted">{unit.blocked}</span>
                     ) : unit.care.length > 0 ? (
-                      <span className="block text-warning-strong">{unit.care.join(" · ")}</span>
+                      <span className="mt-0.5 block text-sm text-warning-strong">
+                        {unit.care.join(" · ")}
+                      </span>
                     ) : null}
                   </span>
                 </button>

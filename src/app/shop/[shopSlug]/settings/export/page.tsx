@@ -136,16 +136,28 @@ export default async function DataOutSettingsPage({
                   <details className="group/file">
                     <summary className="flex min-h-11 cursor-pointer list-none items-start justify-between gap-3 py-3 focus-visible:focus-ring-inset">
                       <span className="min-w-0">
+                        {/* A long name folds after an underscore, never
+                            mid-word ("certification_junior_review / s.csv"). */}
                         <span className="block font-mono text-base wrap-anywhere">
-                          {family.file}
+                          {family.file.split("_").map((part, index) => (
+                            // biome-ignore lint/suspicious/noArrayIndexKey: the name's own parts, in order
+                            <span key={index}>
+                              {index > 0 ? (
+                                <>
+                                  _<wbr />
+                                </>
+                              ) : null}
+                              {part}
+                            </span>
+                          ))}
                         </span>
                         <span className="mt-1 block text-sm text-muted">
                           {t(EXPORT_PURPOSE_KEYS[family.file as keyof typeof EXPORT_PURPOSE_KEYS])}
                         </span>
                       </span>
-                      <span className="shrink-0 text-sm text-muted tabular-nums">
+                      <span className="flex shrink-0 items-center gap-2 whitespace-nowrap text-sm text-muted tabular-nums">
                         {t("settings.export.rowCount", { count: family.count })}
-                        <SummaryCaret className="ms-2 inline size-3 group-open/file:rotate-90" />
+                        <SummaryCaret className="size-3 group-open/file:rotate-90" />
                       </span>
                     </summary>
                     <p className="pb-4 text-sm text-muted">{family.note}</p>

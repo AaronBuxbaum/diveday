@@ -250,15 +250,22 @@ export function ImportPreview({
               shadow or second bg-surface. */}
       <Table
         flush
-        minWidth="36rem"
+        // Six equal tracks at 36rem gave the row number as much room as the
+        // notes, so a note or a "same diver as row 1" chip folded into a 96px
+        // column and swelled its row to 180–280px on a phone
+        // (`assist-import-mapping`, `settings-import-bookings-after-today`).
+        // The describing columns are pinned; the name and the notes share the rest.
+        minWidth="56rem"
         shellClassName="mt-2 rounded-inset border border-border sm:mt-4"
       >
         <THead>
-          <Th numeric>{copy.table.rowNumber}</Th>
+          <Th numeric className="w-14">
+            {copy.table.rowNumber}
+          </Th>
           <Th>{copy.table.name}</Th>
-          <Th>{copy.table.email}</Th>
-          <Th>{copy.table.card}</Th>
-          <Th>{copy.table.waiver}</Th>
+          <Th width="12rem">{copy.table.email}</Th>
+          <Th width="10rem">{copy.table.card}</Th>
+          <Th width="8rem">{copy.table.waiver}</Th>
           <Th>{copy.table.notes}</Th>
         </THead>
         <TBody>
@@ -279,12 +286,12 @@ export function ImportPreview({
                 />
                 {row.fullName || <span className="text-danger">{copy.table.noName}</span>}
                 {row.action === "skip" ? (
-                  <span className="ms-2 rounded bg-danger-tint px-1.5 py-0.5 text-xs text-danger">
+                  <span className="ms-2 whitespace-nowrap rounded bg-danger-tint px-1.5 py-0.5 text-xs text-danger">
                     {copy.table.skippedBadge}
                   </span>
                 ) : null}
                 {row.action === "merge" ? (
-                  <span className="ms-2 rounded bg-surface-sunken px-1.5 py-0.5 text-xs text-muted">
+                  <span className="ms-2 inline-block whitespace-nowrap rounded bg-surface-sunken px-1.5 py-0.5 text-xs text-muted">
                     {fill(copy.table.mergedBadge, { row: row.mergedIntoRow ?? "" })}
                   </span>
                 ) : null}

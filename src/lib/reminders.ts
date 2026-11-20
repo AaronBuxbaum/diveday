@@ -74,6 +74,20 @@ export function dueReminder(input: DueReminderInput): ReminderCadence | null {
 }
 
 /**
+ * When the next reminder for a booking goes out, or null: the first cadence not
+ * yet sent whose time is still ahead. A cadence already due waits only for the
+ * daily run, so it names no time.
+ */
+export function nextReminderAt(input: DueReminderInput): Date | null {
+  for (const cadence of TRIP_REMINDER_CADENCES) {
+    if (input.sentKinds.has(cadence.kind)) continue;
+    const at = new Date(input.startsAt.getTime() - cadence.hoursBefore * HOUR_MS);
+    if (at.getTime() > input.now.getTime()) return at;
+  }
+  return null;
+}
+
+/**
  * One row of the rhythm rule table (issue #1177, delight report D17): whether
  * a cadence sends regardless of what the diver still has to do.
  */

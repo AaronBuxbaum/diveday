@@ -1,0 +1,45 @@
+Copyright (c) 2026 Pseudorandom LLC, doing business as DiveDay. All rights reserved.
+
+PROPRIETARY SOFTWARE. NO LICENSE IS GRANTED.
+
+This repository, including all source code, documentation, designs, text,
+images, data, and other materials in it (the "Software"), is the confidential
+and proprietary property of Pseudorandom LLC dba DiveDay ("DiveDay"). It is
+made visible on a public hosting service for DiveDay's own operational
+convenience only. Public visibility is not a license and not a waiver of any
+right.
+
+Except as expressly allowed by law that cannot be waived by contract, you may
+not, without DiveDay's prior written permission:
+
+1. copy, reproduce, or download the Software, other than the transient copies
+   made when you view it on GitHub;
+2. modify, adapt, translate, or create derivative works of the Software;
+3. distribute, publish, sublicense, sell, lease, rent, or otherwise make the
+   Software available to anyone else;
+4. run, deploy, host, or use the Software, or any part of it, for any purpose,
+   commercial or noncommercial;
+5. use the Software, or any part of it, to train, fine-tune, evaluate, or
+   improve any machine-learning or artificial-intelligence model, or to build
+   any dataset;
+6. remove or alter this notice or any other proprietary notice; or
+7. use the names DiveDay, dive.day, or Pseudorandom, or any DiveDay logo or
+   brand, except to refer to DiveDay truthfully.
+
+GitHub's Terms of Service allow other GitHub users to view and fork public
+repositories on GitHub. That permission comes from GitHub's terms, covers only
+GitHub's own features, and gives no right to use the Software anywhere else or
+in any other way.
+
+Third-party components keep their own licenses. Files that carry their own
+license notice (for example the fonts in src/app/_fonts/ and the fixtures in
+src/lib/computer-import/fixtures/) are covered by that notice and not by this
+one. Open-source dependencies installed from package registries are not part of
+the Software and are licensed by their authors.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+PURPOSE, AND NONINFRINGEMENT. IN NO EVENT SHALL DIVEDAY BE LIABLE FOR ANY
+CLAIM, DAMAGES, OR OTHER LIABILITY ARISING FROM THE SOFTWARE OR ITS USE.
+
+To ask for permission, write to aaron@dive.day.

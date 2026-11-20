@@ -48,7 +48,7 @@ export function MonthDetailLines({
           number does not earn a heading over it, and a month with no
           referred seats renders nothing at all. */}
       {report.partnerReferredSeats > 0 ? (
-        <p className="mt-3 text-end text-sm text-muted tabular-nums">
+        <p className="mt-3 text-sm text-muted sm:text-end tabular-nums">
           {t("reports.partnerArrivals", { count: report.partnerReferredSeats })}
         </p>
       ) : null}
@@ -57,14 +57,14 @@ export function MonthDetailLines({
           person** (ADR 20260908-one-hand, decision 6, lever W). A quiet
           line on the pattern the partner line above already set. */}
       {report.buddyReferredSeats > 0 ? (
-        <p className="mt-1 text-end text-sm text-muted tabular-nums">
+        <p className="mt-1 text-sm text-muted sm:text-end tabular-nums">
           {t("reports.buddySeats", { count: report.buddyReferredSeats })}
         </p>
       ) : null}
 
       {/* Returning divers and package dives owed (owner decision 2026-10-09). */}
       {detail.divers.returning > 0 ? (
-        <p className="mt-1 text-end text-sm text-muted tabular-nums">
+        <p className="mt-1 text-sm text-muted sm:text-end tabular-nums">
           {t("reports.returningDivers", {
             returning: detail.divers.returning,
             total: detail.divers.total,
@@ -72,7 +72,7 @@ export function MonthDetailLines({
         </p>
       ) : null}
       {detail.packageDivesOwed.dives > 0 ? (
-        <p className="mt-1 text-end text-sm text-muted tabular-nums">
+        <p className="mt-1 text-sm text-muted sm:text-end tabular-nums">
           {t("reports.packagesOwed", {
             dives: detail.packageDivesOwed.dives,
             amount: money(detail.packageDivesOwed.valueCents),
@@ -242,11 +242,11 @@ export function MonthFootnotes({
 }) {
   return (
     <>
-      <p className="mt-3 text-end text-sm text-muted tabular-nums">
+      <p className="mt-3 text-sm text-muted sm:text-end tabular-nums">
         {t("reports.taxLine", { amount: money(taxCents) })}
       </p>
       {counterTaxIncludedCents > 0 ? (
-        <p className="mt-1 text-end text-sm text-muted">{t("reports.counterTaxIncluded")}</p>
+        <p className="mt-1 text-sm text-muted sm:text-end">{t("reports.counterTaxIncluded")}</p>
       ) : null}
     </>
   );

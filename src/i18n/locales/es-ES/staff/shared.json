@@ -159,7 +159,7 @@
     "search": "Buscar",
     "dialogAriaLabel": "Búsqueda rápida",
     "comboboxAriaLabel": "Buscar buceadores, salidas y páginas",
-    "placeholder": "Busca buceadores, salidas, o ve directo a una página…",
+    "placeholder": "Busca buceadores, salidas y páginas…",
     "emptyShort": "Escribe para buscar personas y salidas, o ve directo a una página.",
     "emptyNoMatches": "Sin resultados. Prueba un nombre, correo o título de salida.",
     "searching": "Buscando…",

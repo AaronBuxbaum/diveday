@@ -11,9 +11,11 @@ import type { TrainingMarkRosterSeat } from "@/db/training-marks";
 import type { IssuedCard } from "@/features/agency-processing";
 import type { CourseMaterialsDone } from "@/features/course-materials";
 import type { CourseStepDone } from "@/features/course-progress";
+import type { TodayHelpRequest } from "@/features/help-requests";
 import type { SameNamePerson } from "@/features/identity-repoint";
 import type { PaymentMarkFacts } from "@/features/payment-marks";
 import { rosterRowIsBlocked } from "@/features/roster-filters";
+import type { OpenOrderFact } from "@/features/trip-guests";
 import { depthWarningText } from "@/i18n/depth-labels";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import type { AgencyCheckableCard } from "@/lib/agency-check-queue";
@@ -143,6 +145,12 @@ export type RosterRows = {
    * a number not on the STOP list (`textableSeats`, issue #4039).
    */
   textableBookings: ReadonlySet<string>;
+  /** A seat's open help request, which the fix list says beside its other reasons. */
+  helpRequestByBooking: ReadonlyMap<string, TodayHelpRequest>;
+  /** A seat's open invoice, so a money row can send the pay link in one tap. */
+  openOrderByBooking: ReadonlyMap<string, OpenOrderFact>;
+  /** When each seat's next pre-trip reminder goes out; a seat with none left is absent. */
+  nextReminderAtByBooking: ReadonlyMap<string, Date>;
   rentalFitByBooking: RentalFitByBooking;
   nitroxByBooking: NitroxByBooking;
   notesByBooking: Map<string, RosterPrivateNote[]>;

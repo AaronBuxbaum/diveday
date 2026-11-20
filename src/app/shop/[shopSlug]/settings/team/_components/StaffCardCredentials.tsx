@@ -164,27 +164,32 @@ function CredentialRow({
   personId: string;
 }) {
   return (
+    // The facts take their own line; under them "Edit or renew" and Delete
+    // share one, so a Delete never stands alone between two credentials,
+    // reading as the next one's (phone polish 2026-11-20).
     <li className="flex flex-wrap items-center gap-x-3 gap-y-1">
-      <span className="font-medium">{credential.name}</span>
-      {credential.detail ? <span className="text-muted">{credential.detail}</span> : null}
-      {credential.renewalWord ? (
-        <span
-          className={
-            credential.renewal === "overdue" || credential.renewal === "due-soon"
-              ? "font-medium text-warning-strong"
-              : "text-muted"
-          }
-        >
-          {credential.renewalWord}
-        </span>
-      ) : null}
-      {credential.reviewed ? null : (
-        <Badge tone="neutral" size="sm">
-          {t("staffing.credentials.pending")}
-        </Badge>
-      )}
+      <span className="flex basis-full flex-wrap items-center gap-x-3 gap-y-1">
+        <span className="font-medium">{credential.name}</span>
+        {credential.detail ? <span className="text-muted">{credential.detail}</span> : null}
+        {credential.renewalWord ? (
+          <span
+            className={
+              credential.renewal === "overdue" || credential.renewal === "due-soon"
+                ? "font-medium text-warning-strong"
+                : "text-muted"
+            }
+          >
+            {credential.renewalWord}
+          </span>
+        ) : null}
+        {credential.reviewed ? null : (
+          <Badge tone="neutral" size="sm">
+            {t("staffing.credentials.pending")}
+          </Badge>
+        )}
+      </span>
       {editAction ? (
-        <details className="basis-full">
+        <details className="open:basis-full">
           <summary className={buttonClass({ variant: "link", size: "sm", flush: true })}>
             {t("staffing.credentials.editOrRenew")}
           </summary>

@@ -27,7 +27,8 @@ import { useMenuDismissal } from "@/components/useMenuDismissal";
  *   what sits beside it; horizontal placement stays inside the viewport
  *   when a narrow layout puts the trigger near its edge;
  * - when the list would run under the foot of the screen (or the phone tab
- *   bar), it opens upward from the "⋯" instead;
+ *   bar), it opens upward from the "⋯" instead, measured again on every
+ *   scroll and resize while it is open;
  * - a second tap on the "⋯" closes it, as does Escape (focus goes back to the
  *   "⋯") or a tap anywhere else (`useMenuDismissal`).
  *
@@ -125,12 +126,20 @@ export function RowMenu({
       setInlineEnd(rtl ? containedLeft - root.left : root.right - containedLeft - width);
     };
     positionPanel();
+    // A scroll moves the "⋯" against the fixed tab bar as surely as a resize
+    // does: a list that opened downward mid-page slid under the bar as the
+    // reader scrolled on, hiding every act but the last
+    // (`staff-date-requests-row-menu`). Captured, so a scroll inside any
+    // scrolling ancestor counts too.
+    const scrollOptions = { capture: true, passive: true } as const;
     window.addEventListener("resize", positionPanel);
+    window.addEventListener("scroll", positionPanel, scrollOptions);
     const observer =
       typeof ResizeObserver === "undefined" ? null : new ResizeObserver(positionPanel);
     observer?.observe(panel);
     return () => {
       window.removeEventListener("resize", positionPanel);
+      window.removeEventListener("scroll", positionPanel, scrollOptions);
       observer?.disconnect();
     };
   }, [open, children]);

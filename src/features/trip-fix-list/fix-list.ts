@@ -32,6 +32,7 @@ export const ADVISORY_REASONS = [
   "drysuit",
   "fit_needed",
   "recency",
+  "help_requested",
 ] as const;
 export type AdvisoryReason = (typeof ADVISORY_REASONS)[number];
 export type FixReason = ReadinessBlockerCode | AdvisoryReason;
@@ -49,6 +50,7 @@ export type FixRemedy =
   | "course_forms"
   | "add_contact"
   | "fit_gear"
+  | "arrange_help"
   | "open";
 
 /** Advisories the desk itself still owes once a guest has arrived. */
@@ -56,6 +58,8 @@ const DESK_ADVISORIES: ReadonlySet<FixReason> = new Set<FixReason>([
   "waiver_unsigned",
   "payment_unpaid",
   "contact_missing",
+  // A diver asked for a hand: it stands until a crew member is on it.
+  "help_requested",
 ]);
 
 export function isBlockerReason(reason: FixReason): reason is ReadinessBlockerCode {
@@ -86,6 +90,8 @@ export function remedyFor(reason: FixReason): FixRemedy {
     case "fit_needed":
     case "drysuit":
       return "fit_gear";
+    case "help_requested":
+      return "arrange_help";
     case "re_entry_ask":
     case "depth":
     case "recency":
@@ -142,6 +148,7 @@ const PRIORITY: readonly FixReason[] = [
   // desk's own advisories stay, so a crew advisory ranked lower was never seen.
   "earlier_refusal",
   "earlier_referral",
+  "help_requested",
   "depth",
   "recency",
   "re_entry_ask",

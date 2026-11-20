@@ -33,7 +33,12 @@ export function ShopContactLinks({
   if (!phone && !email) return null;
   const linkClass = `${tapTargetLinkClass} font-medium text-primary hover:underline`;
   return (
-    <span className={`inline-flex flex-wrap items-baseline gap-x-2 ${className}`}>
+    // `overflow-x-clip`: the dot sits in the gap before the email, so when the
+    // email wraps under the phone its dot falls outside the row's start edge
+    // and is clipped; no line starts or ends on a "·" (phone polish,
+    // 2026-11-20). The clip is horizontal only, so a caller's `-my-3` still
+    // lets the 44px targets overhang the line.
+    <span className={`inline-flex flex-wrap items-baseline gap-x-2 overflow-x-clip ${className}`}>
       {phone ? (
         // A dialler takes digits and a leading `+`, never the spaces, dashes,
         // and parentheses a shop types into the settings box — the visible
@@ -42,13 +47,22 @@ export function ShopContactLinks({
           {phone}
         </a>
       ) : null}
-      {phone && email ? <span aria-hidden="true">·</span> : null}
       {email ? (
-        // `wrap-anywhere`: a tap-target link is a flex box, whose narrowest
-        // width is the whole address unless it may break inside it.
-        <a href={mailtoHref(email)} className={`${linkClass} min-w-0 wrap-anywhere`}>
-          {email}
-        </a>
+        <span className="relative inline-flex min-w-0 items-baseline">
+          {phone ? (
+            <span
+              aria-hidden="true"
+              className="absolute inset-y-0 -start-2 flex w-2 items-center justify-center"
+            >
+              ·
+            </span>
+          ) : null}
+          {/* `wrap-anywhere`: a tap-target link is a flex box, whose narrowest
+              width is the whole address unless it may break inside it. */}
+          <a href={mailtoHref(email)} className={`${linkClass} min-w-0 wrap-anywhere`}>
+            {email}
+          </a>
+        </span>
       ) : null}
     </span>
   );
