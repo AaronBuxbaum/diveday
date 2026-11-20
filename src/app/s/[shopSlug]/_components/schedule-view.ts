@@ -57,6 +57,8 @@ export type ScheduleView = {
   hideAboveFilter: boolean;
   /** The *resolved* lens, or null when the URL named none or a word since deleted. */
   activeLens: { slug: string } | null;
+  /** `?view=month`: the day strip swapped for the month calendar. */
+  monthView?: boolean;
 };
 
 /**
@@ -77,6 +79,7 @@ export function scheduleViewLinks(view: ScheduleView) {
   const withViewParams = (params: URLSearchParams) => {
     if (view.partySize !== undefined) params.set("partySize", String(view.partySize));
     if (month) params.set("month", month);
+    if (view.monthView) params.set("view", "month");
     if (hasSpaceFilter) params.set("hasSpace", "1");
     if (tripTypeFilter) params.set("tripType", tripTypeFilter);
     if (canDiveFilter) params.set("canDive", canDiveFilter);
@@ -106,7 +109,20 @@ export function scheduleViewLinks(view: ScheduleView) {
     const query = params.toString();
     return `${publicSchedulePath(shopSlug)}${query ? `?${query}` : ""}`;
   };
-  return { withViewParams, monthHref, lensHref };
+  /** The calendar button's two destinations: the month view of this month, and back to the list. */
+  const viewHref = (toMonthView: boolean, monthKey: string) => {
+    const params = withViewParams(new URLSearchParams());
+    params.delete("view");
+    params.delete("month");
+    if (toMonthView) {
+      params.set("view", "month");
+      params.set("month", monthKey);
+    } else if (month) {
+      params.set("month", month);
+    }
+    return `${publicSchedulePath(shopSlug)}?${params.toString()}`;
+  };
+  return { withViewParams, monthHref, lensHref, viewHref };
 }
 
 /**
@@ -422,6 +438,7 @@ export function scheduleZoneLine(
 export type ScheduleQuery = {
   recoveryActivity?: string;
   month?: string;
+  view?: string;
   after?: string;
   before?: string;
   hasSpace?: string;

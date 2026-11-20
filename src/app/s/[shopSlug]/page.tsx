@@ -14,7 +14,7 @@ import { shopBySlugCached } from "@/features/shops-cached";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
 import type { DiverTranslator } from "@/i18n/messages";
 import { requestTranslator } from "@/i18n/request";
-import { monthLabel, parseMonthKey } from "@/lib/calendar";
+import { monthKey, monthLabel, parseMonthKey } from "@/lib/calendar";
 import { nowDate } from "@/lib/clock";
 import { perDiverBookingPriceCents } from "@/lib/courses";
 import { formatTime } from "@/lib/format";
@@ -27,7 +27,7 @@ import { absoluteUrl, scheduleJsonLd } from "@/lib/structured-data";
 import { ClassroomRequest } from "./_components/ClassroomRequest";
 import { DayJumpStrip } from "./_components/DayJumpStrip";
 import { identityBand, monthRailSides } from "./_components/identity-band";
-import { MonthRail } from "./_components/MonthRail";
+import { MonthControls } from "./_components/MonthControls";
 import { MoreWaysRows } from "./_components/MoreWaysRows";
 import { NextBoatCard } from "./_components/NextBoatCard";
 import { OffSeasonPanel } from "./_components/OffSeasonPanel";
@@ -134,6 +134,7 @@ export default async function SchedulePage({
   // When the diver has explicitly paged to a month on the rail, bound the trip list to that month —
   // the label above the list and the list itself must never disagree.
   const explicitMonth = parseMonthKey(month);
+  const monthView = query.view === "month";
   const listMonthBounds = explicitMonth ? scheduleMonthBounds(explicitMonth, tz) : null;
 
   const [
@@ -162,6 +163,7 @@ export default async function SchedulePage({
       hasSpaceFilter,
       partySize: query.partySize ? partySize : undefined,
       tripTypeFilter,
+      limit: monthView && explicitMonth ? 120 : undefined,
     }),
     listPublicStaffProfiles(db, shop.id),
   ]);
@@ -174,8 +176,9 @@ export default async function SchedulePage({
     canDiveFilter,
     hideAboveFilter,
     activeLens,
+    monthView,
   };
-  const { monthHref, lensHref } = scheduleViewLinks(view);
+  const { monthHref, lensHref, viewHref } = scheduleViewLinks(view);
 
   // The widget shows a window, sliced below once the composed requirements are
   // known so hiding happens first and both surfaces read one list (issue #805).
@@ -269,16 +272,6 @@ export default async function SchedulePage({
   const zoneLine = hasUpcoming
     ? scheduleZoneLine(t, shop.name, upcoming[0]?.startsAt ?? range.first, locale, tz)
     : null;
-  const calendarRail =
-    prevMonthKey || nextMonthKey || explicitMonth ? (
-      <MonthRail
-        aria-label={t("schedule.monthNav")}
-        month={monthLabel(currentMonth, locale)}
-        className=""
-        {...monthRailSides(prevMonthKey, nextMonthKey, monthHref, t)}
-      />
-    ) : null;
-
   return (
     <main className={SHOP_MAIN_CLASS}>
       <ClassroomRequest shop={shop} query={query} locale={locale} />
@@ -348,8 +341,14 @@ export default async function SchedulePage({
       {hasUpcoming ? (
         <div id="schedule" className="mt-6">
           <div className="mb-2">
-            {calendarRail}
-            {showsWeekLedger ? (
+            <MonthControls
+              {...{ t, locale, monthView, currentMonth, dayKeyOf, weekRows }}
+              railShown={Boolean(prevMonthKey || nextMonthKey || explicitMonth)}
+              railSides={monthRailSides(prevMonthKey, nextMonthKey, monthHref, t)}
+              departures={visibleUpcoming}
+              toggleHref={viewHref(!monthView, monthKey(currentMonth))}
+            />
+            {monthView ? null : showsWeekLedger ? (
               <DayJumpStrip rows={weekRows} label={t("schedule.jumpToDay")} />
             ) : null}
           </div>

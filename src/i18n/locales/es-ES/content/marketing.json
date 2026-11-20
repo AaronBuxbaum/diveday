@@ -974,38 +974,6 @@
     "lockNote": "El precio de hoy, congelado un año para los centros fundadores.",
     "trialNote": "Prueba un centro propio gratis durante 2 semanas, sin tarjeta. Tu centro sigue funcionando después de la prueba mientras acuerdas el paso a un plan de pago con {email}.",
     "earlyAccessBadge": "Acceso anticipado",
-    "invoice": {
-      "title": "La factura",
-      "setup": {
-        "label": "Alta",
-        "value": "Ninguna"
-      },
-      "logins": {
-        "label": "Accesos del personal",
-        "value": "Todos"
-      },
-      "tiers": {
-        "label": "Niveles de funciones",
-        "value": "Un solo plan"
-      },
-      "cut": {
-        "label": "Comisión por reserva",
-        "value": "Ninguna"
-      },
-      "cards": {
-        "label": "Procesamiento de tarjetas",
-        "value": "La comisión de Stripe, pagada a Stripe"
-      },
-      "contract": {
-        "label": "Contrato",
-        "value": "Mes a mes"
-      },
-      "leaving": {
-        "label": "Exportación de datos",
-        "value": "Un ZIP desde Ajustes, cualquier día",
-        "pointer": "Tus registros se van contigo. Míralo más abajo."
-      }
-    },
     "notes": {
       "title": "Notas",
       "note1": "Cada acceso del personal está en el precio, de recepción a capitán. Nada se cuenta por asiento.",
@@ -1080,8 +1048,6 @@
     "closingTitle": "Todas las funciones y todos los accesos del personal están en el precio",
     "percentArm": {
       "cadence": "del dinero registrado como recibido en DiveDay{hasBase, select, yes {, más {base} al mes} other {, sin cuota mensual}}",
-      "invoiceFeeLabel": "La tarifa de DiveDay",
-      "invoiceFeeValue": "El {percent} del dinero registrado como recibido en DiveDay",
       "whatCountsQuestion": "¿Qué cuenta para el {percent}?",
       "whatCountsAnswer": "El dinero registrado como recibido en DiveDay, ya sea por internet, en efectivo, por transferencia, con tu propia terminal o por otro medio. Los depósitos cuentan cuando se reciben; una reserva sin pagar no cuenta. Los paquetes cuentan al venderse, nunca otra vez al canjearse. Se excluyen las propinas, los impuestos y los cargos de terceros registrados por separado, y el historial importado. Si no hay un desglose de impuestos, cuenta el importe completo. Los reembolsos generan un crédito con el porcentaje original."
     },
