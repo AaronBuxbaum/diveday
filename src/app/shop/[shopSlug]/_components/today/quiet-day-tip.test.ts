@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { CalendarDate } from "./calendar-date";
+import type { CalendarDate } from "@/lib/calendar-date";
 import { QUIET_DAY_TIP_COUNT, quietDayTipIndex } from "./quiet-day-tip";
 
 const day = (value: string) => value as CalendarDate;

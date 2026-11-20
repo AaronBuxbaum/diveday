@@ -1,4 +1,4 @@
-import { type CalendarDate, calendarDaysBetween } from "./calendar-date";
+import { type CalendarDate, calendarDaysBetween } from "@/lib/calendar-date";
 
 /** How many surface-interval tips the `shopHome.quietTip` bundle holds (`quietTip.0` to the last). */
 export const QUIET_DAY_TIP_COUNT = 6;

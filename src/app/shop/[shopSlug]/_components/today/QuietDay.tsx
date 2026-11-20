@@ -6,9 +6,9 @@ import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import type { DayLoadOut } from "@/lib/closeout-kinds";
 import { formatShortDate, formatTime } from "@/lib/format";
-import { quietDayTipIndex } from "@/lib/quiet-day-tip";
 import { QuietDaySuggestions } from "./QuietDaySuggestions";
 import { QuietDayThinBoats } from "./QuietDayThinBoats";
+import { quietDayTipIndex } from "./quiet-day-tip";
 import { TomorrowFromTonight } from "./TomorrowFromTonight";
 
 const QUIET_TIPS = [
