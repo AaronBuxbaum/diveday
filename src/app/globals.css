@@ -1778,17 +1778,6 @@ select:not([multiple]):not([size]):dir(rtl) {
 }
 
 /*
- * A move between pages (`PageEnter`, issue #4263): the same `rise-in`, in the
- * quick beat, and `backwards` rather than `both` so nothing is held once it has
- * landed — a transform left on the wrapper would make it the containing block
- * of every fixed bar and toast on the page. The reduced-motion kill-switch
- * below covers it.
- */
-.page-enter {
-  animation: rise-in var(--motion-quick) var(--ease-out-soft) backwards;
-}
-
-/*
  * The settled mark landing — `SettledCheck` (ADR
  * 20260827-clearwater-surface-language).
  *

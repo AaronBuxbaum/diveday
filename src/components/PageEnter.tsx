@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode, useEffect, useState } from "react";
+import { type ReactNode, useLayoutEffect } from "react";
 
 /**
  * Whether this tab has already shown a page. The first paint of a visit never
@@ -11,17 +11,32 @@ import { type ReactNode, useEffect, useState } from "react";
  */
 let hasShownAPage = false;
 
+/** `--motion-quick` in `globals.css`. */
+const RISE_MS = 150;
+
 /**
  * **A move between pages rises in** (issue #4263): `rise-in`'s own fade and
  * eight pixels of travel, in the quick beat, so a tap lands somewhere rather
- * than swapping. Opacity and transform only, no fill once it settles (a
- * transform that stayed would become the containing block of every fixed bar
- * and toast below it), and the reduced-motion switch in `globals.css` zeroes it.
+ * than swapping. It plays on the page's own content container (`targetId`) and
+ * renders no element of its own: a wrapper between the layout and the page broke
+ * the child-combinator rules the roll call's boat mode and pinned count card
+ * read (`#shop-main-content > main > …`). Opacity and transform only, no fill
+ * once it settles (a transform that stayed would become the containing block of
+ * every fixed bar and toast), and reduced motion plays nothing.
  */
-export function PageEnter({ children }: { children: ReactNode }) {
-  const [animate] = useState(() => hasShownAPage);
-  useEffect(() => {
+export function PageEnter({ targetId, children }: { targetId: string; children: ReactNode }) {
+  useLayoutEffect(() => {
+    const shown = hasShownAPage;
     hasShownAPage = true;
-  }, []);
-  return <div className={animate ? "page-enter" : undefined}>{children}</div>;
+    if (!shown) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    document.getElementById(targetId)?.animate(
+      [
+        { opacity: 0, transform: "translateY(0.5rem)" },
+        { opacity: 1, transform: "none" },
+      ],
+      { duration: RISE_MS, easing: "ease-out", fill: "backwards" },
+    );
+  }, [targetId]);
+  return <>{children}</>;
 }
