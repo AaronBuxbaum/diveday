@@ -756,6 +756,10 @@ export const shops = pgTable(
      * it and they come back.
      */
     searchListingOptOutAt: timestamp("search_listing_opt_out_at", { withTimezone: true }),
+    /** One line the shop posts and later removes ("Lobster mini-season boats are open"). */
+    noticeText: text("notice_text"),
+    /** Which section opens the storefront under the welcome: the schedule or the courses. */
+    storefrontLeads: text("storefront_leads").notNull().default("schedule"),
     welcomeText: text("welcome_text"),
     welcomeSigner: text("welcome_signer"),
     tagline: text("tagline"),
@@ -804,6 +808,7 @@ export const shops = pgTable(
       "gin",
       sql`${table.addressLocality} gin_trgm_ops`,
     ),
+    check("shops_storefront_leads_known", sql`${table.storefrontLeads} in ('schedule', 'courses')`),
     check("shops_dock_call_minutes_nonnegative", sql`${table.dockCallMinutes} >= 0`),
     check("shops_offline_erasure_epoch_nonnegative", sql`${table.offlineErasureEpoch} >= 0`),
     // H-20261014-stale-roll-call-recipients: an address DiveDay sends to exists only with its recorded consent.

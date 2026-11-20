@@ -20,6 +20,7 @@ export function ScheduleShelves({
   staffProfiles,
   boats,
   className,
+  only,
 }: {
   shop: ShelfShop;
   shopSlug: string;
@@ -31,7 +32,19 @@ export function ScheduleShelves({
   staffProfiles: ComponentProps<typeof PublicStaffProfiles>["profiles"];
   boats: ComponentProps<typeof BoatsShelf>["boats"];
   className: string;
+  /** A shop that leads with its courses shows that shelf up top and the rest below the schedule. */
+  only?: "courses" | "rest";
 }) {
+  if (only === "courses") {
+    return (
+      <CoursesShelf
+        courses={courses}
+        allCoursesHref={publicCoursesPath(shopSlug)}
+        className={className}
+        dates={{ shopSlug, locale, timeZone: tz, t }}
+      />
+    );
+  }
   return (
     <>
       {/* **The shelves.** What the shop teaches, then what divers said about
@@ -42,12 +55,14 @@ export function ScheduleShelves({
           departures at all: a course-led shop with an empty board is a real
           day-zero shape, and the shelf is the only thing on that page with
           something to sell. */}
-      <CoursesShelf
-        courses={courses}
-        allCoursesHref={publicCoursesPath(shopSlug)}
-        className={className}
-        dates={{ shopSlug, locale, timeZone: tz, t }}
-      />
+      {only === "rest" ? null : (
+        <CoursesShelf
+          courses={courses}
+          allCoursesHref={publicCoursesPath(shopSlug)}
+          className={className}
+          dates={{ shopSlug, locale, timeZone: tz, t }}
+        />
+      )}
       <ShopfrontStory
         shop={shop}
         aggregate={aggregate}

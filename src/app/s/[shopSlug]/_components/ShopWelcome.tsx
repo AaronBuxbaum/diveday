@@ -55,84 +55,95 @@ export function ShopWelcome({
   className: string;
 }) {
   const line = shop.tagline?.trim() || shop.description?.trim() || null;
+  // **The shop's notice** (#4387): one line it posts and takes down, above everything else.
+  const notice = shop.noticeText?.trim() ? (
+    <p
+      className={`print:hidden rounded-panel border border-border bg-surface px-4 py-3 ${className}`}
+    >
+      {shop.noticeText}
+    </p>
+  ) : null;
   // Nothing the shop wrote and no photo: no welcome, rather than a name over two buttons.
-  if (!hasShopWelcomeContent(shop)) return null;
+  if (!hasShopWelcomeContent(shop)) return notice;
   const badges = parseBrandBadges(shop.brandBadges);
   const average = aggregate.count > 0 ? aggregate.average : null;
   return (
-    <section aria-label={shop.name} className={`print:hidden ${className}`}>
-      <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] sm:items-center sm:gap-8">
-        {shop.brandHeroImageUrl ? (
-          <div className="overflow-hidden rounded-panel border border-border bg-surface-sunken">
-            <StoredPhoto
-              src={shop.brandHeroImageUrl}
-              alt={shop.brandHeroImageAlt ?? ""}
-              className="aspect-[16/9] w-full sm:aspect-[4/3]"
-              sizes="(min-width: 1152px) 508px, (min-width: 640px) 43vw, calc(100vw - 34px)"
-              priority
-            />
-          </div>
-        ) : null}
-        <div className="min-w-0">
-          <p className={`font-brand-display ${PAGE_TITLE_CLASS} text-balance`}>{shop.name}</p>
-          {line ? (
-            <p className="mt-2 line-clamp-2 max-w-xl text-lg text-pretty text-foreground/90">
-              {line}
-            </p>
-          ) : null}
-          {shop.welcomeText?.trim() ? (
-            <div className="mt-4 max-w-xl">
-              <p className="whitespace-pre-line break-words">{shop.welcomeText}</p>
-              {shop.welcomeSigner?.trim() ? (
-                <p className="mt-2 text-muted">{shop.welcomeSigner}</p>
-              ) : null}
-            </div>
-          ) : null}
-          {average === null ? null : (
-            <p className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted">
-              <StarRating
-                rating={Math.round(average)}
-                label={t("reviews.ratingOption", { rating: Math.round(average) })}
-                tone="accent"
-                className="text-base"
+    <>
+      {notice}
+      <section aria-label={shop.name} className={`print:hidden ${className}`}>
+        <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] sm:items-center sm:gap-8">
+          {shop.brandHeroImageUrl ? (
+            <div className="overflow-hidden rounded-panel border border-border bg-surface-sunken">
+              <StoredPhoto
+                src={shop.brandHeroImageUrl}
+                alt={shop.brandHeroImageAlt ?? ""}
+                className="aspect-[16/9] w-full sm:aspect-[4/3]"
+                sizes="(min-width: 1152px) 508px, (min-width: 640px) 43vw, calc(100vw - 34px)"
+                priority
               />
-              <span className="text-base font-semibold text-foreground tabular-nums">
-                {cachedFormatter("num", Intl.NumberFormat, locale, {
-                  minimumFractionDigits: 1,
-                  maximumFractionDigits: 1,
-                }).format(average)}
-              </span>
-              <span aria-hidden="true">·</span>
-              <span className="tabular-nums">
-                {t("reviews.ratingsCount", { count: aggregate.count })}
-              </span>
-            </p>
-          )}
-          <BadgeWall
-            badges={badges}
-            establishedYear={shop.establishedYear}
-            t={t}
-            className="mt-3"
-          />
-          {newToDivingHref || seeScheduleHref ? (
-            <div className="mt-5 flex flex-col gap-3 sm:flex-row">
-              {newToDivingHref ? (
-                <Link href={newToDivingHref} className={buttonClass({ className: "sm:w-auto" })}>
-                  {t("schedule.welcome.newToDiving")}
-                </Link>
-              ) : null}
-              {seeScheduleHref ? (
-                <Link
-                  href={seeScheduleHref}
-                  className={buttonClass({ variant: "outline", className: "sm:w-auto" })}
-                >
-                  {t("schedule.welcome.seeSchedule")}
-                </Link>
-              ) : null}
             </div>
           ) : null}
+          <div className="min-w-0">
+            <p className={`font-brand-display ${PAGE_TITLE_CLASS} text-balance`}>{shop.name}</p>
+            {line ? (
+              <p className="mt-2 line-clamp-2 max-w-xl text-lg text-pretty text-foreground/90">
+                {line}
+              </p>
+            ) : null}
+            {shop.welcomeText?.trim() ? (
+              <div className="mt-4 max-w-xl">
+                <p className="whitespace-pre-line break-words">{shop.welcomeText}</p>
+                {shop.welcomeSigner?.trim() ? (
+                  <p className="mt-2 text-muted">{shop.welcomeSigner}</p>
+                ) : null}
+              </div>
+            ) : null}
+            {average === null ? null : (
+              <p className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted">
+                <StarRating
+                  rating={Math.round(average)}
+                  label={t("reviews.ratingOption", { rating: Math.round(average) })}
+                  tone="accent"
+                  className="text-base"
+                />
+                <span className="text-base font-semibold text-foreground tabular-nums">
+                  {cachedFormatter("num", Intl.NumberFormat, locale, {
+                    minimumFractionDigits: 1,
+                    maximumFractionDigits: 1,
+                  }).format(average)}
+                </span>
+                <span aria-hidden="true">·</span>
+                <span className="tabular-nums">
+                  {t("reviews.ratingsCount", { count: aggregate.count })}
+                </span>
+              </p>
+            )}
+            <BadgeWall
+              badges={badges}
+              establishedYear={shop.establishedYear}
+              t={t}
+              className="mt-3"
+            />
+            {newToDivingHref || seeScheduleHref ? (
+              <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+                {newToDivingHref ? (
+                  <Link href={newToDivingHref} className={buttonClass({ className: "sm:w-auto" })}>
+                    {t("schedule.welcome.newToDiving")}
+                  </Link>
+                ) : null}
+                {seeScheduleHref ? (
+                  <Link
+                    href={seeScheduleHref}
+                    className={buttonClass({ variant: "outline", className: "sm:w-auto" })}
+                  >
+                    {t("schedule.welcome.seeSchedule")}
+                  </Link>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
+    </>
   );
 }
