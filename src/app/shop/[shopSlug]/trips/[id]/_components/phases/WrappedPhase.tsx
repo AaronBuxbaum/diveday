@@ -7,9 +7,12 @@ import { listTripIncidentReports } from "@/db/incident-reports";
 import type { TripGuests } from "@/features/trip-guests";
 import { getTripMoney } from "@/features/trip-money";
 import { canViewShopReports } from "@/lib/authz";
+import { nowDate } from "@/lib/clock";
 import { depthInUnit } from "@/lib/depth-units";
 import { tripPacketPath } from "@/lib/print-sheets";
+import { seenSiteFor } from "@/lib/sightings";
 import { shopPath } from "@/lib/staff-notices";
+import { hasSailed } from "@/lib/trips";
 import { readManifestView } from "../../manifest/_components/manifest-view";
 import { recordTripPrintPdfAction } from "../../print-actions";
 import { PrintTripBundleButton } from "../PrintTripBundleButton";
@@ -21,6 +24,7 @@ import { UnplacedLine } from "./WaterPanels";
 import type { PhaseRecordContext } from "./WaterPhase";
 import { WrappedMore } from "./WrappedMore";
 import { CloseOutCard, IncidentsLine, MoneyCard, WhatHappenedCard } from "./WrappedPanels";
+import { WrappedRecordLinks } from "./WrappedRecordLinks";
 import { loggableDives, waterStandingOf } from "./water-reading";
 
 /**
@@ -99,6 +103,15 @@ export async function WrappedPhase({
         {moneyCard}
         {incidentsLine}
         {guests}
+        <WrappedRecordLinks
+          dives={[]}
+          sightingDives={[]}
+          shopSlug={shop.slug}
+          tripId={tripId}
+          sightingsEnabled={false}
+          lostFoundEnabled={shop.lostFoundEnabled}
+          t={t}
+        />
         {more}
         {runAgain}
       </div>
@@ -158,6 +171,31 @@ export async function WrappedPhase({
         {moneyCard}
       </div>
       {guests}
+      <WrappedRecordLinks
+        dives={loggableDives(standing, { back: true }).filter((dive) =>
+          view.completeManifests.some((manifest) => manifest.checkpoint === `after_dive_${dive}`),
+        )}
+        sightingDives={
+          hasSailed(view.departureManifest.trip.startsAt, nowDate())
+            ? view.completeManifests.flatMap(({ checkpoint }) => {
+                const match = /^after_dive_(\d+)$/.exec(checkpoint);
+                if (!match) return [];
+                const dive = Number(match[1]);
+                const site = seenSiteFor({
+                  recorded: view.executedDives.find((row) => row.executed.diveNumber === dive),
+                  planned:
+                    view.plannedDives.find((row) => row.dive.diveNumber === dive)?.diveSite ?? null,
+                });
+                return site ? [dive] : [];
+              })
+            : []
+        }
+        shopSlug={shop.slug}
+        tripId={tripId}
+        sightingsEnabled={shop.sightingsEnabled}
+        lostFoundEnabled={shop.lostFoundEnabled}
+        t={t}
+      />
       {more}
       {runAgain}
     </div>

@@ -59,6 +59,7 @@
     "boat": "Barco",
     "crew": "Tripulación",
     "price": "Precio",
+    "certificatePassengers": "Certificado: {count, plural, one {# pasajero} other {# pasajeros}}",
     "seats": "Plazas",
     "nameAndDescription": "Nombre y descripción",
     "view": "Ver",
@@ -1140,6 +1141,7 @@
       "heading": "Esta salida"
     },
     "ready": {
+      "paperPasses": "Pases en papel: abre Registro para huéspedes llegados y autorizados",
       "gearHeading": "Equipo para cargar",
       "pullList": "Lista de carga",
       "tanks": "Botellas",
@@ -1206,6 +1208,9 @@
       "noCrewAboard": "Ningún miembro de la tripulación registrado a bordo."
     },
     "wrapped": {
+      "diveSightings": "Avistamientos de la inmersión {dive}",
+      "diveSpecies": "Registro y especies de la inmersión {dive}",
+      "records": "Registros de la salida",
       "everyoneBack": "Todos constan de vuelta.",
       "homeSaid": "La tripulación marcó En casa a las {time}.",
       "lookBackWarning": "Revisar Terminada",

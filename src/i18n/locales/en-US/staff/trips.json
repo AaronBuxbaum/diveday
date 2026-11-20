@@ -59,6 +59,7 @@
     "boat": "Boat",
     "crew": "Crew",
     "price": "Price",
+    "certificatePassengers": "Certificate: {count, plural, one {# passenger} other {# passengers}}",
     "seats": "Seats",
     "nameAndDescription": "Name and description",
     "view": "View",
@@ -1140,6 +1141,7 @@
       "heading": "This trip"
     },
     "ready": {
+      "paperPasses": "Paper passes: open Check-in for arrived and cleared guests",
       "gearHeading": "Gear to pack",
       "pullList": "Pull list",
       "tanks": "Tanks",
@@ -1206,6 +1208,9 @@
       "noCrewAboard": "No crew recorded aboard."
     },
     "wrapped": {
+      "diveSightings": "Dive {dive} sightings",
+      "diveSpecies": "Dive {dive} log and species",
+      "records": "Trip records",
       "everyoneBack": "Everyone is recorded back.",
       "homeSaid": "The crew said Home at {time}.",
       "lookBackWarning": "Review Wrapped up",

@@ -109,6 +109,23 @@ export function tripFixes(
           },
         ]
       : []),
+    ...((phase === "filling" || phase === "ready") && overview.pulse.work.openOrders > 0
+      ? [
+          {
+            key: "open_orders",
+            text: boatWorkText(t, {
+              code: "open_orders",
+              count: overview.pulse.work.openOrders,
+              tone: "work",
+            }),
+            tone: "warning" as const,
+            action: {
+              href: `${shopPath(shopSlug, "orders")}?tripId=${encodeURIComponent(tripId)}&status=open&range=all`,
+              label: t("today.actionLabel.openOrders"),
+            },
+          },
+        ]
+      : []),
     // Nitrox asked for with no verified card is packed as air: worth a word.
     ...boatWorkItems(overview.pulse.work, { startsAt: overview.trip.startsAt, now })
       .filter((item) => item.tone === "warning")

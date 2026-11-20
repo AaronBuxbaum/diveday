@@ -316,7 +316,6 @@ export default async function ManageTripPage({
           }
         />
         {desk ? <TripDeskConnectivity active t={t} /> : null}
-
         <TripNoticeBanner notice={rootPageNotice} locale={locale} />
 
         <TripCancellation
@@ -358,7 +357,7 @@ export default async function ManageTripPage({
           <FillingPhase guests={guestList} next={slots.panel} />
         ) : frame.shown === "ready" ? (
           <ReadyPhase
-            guests={guestList}
+            {...{ ...phase, guests: guestList }}
             prep={slots.panel}
             buddies={<BuddyTeamsCard {...buddyArgs} surface="ready" open={buddies === "open"} />}
           />
