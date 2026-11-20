@@ -28,3 +28,6 @@ Latest regression: single-day NULL fallback and multi-day unknown-day diver and 
 
 
 Latest checkpoint: gated crew boat/intake ordering and the two-day unknown-history current recount regression passed against disposable PostgreSQL. A witnessed current count now preserves unknown historical evidence, but the named review guidance and full reader/UI parity are not complete or verified. This branch is a checkpoint only; do not merge, deploy, or treat it as an activation PR. Exact-head browser, visual checks, and CI remain outstanding.
+
+
+Review blocker: unknown-day server evidence remains permanently unresolved because there is no authorized auditable disposition for its actual event IDs; current signed recount can be recorded and shown but does not resolve the history. Saved offline manifests also need named uncertainty and incomplete-count parity. Do not use as an activation PR. The disposable PG crew race and current-recount suite passed six tests, and focused UI checks passed. A fresh full build/browser and exact-head CI have not been verified for this checkpoint.

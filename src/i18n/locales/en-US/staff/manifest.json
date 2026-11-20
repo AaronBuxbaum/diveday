@@ -400,6 +400,7 @@
   },
   "deck": {
     "recountRequired": "Recount required",
+    "historicalReviewRequired": "Earlier observation needs review. Ask an owner to check the departure log.",
     "title": "Roll call",
     "start": "Start roll call",
     "next": "Next person",

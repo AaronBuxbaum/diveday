@@ -1338,13 +1338,16 @@ export function buildTripManifest(input: {
     trip: input.trip,
     checkpoint,
     crew,
-    completeness: rollCallCompleteness({
-      checkpoint,
-      totalDivers: summary.totalDivers,
-      awaiting: summary.awaiting,
-      notBackAboard: summary.notBackAboard,
-      crew: input.crew,
-    }),
+    completeness: {
+      ...rollCallCompleteness({
+        checkpoint,
+        totalDivers: summary.totalDivers,
+        awaiting: summary.awaiting,
+        notBackAboard: summary.notBackAboard,
+        crew: input.crew,
+      }),
+      ...((summary.historicalReviewRequired ?? 0) > 0 ? { complete: false } : {}),
+    },
     divers,
     summary,
   };

@@ -205,7 +205,9 @@ describePostgres("recount across meeting days", () => {
       .values({ shopId: shop.id, name: "Another replacement", capacity: 200 })
       .returning();
     if (!anotherBoat) throw new Error("boat missing");
-    expect(await editTripSection(pg.db, shop.id, trip.id, { boatId: anotherBoat.id })).toMatchObject({ ok: true });
+    expect(
+      await editTripSection(pg.db, shop.id, trip.id, { boatId: anotherBoat.id }),
+    ).toMatchObject({ ok: true });
     const ambiguous = await getTripManifest(pg.db, shop.id, trip.id, "after_dive_1");
     expect(ambiguous?.divers.find((item) => item.bookingId === seat.booking.id)).toMatchObject({
       recountRequired: true,
@@ -220,6 +222,17 @@ describePostgres("recount across meeting days", () => {
       .find((item) => item.checkpoint === "after_dive_1")
       ?.divers.find((item) => item.bookingId === seat.booking.id)
       ?.rollCallContext?.liveRecountProof;
+    expect(
+      await recordRollCall(pg.db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        bookingId: seat.booking.id,
+        recordedByPersonId: owner.person.id,
+        checkpoint: "after_dive_1",
+        status: "boarded",
+        source: "live",
+      }),
+    ).toMatchObject({ ok: false, reason: "review_required" });
     expect(
       await recordRollCall(pg.db, {
         shopId: shop.id,
@@ -258,5 +271,19 @@ describePostgres("recount across meeting days", () => {
       historicalReviewRequired: true,
       rollCall: { state: "boarded" },
     });
+    expect(recounted?.summary.historicalReviewRequired).toBeGreaterThan(0);
+    expect(recounted?.completeness.complete).toBe(false);
+    expect(
+      await recordRollCall(pg.db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        bookingId: seat.booking.id,
+        recordedByPersonId: owner.person.id,
+        checkpoint: "after_dive_1",
+        status: "not_boarded",
+        source: "live",
+        liveRecountProof: ambiguousProof,
+      }),
+    ).toMatchObject({ ok: false, reason: "review_required" });
   });
 });

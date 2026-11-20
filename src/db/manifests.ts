@@ -1486,13 +1486,15 @@ export async function getTripManifests(
       ),
     ]),
   );
+  const historical = (subjectId: string) =>
+    recountHasUnknownDay(recount, shopId, tripId, subjectId);
   return checkpoints.map((checkpoint, index) =>
     buildTripManifest({
       trip: tripInput,
       checkpoint,
       crew: crew.map((member) => ({
         ...member,
-        historicalReviewRequired: recountHasUnknownDay(recount, shopId, tripId, `crew:${member.id}`),
+        historicalReviewRequired: historical(`crew:${member.id}`),
         ...manifestRecount(
           recountApplies(
             recount,
@@ -1514,7 +1516,7 @@ export async function getTripManifests(
       })),
       divers: diverInputs.map((diver) => ({
         ...diver,
-        historicalReviewRequired: recountHasUnknownDay(recount, shopId, tripId, diver.bookingId),
+        historicalReviewRequired: historical(diver.bookingId),
         ...manifestRecount(
           recountApplies(recount, shopId, tripId, diver.bookingId, checkpoint, causal.meetingDay),
           causalRecord(
@@ -1524,12 +1526,18 @@ export async function getTripManifests(
           ),
         ),
         rollCallContext: manifestCausalContext(causal, `seat:${diver.bookingId}/${checkpoint}`),
-        boardedEarlier: boardedBefore(
-          (effectiveByBooking.get(diver.bookingId) ?? []).slice(0, index),
-        ),
+        boardedEarlier: wasBoardedEarlier(effectiveByBooking, diver.bookingId, index),
       })),
     }),
   );
+}
+
+function wasBoardedEarlier(
+  byBooking: Map<string, ReturnType<typeof carryForwardNotBoarded>>,
+  bookingId: string,
+  index: number,
+) {
+  return boardedBefore((byBooking.get(bookingId) ?? []).slice(0, index));
 }
 
 function manifestCausalContext(

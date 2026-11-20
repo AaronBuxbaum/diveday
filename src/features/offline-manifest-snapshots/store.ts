@@ -234,7 +234,9 @@ export async function readOfflineManifestRosterWithWindows(
         offlineRollCallWitnessEnabled() &&
         manifests.some(
           (manifest) =>
-            manifest.divers.some((diver) => diver.recountRequired || diver.historicalReviewRequired) || manifest.crew.length > 0,
+            manifest.divers.some(
+              (diver) => diver.recountRequired || diver.historicalReviewRequired,
+            ) || manifest.crew.length > 0,
         )
       ) {
         const seats = await tx

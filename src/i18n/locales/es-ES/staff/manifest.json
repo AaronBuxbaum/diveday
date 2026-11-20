@@ -400,6 +400,7 @@
   },
   "deck": {
     "recountRequired": "Requiere un nuevo conteo",
+    "historicalReviewRequired": "Una observación anterior necesita revisión. Pide a un propietario que consulte el registro de salida.",
     "title": "Pase de lista",
     "start": "Pasar lista",
     "next": "Siguiente persona",

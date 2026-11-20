@@ -29,7 +29,12 @@ export async function liveCrewCaptureValid(
 ): Promise<boolean> {
   if (!offlineRollCallWitnessEnabled()) return true;
   const { causal, recount } = await manifestRollCallReads(db, input.shopId, input.tripId);
-  const unknownDay = recountHasUnknownDay(recount, input.shopId, input.tripId, `crew:${input.personId}`);
+  const unknownDay = recountHasUnknownDay(
+    recount,
+    input.shopId,
+    input.tripId,
+    `crew:${input.personId}`,
+  );
   const requires = recountApplies(
     recount,
     input.shopId,

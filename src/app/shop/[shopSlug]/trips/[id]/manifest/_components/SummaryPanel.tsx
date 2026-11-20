@@ -341,7 +341,9 @@ export function SummaryPanel({
         ) : null}
         {(summary.historicalReviewRequired ?? 0) > 0 ? (
           <p className="mt-2 text-base font-bold text-danger" role="status">
-            {t("manifest.historicalReviewRequired", { count: summary.historicalReviewRequired ?? 0 })}
+            {t("manifest.historicalReviewRequired", {
+              count: summary.historicalReviewRequired ?? 0,
+            })}
           </p>
         ) : null}
         {/* Everything below stays *pinned*: each of these lines says a person

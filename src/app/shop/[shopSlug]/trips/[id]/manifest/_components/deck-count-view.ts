@@ -22,8 +22,8 @@ export function deckCountView(
     counted,
     aboard,
     comparison:
-      manifest.divers.some((diver) => diver.recountRequired) ||
-      manifest.crew.some((crew) => crew.recountRequired)
+      manifest.divers.some((diver) => diver.recountRequired || diver.historicalReviewRequired) ||
+      manifest.crew.some((crew) => crew.recountRequired || crew.historicalReviewRequired)
         ? null
         : compareDeckCount(counted, aboard),
   };
