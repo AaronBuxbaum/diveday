@@ -2,7 +2,7 @@
 let nextSequence = 0;
 
 const PHASE =
-  /^(?:entry\.(?:preflight|mint-transaction|shop-and-seat|sign-in)|mint\.(?:cap|core|packages|schedule)|schedule\.(?:board|step\.\d+))$/;
+  /^(?:entry\.(?:preflight|mint-transaction|shop-and-seat|sign-in)|mint\.(?:cap|clone|core|packages|schedule)|schedule\.(?:board|step\.\d+))$/;
 
 export function createDemoEntryTiming(
   enabled: boolean,

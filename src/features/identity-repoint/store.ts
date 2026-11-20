@@ -1,4 +1,5 @@
 import { and, asc, eq, inArray, isNotNull, isNull, ne, or, sql } from "drizzle-orm";
+import { nextOfflineGeneration } from "@/db/offline-generation";
 import { livePerson, liveTrip, seatNotCancelled } from "@/db/trips";
 import { hasReturned } from "@/lib/trips";
 import { lockBoardingCertificationEvidence } from "../../db/boarding-certification-snapshot";
@@ -388,7 +389,7 @@ async function repointInTransaction(
     .update(bookings)
     .set({
       personId: input.toPersonId,
-      offlineAssignmentGeneration: sql`case when ${bookings.personId} is distinct from ${input.toPersonId}::uuid then ${bookings.offlineAssignmentGeneration} + 1 else ${bookings.offlineAssignmentGeneration} end`,
+      offlineAssignmentGeneration: sql`case when ${bookings.personId} is distinct from ${input.toPersonId}::uuid then ${nextOfflineGeneration(bookings.offlineAssignmentGeneration)} else ${bookings.offlineAssignmentGeneration} end`,
       // A queued offline arrival saved before this was about another person
       // (issue #3830).
       seatReopenedAt: now,

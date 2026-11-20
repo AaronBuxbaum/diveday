@@ -579,16 +579,7 @@ test("public marketing pages lead to the product and pricing details", async ({ 
       exact: true,
     }),
   ).toBeVisible();
-  // The price as an invoice (2026-09-24): seven labelled lines under the
-  // figure, beside the builder's notes on them, so the terms a buyer scans
-  // for are on the first screen as a ledger rather than as prose. The trial
-  // line left on 2026-10-22: the page states the trial once, in its note.
-  const invoice = page.getByRole("main").locator("dl[aria-label='The invoice']");
-  await expect(invoice.getByRole("term")).toHaveCount(7);
-  await expect(invoice.getByRole("term").filter({ hasText: "Cut of your bookings" })).toBeVisible();
-  // One "Notes" list under the invoice, at most five lines (visual review
-  // 2026-10-24, B11): the invoice's notes and what the price covers were two
-  // sections saying overlapping things.
+  // One "Notes" list below the comparison (the invoice above it is gone).
   await expect(page.getByRole("heading", { name: "Notes", exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Notes on the invoice" })).toHaveCount(0);
   await expect(pricingHero.getByText("$99", { exact: true })).toBeVisible();
@@ -614,7 +605,6 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   );
   await expect(trialTerms).toHaveCount(1);
   await expect(page.getByText("2 weeks, no card", { exact: true })).toHaveCount(0);
-  await expect(page.getByText("Stripe’s fee, paid to Stripe", { exact: true })).toHaveCount(1);
   await expect(page.getByText(/Card fees are Stripe’s|Payment-processing fees/)).toHaveCount(0);
   // The offline row is gone from this page's FAQ, deliberately — the claim
   // lives on the boat manifest page, asserted above.
