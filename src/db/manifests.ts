@@ -64,6 +64,11 @@ import { publishManifestEvent } from "./manifest-events";
 import { bookingsWithMedicalAlert, standingReleaseByBooking } from "./medical-alerts";
 import { verifiedNitroxPersonIds } from "./nitrox";
 import {
+  liveCrewCaptureValid,
+  offlineCrewFrontierValid,
+  offlineCrewWitness,
+} from "./offline-crew-roll-call-capture";
+import {
   answeringReplayAsDuplicate,
   type CLIENT_EVENT_CONFLICT,
   replayVerdict,
@@ -84,7 +89,10 @@ import {
   effectiveCausalRowsForDb,
   manifestRollCallReads,
   prepareCausalRollCall,
+  recountApplies,
+  recountHasUnknownDay,
   refreshCausalRollCall,
+  rollCallProjectionForDb,
 } from "./roll-call-causal-store";
 import { newestMarkFirst } from "./roll-call-order";
 import {
@@ -880,7 +888,8 @@ export async function onTheWaterByRollCall(
       ),
     )
     .orderBy(...newestMarkFirst());
-  const effectiveDivers = await effectiveCausalRowsForDb(db, rows);
+  const diverProjection = await rollCallProjectionForDb(db, rows);
+  const effectiveDivers = diverProjection.rows;
   const fromDivers = standingRowMeansSailed(
     effectiveDivers.map(({ event, day }) => ({
       checkpoint: event.checkpoint,
@@ -929,7 +938,8 @@ export async function onTheWaterByRollCall(
     )
     .where(and(eq(rollCallEvents.shopId, shopId), crewMarks(), eq(rollCallEvents.tripId, tripId)))
     .orderBy(...newestMarkFirst());
-  const effectiveCrew = await effectiveCausalRowsForDb(db, crewRows);
+  const crewProjection = await rollCallProjectionForDb(db, crewRows);
+  const effectiveCrew = crewProjection.rows;
   const fromCrew = standingRowMeansSailed(
     effectiveCrew.map(({ event, day }) => ({
       checkpoint: event.checkpoint,
@@ -938,13 +948,7 @@ export async function onTheWaterByRollCall(
     })),
   );
   if (fromCrew) return fromCrew;
-  const eligibleIds = new Set([...effectiveDivers, ...effectiveCrew].map(({ event }) => event.id));
-  const uncertain = [...rows, ...crewRows].some(
-    ({ event }) =>
-      !eligibleIds.has(event.id) &&
-      standingResultMeansSailed(event.checkpoint, event.statementStatus ?? event.status),
-  );
-  return uncertain ? "uncertain" : null;
+  return diverProjection.recount.size > 0 || crewProjection.recount.size > 0 ? "uncertain" : null;
 }
 
 /**
@@ -1138,7 +1142,7 @@ export async function getTripManifests(
   const trip = await getTripWithBooked(db, shopId, tripId);
   if (!trip) return null;
   const checkpoints = rollCallCheckpoints(trip.plannedDives);
-  const { causal, crewRollCalls } = await manifestRollCallReads(db, shopId, tripId);
+  const { causal, crewRollCalls, recount } = await manifestRollCallReads(db, shopId, tripId);
   const [
     shop,
     roster,
@@ -1482,39 +1486,70 @@ export async function getTripManifests(
       ),
     ]),
   );
+  const historical = (subjectId: string) =>
+    recountHasUnknownDay(recount, shopId, tripId, subjectId);
   return checkpoints.map((checkpoint, index) =>
     buildTripManifest({
       trip: tripInput,
       checkpoint,
       crew: crew.map((member) => ({
         ...member,
-        rollCall: causalRecord(
-          crewEffective.get(member.id)?.[index],
-          causal.contexts.get(`crew:${member.id}/${checkpoint}`),
-          checkpoint,
+        historicalReviewRequired: historical(`crew:${member.id}`),
+        ...manifestRecount(
+          recountApplies(
+            recount,
+            shopId,
+            tripId,
+            `crew:${member.id}`,
+            checkpoint,
+            causal.meetingDay,
+          ),
+          causalRecord(
+            crewEffective.get(member.id)?.[index],
+            causal.contexts.get(`crew:${member.id}/${checkpoint}`),
+            checkpoint,
+          ),
         ),
-        rollCallContext:
-          causal.contexts.get(`crew:${member.id}/${checkpoint}`) ??
-          emptyCausalContext(causal.meetingDay),
+        rollCallContext: manifestCausalContext(causal, `crew:${member.id}/${checkpoint}`),
         buddyTeams: teamsByCrewId.get(member.id) ?? [],
         clashes: clashesByCrewId.get(member.id) ?? [],
       })),
       divers: diverInputs.map((diver) => ({
         ...diver,
-        rollCall: causalRecord(
-          effectiveByBooking.get(diver.bookingId)?.[index],
-          causal.contexts.get(`seat:${diver.bookingId}/${checkpoint}`),
-          checkpoint,
+        historicalReviewRequired: historical(diver.bookingId),
+        ...manifestRecount(
+          recountApplies(recount, shopId, tripId, diver.bookingId, checkpoint, causal.meetingDay),
+          causalRecord(
+            effectiveByBooking.get(diver.bookingId)?.[index],
+            causal.contexts.get(`seat:${diver.bookingId}/${checkpoint}`),
+            checkpoint,
+          ),
         ),
-        rollCallContext:
-          causal.contexts.get(`seat:${diver.bookingId}/${checkpoint}`) ??
-          emptyCausalContext(causal.meetingDay),
-        boardedEarlier: boardedBefore(
-          (effectiveByBooking.get(diver.bookingId) ?? []).slice(0, index),
-        ),
+        rollCallContext: manifestCausalContext(causal, `seat:${diver.bookingId}/${checkpoint}`),
+        boardedEarlier: wasBoardedEarlier(effectiveByBooking, diver.bookingId, index),
       })),
     }),
   );
+}
+
+function wasBoardedEarlier(
+  byBooking: Map<string, ReturnType<typeof carryForwardNotBoarded>>,
+  bookingId: string,
+  index: number,
+) {
+  return boardedBefore((byBooking.get(bookingId) ?? []).slice(0, index));
+}
+
+function manifestCausalContext(
+  causal: Awaited<ReturnType<typeof manifestRollCallReads>>["causal"],
+  key: string,
+) {
+  return causal.contexts.get(key) ?? emptyCausalContext(causal.meetingDay);
+}
+
+function manifestRecount(key: boolean, rollCall: RollCallRecord | undefined) {
+  const recountRequired = key;
+  return { recountRequired, rollCall: recountRequired ? undefined : rollCall };
 }
 
 export async function getTripManifest(
@@ -1758,7 +1793,7 @@ async function gateOfflineRollCallNote(
     note: string | null | undefined;
     shopId: string;
     tripId: string;
-    bookingId: string;
+    subject: { bookingId: string } | { personId: string };
     snapshotId: string | null | undefined;
     token: string | null | undefined;
     mayWriteNote: boolean;
@@ -1783,7 +1818,7 @@ async function gateOfflineRollCallNote(
     .where(eq(shops.id, input.shopId))
     .limit(1);
   if (shop?.epoch === issuedEpoch) return { note: input.note };
-  return (await offlineNoteSubjectErased(tx, input.shopId, { bookingId: input.bookingId }))
+  return (await offlineNoteSubjectErased(tx, input.shopId, input.subject))
     ? { note: null, noteDisposition: "discarded_erasure_cutoff" }
     : { note: input.note };
 }
@@ -1998,7 +2033,15 @@ async function storedRollCallEvent(
   tx: DbExecutor,
   shopId: string,
   clientEventId: string,
-): Promise<(StoredOfflineEvent & { witnessBound: boolean }) | undefined> {
+): Promise<
+  | (StoredOfflineEvent & {
+      witnessBound: boolean;
+      offlineMeetingGeneration: number | null;
+      offlineAssignmentGeneration: number | null;
+      offlineCrewAssignmentId: string | null;
+    })
+  | undefined
+> {
   const [existing] = await tx
     .select({
       id: rollCallEvents.id,
@@ -2015,6 +2058,7 @@ async function storedRollCallEvent(
       source: rollCallEvents.source,
       offlineMeetingGeneration: rollCallEvents.offlineMeetingGeneration,
       offlineAssignmentGeneration: rollCallEvents.offlineAssignmentGeneration,
+      offlineCrewAssignmentId: rollCallEvents.offlineCrewAssignmentId,
     })
     // diveday:roll-call-both-subjects: one id namespace; the kind read here decides duplicate or conflict.
     .from(rollCallEvents)
@@ -2044,6 +2088,9 @@ async function storedRollCallEvent(
   }
   return {
     id: existing.id,
+    offlineMeetingGeneration: existing.offlineMeetingGeneration,
+    offlineAssignmentGeneration: existing.offlineAssignmentGeneration,
+    offlineCrewAssignmentId: existing.offlineCrewAssignmentId,
     witnessBound:
       existing.offlineMeetingGeneration !== null && existing.offlineAssignmentGeneration !== null,
     subject: rollCallReplaySubject(existing.subjectKind, existing.tripId, markSubjectId(existing), {
@@ -2100,6 +2147,7 @@ export async function recordRollCall(
     offlineSnapshotId?: string;
     offlineErasureEpochToken?: string;
     rollCallWitness?: string;
+    liveRecountProof?: { snapshotId: string; witness: string; meetingDay: number };
     /** Fresh server-issued context for an explicit live review confirmation. */
     reviewWitness?: string;
     reviewOriginalWitness?: string;
@@ -2115,6 +2163,8 @@ export async function recordRollCall(
     occurredAt?: Date;
   },
 ): Promise<RecordRollCallOutcome> {
+  if (input.liveRecountProof && input.meetingDay === undefined)
+    input = { ...input, meetingDay: input.liveRecountProof.meetingDay };
   // One instant for the event and the boat snapshot it keeps (#2300). An
   // offline tap is never dated after its own sync (`offlineEventInstant`).
   const now = nowDate();
@@ -2209,7 +2259,7 @@ async function writeRollCall(
     note: input.note,
     shopId: input.shopId,
     tripId: input.tripId,
-    bookingId: input.bookingId,
+    subject: { bookingId: input.bookingId },
     snapshotId: input.offlineSnapshotId,
     token: input.offlineErasureEpochToken,
     mayWriteNote,
@@ -2236,7 +2286,8 @@ async function writeRollCall(
       !stored?.witnessBound
     )
       return refuse("review_required");
-    if (replayed) return noteDisposition ? { ...replayed, noteDisposition } : replayed;
+    if (replayed && !(source === "offline" && replayed.ok && offlineRollCallWitnessEnabled()))
+      return noteDisposition ? { ...replayed, noteDisposition } : replayed;
   }
 
   // The departure, then the seat — the one order every seat writer takes
@@ -2271,7 +2322,8 @@ async function writeRollCall(
       !stored?.witnessBound
     )
       return refuse("review_required");
-    if (replayed) return noteDisposition ? { ...replayed, noteDisposition } : replayed;
+    if (replayed && !(source === "offline" && replayed.ok && offlineRollCallWitnessEnabled()))
+      return noteDisposition ? { ...replayed, noteDisposition } : replayed;
   }
   if (lockedTripId !== input.tripId) return refuse("booking_unavailable");
   const [booking] = await tx
@@ -2304,6 +2356,23 @@ async function writeRollCall(
     .limit(1)
     .for("update", { of: bookings });
   if (!booking) return refuse("booking_unavailable");
+  if (source === "offline" && input.clientEventId && offlineRollCallWitnessEnabled()) {
+    const stored = await storedRollCallEvent(tx, input.shopId, input.clientEventId);
+    const replayed = replayVerdict(
+      stored,
+      rollCallReplaySubject("seat", input.tripId, input.bookingId, input),
+      "roll_call_events",
+    );
+    if (replayed?.ok) {
+      if (
+        !stored?.witnessBound ||
+        stored.offlineMeetingGeneration !== booking.offlineMeetingGeneration ||
+        stored.offlineAssignmentGeneration !== booking.offlineAssignmentGeneration
+      )
+        return refuse("review_required");
+      return noteDisposition ? { ...replayed, noteDisposition } : replayed;
+    }
+  }
   const capture = await validateOfflineRollCallCapture(tx, input, checkpoint, booking);
   if (!capture.ok) return refuse("review_required");
   const verifiedWitness = capture.witness;
@@ -2435,10 +2504,23 @@ async function writeRollCall(
       source,
       clientEventId: input.clientEventId ?? null,
       statementStatus: input.status,
-      offlineMeetingGeneration: verifiedWitness?.meetingGeneration ?? null,
-      offlineAssignmentGeneration: verifiedWitness?.assignmentGeneration ?? null,
+      offlineMeetingGeneration:
+        source === "live"
+          ? booking.offlineMeetingGeneration
+          : (verifiedWitness?.meetingGeneration ?? null),
+      offlineAssignmentGeneration:
+        source === "live"
+          ? booking.offlineAssignmentGeneration
+          : (verifiedWitness?.assignmentGeneration ?? null),
       captureContext: {
         ...rawRollCallCapture(input),
+        ...(source === "live" && capture.liveRecountVerified ? { liveRecountVerified: true } : {}),
+        ...(source === "offline" && verifiedWitness && input.offlineSnapshotId
+          ? {
+              offlineSnapshotId: input.offlineSnapshotId,
+              offlineWitnessFrontier: verifiedWitness.frontier,
+            }
+          : {}),
         // Personal blocker reasons live only in readinessBlockers, whose
         // erasure sweep removes them. Capture context keeps retry intent.
         ...(input.physicalPresenceOnly ? { physicalPresenceOnly: true } : {}),
@@ -2594,32 +2676,118 @@ export type RecordCrewRollCallOutcome =
  * from a dive — and this half exists so a captain offshore can close an
  * after-dive checkpoint at all (H-20260814-where-diveday-sit-between).
  */
+/** Resolve an assigned crew subject inside the writer's trip transaction. */
+async function currentRollCallCrew(
+  tx: DbExecutor,
+  shopId: string,
+  tripId: string,
+  personId: string,
+) {
+  const [assigned] = await tx
+    .select({
+      personId: tripAssignments.personId,
+      incarnation: tripAssignments.offlineIncarnation,
+      anonymizedAt: people.anonymizedAt,
+    })
+    .from(tripAssignments)
+    .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
+    .innerJoin(people, eq(people.id, tripAssignments.personId))
+    .leftJoin(
+      personRoles,
+      and(eq(personRoles.personId, people.id), inArray(personRoles.role, [...STAFF_ROLES])),
+    )
+    .where(
+      and(
+        liveTrip(),
+        eq(tripAssignments.tripId, tripId),
+        eq(tripAssignments.personId, personId),
+        eq(trips.shopId, shopId),
+        eq(people.shopId, shopId),
+        isOnTripCrew(tx, shopId, tripId),
+      ),
+    )
+    .limit(1);
+  return assigned;
+}
+
+export type CrewRollCallInput = {
+  shopId: string;
+  tripId: string;
+  personId: string;
+  recordedByPersonId: string;
+  status: RollCallEventStatus;
+  checkpoint?: RollCallCheckpoint;
+  source?: "live" | "offline";
+  clientEventId?: string;
+  observedEvidenceIds?: string[];
+  reconcilesEvidence?: boolean;
+  meetingDay?: number;
+  /** The `clientEventId` an offline `cleared` undoes — see {@link causalRetractionTarget}. */
+  retractsClientEventId?: string;
+  /** The stored event id a live `cleared` undoes — see {@link causalRetractionTarget}. */
+  retractsEventId?: string;
+  offlineSnapshotSavedAt?: Date;
+  offlineSnapshotId?: string;
+  offlineErasureEpochToken?: string;
+  /** The same, for the other half of the head count. */
+  rollCallWitness?: string;
+  liveRecountProof?: { snapshotId: string; witness: string; meetingDay: number };
+  note?: string | null;
+  occurredAt?: Date;
+};
+
+/** Acquire the erasure fence before the trip lock for crew marks and notes. */
+async function lockCrewRollCallEvidence(
+  tx: DbExecutor,
+  input: CrewRollCallInput,
+  checkpoint: string,
+  source: "live" | "offline",
+) {
+  const captureCredentials =
+    source === "live" && checkpoint === "departure" && input.status === "boarded";
+  const mayWriteNote = Boolean(input.note?.trim());
+  const mode =
+    checkpoint === "departure" && input.status === "not_boarded"
+      ? "rewrite"
+      : captureCredentials || mayWriteNote
+        ? "boarding"
+        : null;
+  if (mode) await lockBoardingCertificationEvidence(tx, input.shopId, mode);
+  return { captureCredentials, mayWriteNote };
+}
+
+async function crewCheckpointValid(
+  tx: DbExecutor,
+  tripId: string,
+  checkpoint: RollCallCheckpoint,
+  plannedDives: number,
+  meetingDay?: number,
+) {
+  return (
+    isRollCallCheckpoint(checkpoint, plannedDives) &&
+    (meetingDay === undefined ||
+      (meetingDay >= 0 && (await causalMeetingDay(tx, tripId, meetingDay)) === meetingDay))
+  );
+}
+
+async function earlyCrewReplay(tx: DbExecutor, input: CrewRollCallInput) {
+  if (!input.clientEventId) return undefined;
+  const replayed = replayVerdict(
+    await storedRollCallEvent(tx, input.shopId, input.clientEventId),
+    rollCallReplaySubject("crew", input.tripId, input.personId, input),
+    "roll_call_events",
+  );
+  return input.source === "offline" && replayed?.ok && offlineRollCallWitnessEnabled()
+    ? undefined
+    : replayed;
+}
+
 export async function recordCrewRollCall(
   db: AppDb,
-  input: {
-    shopId: string;
-    tripId: string;
-    personId: string;
-    recordedByPersonId: string;
-    status: RollCallEventStatus;
-    checkpoint?: RollCallCheckpoint;
-    source?: "live" | "offline";
-    clientEventId?: string;
-    observedEvidenceIds?: string[];
-    reconcilesEvidence?: boolean;
-    meetingDay?: number;
-    /** The `clientEventId` an offline `cleared` undoes — see {@link causalRetractionTarget}. */
-    retractsClientEventId?: string;
-    /** The stored event id a live `cleared` undoes — see {@link causalRetractionTarget}. */
-    retractsEventId?: string;
-    offlineSnapshotSavedAt?: Date;
-    offlineSnapshotId?: string;
-    offlineErasureEpochToken?: string;
-    /** The same, for the other half of the head count. */
-    note?: string | null;
-    occurredAt?: Date;
-  },
+  input: CrewRollCallInput,
 ): Promise<RecordCrewRollCallOutcome> {
+  if (input.liveRecountProof && input.meetingDay === undefined)
+    input = { ...input, meetingDay: input.liveRecountProof.meetingDay };
   // One instant for the event and the boat snapshot it keeps (#2300). An
   // offline tap is never dated after its own sync (`offlineEventInstant`).
   const now = nowDate();
@@ -2639,82 +2807,35 @@ export async function recordCrewRollCall(
         );
         if (!authorization.ok) return authorization;
         const staffId = authorization.staffId;
-        const captureCredentials =
-          source === "live" && checkpoint === "departure" && input.status === "boarded";
-        // Acquire the shop fence before trip or seat locks: erasure takes
-        // this fence before its person and booking sweeps (a stale offline note
-        // is discarded only when this crew member is the one erased). Conservatively fence non-empty text even when the
-        // checkpoint rule later drops it.
-        const mayWriteNote = Boolean(input.note?.trim());
-        const evidenceLockMode =
-          checkpoint === "departure" && input.status === "not_boarded"
-            ? "rewrite"
-            : captureCredentials || mayWriteNote
-              ? "boarding"
-              : null;
-        // A departure absence invalidates plans under the exclusive shop lock;
-        // captures and non-empty notes share it. All acquire it before the trip
-        // row, preserving the erasure-before-person/booking lock order.
-        if (evidenceLockMode) {
-          await lockBoardingCertificationEvidence(tx, input.shopId, evidenceLockMode);
-        }
+        const { captureCredentials, mayWriteNote } = await lockCrewRollCallEvidence(
+          tx,
+          input,
+          checkpoint,
+          source,
+        );
 
-        let noteInput = input.note;
-        let noteDisposition:
-          | "discarded_erasure_cutoff"
-          | "discarded_unverified_snapshot"
-          | undefined;
-        if (source === "offline" && mayWriteNote) {
-          const issuedEpoch = verifyOfflineErasureEpoch({
-            token: input.offlineErasureEpochToken,
-            shopId: input.shopId,
-            tripId: input.tripId,
-            snapshotId: input.offlineSnapshotId,
-          });
-          const [shop] = await tx
-            .select({ epoch: shops.offlineErasureEpoch })
-            .from(shops)
-            .where(eq(shops.id, input.shopId))
-            .limit(1);
-          // The shared erasure fence remains held through this comparison and
-          // the event insert. A stale snapshot still gets its roll-call mark,
-          // but its text cannot cross a completed erasure of this crew member;
-          // a note about anybody else is kept (issue #3569).
-          if (issuedEpoch === null) {
-            noteInput = null;
-            noteDisposition = "discarded_unverified_snapshot";
-          } else if (
-            shop?.epoch !== issuedEpoch &&
-            (await offlineNoteSubjectErased(tx, input.shopId, { personId: input.personId }))
-          ) {
-            noteInput = null;
-            noteDisposition = "discarded_erasure_cutoff";
-          }
-        }
+        const { note: noteInput, noteDisposition } = await gateOfflineRollCallNote(tx, {
+          source,
+          note: input.note,
+          shopId: input.shopId,
+          tripId: input.tripId,
+          subject: { personId: input.personId },
+          snapshotId: input.offlineSnapshotId,
+          token: input.offlineErasureEpochToken,
+          mayWriteNote,
+        });
         const refuse = (reason: Extract<RecordCrewRollCallOutcome, { ok: false }>["reason"]) => ({
           ok: false as const,
           reason,
           ...(noteDisposition ? { noteDisposition } : {}),
         });
-        // Crew assignment generations are not yet issued; preserve the observation for review.
-        if (source === "offline" && offlineRollCallWitnessEnabled())
-          return refuse("review_required");
-
         // Idempotency first, exactly as the diver path does it: a sync the device
         // retried (the response never arrived, the tab was closed mid-flight) must
         // not append a second row, and answering `duplicate` before any subject
         // lookup means a replay costs nothing and cannot be refused by a roster
         // that has changed since.
-        if (input.clientEventId) {
-          const replayed = replayVerdict(
-            await storedRollCallEvent(tx, input.shopId, input.clientEventId),
-            rollCallReplaySubject("crew", input.tripId, input.personId, input),
-            "roll_call_events",
-          );
-          if (replayed) {
-            return noteDisposition ? { ...replayed, noteDisposition } : replayed;
-          }
-        }
+        const replayed = await earlyCrewReplay(tx, input);
+        if (replayed) return noteDisposition ? { ...replayed, noteDisposition } : replayed;
 
         // Same tenancy and trip-status gate the other two writers apply — and the
         // trip's lock, taken here, before the crew member's own seat below
@@ -2728,7 +2849,11 @@ export async function recordCrewRollCall(
         // its function (#2983, `roll-call.postgres.test.ts`).
         await boundLockWaits(tx);
         const [trip] = await tx
-          .select({ id: trips.id, plannedDives: trips.plannedDives })
+          .select({
+            id: trips.id,
+            plannedDives: trips.plannedDives,
+            offlineMeetingGeneration: trips.offlineMeetingGeneration,
+          })
           .from(trips)
           .where(
             and(
@@ -2743,59 +2868,74 @@ export async function recordCrewRollCall(
         // Asked again under the trip lock, for `recordRollCall`'s reason: a resent
         // sync can overlap the request it replaced, and only now does that
         // request's commit show.
-        if (input.clientEventId) {
-          const replayed = replayVerdict(
-            await storedRollCallEvent(tx, input.shopId, input.clientEventId),
-            rollCallReplaySubject("crew", input.tripId, input.personId, input),
-            "roll_call_events",
-          );
-          if (replayed) {
-            return noteDisposition ? { ...replayed, noteDisposition } : replayed;
-          }
-        }
+        const lockedReplay = await earlyCrewReplay(tx, input);
+        if (lockedReplay)
+          return noteDisposition ? { ...lockedReplay, noteDisposition } : lockedReplay;
         if (!trip) return refuse("trip_unavailable");
-        if (!isRollCallCheckpoint(checkpoint, trip.plannedDives)) {
-          return refuse("invalid_checkpoint");
-        }
         if (
-          input.meetingDay !== undefined &&
-          (input.meetingDay < 0 ||
-            (await causalMeetingDay(tx, input.tripId, input.meetingDay)) !== input.meetingDay)
+          !(await crewCheckpointValid(
+            tx,
+            input.tripId,
+            checkpoint,
+            trip.plannedDives,
+            input.meetingDay,
+          ))
         ) {
           return refuse("invalid_checkpoint");
         }
 
-        // `isOnTripCrew` — the identical condition `listTripCrew` reads the crew
-        // list through, which is the whole point of it being one function. Without
-        // it this accepted a subject who was assigned but held no staff role and
-        // no history: their events were written, and then neither the crew list
-        // nor the denominator ever mentioned them, so a result existed about
-        // somebody the head count could not see (review 20260803, D11). It also
-        // *keeps accepting* a former staff member who is still on the list because
-        // of a result already recorded — so a checkpoint they are holding open can
-        // still be closed by naming what happened to them, rather than only by
-        // deleting them.
-        const [assigned] = await tx
-          .select({ personId: tripAssignments.personId, anonymizedAt: people.anonymizedAt })
-          .from(tripAssignments)
-          .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
-          .innerJoin(people, eq(people.id, tripAssignments.personId))
-          .leftJoin(
-            personRoles,
-            and(eq(personRoles.personId, people.id), inArray(personRoles.role, [...STAFF_ROLES])),
-          )
-          .where(
-            and(
-              liveTrip(),
-              eq(tripAssignments.tripId, input.tripId),
-              eq(tripAssignments.personId, input.personId),
-              eq(trips.shopId, input.shopId),
-              eq(people.shopId, input.shopId),
-              isOnTripCrew(tx, input.shopId, input.tripId),
-            ),
-          )
-          .limit(1);
+        const assigned = await currentRollCallCrew(tx, input.shopId, input.tripId, input.personId);
         if (!assigned) return refuse("crew_not_assigned");
+        const crewContext = {
+          shopId: input.shopId,
+          tripId: input.tripId,
+          personId: input.personId,
+          checkpoint,
+          meetingGeneration: trip.offlineMeetingGeneration,
+          incarnation: assigned.incarnation,
+        };
+        if (
+          source === "live" &&
+          !(await liveCrewCaptureValid(tx, crewContext, input.liveRecountProof, input.meetingDay))
+        )
+          return refuse("review_required");
+        let crewWitness: ReturnType<typeof offlineCrewWitness> = null;
+        if (source === "offline" && offlineRollCallWitnessEnabled()) {
+          if (!input.offlineSnapshotId || input.meetingDay === undefined || !input.rollCallWitness)
+            return refuse("review_required");
+          crewWitness = offlineCrewWitness(crewContext, {
+            snapshotId: input.offlineSnapshotId,
+            meetingDay: input.meetingDay,
+            witness: input.rollCallWitness,
+          });
+          if (!crewWitness) return refuse("review_required");
+          if (input.clientEventId) {
+            const stored = await storedRollCallEvent(tx, input.shopId, input.clientEventId);
+            const replayed = replayVerdict(
+              stored,
+              rollCallReplaySubject("crew", input.tripId, input.personId, input),
+              "roll_call_events",
+            );
+            if (replayed?.ok) {
+              if (
+                stored?.offlineMeetingGeneration !== trip.offlineMeetingGeneration ||
+                stored.offlineCrewAssignmentId !== assigned.incarnation
+              )
+                return refuse("review_required");
+              return noteDisposition ? { ...replayed, noteDisposition } : replayed;
+            }
+          }
+          if (
+            !(await offlineCrewFrontierValid(tx, {
+              ...crewContext,
+              snapshotId: input.offlineSnapshotId,
+              meetingDay: input.meetingDay,
+              captured: crewWitness.frontier,
+              observed: input.observedEvidenceIds ?? [],
+            }))
+          )
+            return refuse("review_required");
+        }
 
         /** The event a `cleared` takes back, once proved standing (`retracts_event_id`). */
         let retractsEventId: string | undefined;
@@ -2898,7 +3038,23 @@ export async function recordCrewRollCall(
             source,
             clientEventId: input.clientEventId ?? null,
             statementStatus: input.status,
-            captureContext: rawRollCallCapture(input),
+            offlineMeetingGeneration:
+              source === "live"
+                ? trip.offlineMeetingGeneration
+                : (crewWitness?.meetingGeneration ?? null),
+            offlineCrewAssignmentId: source === "live" || crewWitness ? assigned.incarnation : null,
+            captureContext: {
+              ...rawRollCallCapture(input),
+              ...(source === "live" && input.liveRecountProof && offlineRollCallWitnessEnabled()
+                ? { liveRecountVerified: true }
+                : {}),
+              ...(source === "offline" && crewWitness && input.offlineSnapshotId
+                ? {
+                    offlineSnapshotId: input.offlineSnapshotId,
+                    offlineWitnessFrontier: crewWitness.frontier,
+                  }
+                : {}),
+            },
             observedEvidenceIds: input.observedEvidenceIds ?? null,
             reconcilesEvidence: input.reconcilesEvidence ?? false,
             retractsEventId: retractsEventId ?? null,

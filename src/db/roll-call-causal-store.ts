@@ -1,4 +1,4 @@
-import { and, asc, count, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, count, eq, inArray, or, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import {
   effectiveRollCallKey,
@@ -17,7 +17,15 @@ import { carriedMissing, manifestRollCallView, standingByDay } from "@/lib/roll-
 import { rollCallDayOf, rollCallDayStarts } from "@/lib/trip-days";
 import type { DbExecutor } from "./client";
 import { crewMarks, seatMarks } from "./roll-call-subject";
-import { bookings, people, rollCallEvents, tripScheduleDays, trips } from "./schema";
+import {
+  bookings,
+  people,
+  rollCallEvents,
+  tripAssignments,
+  tripScheduleDays,
+  trips,
+} from "./schema";
+import { rollCallDayIndex } from "./trip-meeting-windows";
 import { liveTrip } from "./trips-live";
 
 export type RollCallCausalSubject = {
@@ -112,14 +120,144 @@ export async function effectiveCausalRowsForDb<T extends { event: CausalEvent; d
   db: DbExecutor,
   rows: readonly T[],
 ): Promise<T[]> {
-  const bound = rows.filter(
+  return (await rollCallProjectionForDb(db, rows)).rows;
+}
+
+export function recountKey(event: CausalEvent, day: number): string {
+  return recountScopeKey(
+    event.shopId,
+    event.tripId,
+    event.bookingId ?? (event.crewPersonId ? `crew:${event.crewPersonId}` : null),
+    event.checkpoint,
+    day,
+  );
+}
+export function recountScopeKey(
+  shopId: string,
+  tripId: string,
+  bookingId: string | null,
+  checkpoint: string,
+  day: number,
+): string {
+  return JSON.stringify([
+    shopId.toLowerCase(),
+    tripId.toLowerCase(),
+    bookingId?.toLowerCase() ?? null,
+    checkpoint,
+    day,
+  ]);
+}
+
+function currentUnknownKey(
+  shopId: string,
+  tripId: string,
+  subjectId: string,
+  checkpoint: string,
+  day: number,
+) {
+  return `current:${recountScopeKey(shopId, tripId, subjectId, checkpoint, day)}`;
+}
+
+/** Unresolved earlier and unknown-day presence stays visible at later counts. */
+export function recountApplies(
+  recount: ReadonlySet<string>,
+  shopId: string,
+  tripId: string,
+  subjectId: string,
+  checkpoint: string,
+  day: number,
+): boolean {
+  const current =
+    checkpoint === "departure" ? 0 : Number(/^after_dive_(\d+)$/.exec(checkpoint)?.[1] ?? -1);
+  if (current < 0) return false;
+  for (let index = 0; index <= 6; index++) {
+    const source = index === 0 ? "departure" : `after_dive_${index}`;
+    if (
+      recount.has(recountScopeKey(shopId, tripId, subjectId, source, -1)) &&
+      !recount.has(currentUnknownKey(shopId, tripId, subjectId, checkpoint, day))
+    )
+      return true;
+    for (let earlier = 0; earlier < day; earlier++)
+      if (recount.has(recountScopeKey(shopId, tripId, subjectId, source, earlier))) return true;
+    if (index <= current && recount.has(recountScopeKey(shopId, tripId, subjectId, source, day)))
+      return true;
+  }
+  return false;
+}
+
+export function recountHasUnknownDay(
+  recount: ReadonlySet<string>,
+  shopId: string,
+  tripId: string,
+  subjectId: string,
+): boolean {
+  for (let index = 0; index <= 6; index++) {
+    if (
+      recount.has(
+        recountScopeKey(
+          shopId,
+          tripId,
+          subjectId,
+          index === 0 ? "departure" : `after_dive_${index}`,
+          -1,
+        ),
+      )
+    )
+      return true;
+  }
+  return false;
+}
+
+/** Load all offline sources for subjects represented in a possibly checkpoint-limited reader. */
+async function offlineSourcesForRows<T extends { event: CausalEvent; day: number }>(
+  db: DbExecutor,
+  rows: readonly T[],
+) {
+  if (rows.length === 0) return [];
+  const trips = [...new Set(rows.map(({ event }) => event.tripId))];
+  const shops = [...new Set(rows.map(({ event }) => event.shopId))];
+  const seats = [
+    ...new Set(rows.flatMap(({ event }) => (event.bookingId ? [event.bookingId] : []))),
+  ];
+  const crew = [
+    ...new Set(rows.flatMap(({ event }) => (event.crewPersonId ? [event.crewPersonId] : []))),
+  ];
+  if (!seats.length && !crew.length) return [];
+  const events = await db
+    .select({ event: rollCallEvents, day: rollCallDayIndex() })
+    .from(rollCallEvents)
+    // diveday:roll-call-both-subjects: the paired subject predicates bound this lookup.
+    .where(
+      and(
+        inArray(rollCallEvents.tripId, trips),
+        inArray(rollCallEvents.shopId, shops),
+        eq(rollCallEvents.source, "offline"),
+        or(
+          seats.length ? inArray(rollCallEvents.bookingId, seats) : undefined,
+          crew.length ? inArray(rollCallEvents.crewPersonId, crew) : undefined,
+        ),
+      ),
+    );
+  const existing = new Set(rows.map(({ event }) => event.id));
+  return events.filter(({ event }) => !existing.has(event.id));
+}
+
+/** Keep invalidated positive evidence visible as an unresolved count, not an older answer. */
+export async function rollCallProjectionForDb<T extends { event: CausalEvent; day: number }>(
+  db: DbExecutor,
+  rows: readonly T[],
+): Promise<{ rows: T[]; recount: Set<string> }> {
+  const sources = [...rows, ...(await offlineSourcesForRows(db, rows))];
+  const bound = sources.filter(
     ({ event }) =>
       event.source === "offline" &&
       (offlineRollCallWitnessEnabled() ||
         event.offlineMeetingGeneration !== null ||
-        event.offlineAssignmentGeneration !== null),
+        event.offlineAssignmentGeneration !== null ||
+        event.offlineCrewAssignmentId !== null),
   );
-  if (bound.length === 0) return effectiveCausalRows(rows, () => true);
+  if (bound.length === 0)
+    return { rows: effectiveCausalRows(rows, () => true), recount: new Set() };
   const ids = [
     ...new Set(bound.flatMap(({ event }) => (event.bookingId ? [event.bookingId] : []))),
   ];
@@ -138,8 +276,38 @@ export async function effectiveCausalRowsForDb<T extends { event: CausalEvent; d
           .innerJoin(trips, and(eq(trips.id, bookings.tripId), eq(trips.shopId, bookings.shopId)))
           .where(and(inArray(bookings.id, ids), liveTrip()));
   const byId = new Map(current.map((row) => [row.id, row]));
-  return effectiveCausalRows(rows, (event) => {
+  const crewTripIds = [
+    ...new Set(
+      bound.filter(({ event }) => event.subjectKind === "crew").map(({ event }) => event.tripId),
+    ),
+  ];
+  const currentCrew = crewTripIds.length
+    ? await db
+        .select({
+          tripId: trips.id,
+          shopId: trips.shopId,
+          meeting: trips.offlineMeetingGeneration,
+          personId: tripAssignments.personId,
+          incarnation: tripAssignments.offlineIncarnation,
+        })
+        .from(tripAssignments)
+        .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
+        .where(and(inArray(trips.id, crewTripIds), liveTrip()))
+    : [];
+  const crewById = new Map(currentCrew.map((row) => [`${row.tripId}:${row.personId}`, row]));
+  const eligible = (event: CausalEvent) => {
     if (event.source !== "offline") return true;
+    if (event.subjectKind === "crew") {
+      if (event.offlineMeetingGeneration === null && event.offlineCrewAssignmentId === null)
+        return !offlineRollCallWitnessEnabled();
+      const crew = crewById.get(`${event.tripId}:${event.crewPersonId}`);
+      return (
+        crew !== undefined &&
+        crew.shopId === event.shopId &&
+        crew.meeting === event.offlineMeetingGeneration &&
+        crew.incarnation === event.offlineCrewAssignmentId
+      );
+    }
     if (event.offlineMeetingGeneration === null && event.offlineAssignmentGeneration === null)
       return !offlineRollCallWitnessEnabled();
     if (!event.bookingId || event.subjectKind !== "seat") return false;
@@ -151,7 +319,167 @@ export async function effectiveCausalRowsForDb<T extends { event: CausalEvent; d
       event.offlineMeetingGeneration === seat.meeting &&
       event.offlineAssignmentGeneration === seat.assignment
     );
+  };
+  const recount = new Set<string>();
+  const liveByKey = new Map<string, CausalEvent[]>();
+  const stale = bound.filter(({ event }) => !eligible(event));
+  const tripIds = [...new Set(stale.map(({ event }) => event.tripId))];
+  const shopIds = [...new Set(stale.map(({ event }) => event.shopId))];
+  const seatIds = [
+    ...new Set(stale.flatMap(({ event }) => (event.bookingId ? [event.bookingId] : []))),
+  ];
+  const crewIds = [
+    ...new Set(stale.flatMap(({ event }) => (event.crewPersonId ? [event.crewPersonId] : []))),
+  ];
+  const laterLive =
+    tripIds.length && (seatIds.length || crewIds.length)
+      ? await db
+          .select()
+          .from(rollCallEvents)
+          // diveday:roll-call-both-subjects: scoped subjects are named in the paired predicates.
+          .where(
+            and(
+              inArray(rollCallEvents.tripId, tripIds),
+              inArray(rollCallEvents.shopId, shopIds),
+              eq(rollCallEvents.source, "live"),
+              or(
+                seatIds.length ? inArray(rollCallEvents.bookingId, seatIds) : undefined,
+                crewIds.length ? inArray(rollCallEvents.crewPersonId, crewIds) : undefined,
+              ),
+            ),
+          )
+      : [];
+  const evidenceRows = [
+    ...rows.map(({ event, day }) => ({ event, day })),
+    ...laterLive.flatMap((event) =>
+      event.meetingDay === null ? [] : [{ event, day: event.meetingDay }],
+    ),
+  ];
+  const maxDay = evidenceRows.reduce((maximum, row) => Math.max(maximum, row.day), 0);
+  for (const { event, day } of evidenceRows) {
+    if (event.source !== "live") continue;
+    const key = recountKey(event, day);
+    const events = liveByKey.get(key) ?? [];
+    events.push(event);
+    liveByKey.set(key, events);
+  }
+  for (const { event, day } of bound) {
+    const statement = event.statementStatus ?? event.status;
+    if (
+      eligible(event) ||
+      (!event.bookingId && !event.crewPersonId) ||
+      statement === "cleared" ||
+      (event.checkpoint === "departure" && statement !== "boarded")
+    )
+      continue;
+    const key = recountKey(event, day);
+    const current = event.bookingId ? byId.get(event.bookingId) : undefined;
+    const crew = event.crewPersonId
+      ? crewById.get(`${event.tripId}:${event.crewPersonId}`)
+      : undefined;
+    const subjectId = event.bookingId ?? `crew:${event.crewPersonId}`;
+    const ordinal =
+      event.checkpoint === "departure"
+        ? 0
+        : Number(/^after_dive_(\d+)$/.exec(event.checkpoint)?.[1] ?? -1);
+    const keys = [{ key, laterDay: false }];
+    if (day >= 0 && ordinal >= 0)
+      for (let later = ordinal + 1; later <= 6; later++)
+        keys.push({
+          key: recountScopeKey(event.shopId, event.tripId, subjectId, `after_dive_${later}`, day),
+          laterDay: false,
+        });
+    if (day >= 0)
+      for (let nextDay = day + 1; nextDay <= maxDay; nextDay++)
+        for (let index = 0; index <= 6; index++)
+          keys.push({
+            key: recountScopeKey(
+              event.shopId,
+              event.tripId,
+              subjectId,
+              index === 0 ? "departure" : `after_dive_${index}`,
+              nextDay,
+            ),
+            laterDay: true,
+          });
+    const resolved = keys.some((candidate) => {
+      const live = (liveByKey.get(candidate.key) ?? []).reduce<CausalEvent | undefined>(
+        (latest, candidate) => (!latest || latest.seq < candidate.seq ? candidate : latest),
+        undefined,
+      );
+      return (
+        live !== undefined &&
+        live.seq > event.seq &&
+        (live.statementStatus ?? live.status) !== "cleared" &&
+        (!candidate.laterDay || (live.statementStatus ?? live.status) === "boarded") &&
+        (candidate.key === key || live.captureContext?.liveRecountVerified === true) &&
+        ((current !== undefined &&
+          current.shopId === event.shopId &&
+          current.tripId === event.tripId &&
+          live.offlineMeetingGeneration === current.meeting &&
+          live.offlineAssignmentGeneration === current.assignment) ||
+          (crew !== undefined &&
+            crew.shopId === event.shopId &&
+            live.offlineMeetingGeneration === crew.meeting &&
+            live.offlineCrewAssignmentId === crew.incarnation))
+      );
+    });
+    if (!resolved) recount.add(key);
+  }
+  // A current, witnessed physical count can answer the present checkpoint without
+  // assigning an unknown historical observation to a made-up day.
+  for (const [key, events] of liveByKey) {
+    const live = events.reduce<CausalEvent | undefined>(
+      (latest, candidate) => (!latest || latest.seq < candidate.seq ? candidate : latest),
+      undefined,
+    );
+    if (
+      !live ||
+      live.meetingDay === null ||
+      live.captureContext?.liveRecountVerified !== true ||
+      (live.statementStatus ?? live.status) === "cleared"
+    )
+      continue;
+    const subjectId = live.bookingId ?? (live.crewPersonId ? `crew:${live.crewPersonId}` : null);
+    if (!subjectId || !recountHasUnknownDay(recount, live.shopId, live.tripId, subjectId)) continue;
+    if (
+      stale.some(
+        ({ event, day }) =>
+          day === -1 &&
+          event.shopId === live.shopId &&
+          event.tripId === live.tripId &&
+          (event.bookingId ?? (event.crewPersonId ? `crew:${event.crewPersonId}` : null)) ===
+            subjectId &&
+          event.seq >= live.seq,
+      )
+    )
+      continue;
+    const seat = live.bookingId ? byId.get(live.bookingId) : undefined;
+    const crew = live.crewPersonId
+      ? crewById.get(`${live.tripId}:${live.crewPersonId}`)
+      : undefined;
+    if (
+      (seat &&
+        seat.shopId === live.shopId &&
+        seat.tripId === live.tripId &&
+        live.offlineMeetingGeneration === seat.meeting &&
+        live.offlineAssignmentGeneration === seat.assignment) ||
+      (crew &&
+        crew.shopId === live.shopId &&
+        live.offlineMeetingGeneration === crew.meeting &&
+        live.offlineCrewAssignmentId === crew.incarnation)
+    )
+      recount.add(`current:${key}`);
+  }
+  const kept = rows.filter(({ event, day }) => {
+    const subjectId = event.bookingId ?? (event.crewPersonId ? `crew:${event.crewPersonId}` : null);
+    return (
+      eligible(event) &&
+      (!subjectId ||
+        !recountApplies(recount, event.shopId, event.tripId, subjectId, event.checkpoint, day))
+    );
   });
+  return { rows: effectiveCausalRows(kept, () => true), recount };
 }
 
 /** Unknown historical meeting days are never reconstructed from a device clock. */
@@ -273,13 +601,14 @@ export async function manifestRollCallReads(db: DbExecutor, shopId: string, trip
     .from(tripScheduleDays)
     .where(eq(tripScheduleDays.tripId, tripId))
     .orderBy(asc(tripScheduleDays.startsAt));
-  const rows = await effectiveCausalRowsForDb(
+  const projection = await rollCallProjectionForDb(
     db,
     loaded.map((row) => ({
       ...row,
       day: row.event.meetingDay ?? (windows.length > 1 ? -1 : 0),
     })),
   );
+  const { rows, recount } = projection;
   const meetingDay = rollCallDayOf(rollCallDayStarts(windows), nowDate());
   const latest = new Map<string, (typeof rows)[number]>();
   for (const row of rows) {
@@ -419,7 +748,7 @@ export async function manifestRollCallReads(db: DbExecutor, shopId: string, trip
       ...(day < meetingDay ? { fromEarlierDay: true } : {}),
     });
   }
-  return { causal: { meetingDay, contexts }, crewRollCalls };
+  return { causal: { meetingDay, contexts }, crewRollCalls, recount };
 }
 
 /** An ordinary undo names one standing statement; it is never an opinion about everybody else. */

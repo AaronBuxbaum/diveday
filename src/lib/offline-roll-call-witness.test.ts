@@ -7,16 +7,17 @@ import {
 } from "./offline-roll-call-witness";
 
 describe("offline roll-call witness", () => {
-  it("cannot activate the experimental path in production", () => {
-    vi.stubEnv("DIVEDAY_OFFLINE_ROLL_CALL_WITNESS", "1");
+  it("enables witness validation for a production database without a flag", () => {
+    vi.stubEnv("DIVEDAY_OFFLINE_ROLL_CALL_WITNESS", "");
     vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("DATABASE_URL", "postgres://real-configured");
     try {
-      expect(offlineRollCallWitnessEnabled()).toBe(false);
+      expect(offlineRollCallWitnessEnabled()).toBe(true);
     } finally {
       vi.unstubAllEnvs();
     }
   });
-  it("permits only the database-free E2E harness to exercise it in a production build", () => {
+  it("lets the database-free E2E harness opt in without disabling production", () => {
     vi.stubEnv("DIVEDAY_OFFLINE_ROLL_CALL_WITNESS", "1");
     vi.stubEnv("NODE_ENV", "production");
     vi.stubEnv("DIVEDAY_E2E", "1");
@@ -24,7 +25,18 @@ describe("offline roll-call witness", () => {
     try {
       expect(offlineRollCallWitnessEnabled()).toBe(true);
       vi.stubEnv("DATABASE_URL", "postgres://real-configured");
-      expect(offlineRollCallWitnessEnabled()).toBe(false);
+      expect(offlineRollCallWitnessEnabled()).toBe(true);
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+  it("enables witnesses in ordinary development without a flag", () => {
+    vi.stubEnv("NODE_ENV", "development");
+    vi.stubEnv("DATABASE_URL", "");
+    vi.stubEnv("DIVEDAY_E2E", "");
+    vi.stubEnv("DIVEDAY_OFFLINE_ROLL_CALL_WITNESS", "");
+    try {
+      expect(offlineRollCallWitnessEnabled()).toBe(true);
     } finally {
       vi.unstubAllEnvs();
     }

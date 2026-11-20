@@ -40,3 +40,47 @@ it("carries confirmed physical identity but never a held person's identifier", (
   expect(held.manifests[0]?.divers[0]?.personId).toBeUndefined();
   expect(JSON.stringify(held)).not.toContain("private-person");
 });
+
+it("saves unresolved count markers for both passengers and crew", () => {
+  const manifest = buildTripManifest({
+    trip,
+    checkpoint: "departure",
+    crew: [
+      {
+        id: "crew",
+        fullName: "Crew",
+        roles: ["captain"],
+        standingRatings: [],
+        emergencyContactName: null,
+        emergencyContactPhone: null,
+        recountRequired: true,
+      },
+    ],
+    divers: [
+      {
+        bookingId: "seat",
+        fullName: "Guest",
+        email: null,
+        emergencyContactName: null,
+        emergencyContactPhone: null,
+        checkedIn: false,
+        rentalFit: { state: "own_kit" },
+        nitroxRequested: false,
+        readiness: { status: "ready", blockers: [] },
+        historicalReviewRequired: true,
+      },
+    ],
+  });
+  const saved = serializeManifests(
+    [manifest],
+    {
+      slug: "test",
+      name: "Test",
+      timezone: "UTC",
+      emergencyReference: EMPTY_EMERGENCY_REFERENCE,
+    },
+    () => "",
+  );
+  expect(saved.manifests[0]?.crew[0]?.recountRequired).toBe(true);
+  expect(saved.manifests[0]?.divers[0]?.historicalReviewRequired).toBe(true);
+});

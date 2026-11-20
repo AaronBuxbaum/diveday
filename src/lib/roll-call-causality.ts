@@ -179,6 +179,8 @@ export function foldRollCallEvidence(
 
 /** Named, tenant-scoped evidence rendered to crew; no global sequence is exposed. */
 export type RollCallCausalContext = {
+  /** Proof of the meeting and seat shown for a deliberate live recount. */
+  liveRecountProof?: { snapshotId: string; witness: string; meetingDay: number };
   meetingDay: number;
   observedEvidenceIds: string[];
   conflict: boolean;

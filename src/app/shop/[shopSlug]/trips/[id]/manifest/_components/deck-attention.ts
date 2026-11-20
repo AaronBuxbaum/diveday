@@ -10,6 +10,8 @@ export function deckAttentionNeeded(input: {
 }): boolean {
   const { manifest, checkpoint, alerted, headCount } = input;
   return (
+    (manifest.summary.recountRequired ?? 0) > 0 ||
+    (manifest.summary.historicalReviewRequired ?? 0) > 0 ||
     manifest.divers.some(
       (row) => isNotBackAboard(checkpoint, row.rollCall) || row.rollCallContext?.conflict,
     ) ||

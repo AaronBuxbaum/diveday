@@ -17,7 +17,7 @@ import { buildOfflineManifestCopies } from "@/features/offline-manifest-snapshot
 import type { DiveDaySession } from "@/lib/auth";
 import { nowDate } from "@/lib/clock";
 import { signRollCallWitness, verifyRollCallWitness } from "@/lib/offline-roll-call-witness";
-import { ROLL_CALL_REVIEW_HEADERS, ROLL_CALL_WITNESS_HEADERS } from "@/lib/roll-call-protocol";
+import { ROLL_CALL_WITNESS_HEADERS } from "@/lib/roll-call-protocol";
 import { fileScopedShopContext } from "@/test/db";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
 
@@ -72,16 +72,18 @@ it("refuses a cached review-protocol client before settling a batch", async () =
   auth.mockResolvedValue(staffSession(shop.id, staffPersonId));
   const saved = (await buildOfflineManifestCopies(db, shop, staffPersonId, [trip.id])).payloads[0];
   if (!saved?.snapshotId) throw new Error("snapshot missing");
+  const eventId = crypto.randomUUID();
+  vi.stubEnv("DIVEDAY_OFFLINE_ROLL_CALL_WITNESS", "0");
   const response = await POST(
     new Request("http://localhost/api/offline-manifests/sync", {
       method: "POST",
-      headers: { ...ROLL_CALL_REVIEW_HEADERS, "content-type": "application/json" },
+      headers: { "x-diveday-roll-call-protocol": "2", "content-type": "application/json" },
       body: JSON.stringify({
         events: [
           {
             tripId: trip.id,
             bookingId: booking.id,
-            clientEventId: crypto.randomUUID(),
+            clientEventId: eventId,
             snapshotId: saved.snapshotId,
             erasureEpochToken: saved.erasureEpochToken,
             snapshotSavedAt: nowDate().toISOString(),
@@ -93,7 +95,11 @@ it("refuses a cached review-protocol client before settling a batch", async () =
       }),
     }),
   );
+  vi.stubEnv("DIVEDAY_OFFLINE_ROLL_CALL_WITNESS", "1");
   expect(response.status).toBe(426);
+  expect(
+    await db.select().from(rollCallEvents).where(eq(rollCallEvents.clientEventId, eventId)),
+  ).toHaveLength(0);
 });
 
 it("issues a signed snapshot witness for a represented seat", async () => {

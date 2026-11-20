@@ -274,7 +274,10 @@ export function offlineTripView(envelope: OfflineManifestEnvelope, checkpoint: R
   //   no longer anything to apologise for.
   const crewMissing = completeness.crewReason === "crew_not_back_aboard";
   const crewWithoutId = crewWithKeys.filter((member) => !member.id).length;
-  const rollCallComplete = completeness.complete;
+  const unresolvedSaved =
+    manifest.divers.some((diver) => diver.recountRequired || diver.historicalReviewRequired) ||
+    manifest.crew.some((member) => member.recountRequired || member.historicalReviewRequired);
+  const rollCallComplete = completeness.complete && !unresolvedSaved;
   // The people this device counts (every row but a turned-away seat nobody
   // has answered for), not the (possibly stale, save-time)
   // `manifest.summary.totalDivers`. Feeds MilestoneHaptics and the
@@ -287,7 +290,7 @@ export function offlineTripView(envelope: OfflineManifestEnvelope, checkpoint: R
   // heading text above ("Roll call complete" is accurate either way), but an
   // "everyone's aboard" celebration must not fire on that basis. Gate it on
   // the true boarded count instead.
-  const allBoarded = totalDivers > 0 && boarded === totalDivers;
+  const allBoarded = totalDivers > 0 && boarded === totalDivers && !unresolvedSaved;
   const missingDivers = manifest.divers.filter(
     (_diver, index) => !localStates[index] && !offBoat[index],
   );

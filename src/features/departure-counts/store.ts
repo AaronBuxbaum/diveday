@@ -5,7 +5,11 @@ import { seatSailed } from "@/features/seat-sailed";
 import type { DbExecutor } from "../../db/client";
 import { queryAll } from "../../db/query-helpers";
 import { listTripsReadiness } from "../../db/readiness";
-import { effectiveCausalRowsForDb } from "../../db/roll-call-causal-store";
+import {
+  recountApplies,
+  recountKey,
+  rollCallProjectionForDb,
+} from "../../db/roll-call-causal-store";
 import { newestMarkFirst } from "../../db/roll-call-order";
 import { seatMarks } from "../../db/roll-call-subject";
 import { bookings, rollCallEvents, trips } from "../../db/schema/index";
@@ -85,6 +89,8 @@ export type DepartureCount = Readonly<{
    * stray tap can never hide one.
    */
   missing: number;
+  /** People at the current checkpoint whose earlier offline presence needs recounting. */
+  recountRequired: number;
   /**
    * **Seats on the roster whose readiness says they may not board**
    * (`rosterRowIsBlocked`), counted over the same seats the roster's Blocked
@@ -154,7 +160,24 @@ export async function departureCounts(
         .orderBy(...newestMarkFirst()),
   ]);
   const readiness = await readinessFor(db, shopId, roster, options);
-  const effective = await effectiveCausalRowsForDb(db, events);
+  const { rows: effective, recount } = await rollCallProjectionForDb(db, events);
+  const currentDayByTrip = new Map(events.map((row) => [row.event.tripId, row.currentDay]));
+  const recountByTrip = new Map<string, Map<number, Set<string>>>();
+  for (const row of events) {
+    if (
+      !row.event.bookingId ||
+      row.day !== row.currentDay ||
+      !recount.has(recountKey(row.event, row.day))
+    )
+      continue;
+    const ordinal = rollCallCheckpointOrdinal(row.event.checkpoint as RollCallCheckpoint);
+    if (!Number.isInteger(ordinal) || ordinal < 0) continue;
+    const byCheckpoint = recountByTrip.get(row.event.tripId) ?? new Map<number, Set<string>>();
+    const people = byCheckpoint.get(ordinal) ?? new Set<string>();
+    people.add(row.event.bookingId);
+    byCheckpoint.set(ordinal, people);
+    recountByTrip.set(row.event.tripId, byCheckpoint);
+  }
 
   // Newest first, so the first event per seat and checkpoint is its standing word.
   // Keyed by departure too: a word recorded on another departure (an offline
@@ -207,11 +230,17 @@ export async function departureCounts(
         if (ordinal <= plannedDives) latest = Math.max(latest, ordinal);
       }
     }
+    // An unresolved observation is still evidence that this checkpoint was
+    // reached, even though it is not a confirmed aboard or missing result.
+    for (const ordinal of recountByTrip.get(tripId)?.keys() ?? []) {
+      if (ordinal > 0 && ordinal <= plannedDives) latest = Math.max(latest, ordinal);
+    }
     let booked = 0;
     let sailed = 0;
     let boarded = 0;
     let back = 0;
     let missing = 0;
+    let recountRequired = 0;
     let blocked = 0;
     for (const seat of seats) {
       const held = seatIsHeld(seat.status);
@@ -226,11 +255,24 @@ export async function departureCounts(
       if (said?.dock === "boarded") boarded += 1;
       if (latest > 0 && said?.afterDive.get(latest) === "boarded") back += 1;
       if (said && isMissing(said.afterDive)) missing += 1;
+      const day = currentDayByTrip.get(tripId);
+      if (
+        day !== undefined &&
+        recountApplies(
+          recount,
+          shopId,
+          tripId,
+          seat.id,
+          latest === 0 ? "departure" : `after_dive_${latest}`,
+          day,
+        )
+      )
+        recountRequired += 1;
       if (rosterRowIsBlocked(readiness.get(seat.id))) blocked += 1;
     }
     counts.set(
       tripId,
-      Object.freeze({ capacity, booked, sailed, boarded, back, missing, blocked }),
+      Object.freeze({ capacity, booked, sailed, boarded, back, missing, recountRequired, blocked }),
     );
   }
   return counts;

@@ -20,10 +20,9 @@ import { isStaff } from "@/lib/authz";
 import { log } from "@/lib/log";
 import { ROLL_CALL_NOTE_MAX, type RollCallCheckpoint } from "@/lib/manifests";
 import type { OfflineManifestUpcomingResponse } from "@/lib/offline-manifests";
-import { offlineRollCallWitnessEnabled } from "@/lib/offline-roll-call-witness";
 import { ROLL_CALL_EVENT_STATUSES } from "@/lib/roll-call";
 import { clientRollCallEvidenceId, rollCallEvidenceIdPattern } from "@/lib/roll-call-causality";
-import { supportsRollCallReview, supportsRollCallWitness } from "@/lib/roll-call-protocol";
+import { supportsRollCallWitness } from "@/lib/roll-call-protocol";
 
 /**
  * One event carries **exactly one** subject: a `bookingId` (a diver's paid
@@ -262,11 +261,7 @@ export async function POST(request: Request) {
     return Response.json({ error: "authentication_required" }, { status: 401 });
   }
 
-  if (
-    !(offlineRollCallWitnessEnabled()
-      ? supportsRollCallWitness(request)
-      : supportsRollCallReview(request))
-  )
+  if (!supportsRollCallWitness(request))
     return Response.json(
       { error: "offline_update_required" },
       { status: 426, headers: { "Cache-Control": "no-store" } },
