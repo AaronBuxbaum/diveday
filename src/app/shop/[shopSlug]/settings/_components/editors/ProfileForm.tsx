@@ -81,6 +81,22 @@ export function ProfileForm({
           className={controlClass}
         />
       </Field>
+      <Field label={t("settings.main.profile.noticeText")} hint={t("settings.main.optionalHint")}>
+        <input
+          name="noticeText"
+          type="text"
+          maxLength={200}
+          defaultValue={shop.noticeText ?? ""}
+          placeholder={t("settings.main.profile.noticePlaceholder")}
+          className={controlClass}
+        />
+      </Field>
+      <Field label={t("settings.main.profile.storefrontLeads")}>
+        <select name="storefrontLeads" defaultValue={shop.storefrontLeads} className={controlClass}>
+          <option value="schedule">{t("settings.main.profile.leadsSchedule")}</option>
+          <option value="courses">{t("settings.main.profile.leadsCourses")}</option>
+        </select>
+      </Field>
       <Field label={t("settings.main.profile.tagline")} hint={t("settings.main.optionalHint")}>
         <textarea
           name="tagline"

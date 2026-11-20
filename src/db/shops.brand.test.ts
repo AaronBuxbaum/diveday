@@ -32,6 +32,22 @@ describe("a shop's brand", () => {
     expect(cleared).toMatchObject({ welcomeText: null, welcomeSigner: null });
   });
 
+  it("saves a notice and which section leads, and rejects an unknown lead", async () => {
+    const { db, shop } = ctx;
+    await setShopProfile(db, shop.id, {
+      noticeText: " Boats are open ",
+      storefrontLeads: "courses",
+    });
+    const [saved] = await db.select().from(shops).where(eq(shops.id, shop.id));
+    expect(saved).toMatchObject({ noticeText: "Boats are open", storefrontLeads: "courses" });
+    await setShopProfile(db, shop.id, { noticeText: " ", storefrontLeads: "schedule" });
+    const [cleared] = await db.select().from(shops).where(eq(shops.id, shop.id));
+    expect(cleared).toMatchObject({ noticeText: null, storefrontLeads: "schedule" });
+    await expect(
+      db.update(shops).set({ storefrontLeads: "boats" }).where(eq(shops.id, shop.id)),
+    ).rejects.toThrow();
+  });
+
   it("stores the whole brand, and blanks clear it", async () => {
     const { db, shop } = ctx;
     const shopId = shop.id;

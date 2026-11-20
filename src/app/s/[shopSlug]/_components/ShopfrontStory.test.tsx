@@ -54,6 +54,17 @@ describe("the welcome and the lower shop story", () => {
     expect(screen.getByText("Ana")).toBeInTheDocument();
   });
 
+  it("shows the shop's notice even with nothing else to welcome with", () => {
+    storefront({
+      ...SHOP,
+      tagline: null,
+      description: null,
+      brandHeroImageUrl: null,
+      noticeText: "Lobster mini-season boats are open",
+    });
+    expect(screen.getByText("Lobster mini-season boats are open")).toBeInTheDocument();
+  });
+
   it("shows an unsigned note but never a signer without a note", () => {
     const empty = { ...SHOP, tagline: null, description: null, brandHeroImageUrl: null };
     const view = storefront({ ...empty, welcomeText: "Come aboard.", welcomeSigner: null });

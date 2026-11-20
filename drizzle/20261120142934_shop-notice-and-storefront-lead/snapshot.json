@@ -1,0 +1,111 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "3c1b900b-810e-41dd-bfd3-f97b8f8295f0",
+  "prevIds": [
+    "be1942e5-8b10-4dcd-b1aa-9049812cb753",
+    "ec15c277-e1d2-455b-a047-7101e2a33d3d"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "shops",
+        "notice_text"
+      ],
+      "writes": [
+        "s|col|public.shops.notice_text",
+        "n|col|public.shops.notice_text",
+        "e|col|public.shops.notice_text"
+      ],
+      "reads": [
+        "n|tbl|public.shops",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "shops",
+        "storefront_leads"
+      ],
+      "writes": [
+        "s|col|public.shops.storefront_leads",
+        "n|col|public.shops.storefront_leads",
+        "e|col|public.shops.storefront_leads"
+      ],
+      "reads": [
+        "n|tbl|public.shops",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_check",
+      "statementTarget": [
+        "table",
+        "public",
+        "shops"
+      ],
+      "writes": [
+        "s|ck|public.shops.shops_storefront_leads_known",
+        "n|ck|public.shops.shops_storefront_leads_known",
+        "e|ck|public.shops.shops_storefront_leads_known",
+        "n|con|public.shops.shops_storefront_leads_known"
+      ],
+      "reads": [
+        "n|tbl|public.shops",
+        "n|sch|public",
+        "n|col|public.shops.storefront_leads"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "shops",
+        "name": "notice_text",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "shops",
+        "name": "storefront_leads",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "'schedule'",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "shops",
+        "name": "shops_storefront_leads_known",
+        "value": "\"storefront_leads\" in ('schedule', 'courses')",
+        "entityType": "checks"
+      }
+    }
+  ]
+}

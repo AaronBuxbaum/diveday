@@ -1,8 +1,10 @@
 import Link from "next/link";
+import type { ComponentProps } from "react";
 import { DiveDayIcon } from "@/components/DiveDayIcon";
 import { buttonClass } from "@/components/ui/button";
 import type { DiverTranslator } from "@/i18n/messages";
 import { type MonthRef, monthLabel } from "@/lib/calendar";
+import { DayJumpStrip } from "./DayJumpStrip";
 import { MonthGrid } from "./MonthGrid";
 import { MonthRail } from "./MonthRail";
 import { monthGridWeekdays, monthGridWeeks, weekStartsOnFor } from "./month-grid";
@@ -31,7 +33,7 @@ export function MonthControls({
   railSides: Pick<Parameters<typeof MonthRail>[0], "previous" | "next">;
   departures: readonly { startsAt: Date; capacity: number; booked: number }[];
   dayKeyOf: (date: Date) => string;
-  weekRows: readonly { dayKey: string }[];
+  weekRows: ComponentProps<typeof DayJumpStrip>["rows"];
   toggleHref: string;
 }) {
   const weekStartsOn = weekStartsOnFor(locale);
@@ -67,7 +69,9 @@ export function MonthControls({
           fullText={t("fallback.full")}
           linkedDays={new Set(weekRows.map((row) => row.dayKey))}
         />
-      ) : null}
+      ) : (
+        <DayJumpStrip rows={weekRows} label={t("schedule.jumpToDay")} />
+      )}
     </>
   );
 }

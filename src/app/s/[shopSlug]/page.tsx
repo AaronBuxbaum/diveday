@@ -25,7 +25,6 @@ import type { ReviewAggregate } from "@/lib/reviews";
 import { openGraphSite, shopSearchListingRobots } from "@/lib/site-metadata";
 import { absoluteUrl, scheduleJsonLd } from "@/lib/structured-data";
 import { ClassroomRequest } from "./_components/ClassroomRequest";
-import { DayJumpStrip } from "./_components/DayJumpStrip";
 import { identityBand, monthRailSides } from "./_components/identity-band";
 import { MonthControls } from "./_components/MonthControls";
 import { MoreWaysRows } from "./_components/MoreWaysRows";
@@ -269,6 +268,12 @@ export default async function SchedulePage({
     t,
   });
 
+  const shelfProps = {
+    ...{ shop, shopSlug, locale, t, tz, courses: shelfCourses, aggregate: reviewAggregate },
+    ...{ staffProfiles, boats, className: SECTION_GAP },
+  };
+  const leadsCourses = shop.storefrontLeads === "courses" && shelfCourses.length > 0;
+
   const zoneLine = hasUpcoming
     ? scheduleZoneLine(t, shop.name, upcoming[0]?.startsAt ?? range.first, locale, tz)
     : null;
@@ -299,6 +304,7 @@ export default async function SchedulePage({
         t={t}
         className="mb-10"
       />
+      {leadsCourses ? <ScheduleShelves {...shelfProps} only="courses" /> : null}
       <header>
         <h1 className={`font-brand-display ${PAGE_TITLE_CLASS}`}>{t("schedule.title")}</h1>
         {zoneLine ? <p className="mt-2 max-w-xl text-sm text-muted">{zoneLine}</p> : null}
@@ -342,15 +348,13 @@ export default async function SchedulePage({
         <div id="schedule" className="mt-6">
           <div className="mb-2">
             <MonthControls
-              {...{ t, locale, monthView, currentMonth, dayKeyOf, weekRows }}
+              {...{ t, locale, monthView, currentMonth, dayKeyOf }}
+              weekRows={showsWeekLedger ? weekRows : []}
               railShown={Boolean(prevMonthKey || nextMonthKey || explicitMonth)}
               railSides={monthRailSides(prevMonthKey, nextMonthKey, monthHref, t)}
               departures={visibleUpcoming}
               toggleHref={viewHref(!monthView, monthKey(currentMonth))}
             />
-            {monthView ? null : showsWeekLedger ? (
-              <DayJumpStrip rows={weekRows} label={t("schedule.jumpToDay")} />
-            ) : null}
           </div>
 
           {/* The shop’s lens chips (ADR 20260904-reef-all-the-way-down, D02)
@@ -424,18 +428,7 @@ export default async function SchedulePage({
         runningLines={runningLines}
         className={SECTION_GAP}
       />
-      <ScheduleShelves
-        shop={shop}
-        shopSlug={shopSlug}
-        locale={locale}
-        t={t}
-        tz={tz}
-        courses={shelfCourses}
-        aggregate={reviewAggregate}
-        staffProfiles={staffProfiles}
-        boats={boats}
-        className={SECTION_GAP}
-      />
+      <ScheduleShelves {...shelfProps} only={leadsCourses ? "rest" : undefined} />
       {/* Reviews are a full-page, diver-facing signal: the embed stays a compact booking widget
           (docs ADR 20260726-schedule-embed), and staff moderate from /shop/[shopSlug]/reviews
           rather than reading them here. The published-review list streams in behind the shell and

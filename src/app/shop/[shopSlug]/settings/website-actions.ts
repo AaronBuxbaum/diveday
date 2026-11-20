@@ -17,6 +17,8 @@ import { MAX_NEW_SHOPFRONT_PHOTOS_PER_SAVE, MAX_SHOPFRONT_PHOTOS } from "@/lib/s
 import { SETTINGS_GATE } from "./action-gates";
 
 const profileSchema = z.object({
+  noticeText: z.string().trim().max(200),
+  storefrontLeads: z.enum(["schedule", "courses"]),
   welcomeText: z.string().trim().max(1000),
   welcomeSigner: z.string().trim().max(120),
   tagline: z.string().trim().max(120),
@@ -33,6 +35,8 @@ const profileSchema = z.object({
 
 /** The profile form as posted; `profileSchema` and the brand parsers hold it to its bounds. */
 const profileForm = z.object({
+  noticeText: trimmedText(),
+  storefrontLeads: text(),
   welcomeText: trimmedText(),
   welcomeSigner: trimmedText(),
   tagline: trimmedText(),
@@ -67,6 +71,8 @@ export const saveProfileAction = defineAction({
   async run({ db, shopId, shopSlug, path }, form) {
     const page = path("settings", "profile");
     const parsed = profileSchema.safeParse({
+      noticeText: form.noticeText,
+      storefrontLeads: form.storefrontLeads,
       welcomeText: form.welcomeText,
       welcomeSigner: form.welcomeSigner,
       tagline: form.tagline,
@@ -111,6 +117,8 @@ export const saveProfileAction = defineAction({
     }
 
     await setShopProfile(db, shopId, {
+      noticeText: parsed.data.noticeText,
+      storefrontLeads: parsed.data.storefrontLeads,
       welcomeText: parsed.data.welcomeText,
       welcomeSigner: parsed.data.welcomeSigner,
       tagline: parsed.data.tagline,
