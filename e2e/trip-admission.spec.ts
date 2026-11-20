@@ -543,8 +543,8 @@ test.describe("what the public schedule card says a departure requires", () => {
     // marker is already worded to stand on its own, and the row's one meta line
     // sets them between separators.
     await expect(
-      row("Wreck Trip — Spiegel Grove").getByText(/Advanced Open Water or higher · Deep · Nitrox/),
-    ).toBeVisible();
+      row("Wreck Trip — Spiegel Grove").locator("h3 + p"),
+    ).toContainText(/Advanced Open Water or higher\s·\sDeep\s·\sNitrox/);
 
     await expect(
       row("Two-Tank Reef — Molasses & French").getByText(/Open Water or higher/),
@@ -586,7 +586,7 @@ test.describe("what the public schedule card says a departure requires", () => {
       page
         .getByRole("listitem")
         .filter({ hasText: "Deep Wreck Charter — the Duane on EANx" })
-        .getByText(/Advanced Open Water or higher · Deep · Nitrox/),
-    ).toBeVisible();
+        .locator("h3 + p"),
+    ).toContainText(/Advanced Open Water or higher\s·\sDeep\s·\sNitrox/);
   });
 });

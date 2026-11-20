@@ -1088,11 +1088,11 @@ test.describe("courses on the shopfront", () => {
   }, async ({ page }) => {
     await page.goto("/s/blue-mantis/courses");
     await expect(page.getByRole("heading", { level: 1, name: "Courses" })).toHaveClass(
-      /text-\[2\.5rem\]/,
+      /text-\[min\(2\.5rem,12vw\)\]/,
     );
 
     await page.goto("/s/blue-mantis/courses/open-water-diver");
-    await expect(page.getByRole("heading", { level: 1 })).toHaveClass(/text-\[2\.5rem\]/);
+    await expect(page.getByRole("heading", { level: 1 })).toHaveClass(/text-\[min\(2\.5rem,12vw\)\]/);
   });
 });
 
