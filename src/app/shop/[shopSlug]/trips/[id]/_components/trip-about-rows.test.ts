@@ -62,7 +62,7 @@ async function rowsFor(
 }
 
 describe("tripAboutRows (in-memory PGlite)", () => {
-  it("says the boat certificate's passengers beside the seats on sale (#4685)", async () => {
+  it("says the boat certificate's passengers beside the seats on sale (issue 4685)", async () => {
     const { db, shop } = ctx;
     const reef = (await upcomingTripsWithCounts(db, shop.id, new Date(0))).find((trip) =>
       trip.title.startsWith("Two-Tank Reef — Molasses"),

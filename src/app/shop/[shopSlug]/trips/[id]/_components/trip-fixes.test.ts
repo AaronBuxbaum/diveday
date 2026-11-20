@@ -76,7 +76,7 @@ describe("tripFixes", () => {
     expect(fixes[0]?.action.href).toContain("/prep#");
   });
 
-  it("lists this departure's open orders in Filling and Getting ready, opening them (#4685)", () => {
+  it("lists this departure's open orders in Filling and Getting ready, opening them (issue 4685)", () => {
     const owing = overview({
       pulse: { blocked: 0, boarded: 0, work: { ...noWork, openOrders: 2 } } as never,
     });
