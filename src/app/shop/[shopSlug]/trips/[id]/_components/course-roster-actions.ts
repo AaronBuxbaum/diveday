@@ -56,16 +56,19 @@ export function trainingMarkRosterActions(
 }
 
 /**
- * The eLearning code button is offered once the course sells eLearning or the shop has pasted
- * codes in (ADR 20261120-course-elearning-codes); a course with neither has nothing to hand out.
+ * The eLearning code action, once the course sells eLearning or the shop has pasted codes in (ADR
+ * 20261120-course-elearning-codes); a course with neither has nothing to hand out.
  */
-export function elearningCodesOffered(guests: {
-  elearningCodes: { left: number; handedOut: number } | null;
-  courseSellsElearning: boolean;
-}) {
+export function elearningCodesOffered<Action>(
+  guests: {
+    elearningCodes: { left: number; handedOut: number } | null;
+    courseSellsElearning: boolean;
+  },
+  actions: { setElearningCodeAction?: Action },
+): Action | undefined {
   const stock = guests.elearningCodes;
-  return (
-    Boolean(stock) &&
-    (guests.courseSellsElearning || (stock?.left ?? 0) + (stock?.handedOut ?? 0) > 0)
-  );
+  if (!stock) return undefined;
+  return guests.courseSellsElearning || stock.left + stock.handedOut > 0
+    ? actions.setElearningCodeAction
+    : undefined;
 }

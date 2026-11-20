@@ -321,9 +321,7 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
           : undefined,
         setCourseStepDoneAction:
           guests.courseSteps.length > 0 ? actions.setCourseStepDoneAction : undefined,
-        setElearningCodeAction: elearningCodesOffered(guests)
-          ? actions.setElearningCodeAction
-          : undefined,
+        setElearningCodeAction: elearningCodesOffered(guests, actions),
         elearningCheckAction: guests.courseHasMaterials ? actions.elearningCheckAction : undefined,
         referralStudentAction: actions.referralStudentAction,
         // A finished departure is its record: nothing on it is checked.
