@@ -70,6 +70,7 @@ work_order_events.csv 15 rows e3cd810a7823c5c5 [id,work_order_id,kind,from_statu
 pre_departure_checklist_items.csv 5 rows 9ebc19091895953a [id,label,sort_order,deleted_at,created_at,updated_at]
 pre_departure_check_events.csv 260 rows 7842830c0621368b [id,trip_id,checklist_item_id,checklist_item_label,status,source,client_event_id,note,recorded_by_person_id,recorded_by_name,occurred_at,created_at]
 roll_call_deck_counts.csv 0 rows 3f00c4b747eda4f3 [id,trip_id,checkpoint,counted,recorded_by_person_id,recorded_by_name,recorded_at]
+dive_participation_notes.csv 0 rows d8078fea00105d9c [id,trip_id,booking_id,dive_number,participation,recorded_by_person_id,recorded_by_name,recorded_at]
 boat_snags.csv 0 rows 06ec9548988823e4 [id,boat_id,boat_name,checklist_item_id,checklist_item_label,note,noted_on_trip_id,noted_by_person_id,noted_by_name,noted_at,still_there_on_trip_id,still_there_by_person_id,still_there_by_name,still_there_at,fixed_on_trip_id,fixed_by_person_id,fixed_by_name,fixed_at,created_at,updated_at]
 course_elearning_codes.csv 0 rows 6c325f0071d100de [id,course_id,code,booking_id,assigned_at,assigned_by_person_id,created_at,deleted_at]
 departure_boat_safety_snapshots.csv 1 rows 76851f8a7997211b [id,trip_id,boat_id,boat_name,judged_on,departure_starts_at,papers,radio,notices,captured_at]

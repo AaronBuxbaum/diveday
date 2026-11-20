@@ -20,6 +20,8 @@ export const ERASURE_KEEPS: Record<string, string> = {
     "Promotional value and its economic journal retain anonymous beneficiary ids; erasure removes personal data from the person record, never changes outstanding balances (ADR 20261116-promotional-trip-credit-ledger).",
   roll_call_deck_counts:
     "the captain's head count at a checkpoint: a number and the staffer who recorded it, with no diver column and no free text; the staffer is never erased",
+  dive_participation_notes:
+    "that a seat dived or sat out one dive, by seat and dive number: a code and a time, no words. Its one person column is the staffer who recorded it, a pointer joined at read; the diver is reached through the seat, which the erasure scrubs",
   package_gifts:
     "which order was a gift, which person got the dives and the date the mail went out, by id only; the recipient's name and email live on the person row, which the erasure clears, and the dives themselves follow the package entitlement rules (ADR 20260822-a-package-is-entitlements-not-money)",
   // --- staff prose that may mention a diver: not their data, so not swept ----
