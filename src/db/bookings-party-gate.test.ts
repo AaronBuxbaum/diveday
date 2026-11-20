@@ -4,7 +4,7 @@ import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { countingShopContext } from "@/test/query-count";
 import { createBoat } from "../features/boats/store";
-import { type BookingRequest, createBooking, createBookingParty } from "./bookings";
+import { type BookingRequest, cancelBooking, createBooking, createBookingParty } from "./bookings";
 import { bookings, trips } from "./schema";
 import { createTrip, listStaff, setTripCrew } from "./trips";
 
@@ -177,6 +177,24 @@ describe("party booking, trip-level checks", () => {
     expect(rows.get(child?.bookingId ?? "")?.contactTypedByLeadAt).not.toBeNull();
   });
 
+  it("counts a cancelled seat the party reopens once, so a full boat still takes the whole party", async () => {
+    const trip = await departure({ capacity: 2 });
+    const [first] = seats(trip.id, 1, "staff", "again");
+    if (!first) throw new Error("seat missing");
+    const booked = await createBooking(ctx.db, first);
+    if (!booked.ok) throw new Error("setup booking failed");
+    expect((await cancelBooking(ctx.db, ctx.shop.id, booked.bookingId)).ok).toBe(true);
+    const [second] = seats(trip.id, 1, "staff", "fresh");
+    if (!second) throw new Error("seat missing");
+    const outcome = await createBookingParty(ctx.db, [first, second]);
+    expect(outcome.ok).toBe(true);
+    expect(await liveSeats(trip.id)).toHaveLength(2);
+    // And a third still does not fit.
+    const [third] = seats(trip.id, 1, "staff", "third");
+    if (!third) throw new Error("seat missing");
+    expect(await createBooking(ctx.db, third)).toEqual({ ok: false, reason: "trip_full" });
+  });
+
   it("refuses seats that name different departures, before anything is written", async () => {
     const one = await departure({ capacity: 4 }, "One");
     const two = await departure({ capacity: 4 }, "Two");
@@ -184,7 +202,7 @@ describe("party booking, trip-level checks", () => {
     expect(await createBookingParty(ctx.db, mixed)).toEqual({
       ok: false,
       reason: "trip_unavailable",
-      failedIndex: -1,
+      failedIndex: 1,
     });
     expect(await liveSeats(one.id)).toHaveLength(0);
     expect(await liveSeats(two.id)).toHaveLength(0);

@@ -496,6 +496,18 @@ export async function createBookingParty(
         admissionAdvisory?: BookingAdmissionAdvisory;
       }> = [];
       const pending: PendingDeclaration[] = [];
+      // A party is one departure's seats: a seat naming another shop's or
+      // another departure is refused, and a group hold (one deadline over one
+      // departure) has no member to point at.
+      const [lead] = requests;
+      const stray = requests.findIndex(
+        (request) => request.shopId !== lead?.shopId || request.tripId !== lead?.tripId,
+      );
+      if (stray >= 0)
+        throw new PartyBookingError(
+          { ok: false, reason: "trip_unavailable" },
+          options.holdUntil ? -1 : stray,
+        );
       const gate = await openPartyTripGate(tx, requests);
       for (const [index, request] of requests.entries()) {
         const outcome = await createBookingRecord(tx, request, pending, gate ?? undefined);
@@ -1145,8 +1157,7 @@ async function readTripOccupancy(tx: DbExecutor, trip: typeof trips.$inferSelect
 
 /**
  * Lock the party's one departure and read what every seat is measured against.
- * A party is one departure's seats, so seats naming different ones are refused;
- * null when the departure is not there, and the first seat then says why.
+ * Null when the departure is not there, and the first seat then says why.
  */
 async function openPartyTripGate(
   tx: DbExecutor,
@@ -1154,11 +1165,6 @@ async function openPartyTripGate(
 ): Promise<PartyTripGate | null> {
   const first = requests[0];
   if (!first) return null;
-  // Not about one member, so no seat to point at (`failedIndex` -1).
-  if (
-    requests.some((request) => request.shopId !== first.shopId || request.tripId !== first.tripId)
-  )
-    throw new PartyBookingError({ ok: false, reason: "trip_unavailable" }, -1);
   await boundLockWaits(tx);
   const trip = await lockTripForSeat(tx, first);
   if (!trip) return null;
@@ -1379,12 +1385,6 @@ async function createBookingRecord(
     pending,
     gate,
   });
-  if (outcome.ok && gate) {
-    gate.held = {
-      aboard: gate.held.aboard + 1,
-      divers: gate.held.divers + (isDiver(participantType) ? 1 : 0),
-    };
-  }
   let dateRequestPartyComplete: boolean | undefined;
   if (outcome.ok && dateOffer) {
     const linked = await recordDateRequestOfferBooking(tx, {
@@ -1543,6 +1543,9 @@ async function writeSeat(
       participantType,
     });
     pending.push({ req, personId: person.id, identityUnconfirmed });
+    // The reopened row may already have been counted (a no-show waiting at the
+    // dock holds its place), so a party re-reads rather than adding one.
+    if (input.gate) input.gate.held = await heldSeatCounts(tx, trip.shopId, trip.id);
     return {
       ok: true,
       bookingId: existing.id,
@@ -1593,6 +1596,12 @@ async function writeSeat(
     .returning();
   if (!created) throw new Error("createBooking: booking insert returned no row");
   pending.push({ req, personId: person.id, identityUnconfirmed });
+  if (input.gate) {
+    input.gate.held = {
+      aboard: input.gate.held.aboard + 1,
+      divers: input.gate.held.divers + (isDiver(participantType) ? 1 : 0),
+    };
+  }
 
   // **A prepaid dive, spent on this seat** (ADR
   // 20260822-a-package-is-entitlements-not-money).
