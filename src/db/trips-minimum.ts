@@ -7,6 +7,7 @@ import type { AppDb } from "./client";
 import { flushUrgentCrewNotices, recordCrewCalledOff } from "./crew-notices";
 import { releaseUnclaimedGearReservationsForTrips } from "./gear";
 import { publishManifestEvent } from "./manifest-events";
+import { nextOfflineGeneration } from "./offline-generation";
 import { recordSystemTripActivity } from "./operations";
 import { bookings, people, shops, type Trip, tripScheduleDays, trips } from "./schema";
 import { lockTripRevisionNotificationFence } from "./trip-revision-notification-fence";
@@ -205,7 +206,7 @@ export async function cancelDeparturesBelowMinimum(
         .set({
           status: "cancelled",
           cancelledAt: now,
-          offlineMeetingGeneration: sql`${trips.offlineMeetingGeneration} + 1`,
+          offlineMeetingGeneration: sql`${nextOfflineGeneration(trips.offlineMeetingGeneration)}`,
         })
         .where(
           and(
@@ -337,7 +338,7 @@ export async function reinstateTrip(
       .set({
         status: "scheduled",
         cancelledAt: null,
-        offlineMeetingGeneration: sql`case when ${trips.status} is distinct from 'scheduled' then ${trips.offlineMeetingGeneration} + 1 else ${trips.offlineMeetingGeneration} end`,
+        offlineMeetingGeneration: sql`case when ${trips.status} is distinct from 'scheduled' then ${nextOfflineGeneration(trips.offlineMeetingGeneration)} else ${trips.offlineMeetingGeneration} end`,
         minimumBookings: null,
         minimumDecisionHours: null,
       })

@@ -482,6 +482,7 @@ script again.
 | 20261118-rate-limits-in-postgres | Shared rate-limit buckets live in… |
 | 20261119-offline-roll-call-review | Hold unavailable offline observations for… |
 | 20261120-course-session-progress | Which sessions of a course… |
+| 20261120-demo-mint-replays-a-template | A visitor's demo is written… |
 | 20261120-e2e-purge-settles-by-set | Delete the e2e reset's minted… |
 
 <!-- adr-index:end -->
