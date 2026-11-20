@@ -66,7 +66,7 @@ test.describe("available paper passes", () => {
     await expect(
       row.getByRole("button", { name: "Undo check-in for Diego Alvarez" }),
     ).toBeVisible();
-    const trip = page.url().split("?")[0];
+    const trip = new URL(page.url()).pathname;
     await page.goto(`${trip}?phase=ready`);
     await page.getByRole("link", { name: t("trips.clock.ready.paperPasses") }).click();
     const arrived = await rosterRow(page, "Diego Alvarez");
