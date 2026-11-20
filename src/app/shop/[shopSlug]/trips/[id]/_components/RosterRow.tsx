@@ -44,6 +44,12 @@ export type RosterRowContext = {
   countedAboardBlocked?: ReadonlyMap<string, CountedAboardBlocked>;
   /** Under a seat on that record, the diver's next dive (fifth-loop ideas, item 4). */
   recordBelow?: ReadonlyMap<string, ReactNode>;
+  /**
+   * Getting ready only: under a seat readiness clears, its paper pass, for the
+   * diver without a phone (issue #4683; the counter's own pass door stays at
+   * Check-in, ADR 20260908-one-hand, decision 6).
+   */
+  readyBelow?: ReadonlyMap<string, ReactNode>;
   /** Depth sentences much of the boat shares, said once in the group band. */
   sharedAdvisoryTexts: ReadonlySet<string>;
   waiverControls: WaiverControls;

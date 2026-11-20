@@ -55,6 +55,34 @@ for (const scheme of ["light", "dark"] as const) {
         expect(rollCallBounds.y + rollCallBounds.height).toBeLessThan(navBounds.y);
         await capture(page, "trip-checkin-look-back", scheme);
       });
+      // A dive the crew never counted is recorded not made from its own
+      // close-out row, then shows with who and when under What happened (#4681).
+      test(`a dive not made closes its own roll-call item (${scheme})`, async ({
+        page,
+        request,
+        privateShop,
+      }) => {
+        const { boatOnTheWater } = (await seedFacts(
+          request,
+          [{ name: "boatOnTheWater", state: "skipped" }],
+          { slug: privateShop.slug },
+        )) as { boatOnTheWater: { tripId: string } };
+        await page.goto(`/shop/${privateShop.slug}/trips/${boatOnTheWater.tripId}?phase=wrapped`);
+        const notMade = staffCopy("trips.clock.wrapped.notMadeAction", { dive: 2 });
+        await page.getByRole("button", { name: notMade }).click();
+        await expect(
+          page.getByText(staffCopy("trips.clock.wrapped.notMadeConfirm", { dive: 2 })),
+        ).toBeVisible();
+        await capture(page, "trip-wrapped-dive-not-made-offer", scheme);
+        await page.getByRole("button", { name: notMade }).last().click();
+        await page.waitForURL(/notice=dive-not-made/);
+        // Reopened without the notice, so its toast never sits over the picture.
+        await page.goto(`/shop/${privateShop.slug}/trips/${boatOnTheWater.tripId}?phase=wrapped`);
+        await expect(
+          page.getByRole("button", { name: staffCopy("trips.clock.wrapped.notMadeUndo") }),
+        ).toBeVisible();
+        await capture(page, "trip-wrapped-dive-not-made", scheme);
+      });
     });
   });
 }

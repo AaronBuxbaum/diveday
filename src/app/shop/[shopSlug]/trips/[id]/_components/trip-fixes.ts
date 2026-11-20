@@ -1,4 +1,5 @@
 import { boatWorkItems, boatWorkText } from "@/features/boat-work";
+import { openOrdersFix } from "@/features/trip-fix-list";
 import type { getTripOverview } from "@/features/trip-overview";
 import { overRatioPulseKey } from "@/i18n/crew-gap-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
@@ -16,7 +17,9 @@ type TripOverview = NonNullable<Awaited<ReturnType<typeof getTripOverview>>>;
  * the hull on another departure at these hours, and, worth a minute, nitrox
  * asked for with no verified card. Each is one row with the door to its fix.
  * The day before and at Check-in, a trip with no crew or no dive plan says so
- * too. Nothing on a finished or cancelled trip.
+ * too. In Filling and Getting ready, this departure's orders still awaiting
+ * payment are one row opening them (`openOrdersFix`, issue #4685). Nothing on
+ * a finished or cancelled trip.
  *
  * It replaces the old "Needs you" fold: a guest's own work is their fix-list
  * row, and Today keeps the shop-wide queue.
@@ -47,6 +50,7 @@ export function tripFixes(
   const edit = (section: string) => `${shopPath(shopSlug, "trips", tripId)}?view=edit#${section}`;
   const setCrew = { href: edit("crew"), label: t("trips.fixList.setCrew") };
   const dayOf = phase === "ready" || phase === "checkin";
+  const orders = openOrdersFix(overview.pulse.work.openOrders, phase);
   return [
     ...(crewGap.code === "no_instructor"
       ? [
@@ -121,5 +125,19 @@ export function tripFixes(
           label: t("trips.fixList.openGear"),
         },
       })),
+    // Orders never hold a guest up: worth a minute, in the boat's work's own words.
+    ...(orders
+      ? [
+          {
+            key: "orders",
+            text: boatWorkText(t, { code: "open_orders", count: orders.count, tone: "work" }),
+            tone: "warning" as const,
+            action: {
+              href: `${shopPath(shopSlug, "orders")}?tripId=${tripId}&status=open&range=all`,
+              label: t("trips.fixList.openOrders"),
+            },
+          },
+        ]
+      : []),
   ];
 }

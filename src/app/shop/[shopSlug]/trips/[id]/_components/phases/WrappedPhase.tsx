@@ -1,9 +1,11 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { buttonClass } from "@/components/ui/button";
+import { activeCrewOn, diveNotMadeStanding } from "@/db/dive-not-made";
 import { listFlySafeFollowUps } from "@/db/fly-safe-correction";
 import { listTripUnitsToCheckIn } from "@/db/gear";
 import { listTripIncidentReports } from "@/db/incident-reports";
+import { listTripLostItems } from "@/features/lost-items";
 import type { TripGuests } from "@/features/trip-guests";
 import { getTripMoney } from "@/features/trip-money";
 import { canViewShopReports } from "@/lib/authz";
@@ -16,7 +18,8 @@ import { PrintTripBundleButton } from "../PrintTripBundleButton";
 import { diveLogRows } from "../TripDiveRecord";
 import { TripSentenceLine } from "../TripSentenceLine";
 import type { TripSentence } from "../trip-sentence";
-import { closeOutItems, wrappedSentence } from "../wrapped-close-out";
+import { closeOutItems, notMadeOfferFor, wrappedSentence } from "../wrapped-close-out";
+import { wrappedRecords } from "../wrapped-records";
 import { UnplacedLine } from "./WaterPanels";
 import type { PhaseRecordContext } from "./WaterPhase";
 import { WrappedMore } from "./WrappedMore";
@@ -28,9 +31,12 @@ import { loggableDives, waterStandingOf } from "./water-reading";
  * boat is back, and where a cancelled trip opens. The sentence says whether
  * the counts have everyone back and how much is left; then what is left, each
  * with its door; what happened, one block whose dives open in place to their
- * logs, with the incident reports; the guests as listed; and, under More, what
+ * logs, with the incident reports and a short row each for what was seen and
+ * what was left aboard (issue #4683); the guests as listed; and, under More, what
  * was found aboard, the conservation record, the activity and the trip's links.
  * Roll call's door is the close-out row that needs it, or the header's link.
+ * Crew on the departure may record a dive whose count never began as not made
+ * from that row, and undo it from What happened (issue #4681).
  *
  * A cancelled trip that never sailed has no dives: its close-out (people put
  * aboard at the dock come ashore through the dock count), what was collected,
@@ -54,15 +60,21 @@ export async function WrappedPhase({
   const personId = session.user.personId;
   const timeZone = shop.timezone;
   const words = { locale, timeZone, t };
-  const [view, rentalsOut, incidents, money, flySafe] = await Promise.all([
-    readManifestView({ ...context, shopSlug: shop.slug, tripId, locale, t }),
-    cancelled ? [] : listTripUnitsToCheckIn(db, shop.id, tripId),
-    listTripIncidentReports(db, shop.id, tripId, personId),
-    // The money record is for whoever may read the shop's reports.
-    canViewShopReports(session.user.roles) ? getTripMoney(db, shop, tripId) : null,
-    // This trip's own guests whose flying guidance needs a follow-up.
-    listFlySafeFollowUps(db, { shopId: shop.id, tripId }),
-  ]);
+  const [view, rentalsOut, incidents, money, flySafe, lostItems, notMade, onCrew] =
+    await Promise.all([
+      readManifestView({ ...context, shopSlug: shop.slug, tripId, locale, t }),
+      cancelled ? [] : listTripUnitsToCheckIn(db, shop.id, tripId),
+      listTripIncidentReports(db, shop.id, tripId, personId),
+      // The money record is for whoever may read the shop's reports.
+      canViewShopReports(session.user.roles) ? getTripMoney(db, shop, tripId) : null,
+      // This trip's own guests whose flying guidance needs a follow-up.
+      listFlySafeFollowUps(db, { shopId: shop.id, tripId }),
+      // What was left aboard, for What happened's row (issue #4683).
+      shop.lostFoundEnabled && !cancelled ? listTripLostItems(db, shop.id, tripId) : [],
+      // Dives crew recorded as not made (issue #4681), and whether this staffer may say so.
+      diveNotMadeStanding(db, shop.id, tripId),
+      cancelled ? false : activeCrewOn(db, { shopId: shop.id, tripId, personId }),
+    ]);
   const ids = { shopSlug: shop.slug, tripId };
   const moneyCard = money ? (
     <MoneyCard money={money} cancelled={cancelled} locale={locale} t={t} />
@@ -77,12 +89,17 @@ export async function WrappedPhase({
       {t("trips.clock.wrapped.runAgain")}
     </Link>
   );
-  const standing = view.status === "ready" ? waterStandingOf(view) : null;
+  const standing = view.status === "ready" ? waterStandingOf(view, notMade) : null;
   // The roll call cannot be read: what is left from every other record still shows.
   const items = closeOutItems({
     ...{ standing, rentalsOut, reports: incidents.reports, cancelled, flySafe },
   });
-  const closeOut = <CloseOutCard items={items} {...ids} locale={locale} t={t} />;
+  // Crew on this departure may say the dive whose roll call is open was not made;
+  // the offer is gone while anybody is missing or not recorded back.
+  const notMadeDive = onCrew && standing ? notMadeOfferFor(standing, items) : null;
+  const closeOut = (
+    <CloseOutCard items={items} {...ids} notMadeDive={notMadeDive} locale={locale} t={t} />
+  );
   if (!standing || view.status !== "ready" || cancelled) {
     const said =
       standing && view.status === "ready"
@@ -127,6 +144,7 @@ export async function WrappedPhase({
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] lg:items-start">
         <WhatHappenedCard
           standing={standing}
+          mayUndoNotMade={onCrew}
           depth={depth}
           logRow={diveLogRows({
             view,
@@ -143,6 +161,19 @@ export async function WrappedPhase({
           turnedAway={released
             .filter(({ booking }) => booking.turnedAwayAt)
             .map(({ person }) => person.fullName)}
+          records={wrappedRecords({
+            sightingsOn: shop.sightingsEnabled,
+            sightings: view.loggedSightings,
+            dives: view.plannedDives.map(({ dive, diveSite }) => ({
+              diveNumber: dive.diveNumber,
+              recorded: view.executedDives.find(
+                (row) => row.executed.diveNumber === dive.diveNumber,
+              ),
+              planned: diveSite,
+            })),
+            lostFoundOn: shop.lostFoundEnabled,
+            lostItems,
+          })}
           print={
             <PrintTripBundleButton
               href={tripPacketPath(shop.slug, tripId)}

@@ -8,7 +8,7 @@
   "src/app/shop/[shopSlug]/trips/[id]/_arrivals/ArrivalTap.tsx": "d4f7a12d755a61a9",
   "src/app/shop/[shopSlug]/trips/[id]/_arrivals/CounterInstrument.tsx": "4c4a11da7655fa81",
   "src/app/shop/[shopSlug]/trips/[id]/_components/GuestFixList.tsx": "cc6a9eae9d3d1f43",
-  "src/app/shop/[shopSlug]/trips/[id]/_components/RosterSection.tsx": "8e5acffb14f7aab8",
+  "src/app/shop/[shopSlug]/trips/[id]/_components/RosterSection.tsx": "398d1adf5fc12a3c",
   "src/app/shop/[shopSlug]/trips/[id]/manifest/_components/CheckpointSwitch.tsx": "9cafa3cf579a33fc",
   "src/app/shop/[shopSlug]/trips/[id]/manifest/_components/DiverRollCallRow.tsx": "87b18abd67d5e994",
   "src/app/shop/[shopSlug]/trips/[id]/manifest/_components/HeadCount.tsx": "5bb8f93f8a63a5c1",

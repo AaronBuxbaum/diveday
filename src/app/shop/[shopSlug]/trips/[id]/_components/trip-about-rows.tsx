@@ -445,10 +445,22 @@ function departureDefinitionRows(context: TripAboutRowsContext) {
       // A fact, not a form: the capacity itself is edited in the Price row.
       id: "seats",
       label: t("trips.about.seats"),
-      value: t("trips.clock.sentence.booked", {
-        booked: trip.booked,
-        capacity: trip.sellableCapacity,
-      }),
+      // Beside what is on sale, the boat certificate's own passenger figure
+      // when the hull has one (issue #4685): the ceiling the seats are capped
+      // at (H-20261009-certificate-caps-seats), said where the seats are set.
+      value: (
+        <>
+          {t("trips.clock.sentence.booked", {
+            booked: trip.booked,
+            capacity: trip.sellableCapacity,
+          })}
+          {trip.certifiedPassengers != null ? (
+            <span className="block text-sm text-muted">
+              {t("trips.about.certificateSeats", { count: trip.certifiedPassengers })}
+            </span>
+          ) : null}
+        </>
+      ),
     },
     {
       id: "requirements",

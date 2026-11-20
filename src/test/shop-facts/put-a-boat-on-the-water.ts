@@ -13,10 +13,11 @@ const FIXTURE = {
   home: "historic",
   unfinished: "intro",
   cancelled: "buddy",
+  skipped: "intro",
 } as const;
 
 export const boatOnTheWaterArgs = z
-  .object({ state: z.enum(["outstanding", "home", "unfinished", "cancelled"]) })
+  .object({ state: z.enum(["outstanding", "home", "unfinished", "cancelled", "skipped"]) })
   .strict();
 
 /**
@@ -26,8 +27,10 @@ export const boatOnTheWaterArgs = z
  * recorded not back aboard (and the crew's note) and one person with no result
  * yet; `home` brings it back five hours in, both dives counted complete and
  * logged, for Wrapped up with nothing left to close; `unfinished` is home too,
- * with dive 2's count missing one person and dive 2 not logged; `cancelled` is the same
- * departure called off before anyone was counted.
+ * with dive 2's count missing one person and dive 2 not logged; `skipped` is home
+ * with dive 1 counted and logged and dive 2 never begun, for "Dive 2 not made"
+ * (issue #4681); `cancelled` is the same departure called off before anyone was
+ * counted.
  */
 export async function putABoatOnTheWater(
   db: AppDb,
@@ -116,14 +119,16 @@ export async function putABoatOnTheWater(
     );
   } else {
     await count("after_dive_1", 82, () => aboard);
-    await count("after_dive_2", 190, (index) =>
-      state === "unfinished" && index === 1 ? null : aboard,
-    );
+    if (state !== "skipped") {
+      await count("after_dive_2", 190, (index) =>
+        state === "unfinished" && index === 1 ? null : aboard,
+      );
+    }
     const logs = [
       [1, 35, 14],
       [2, 130, 11],
     ] as const;
-    for (const [diveNumber, entered, depth] of state === "unfinished" ? logs.slice(0, 1) : logs) {
+    for (const [diveNumber, entered, depth] of state === "home" ? logs : logs.slice(0, 1)) {
       const saved = await upsertExecutedDive(db, {
         shopId: shop.id,
         tripId,

@@ -1,4 +1,6 @@
 /** trip-fix-list public contract. Internals are imported only within this module. */
+
+export { type DepartureFixPhase, openOrdersFix } from "./departure-fixes";
 export {
   ADVISORY_REASONS,
   type AdvisoryReason,

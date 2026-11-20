@@ -60,6 +60,7 @@
     "crew": "Crew",
     "price": "Price",
     "seats": "Seats",
+    "certificateSeats": "Boat certificate: {count, plural, one {# passenger} other {# passengers}}",
     "nameAndDescription": "Name and description",
     "view": "View",
     "thisTrip": "This trip",
@@ -77,6 +78,13 @@
     "comparableOtherPrice": "{title} on {date} filled at a different price"
   },
   "notices": {
+    "diveNotMade": "Recorded as not made.",
+    "diveNotMadeUndone": "Undone. The dive is open on the roll call again.",
+    "diveNotMadeNotCrew": "Only crew on this trip can record a dive not made.",
+    "diveNotMadeCounted": "That dive has a roll call count, so it was made. Finish its count on Roll call.",
+    "diveNotMadeStale": "That changed meanwhile. This is where it stands now.",
+    "diveNotMadeLogged": "That dive has a log, so it was made. Finish its count on Roll call.",
+    "diveNotMadeNotLeft": "The boat hasn’t left the dock, so no dive can be recorded as not made yet.",
     "nextStepSaved": "Next step saved",
     "nextStepTooLong": "Keep the next step under 280 characters.",
     "nextStepNotACourse": "This departure isn’t a course session, so there is no next step to record.",
@@ -1245,7 +1253,14 @@
       "owed": "Owed",
       "nothingOwed": "Nothing",
       "otherCurrency": "{count, plural, one {# seat paid} other {# seats paid}} in another currency, not counted here.",
-      "followUp": "Follow up"
+      "followUp": "Follow up",
+      "seen": "Seen",
+      "species": "{count, plural, one {# species} other {# species}}",
+      "items": "{count, plural, one {# item} other {# items}}",
+      "notMadeAction": "Dive {dive} not made",
+      "notMadeConfirm": "Record that dive {dive} was not made?",
+      "notMade": "Not made · {name}, {time}",
+      "notMadeUndo": "Undo"
     },
     "edit": {
       "schedule": "Schedule",
@@ -1347,6 +1362,7 @@
     "setRequirements": "Set requirements",
     "openTrip": "Open trip",
     "openGear": "Gear",
+    "openOrders": "Orders",
     "facts": {
       "card": "Card",
       "waiver": "Waiver",

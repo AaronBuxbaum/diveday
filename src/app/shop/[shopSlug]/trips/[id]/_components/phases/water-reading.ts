@@ -1,12 +1,16 @@
 import type { ReadyManifestView } from "../TripDiveRecord";
-import { type WaterStanding, waterStanding } from "../water-standing";
+import { type DiveNotMade, type WaterStanding, waterStanding } from "../water-standing";
 
 /**
  * The roll call's own reading, as `waterStanding` takes it: every count, the
  * open missing-diver alerts, the plan and what was logged, the crew's latest
  * word and the boat check. Shared by On the water and Wrapped up.
  */
-export function waterStandingOf(view: ReadyManifestView): WaterStanding {
+export function waterStandingOf(
+  view: ReadyManifestView,
+  /** Planned dives the crew recorded not made (`diveNotMadeStanding`), for Wrapped up. */
+  notMade?: ReadonlyMap<number, DiveNotMade>,
+): WaterStanding {
   const stage = view.stageStrip.stage;
   const items = view.checklistProps.items;
   return waterStanding({
@@ -34,6 +38,7 @@ export function waterStandingOf(view: ReadyManifestView): WaterStanding {
       checked: items.filter((item) => item.checkedByLine !== undefined).length,
       total: items.length,
     },
+    notMade,
   });
 }
 

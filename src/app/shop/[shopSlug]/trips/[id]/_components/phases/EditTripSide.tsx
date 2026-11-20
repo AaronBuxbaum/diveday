@@ -51,8 +51,9 @@ export function RepeatsCard({
 
 /**
  * **Print**: the trip packet (recorded on the trail), and the doors to the
- * three papers drawn where their subject is: each guest's paper pass at
- * Check-in, the rental tickets on Gear, and the roll call on Roll call.
+ * three papers drawn where their subject is: each guest's paper pass in
+ * Getting ready (issue #4683), the rental tickets on Gear, and the roll call on
+ * Roll call.
  */
 export function PrintCard({
   shopSlug,
@@ -78,7 +79,7 @@ export function PrintCard({
           flush
           link
         />
-        <Link href={`${trip}?phase=checkin`} className={LINK}>
+        <Link href={`${trip}?phase=ready`} className={LINK}>
           {t("trips.clock.edit.paperPasses")}
         </Link>
         <Link href={`${trip}/prep`} className={LINK}>

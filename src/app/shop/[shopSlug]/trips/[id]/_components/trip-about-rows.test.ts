@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { courses, diveSites, trips } from "@/db/schema";
+import { boats, courses, diveSites, trips } from "@/db/schema";
 import { listStaff } from "@/db/trips";
 import { upcomingTripsWithCounts } from "@/db/trips-queries.test-support";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -62,6 +62,39 @@ async function rowsFor(
 }
 
 describe("tripAboutRows (in-memory PGlite)", () => {
+  it("says the boat certificate's passengers beside the seats on sale (issue 4685)", async () => {
+    const { db, shop } = ctx;
+    const reef = (await upcomingTripsWithCounts(db, shop.id, new Date(0))).find((trip) =>
+      trip.title.startsWith("Two-Tank Reef — Molasses"),
+    );
+    if (!reef) throw new Error("demo reef trip missing");
+    const [boat] = await db.select().from(boats).where(eq(boats.shopId, shop.id)).limit(1);
+    if (!boat) throw new Error("demo boat missing");
+    const [before] = await db
+      .select({ boatId: trips.boatId })
+      .from(trips)
+      .where(eq(trips.id, reef.id));
+    const certificate = boat.certifiedPassengers;
+    try {
+      await db.update(trips).set({ boatId: boat.id }).where(eq(trips.id, reef.id));
+      await db.update(boats).set({ certifiedPassengers: 40 }).where(eq(boats.id, boat.id));
+      const seats = (await rowsFor()).find((row) => row.id === "seats");
+      expect(renderToStaticMarkup(seats?.value)).toContain(
+        t("trips.about.certificateSeats", { count: 40 }),
+      );
+      // No certificate on file says nothing, never a zero.
+      await db.update(boats).set({ certifiedPassengers: null }).where(eq(boats.id, boat.id));
+      const bare = (await rowsFor()).find((row) => row.id === "seats");
+      expect(renderToStaticMarkup(bare?.value)).not.toContain("certificate");
+    } finally {
+      await db.update(boats).set({ certifiedPassengers: certificate }).where(eq(boats.id, boat.id));
+      await db
+        .update(trips)
+        .set({ boatId: before?.boatId ?? null })
+        .where(eq(trips.id, reef.id));
+    }
+  });
+
   it("lays the departure flat in its rows' order", async () => {
     const rows = await rowsFor();
     const ids = rows.map((row) => row.id);

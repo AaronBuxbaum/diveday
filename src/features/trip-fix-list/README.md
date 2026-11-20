@@ -5,6 +5,7 @@ This module owns the Trip page's fix list (ADR 20261117-trip-page-clock): which 
 ## Owns
 
 - `fix-list.ts`: the pure grouping, the remedy each reason calls for, and the order reasons are named in.
+- `departure-fixes.ts`: which facts about the departure itself become a row, and in which phases (open orders: Filling and Getting ready, issue #4685).
 
 ## Does not own
 

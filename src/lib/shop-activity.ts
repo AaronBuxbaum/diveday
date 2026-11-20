@@ -98,6 +98,8 @@ export const ACTIVITY_CODE_KINDS: Record<ActivityCode, ShopActivityKind> = {
   incident_legal_hold_released: "safety",
   missing_diver_alert_raised: "safety",
   missing_diver_found: "safety",
+  dive_not_made: "safety",
+  dive_not_made_undone: "safety",
   crew_assigned: "departures",
   crew_removed: "departures",
   blowout_called: "departures",

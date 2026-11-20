@@ -1478,6 +1478,13 @@ const rows = [
     why: "who said where the boat was",
   },
   {
+    table: "dive_not_made_events",
+    column: "recorded_by_person_id",
+    kind: "actor",
+    merge: "leave",
+    why: "which crew member recorded a planned dive not made, or undid it",
+  },
+  {
     table: "safety_drills",
     column: "recorded_by_person_id",
     kind: "actor",
