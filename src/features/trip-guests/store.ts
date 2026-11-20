@@ -344,9 +344,7 @@ export async function getTripGuests(
       db,
       shop.id,
       [...new Set(roster.map(({ booking }) => booking.personId))],
-      {
-        courseId: trip.courseId,
-      },
+      { courseId: trip.courseId },
     ),
     listCertificationSummaries(db, shop.id, [
       ...new Set([
@@ -366,7 +364,6 @@ export async function getTripGuests(
           around: trip.startsAt,
         })
       : new Map<string, CourseMaterialsDone>(),
-    // Which outline sessions the instructor has ticked, per student (ADR 20261120-course-session-progress).
     courseProgressFor(db, shop.id, trip.courseId, roster),
     // The cards the DiveDay browser extension could check from this tab
     // (H-20261008-cert-check-extension), and the N of its "Check all N". Never a held seat's: until a
