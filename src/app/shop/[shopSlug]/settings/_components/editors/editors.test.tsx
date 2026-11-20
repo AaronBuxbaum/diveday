@@ -70,7 +70,11 @@ describe("the profile editor", () => {
     const { shop } = await demoShop(async (db, shopId) => {
       await db.update(shops).set({ logoUrl: "/dive-sites/logo.png" }).where(eq(shops.id, shopId));
     });
-    return ProfileForm({ shop: { ...shop, isDemo }, t });
+    return ProfileForm({
+      shop: { ...shop, isDemo },
+      t,
+      locale: "en-US",
+    });
   }
 
   it("asks for the tagline, the logo and every brand field", async () => {

@@ -40,6 +40,7 @@ import {
   computerDiveProfiles,
   computerDives,
   computerImportBatches,
+  courseElearningCodes,
   courseFormRecords,
   courseFormRequirements,
   courseForms,
@@ -1046,6 +1047,7 @@ export async function clearDemoSchedule(
   // course and the form; a version the form and its author. The demo seeds
   // none, so a form a spec or a visitor wrote must not outlive the reset.
   await db.delete(courseFormRecords).where(eq(courseFormRecords.shopId, shopId));
+  await db.delete(courseElearningCodes).where(eq(courseElearningCodes.shopId, shopId));
   await db.delete(courseSessionProgress).where(eq(courseSessionProgress.shopId, shopId));
   await db.delete(courseFormRequirements).where(eq(courseFormRequirements.shopId, shopId));
   await db.delete(courseFormVersions).where(eq(courseFormVersions.shopId, shopId));

@@ -64,6 +64,7 @@ function courseSeatActions(actions: RosterRowContext["actions"]) {
     markCardProcessedAction,
     setCourseMaterialsDoneAction,
     setCourseStepDoneAction,
+    setElearningCodeAction,
     referralStudentAction,
     elearningCheckAction,
     recordPaperCourseFormAction,
@@ -73,6 +74,7 @@ function courseSeatActions(actions: RosterRowContext["actions"]) {
     markCardProcessedAction,
     setCourseMaterialsDoneAction,
     setCourseStepDoneAction,
+    setElearningCodeAction,
     referralStudentAction,
     elearningCheckAction,
     recordPaperCourseFormAction,
@@ -118,6 +120,7 @@ export function rosterSeat(entry: RosterEntry, settled: boolean, context: Roster
     certifyDefaultLevel = null,
     courseHasMaterials = false,
     courseSteps = [],
+    elearningCodes = null,
     courseMaterialsOpen = false,
   } = trip;
   const {
@@ -414,6 +417,9 @@ export function rosterSeat(entry: RosterEntry, settled: boolean, context: Roster
     carriedChartersNote,
     materialsDone,
     courseProgress,
+    elearningCode: elearningCodes
+      ? { code: elearningCodes.byBooking.get(booking.id) ?? null, left: elearningCodes.left }
+      : null,
     materialsPending,
     readiness,
     paymentStatus,

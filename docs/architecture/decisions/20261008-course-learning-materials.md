@@ -61,7 +61,7 @@ word, never a fetched fact.
   enum's middle states ("assigned") have no sender: DiveDay now sends the materials with the
   confirmation, so every student is "assigned" by construction.
 - **A pasted agency code per student.** Deferred. Nothing asked for it, and it is personal data
-  with no reader yet.
+  with no reader yet. A shop later asked: [20261120-course-elearning-codes](20261120-course-elearning-codes.md).
 - **Gate boarding on the tick.** Rejected. Shops let students finish theory on day 1, and a gate
   built on a human's checkbox would block real divers on a forgotten click.
 

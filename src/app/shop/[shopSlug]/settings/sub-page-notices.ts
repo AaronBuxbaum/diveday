@@ -86,6 +86,7 @@ export function profileNoticeMessages(t: StaffTranslator): NoticeMessages<Profil
   return {
     "profile-saved": { tone: "success", text: t("settings.main.notice.profileSaved") },
     "profile-invalid": { tone: "danger", text: t("settings.main.notice.profileInvalid") },
+    "pick-gone": { tone: "danger", text: t("settings.main.notice.pickGone") },
   };
 }
 

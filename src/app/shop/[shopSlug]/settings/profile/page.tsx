@@ -60,7 +60,7 @@ export default async function ProfileSettingsPage({
         </a>
       }
     >
-      <ProfileForm shop={shop} t={t} />
+      <ProfileForm shop={shop} t={t} locale={locale} />
     </SettingsEditorPage>
   );
 }

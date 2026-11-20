@@ -24,12 +24,15 @@ export function CourseMaterials({
   contactEmail,
   t,
 }: {
-  data: Pick<ReadyPageData, "learningMaterials" | "courseMaterialsDone" | "courseStarted">;
+  data: Pick<
+    ReadyPageData,
+    "learningMaterials" | "elearningCode" | "courseMaterialsDone" | "courseStarted"
+  >;
   contactEmail?: string | null;
   t: DiverTranslator;
 }) {
   const materials = data.learningMaterials;
-  if (materials.length === 0) return null;
+  if (materials.length === 0 && !data.elearningCode) return null;
   return (
     <section aria-labelledby="course-materials-heading">
       <h2 id="course-materials-heading" className={SECTION_TITLE_CLASS}>
@@ -40,6 +43,14 @@ export function CourseMaterials({
       {data.courseMaterialsDone ? (
         <p className="mt-2">
           <SettledCheck settled label={t("ready.materialsDone")} className="text-sm text-muted" />
+        </p>
+      ) : null}
+      {data.elearningCode ? (
+        <p className="mt-3 text-base">
+          <span className="text-muted">{t("ready.elearningCode")}</span>{" "}
+          <code className="select-all rounded bg-surface-sunken px-2 py-1 font-mono font-semibold">
+            {data.elearningCode}
+          </code>
         </p>
       ) : null}
       <ul className="mt-3 space-y-2">

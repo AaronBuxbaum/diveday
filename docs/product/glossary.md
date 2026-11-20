@@ -288,6 +288,7 @@ word in a message bundle fails `pnpm check:repo`. The Spanish reasoning is
 - Diver-sent doctor's form
 - Dock call time
 - Doctor's page
+- eLearning code
 - Emergency contact
 - Emergency reference
 - Emergency text

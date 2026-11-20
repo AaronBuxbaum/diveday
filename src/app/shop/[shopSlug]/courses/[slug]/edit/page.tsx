@@ -39,6 +39,7 @@ import { CoursePhotosSection } from "./_components/CoursePhotosSection";
 import { CoursePitchPricingSections } from "./_components/CoursePitchPricingSections";
 import { CourseDayByDaySection, CourseFaqSection } from "./_components/CourseScheduleFaqSections";
 import { CourseTemplateUpdatesPanel } from "./_components/CourseTemplateUpdatesPanel";
+import { ElearningCodesSection } from "./_components/ElearningCodesSection";
 import { courseEditNotices, refusedSectionId } from "./_components/edit-notices";
 import { LearningMaterialsSection } from "./_components/LearningMaterialsSection";
 import { courseTemplateFieldLabels } from "./_components/template-field-labels";
@@ -154,7 +155,7 @@ export default async function EditCoursePage({
   const [pitch, pricing, glance, dayByDay] = sections
     .slice(0, COURSE_EDITOR_OPEN_SECTIONS.length)
     .map((section) => ({ ...section, unsavedTag }));
-  const [photos, enroll, feeCovers, materials, faq] = sections
+  const [photos, enroll, feeCovers, materials, codes, faq] = sections
     .slice(COURSE_EDITOR_OPEN_SECTIONS.length)
     .map(closedRef);
   const formsSection = {
@@ -328,6 +329,7 @@ export default async function EditCoursePage({
                   storageKey={`course-draft:${course.id}`}
                   t={t}
                 />
+                <ElearningCodesSection section={codes} counts={page.elearningCodes} t={t} />
                 <CourseFaqSection course={course} faq={faq} t={t} />
                 <CourseFormsRequirement
                   {...formsPanel}

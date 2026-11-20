@@ -12,9 +12,18 @@ import { CourseMaterials } from "./CourseMaterials";
  */
 const t = diverTranslator("en-US");
 
-type Data = Pick<ReadyPageData, "learningMaterials" | "courseMaterialsDone" | "courseStarted">;
+type Data = Pick<
+  ReadyPageData,
+  "learningMaterials" | "elearningCode" | "courseMaterialsDone" | "courseStarted"
+>;
 function data(over: Partial<Data>): Data {
-  return { learningMaterials: [], courseMaterialsDone: false, courseStarted: false, ...over };
+  return {
+    learningMaterials: [],
+    elearningCode: null,
+    courseMaterialsDone: false,
+    courseStarted: false,
+    ...over,
+  };
 }
 
 afterEach(cleanup);
@@ -48,6 +57,12 @@ describe("CourseMaterials", () => {
     expect(screen.getByText(/Before day 1/)).toBeInTheDocument();
     expect(screen.getByText("Logbook").closest("a")).toBeNull();
     expect(screen.queryByText("The shop has these marked done")).toBeNull();
+  });
+
+  it("shows the code the shop handed this student, even for a course with no materials list", () => {
+    render(<CourseMaterials data={data({ elearningCode: "AB12-CD34" })} t={t} />);
+    expect(screen.getByRole("heading", { name: "Before your first day" })).toBeInTheDocument();
+    expect(screen.getByText("AB12-CD34")).toBeInTheDocument();
   });
 
   it("never renders a link that is not https", () => {
