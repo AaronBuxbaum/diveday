@@ -378,7 +378,12 @@ async function settleOne(
   // rail (`recordRollCall`).
   const [updated] = await tx
     .update(bookings)
-    .set({ status: "booked", turnedAwayReason: null, turnedAwayAt: null })
+    .set({
+      status: "booked",
+      turnedAwayReason: null,
+      turnedAwayAt: null,
+      offlineAssignmentGeneration: sql`${bookings.offlineAssignmentGeneration} + 1`,
+    })
     .where(and(eq(bookings.id, seat.id), eq(bookings.status, "no_show")))
     .returning({ id: bookings.id });
   await markApplied(tx, observation.id, now);

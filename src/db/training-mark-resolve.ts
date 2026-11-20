@@ -16,7 +16,7 @@ import {
 } from "@/lib/training-mark";
 import type { DbExecutor } from "./client";
 import { queryAll } from "./query-helpers";
-import { effectiveCausalRowsForDb } from "./roll-call-causal-store";
+import { recountApplies, rollCallProjectionForDb } from "./roll-call-causal-store";
 import { oldestMarkFirst } from "./roll-call-order";
 import { crewMarks } from "./roll-call-subject";
 import {
@@ -29,7 +29,7 @@ import {
   tripDives,
   trips,
 } from "./schema";
-import { rollCallDayIndex } from "./trip-meeting-windows";
+import { rollCallCurrentDayIndex, rollCallDayIndex } from "./trip-meeting-windows";
 import { liveTrip } from "./trips-live";
 import { seatNotCancelled } from "./trips-queries";
 
@@ -193,23 +193,35 @@ export async function trustedCrewOfTrips(
         .select({
           event: rollCallEvents,
           day: rollCallDayIndex(),
+          currentDay: rollCallCurrentDayIndex(),
         })
         .from(rollCallEvents)
         .where(
-          and(
-            eq(rollCallEvents.shopId, shopId),
-            crewMarks(),
-            inArray(rollCallEvents.tripId, ids),
-            eq(rollCallEvents.checkpoint, "departure"),
-          ),
+          and(eq(rollCallEvents.shopId, shopId), crewMarks(), inArray(rollCallEvents.tripId, ids)),
         )
         // diveday:allow-time-id-order: the latest mark per person wins; nobody is shown this order.
         .orderBy(...oldestMarkFirst()),
   ]);
   // The latest crew-count mark per (trip, person): "not boarded" keeps them off.
   const latest = new Map<string, string>();
-  for (const { event } of await effectiveCausalRowsForDb(db, counted)) {
-    if (event.crewPersonId) latest.set(`${event.tripId}:${event.crewPersonId}`, event.status);
+  const projection = await rollCallProjectionForDb(db, counted, { allSubjectEvents: true });
+  for (const { event } of projection.rows) {
+    if (event.crewPersonId && event.checkpoint === "departure")
+      latest.set(`${event.tripId}:${event.crewPersonId}`, event.status);
+  }
+  for (const { event, currentDay } of counted) {
+    if (
+      event.crewPersonId &&
+      recountApplies(
+        projection.recount,
+        event.shopId,
+        event.tripId,
+        `crew:${event.crewPersonId}`,
+        "departure",
+        currentDay,
+      )
+    )
+      latest.set(`${event.tripId}:${event.crewPersonId}`, "not_boarded");
   }
   const rowsByTrip = new Map<string, typeof rows>();
   for (const row of rows) {

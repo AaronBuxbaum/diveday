@@ -51,9 +51,7 @@ export function RepeatsCard({
 
 /**
  * **Print**: the trip packet (recorded on the trail), and the doors to the
- * three papers drawn where their subject is: each guest's paper pass in
- * Getting ready (issue #4683), the rental tickets on Gear, and the roll call on
- * Roll call.
+ * three papers drawn where their subject is: paper-pass navigation in Getting ready, the rental tickets on Gear, and the roll call on Roll call.
  */
 export function PrintCard({
   shopSlug,

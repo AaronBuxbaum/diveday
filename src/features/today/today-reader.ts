@@ -55,8 +55,8 @@ import {
   shopStripeAccountForRender,
 } from "@/db/stripe-accounts";
 import {
-  currentMeetingDayMarks,
   meetingWindowsByTrip,
+  rollCallCurrentDayIndex,
   rollCallDayIndex,
 } from "@/db/trip-meeting-windows";
 import {
@@ -622,6 +622,7 @@ async function boardedAfterLastDive(
     .select({
       event: rollCallEvents,
       day: rollCallDayIndex(),
+      currentDay: rollCallCurrentDayIndex(),
     })
     .from(rollCallEvents)
     .where(
@@ -632,13 +633,14 @@ async function boardedAfterLastDive(
           rollCallEvents.tripId,
           departures.map((trip) => trip.id),
         ),
-        // The meeting day out now: day one's last count is not day two's (#2557).
-        currentMeetingDayMarks(),
       ),
     )
     .orderBy(...newestMarkFirst());
   const seen = new Set<string>();
-  for (const { event } of await effectiveCausalRowsForDb(db, rows)) {
+  for (const { event, day, currentDay } of await effectiveCausalRowsForDb(db, rows, {
+    allSubjectEvents: true,
+  })) {
+    if (day !== currentDay) continue;
     if (!event.bookingId || event.checkpoint !== lastCheckpoint.get(event.tripId)) continue;
     if (seen.has(event.bookingId)) continue;
     seen.add(event.bookingId);

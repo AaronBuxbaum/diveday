@@ -46,6 +46,7 @@ import { participantTermsRows } from "./ParticipantTermsSection";
 import { crewNamesOf } from "./phases/phase-slots";
 import { RequirementsSection } from "./RequirementsSection";
 import { boatClashText, tripCrewNotesOf } from "./trip-crew-notes";
+import { tripSeatSummary } from "./trip-seat-summary";
 
 type TripOverview = NonNullable<Awaited<ReturnType<typeof getTripOverview>>>;
 type ShopSurface = Awaited<ReturnType<typeof requireShopSurface>>["shop"];
@@ -445,21 +446,11 @@ function departureDefinitionRows(context: TripAboutRowsContext) {
       // A fact, not a form: the capacity itself is edited in the Price row.
       id: "seats",
       label: t("trips.about.seats"),
-      // Beside what is on sale, the boat certificate's own passenger figure
-      // when the hull has one (issue #4685): the ceiling the seats are capped
-      // at (H-20261009-certificate-caps-seats), said where the seats are set.
-      value: (
-        <>
-          {t("trips.clock.sentence.booked", {
-            booked: trip.booked,
-            capacity: trip.sellableCapacity,
-          })}
-          {trip.certifiedPassengers != null ? (
-            <span className="block text-sm text-muted">
-              {t("trips.about.certificateSeats", { count: trip.certifiedPassengers })}
-            </span>
-          ) : null}
-        </>
+      value: tripSeatSummary(
+        t,
+        trip.booked,
+        trip.sellableCapacity,
+        boat?.certifiedPassengers ?? null,
       ),
     },
     {

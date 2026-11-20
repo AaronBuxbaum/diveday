@@ -255,13 +255,21 @@ export function OfflineDeckRollCall({
       name: diver.fullName,
       role: t("manifest.deck.guest"),
       outstanding: !state || problem,
-      attention: problem || facts.blockedAtDock,
-      requiresReview: problem,
+      attention:
+        problem ||
+        facts.blockedAtDock ||
+        !!diver.recountRequired ||
+        !!diver.historicalReviewRequired,
+      requiresReview: problem || !!diver.recountRequired || !!diver.historicalReviewRequired,
       eventId: receiptEvidenceId(state),
       pending: state?.pending,
       status: state
-        ? `${rollCallLabelText(t, rollCallLabel(view.checkpoint, state))}${state.pending ? ` · ${t("manifest.deck.pendingReceipt")}` : ""}`
-        : undefined,
+        ? `${rollCallLabelText(t, rollCallLabel(view.checkpoint, state))}${state.pending ? ` · ${t("manifest.deck.pendingReceipt")}` : ""}${diver.historicalReviewRequired ? ` · ${t("manifest.deck.historicalReviewRequired")}` : diver.recountRequired ? ` · ${t("manifest.deck.recountRequired")} · ${t("manifest.deck.recountOfflineGuidance")}` : ""}`
+        : diver.recountRequired
+          ? `${t("manifest.deck.recountRequired")} · ${t("manifest.deck.recountOfflineGuidance")}`
+          : diver.historicalReviewRequired
+            ? t("manifest.deck.historicalReviewRequired")
+            : undefined,
       observed: state
         ? t("manifest.deck.observed", {
             time: formatDateTimeTz(new Date(state.occurredAt), controls.locale, timeZone),
@@ -324,13 +332,18 @@ export function OfflineDeckRollCall({
       name: member.fullName,
       role: t("manifest.deck.crew"),
       outstanding: !state || problem,
-      attention: problem || !member.id,
-      requiresReview: problem,
+      attention:
+        problem || !member.id || !!member.recountRequired || !!member.historicalReviewRequired,
+      requiresReview: problem || !!member.recountRequired || !!member.historicalReviewRequired,
       eventId: receiptEvidenceId(state),
       pending: state?.pending,
       status: state
-        ? `${rollCallLabelText(t, rollCallLabel(view.checkpoint, state))}${state.pending ? ` · ${t("manifest.deck.pendingReceipt")}` : ""}`
-        : undefined,
+        ? `${rollCallLabelText(t, rollCallLabel(view.checkpoint, state))}${state.pending ? ` · ${t("manifest.deck.pendingReceipt")}` : ""}${member.historicalReviewRequired ? ` · ${t("manifest.deck.historicalReviewRequired")}` : member.recountRequired ? ` · ${t("manifest.deck.recountRequired")} · ${t("manifest.deck.recountOfflineGuidance")}` : ""}`
+        : member.recountRequired
+          ? `${t("manifest.deck.recountRequired")} · ${t("manifest.deck.recountOfflineGuidance")}`
+          : member.historicalReviewRequired
+            ? t("manifest.deck.historicalReviewRequired")
+            : undefined,
       observed: state
         ? t("manifest.deck.observed", {
             time: formatDateTimeTz(new Date(state.occurredAt), controls.locale, timeZone),

@@ -83,6 +83,12 @@ function renderPanel(overrides: Partial<Parameters<typeof SummaryPanel>[0]> = {}
 }
 
 describe("the missing are named, not just counted", () => {
+  it("calls out when an awaiting person needs a recount", () => {
+    renderPanel({
+      summary: summary({ boarded: 1, notBoarded: 1, awaiting: 1, recountRequired: 1 }),
+    });
+    expect(screen.getByText("1 person needs a recount")).toBeInTheDocument();
+  });
   it("names each not-back-aboard diver", () => {
     renderPanel();
     const list = screen.getByRole("list", { name: "Who is not back aboard" });

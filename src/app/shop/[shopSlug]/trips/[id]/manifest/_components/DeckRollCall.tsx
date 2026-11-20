@@ -79,12 +79,25 @@ export function DeckRollCall({
       photoPath: diver.photoPath,
       role: t("manifest.deck.guest"),
       outstanding: !diver.rollCall || missing || conflict,
-      attention: missing || conflict || blocked || view.reader.alerted.has(diver.bookingId),
-      requiresReview: missing || conflict || view.reader.alerted.has(diver.bookingId),
+      attention:
+        missing ||
+        conflict ||
+        blocked ||
+        !!diver.recountRequired ||
+        !!diver.historicalReviewRequired ||
+        view.reader.alerted.has(diver.bookingId),
+      requiresReview:
+        missing ||
+        conflict ||
+        !!diver.recountRequired ||
+        !!diver.historicalReviewRequired ||
+        view.reader.alerted.has(diver.bookingId),
       eventId: diver.rollCall?.eventId,
       status: diver.rollCall
-        ? rollCallLabelText(t, rollCallLabel(view.checkpoint, diver.rollCall))
-        : undefined,
+        ? `${rollCallLabelText(t, rollCallLabel(view.checkpoint, diver.rollCall))}${diver.historicalReviewRequired ? ` · ${t("manifest.deck.historicalReviewRequired")}` : ""}`
+        : diver.recountRequired
+          ? t("manifest.deck.recountRequired")
+          : undefined,
       observed: diver.rollCall
         ? t("manifest.deck.observed", {
             time: formatDateTimeTz(
@@ -168,12 +181,24 @@ export function DeckRollCall({
       photoPath: member.photoPath,
       role: t("manifest.deck.crew"),
       outstanding: !member.rollCall || missing || conflict,
-      attention: missing || conflict || view.reader.alerted.has(member.id),
-      requiresReview: missing || conflict || view.reader.alerted.has(member.id),
+      attention:
+        missing ||
+        conflict ||
+        !!member.recountRequired ||
+        !!member.historicalReviewRequired ||
+        view.reader.alerted.has(member.id),
+      requiresReview:
+        missing ||
+        conflict ||
+        !!member.recountRequired ||
+        !!member.historicalReviewRequired ||
+        view.reader.alerted.has(member.id),
       eventId: member.rollCall?.eventId,
       status: member.rollCall
-        ? rollCallLabelText(t, rollCallLabel(view.checkpoint, member.rollCall))
-        : undefined,
+        ? `${rollCallLabelText(t, rollCallLabel(view.checkpoint, member.rollCall))}${member.historicalReviewRequired ? ` · ${t("manifest.deck.historicalReviewRequired")}` : ""}`
+        : member.recountRequired
+          ? t("manifest.deck.recountRequired")
+          : undefined,
       observed: member.rollCall
         ? t("manifest.deck.observed", {
             time: formatDateTimeTz(
@@ -222,6 +247,18 @@ export function DeckRollCall({
       status={
         <>
           {status}
+          {(manifest.summary.recountRequired ?? 0) > 0 ? (
+            <p className="font-semibold text-danger" role="status">
+              {t("manifest.recountRequired", { count: manifest.summary.recountRequired ?? 0 })}
+            </p>
+          ) : null}
+          {(manifest.summary.historicalReviewRequired ?? 0) > 0 ? (
+            <p className="text-danger" role="status">
+              {t("manifest.historicalReviewRequired", {
+                count: manifest.summary.historicalReviewRequired ?? 0,
+              })}
+            </p>
+          ) : null}
           <MixedTrainingDepthWarning
             show={mixedTrainingDepthAdvisory(
               divers.flatMap((diver) =>

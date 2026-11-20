@@ -1286,6 +1286,13 @@ export async function mergeDiverRecords(input: {
           tableName === "cards"
             ? sql`, "deletion_kind" = case when "deleted_at" is not null then 'system'::card_deletion_kind else "deletion_kind" end`
             : sql``;
+        // A moved seat is a different assignment for offline observations.
+        // Advance in the same write as person_id, so both pending intake and
+        // already recorded offline evidence see the new boundary.
+        const assignmentGeneration =
+          tableName === "bookings"
+            ? sql`, "offline_assignment_generation" = "offline_assignment_generation" + 1`
+            : sql``;
         // Only a capability whose purpose follows a merge moves; a staff
         // credential one refused the merge above, and never reaches here.
         const followsOnly =
@@ -1293,7 +1300,7 @@ export async function mergeDiverRecords(input: {
             ? sql` and "purpose" in (${mergePurposes("follows")})`
             : sql``;
         await tx.execute(
-          sql`update ${sql.raw(quotedTable(tableName))} set "person_id" = ${survivor.id}${systemArchive} where "shop_id" = ${input.shopId} and "person_id" = ${source.id}${leftBehind}${followsOnly}`,
+          sql`update ${sql.raw(quotedTable(tableName))} set "person_id" = ${survivor.id}${systemArchive}${assignmentGeneration} where "shop_id" = ${input.shopId} and "person_id" = ${source.id}${leftBehind}${followsOnly}`,
         );
       }
 

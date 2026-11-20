@@ -1,8 +1,9 @@
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { afterAll, beforeAll, expect, it, vi } from "vitest";
 import { departureCounts } from "@/features/departure-counts/store";
 import { buildOfflineManifestCopies } from "@/features/offline-manifest-snapshots";
 import { nextOfflineManifestSnapshotWithWindows } from "@/features/offline-manifest-snapshots/store";
+import { getDayCloseout } from "@/features/today/closeout-reader";
 import { recordTripStage } from "@/features/trip-stages";
 import { nowDate } from "@/lib/clock";
 import { describePostgres, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
@@ -615,7 +616,7 @@ describePostgres("witnessed offline projection", () => {
       await pg.db.select().from(rollCallEvents).where(eq(rollCallEvents.clientEventId, id)),
     ).toHaveLength(0);
   });
-  it("restores the live mark and counts when a material edit follows an accepted offline mark", async () => {
+  it("holds a recount when a material edit invalidates accepted offline presence", async () => {
     const pg = await postgresTestDb();
     await seedDemo(pg.db, "lean");
     const shop = await getShopBySlug(pg.db, "blue-mantis");
@@ -648,6 +649,11 @@ describePostgres("witnessed offline projection", () => {
     const before = (await departureCounts(pg.db, shop.id, [trip.id], { now: trip.startsAt })).get(
       trip.id,
     );
+    const closeAt = new Date(trip.endsAt.getTime() + 60_000);
+    const beforeClose = (
+      await getDayCloseout(pg.db, shop.id, shop.timezone, closeAt)
+    ).departures.find((row) => row.tripId === trip.id);
+    if (!beforeClose) throw new Error("closeout fixture missing");
     let entered!: () => void;
     let release!: () => void;
     const holding = new Promise<void>((resolve) => {
@@ -694,12 +700,33 @@ describePostgres("witnessed offline projection", () => {
     expect(
       (await getTripManifest(pg.db, shop.id, trip.id, "after_dive_1"))?.divers.find(
         (diver) => diver.bookingId === subject.booking.id,
-      )?.rollCall?.state,
-    ).toBe("not_boarded");
+      ),
+    ).toMatchObject({ recountRequired: true, rollCall: undefined });
     const after = (await departureCounts(pg.db, shop.id, [trip.id], { now: trip.startsAt })).get(
       trip.id,
     );
     expect(after?.back).toBe(before?.back);
-    expect(after?.missing).toBe(before?.missing);
+    expect(after?.recountRequired).toBe(1);
+    expect(after?.sailed).toBe((before?.sailed ?? 0) - 1);
+    const afterClose = (
+      await getDayCloseout(pg.db, shop.id, shop.timezone, closeAt)
+    ).departures.find((row) => row.tripId === trip.id);
+    expect(afterClose?.sailed).toBe(beforeClose.sailed - 1);
+    expect(afterClose?.uncounted).toBeGreaterThan(0);
+    expect(
+      await pg.db
+        .select()
+        .from(rollCallEvents)
+        .where(
+          and(
+            eq(rollCallEvents.tripId, trip.id),
+            eq(rollCallEvents.bookingId, subject.booking.id),
+            eq(rollCallEvents.source, "live"),
+            eq(rollCallEvents.checkpoint, "after_dive_1"),
+          ),
+        ),
+    ).toEqual(
+      expect.arrayContaining([expect.objectContaining({ statementStatus: "not_boarded" })]),
+    );
   });
 });

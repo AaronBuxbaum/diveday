@@ -485,6 +485,8 @@
       "reviewLoad": "Review current roster",
       "reviewCurrentTrip": "Current trip: {trip} · starts {startsAt}.",
       "reviewCurrentRoster": "Current roster and recorded roll call:",
+      "reviewCrewInstruction": "Record a fresh count on the current manifest, then return here to discard this saved mark.",
+      "reviewCrewLink": "Open live roll call",
       "reviewAwaiting": "Awaiting a mark",
       "reviewVerifyPerson": "The current seat names {name}. Check that this is the person and trip you intend to mark; the old observation has not synced.",
       "reviewChoose": "Choose a new live mark after checking the person:",

@@ -87,4 +87,14 @@ describe("Deck shared safety attention", () => {
   it("preserves unresolved alerts even when everybody has a positive record", () => {
     expect(needsAttention(accountedManifest(), new Set(["guest-1"]))).toBe(true);
   });
+  it("keeps earlier unresolved evidence visible after a current count", () => {
+    const base = accountedManifest();
+    expect(
+      needsAttention(
+        accountedManifest({
+          summary: { ...base.summary, historicalReviewRequired: 1 },
+        }),
+      ),
+    ).toBe(true);
+  });
 });

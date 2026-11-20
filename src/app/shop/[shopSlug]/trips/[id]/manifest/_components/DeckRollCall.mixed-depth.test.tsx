@@ -29,6 +29,7 @@ function renderDeck(divers = mixedRoster()) {
       view: {
         manifest: {
           trip: { id: context.tripId },
+          summary: {},
           divers,
           crew: [],
           completeness: { complete: false },

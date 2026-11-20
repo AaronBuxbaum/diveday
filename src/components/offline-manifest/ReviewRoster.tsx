@@ -1,5 +1,8 @@
+import Link from "next/link";
+import { proseLinkClass } from "@/components/ui/button";
 import { formatDateTimeTz } from "@/lib/format";
 import type { OfflineManifestPayload, OfflineRollCallEvent } from "@/lib/offline-manifests";
+import { shopPath } from "@/lib/staff-notices";
 import type { OfflineTripControls } from "./controls";
 
 export function ReviewRoster({
@@ -49,7 +52,32 @@ export function ReviewRoster({
             )}
           </li>
         ))}
+        {manifest.crew.map((crew) => (
+          <li key={crew.id} className="px-3 py-2">
+            {crew.fullName} —{" "}
+            {t(
+              crew.rollCall?.state === "boarded"
+                ? "shared.presence.boarded"
+                : crew.rollCall?.state === "not_boarded"
+                  ? event.checkpoint === "departure"
+                    ? "shared.presence.notBoarded"
+                    : "shared.offlineManifest.single.notBackAboardActive"
+                  : "shared.offlineManifest.single.reviewAwaiting",
+            )}
+          </li>
+        ))}
       </ul>
+      {event.crewPersonId ? (
+        <p>
+          {t("shared.offlineManifest.single.reviewCrewInstruction")}{" "}
+          <Link
+            href={`${shopPath(current.shop.slug, "trips", event.tripId, "manifest")}?checkpoint=${encodeURIComponent(event.checkpoint)}`}
+            className={proseLinkClass}
+          >
+            {t("shared.offlineManifest.single.reviewCrewLink")}
+          </Link>
+        </p>
+      ) : null}
     </div>
   );
 }

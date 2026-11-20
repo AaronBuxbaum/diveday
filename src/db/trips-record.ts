@@ -1253,7 +1253,8 @@ async function updateTripRecord(
     const meetingTimesChanged =
       existing.startsAtMicros !== String(BigInt(patch.startsAt.getTime()) * 1000n) ||
       existing.endsAtMicros !== String(BigInt(patch.endsAt.getTime()) * 1000n);
-    if (meetingTimesChanged || scheduleDaysMoved) {
+    const boatChanged = patch.boatId !== undefined && patch.boatId !== existing.boatId;
+    if (meetingTimesChanged || scheduleDaysMoved || boatChanged) {
       await tx
         .update(trips)
         .set({ offlineMeetingGeneration: sql`${trips.offlineMeetingGeneration} + 1` })
@@ -1496,7 +1497,11 @@ export async function setTripStatus(
     const [trip] = await tx
       .update(trips)
       // Stamped on the way into `cancelled`; `reinstateTrip` clears it.
-      .set({ status, cancelledAt: now })
+      .set({
+        status,
+        cancelledAt: now,
+        offlineMeetingGeneration: sql`case when ${trips.status} is distinct from ${status} then ${trips.offlineMeetingGeneration} + 1 else ${trips.offlineMeetingGeneration} end`,
+      })
       .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)))
       .returning();
     // A cancelled departure keeps its bookings, so the booking cascade never

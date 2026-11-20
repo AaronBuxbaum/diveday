@@ -64,6 +64,28 @@ describe("tripFixes", () => {
     expect(tripFixes(bare, { ...page, phase: "filling" })).toEqual([]);
   });
 
+  it("links only filling and ready open orders to the matching unwindowed departure ledger", () => {
+    const withOrders = overview({
+      pulse: { blocked: 0, boarded: 0, work: { ...noWork, openOrders: 2 } } as never,
+    });
+    for (const phase of ["filling", "ready"] as const) {
+      expect(tripFixes(withOrders, { ...page, phase })).toContainEqual({
+        key: "open_orders",
+        text: "2 orders awaiting payment",
+        tone: "warning",
+        action: {
+          href: "/shop/blue-mantis/orders?tripId=trip-1&status=open&range=all",
+          label: "Review in Orders",
+        },
+      });
+    }
+    for (const phase of ["checkin", "listed"] as const) {
+      expect(
+        tripFixes(withOrders, { ...page, phase }).some((fix) => fix.key === "open_orders"),
+      ).toBe(false);
+    }
+  });
+
   it("keeps nitrox with no verified card as worth a minute, opening the Gear page", () => {
     const fixes = tripFixes(
       overview({

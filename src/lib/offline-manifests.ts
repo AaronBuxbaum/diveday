@@ -316,6 +316,8 @@ export type OfflineManifestPayload = {
            * roll call a captain has queued and not synced.
            */
           clashDepartures?: string[];
+          recountRequired?: boolean;
+          historicalReviewRequired?: boolean;
           rollCallContext?: RollCallCausalContext;
           rollCall?: {
             state: "boarded" | "not_boarded";
@@ -598,6 +600,8 @@ export type OfflineManifestPayload = {
             status: "ready" | "blocked";
             blockers: Array<{ code: ReadinessBlockerCode; text: string }>;
           };
+          recountRequired?: boolean;
+          historicalReviewRequired?: boolean;
           rollCallContext?: RollCallCausalContext;
           rollCall?: {
             state: "boarded" | "not_boarded";
@@ -1436,6 +1440,8 @@ export function serializeManifests(
         id: member.id,
         fullName: member.fullName,
         roles: member.roles,
+        ...(member.recountRequired ? { recountRequired: true } : {}),
+        ...(member.historicalReviewRequired ? { historicalReviewRequired: true } : {}),
         // Names only, and de-duplicated: a teammate who shares two of this
         // person's groups is still one body to look for.
         ...(includeBuddyTeams
@@ -1482,6 +1488,8 @@ export function serializeManifests(
         bookingId: diver.bookingId,
         ...(diver.personId && !diver.identityWithheld ? { personId: diver.personId } : {}),
         fullName: diver.fullName,
+        ...(diver.recountRequired ? { recountRequired: true } : {}),
+        ...(diver.historicalReviewRequired ? { historicalReviewRequired: true } : {}),
         ...(diver.identityWithheld ? { identityWithheld: true as const } : {}),
         ...(diver.identityWithheld && diver.heldEmergencyContact
           ? { heldEmergencyContact: diver.heldEmergencyContact }

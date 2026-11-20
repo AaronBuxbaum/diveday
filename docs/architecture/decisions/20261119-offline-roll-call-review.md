@@ -3,6 +3,12 @@
 - **Status:** Accepted
 - **Date:** 2026-11-19
 
+## Current implementation
+
+The later witnessed sync protocol 3 supersedes the protocol-2 rollout described below. New seat observations reconcile only when their signed meeting, assignment and causal context remains current; other observations remain for review. Snapshot and medical readers retain protocol 1. A previously accepted unbound offline mark is not proof of the current meeting. The restore stop remains in the [runbook](../../engineering/backup-and-restore-runbook.md).
+
+Crew observations use the same meeting witness and a continuous crew-assignment identity. A held crew observation stays on the device: staff open the current live roll call, record a fresh count, and explicitly discard the saved observation. Protocol 3 requires a witnessed meeting day for accepted offline observations; older or imported server evidence may lack one. A witnessed current count can record the person while that earlier observation remains unresolved. Ask an owner to inspect the departure log and keep a separate manual record; the app cannot assign or resolve the unknown day. Automatic replay after a restore remains unsupported.
+
 ## Context
 
 An offline observation can return after its subject is unavailable. A per-event rejection is treated as settled by the device, allowing the only copy to expire. The reconnect batch can also contain independent observations and causal descendants. See #4787.
