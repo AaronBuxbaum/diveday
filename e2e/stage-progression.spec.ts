@@ -14,7 +14,8 @@ test("the stage strip keeps repeat and backward taps available", async ({ page }
   const underway = strip.getByRole("button", { name: "Underway" });
   const surface = strip.getByRole("button", { name: "Surface" });
   const separator = underway.locator("..").locator(":scope > span[aria-hidden=true]");
-  await expect(separator).toHaveCSS("font-size", "16px");
+  // A phone's five short words read left to right without arrows (phone polish).
+  await expect(separator).toBeHidden();
   await underway.focus();
   await page.keyboard.press("Tab");
   await page.keyboard.press("Shift+Tab");
@@ -29,6 +30,7 @@ test("the stage strip keeps repeat and backward taps available", async ({ page }
   }
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.setViewportSize({ width: 1280, height: 844 });
+  await expect(separator).toBeVisible();
   await strip.screenshot({ path: testInfo.outputPath("stage-desktop.png") });
 });
 
