@@ -2144,6 +2144,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       "assigned_at",
       "assigned_by_person_id",
       "created_at",
+      "deleted_at",
     ],
     rows: ({ courseElearningCodeRows }) =>
       courseElearningCodeRows.map((row) => [
@@ -2154,6 +2155,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         row.assignedAt,
         row.assignedByPersonId,
         row.createdAt,
+        row.deletedAt,
       ]),
     note: EXPORT_FILE_NOTES["course_elearning_codes.csv"],
   },

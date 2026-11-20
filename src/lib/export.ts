@@ -174,7 +174,7 @@ export const EXPORT_FILE_NOTES = {
   "boat_snags.csv":
     "Problems a crew wrote against a checklist line on one boat (a snag), oldest first, each carried to that boat's next departures until somebody marked it fixed. still_there_* is the newest crew who looked and found it still there; fixed_* closes it for good. Informs only: an open snag never stopped a departure.",
   "course_elearning_codes.csv":
-    "The eLearning codes the shop pasted in for each course, and the enrollment each was handed to, with when and by whom (blank when the confirmation did it). The shop's own ledger of what it bought from its agency: a handed-out code is never evidence the student finished the theory.",
+    "The eLearning codes the shop pasted in for each course, and the enrollment each was handed to, with when and by whom (blank when the confirmation did it); deleted_at is set on an unused code the shop removed. The shop's own ledger of what it bought from its agency: a handed-out code is never evidence the student finished the theory.",
   "departure_boat_safety_snapshots.csv":
     "The boat's papers and kit as they stood at each departure's roll call, one row per departure, for the departure log: papers is the certificate limits and paper dates verbatim (JSON), notices the codes DiveDay raised about them on the departure's own day (judged_on, JSON). departure_starts_at is the saved scheduled departure instant; an unsailed reschedule can rebind it. Known-unsailed records may refresh on a departure count or hull change. A kept sailed record or one with unknown departure-time provenance is never rewritten. Informs only: nothing here ever stopped a departure.",
   "prior_visits.csv":

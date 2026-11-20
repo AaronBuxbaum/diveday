@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "../test/db";
 import {
+  cancelUnusedCourseCodes,
   courseCodeCounts,
   courseCodesByBooking,
   issueCourseCode,
@@ -162,6 +163,31 @@ describe("releaseCourseCode", () => {
     await issueCourseCode(db, { shopId, bookingId: first, staffPersonId: null });
     expect(await releaseCourseCode(db, { shopId: OTHER_SHOP, bookingId: first })).toEqual({
       released: false,
+    });
+  });
+});
+
+describe("cancelUnusedCourseCodes", () => {
+  it("removes what nobody holds, keeps a handed-out code, and lets the text be pasted again", async () => {
+    const { db, shopId, courseId, first } = await courseContext();
+    await recordCourseCodes(db, { shopId, courseId, text: "AAA1 BBB2 CCC3" });
+    await issueCourseCode(db, { shopId, bookingId: first, staffPersonId: null });
+
+    expect(await cancelUnusedCourseCodes(db, { shopId, courseId })).toEqual({ removed: 2 });
+    expect(await courseCodeCounts(db, { shopId, courseId })).toEqual({ left: 0, handedOut: 1 });
+    expect(await recordCourseCodes(db, { shopId, courseId, text: "BBB2" })).toEqual({
+      ok: true,
+      added: 1,
+      skipped: 0,
+    });
+    expect(await courseCodeCounts(db, { shopId, courseId })).toEqual({ left: 1, handedOut: 1 });
+  });
+
+  it("removes nothing of another shop's", async () => {
+    const { db, shopId, courseId } = await courseContext();
+    await recordCourseCodes(db, { shopId, courseId, text: "AAA1" });
+    expect(await cancelUnusedCourseCodes(db, { shopId: OTHER_SHOP, courseId })).toEqual({
+      removed: 0,
     });
   });
 });
