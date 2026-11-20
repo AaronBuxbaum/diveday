@@ -32,7 +32,7 @@ export async function WrappedMore({
     // The header's Activity row links to `#trip-activity`, inside this card:
     // the card opens for it.
     <AutoOpenDetails
-      openOnHash={["trip-activity", "conservation"]}
+      openOnHash={["trip-activity", "conservation", "found-aboard"]}
       id="wrapped-more"
       className={sectionCardClass({ padding: "none", className: "group/more" })}
     >

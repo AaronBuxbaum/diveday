@@ -46,6 +46,7 @@ import { participantTermsRows } from "./ParticipantTermsSection";
 import { crewNamesOf } from "./phases/phase-slots";
 import { RequirementsSection } from "./RequirementsSection";
 import { boatClashText, tripCrewNotesOf } from "./trip-crew-notes";
+import { tripSeatSummary } from "./trip-seat-summary";
 
 type TripOverview = NonNullable<Awaited<ReturnType<typeof getTripOverview>>>;
 type ShopSurface = Awaited<ReturnType<typeof requireShopSurface>>["shop"];
@@ -445,10 +446,12 @@ function departureDefinitionRows(context: TripAboutRowsContext) {
       // A fact, not a form: the capacity itself is edited in the Price row.
       id: "seats",
       label: t("trips.about.seats"),
-      value: t("trips.clock.sentence.booked", {
-        booked: trip.booked,
-        capacity: trip.sellableCapacity,
-      }),
+      value: tripSeatSummary(
+        t,
+        trip.booked,
+        trip.sellableCapacity,
+        boat?.certifiedPassengers ?? null,
+      ),
     },
     {
       id: "requirements",
