@@ -524,9 +524,13 @@ describe("the extension's copy of the protocol", () => {
         { id: "test", tab: { id: 1 }, frameId: 0, url },
         (answer) => answers.push(answer),
       );
-    ask("https://dive.day/shop/blue-mantis/settings");
+    ask("https://www.dive.day/shop/blue-mantis/settings");
     // Not from a page outside DiveDay's staff pages.
     ask("https://example.com/shop/x");
+    // Nor from the apex, a lookalike host, or a public path on the real one.
+    ask("https://dive.day/shop/x");
+    ask("https://www.dive.day.evil.example/shop/x");
+    ask("https://www.dive.day/s/blue-mantis");
     expect(answers).toEqual([
       {
         ok: true,
@@ -744,7 +748,7 @@ describe("the extension's agencies", () => {
 
   it("talks only to DiveDay's own staff pages", () => {
     const matches = manifest.content_scripts.flatMap((script) => script.matches);
-    expect(matches).toEqual(["https://dive.day/shop/*"]);
+    expect(matches).toEqual(["https://www.dive.day/shop/*"]);
   });
 });
 

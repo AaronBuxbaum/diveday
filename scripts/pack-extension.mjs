@@ -20,7 +20,7 @@
  *   app drive the extension;
  * - a host permission for any site but the agencies' lookup origins in
  *   `agencies.js` (`<all_urls>`, `https://*` and `file://` included), and a
- *   content script anywhere but `https://dive.day/shop/*`;
+ *   content script anywhere but `https://www.dive.day/shop/*`;
  * - a manifest version that differs from `VERSION` in `protocol.js`, the one
  *   DiveDay's pages read;
  * - anything but Manifest V3.
@@ -40,7 +40,7 @@ export const DEFAULT_OUT_DIR = join(ROOT, "dist");
 const ZIP_MTIME = "2026-01-01T00:00:00.000Z";
 
 /** The one place DiveDay's content script may run. */
-export const STAFF_PAGES_MATCH = "https://dive.day/shop/*";
+export const STAFF_PAGES_MATCH = "https://www.dive.day/shop/*";
 
 /** The paths a manifest names directly: itself, its service worker, content scripts and icons. */
 function manifestPaths(manifest) {
