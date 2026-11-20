@@ -4,7 +4,19 @@
     "label": "Vistas de la agenda",
     "week": "Salidas",
     "crew": "Tripulación",
-    "plan": "Turnos"
+    "plan": "Turnos",
+    "boats": "Barcos"
+  },
+  "boats": {
+    "heading": "Todos los barcos, un día",
+    "noBoat": "Sin barco asignado",
+    "empty": "Este día no sale nada.",
+    "previousDay": "Día anterior",
+    "nextDay": "Día siguiente",
+    "today": "Hoy",
+    "noCrew": "Aún sin tripulación",
+    "crewClash": "{name} tripula {first} y {second} al mismo tiempo.",
+    "boatClash": "{boat} está en {first} y {second} al mismo tiempo."
   },
   "viewPublicPage": "Ver la página pública",
   "more": "Más",

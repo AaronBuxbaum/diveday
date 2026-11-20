@@ -250,6 +250,7 @@ export default async function ScheduleBoardPage({
         copy={{
           label: st("schedule.views.label"),
           week: st("schedule.views.week"),
+          boats: st("schedule.views.boats"),
           crew: st("schedule.views.crew"),
           plan: st("schedule.views.plan"),
         }}
