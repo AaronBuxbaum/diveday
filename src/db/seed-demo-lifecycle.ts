@@ -35,6 +35,7 @@ import {
   computerDives,
   computerImportBatches,
   courseFormRecords,
+  courseSessionProgress,
   courseFormRequirements,
   courseForms,
   courseFormVersions,
@@ -269,6 +270,7 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db.delete(inboundMessages).where(eq(inboundMessages.shopId, shopId));
   // Course forms, children first (records → requirements → versions → forms).
   await db.delete(courseFormRecords).where(eq(courseFormRecords.shopId, shopId));
+  await db.delete(courseSessionProgress).where(eq(courseSessionProgress.shopId, shopId));
   await db.delete(courseFormRequirements).where(eq(courseFormRequirements.shopId, shopId));
   await db.delete(courseFormVersions).where(eq(courseFormVersions.shopId, shopId));
   await db.delete(courseForms).where(eq(courseForms.shopId, shopId));
