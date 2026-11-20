@@ -192,6 +192,14 @@
   },
   "quietAddDeparture": "Add a departure",
   "quietNextDepartureLabel": "Next departure",
+  "quietTip": {
+    "0": "Ask each diver the best thing they saw today. The answers tell you what to point out on the next dive.",
+    "1": "Tell one diver something you noticed about their dive, like their buoyancy or how calm they were. People remember being noticed.",
+    "2": "On the surface interval, ask who is diving again tomorrow. It is the easiest way to fill a boat.",
+    "3": "Say the next dive’s plan once, then ask a diver to say it back.",
+    "4": "Ask who has a trip coming up. Divers like talking about where they are headed next.",
+    "5": "Learn one name you did not know this morning."
+  },
   "arrivals": {
     "label": "Find an arriving diver",
     "placeholder": "Name, phone, email, or booking ID",

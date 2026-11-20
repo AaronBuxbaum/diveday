@@ -828,6 +828,12 @@ function pushSessionTargets(
  */
 type ScrubSectionContext = ScrubContext & {
   bookingIds: string[];
+  /**
+   * Every record merged into this diver, read once for the whole erasure
+   * (`mergedIntoChain`): the sweeps that also clear a merged-away shell's rows
+   * take it from here instead of walking the chain again.
+   */
+  mergedShellIds: string[];
   /** Whether the diver holds any booking here — the guard on every booking sweep. */
   owned: boolean;
   retire: (
@@ -851,7 +857,7 @@ async function scrubPersonRecord(
   ctx: ScrubSectionContext,
 ): Promise<ProcessorErasureTargetInput[]> {
   const { shopId, personId, now } = ctx;
-  const mergedShellIds = await mergedIntoChain(tx, shopId, personId);
+  const { mergedShellIds } = ctx;
   const profileOwners = [personId, ...mergedShellIds];
   const profileRows = await tx
     .select({
@@ -1322,7 +1328,7 @@ async function deleteRegisteredPersonRows(
 ): Promise<void> {
   // The records merged into this one too: a writer that still held a merged-away
   // id can have left the person's own rows on the shell (security review of #3799).
-  const chain = [ctx.personId, ...(await mergedIntoChain(tx, ctx.shopId, ctx.personId))];
+  const chain = [ctx.personId, ...ctx.mergedShellIds];
   for (const { table: name, column: columnName } of erasedPersonRowDeletes()) {
     // `registeredTable` is the one write `erasure-coverage.test.ts` reads by name
     // rather than by schema identifier: it stands for every registry delete.
@@ -1486,10 +1492,8 @@ async function scrubBookingRows(
   // A reviewer can be erased even when they held no seat on these departures.
   // Cards can still name a merged-away reviewer, including captures created
   // after the merge, so scrub the entire chain just as the person sweep does.
-  const personChain = [personId, ...(await mergedIntoChain(tx, shopId, personId))];
-  for (const reviewerId of personChain) {
-    await rewriteBoardingSnapshotReviewer(tx, shopId, reviewerId, null);
-  }
+  const personChain = [personId, ...ctx.mergedShellIds];
+  await rewriteBoardingSnapshotReviewer(tx, shopId, personChain, null);
   // A duplicate cancelled seat can remain on a merged-away person. Lock every
   // seat first, so an in-flight boarding cannot insert a snapshot after this
   // erasure scans the event table.
@@ -1996,27 +2000,17 @@ async function scrubImportedHistory(
   // The count of visits is the shop's own history; every label on them came out
   // of the diver's rows in the prior system. `dedupe_key` is NOT NULL and
   // unique per (shop, person), and can embed the source's own reference.
-  const visits = await tx
-    .select({ id: priorVisits.id })
-    .from(priorVisits)
+  await tx
+    .update(priorVisits)
+    .set({
+      title: null,
+      statusLabel: null,
+      amountLabel: null,
+      sourceLabel: null,
+      sourceReference: null,
+      dedupeKey: sql<string>`'redacted-' || gen_random_uuid()::text`,
+    })
     .where(and(eq(priorVisits.shopId, shopId), eq(priorVisits.personId, personId)));
-  if (visits.length)
-    await tx
-      .update(priorVisits)
-      .set({
-        title: null,
-        statusLabel: null,
-        amountLabel: null,
-        sourceLabel: null,
-        sourceReference: null,
-        dedupeKey: sql<string>`'redacted-' || gen_random_uuid()::text`,
-      })
-      .where(
-        inArray(
-          priorVisits.id,
-          visits.map((visit) => visit.id),
-        ),
-      );
 
   // The payment trail beside those visits, and the larger of the two. Every
   // label on it is the prior system's words about this diver's money, the
@@ -2070,27 +2064,17 @@ async function scrubImportedHistory(
   // about this diver's rentals, and `dedupe_key` can embed its reference. The
   // assignment window and the unit stay — which unit was out and when is the
   // register's own record, and it names nobody once the words are gone.
-  const priorAssignments = await tx
-    .select({ id: priorGearAssignments.id })
-    .from(priorGearAssignments)
+  await tx
+    .update(priorGearAssignments)
+    .set({
+      statusLabel: null,
+      sourceReference: null,
+      note: null,
+      dedupeKey: sql<string>`'redacted-' || gen_random_uuid()::text`,
+    })
     .where(
       and(eq(priorGearAssignments.shopId, shopId), eq(priorGearAssignments.personId, personId)),
     );
-  if (priorAssignments.length)
-    await tx
-      .update(priorGearAssignments)
-      .set({
-        statusLabel: null,
-        sourceReference: null,
-        note: null,
-        dedupeKey: sql<string>`'redacted-' || gen_random_uuid()::text`,
-      })
-      .where(
-        inArray(
-          priorGearAssignments.id,
-          priorAssignments.map((assignment) => assignment.id),
-        ),
-      );
   return [];
 }
 
@@ -3136,7 +3120,7 @@ async function scrubTrainingPlans(
   tx: AppTransaction,
   ctx: ScrubSectionContext,
 ): Promise<ProcessorErasureTargetInput[]> {
-  const chain = [ctx.personId, ...(await mergedIntoChain(tx, ctx.shopId, ctx.personId))];
+  const chain = [ctx.personId, ...ctx.mergedShellIds];
   await forgetTrainingPlanPeople(tx, ctx.shopId, chain);
   return [];
 }
@@ -3261,6 +3245,7 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
   const section: ScrubSectionContext = {
     ...ctx,
     bookingIds,
+    mergedShellIds: await mergedIntoChain(tx, shopId, personId),
     owned: bookingIds.length > 0,
     retire,
     found,

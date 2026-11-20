@@ -735,71 +735,87 @@ export async function pagedUpcomingTripsWithCounts(
   const floor = options.from ?? nowWithBuffer;
   const lowerBound = options.monthStart && options.monthStart > floor ? options.monthStart : floor;
 
-  const rows = await db
-    .select({
-      trip: trips,
-      course: boardCourseColumns,
-      diveSite: boardDiveSiteColumns,
-      booked: count(bookings.id),
-      bookedDivers: bookedDiversCount(),
-      certifiedPassengers: tripBoatCertifiedPassengers(),
-      boatCapacity: tripBoatCapacity(),
-      assignedCrewCount: tripAssignedCrewCount(),
-    })
-    .from(trips)
-    .leftJoin(courses, eq(courses.id, trips.courseId))
-    .leftJoin(diveSites, eq(diveSites.id, tripPrimarySiteId))
-    .leftJoin(bookings, liveBookingJoin)
-    .where(
-      and(
-        liveTrip(),
-        upcomingTripScope(shopId, {
-          from: lowerBound,
-          monthEnd: options.monthEnd,
-          tripType: options.tripType,
-          publicOnly: options.publicOnly,
-          lensId: options.lensId,
-          byMeetingDay: options.byMeetingDay,
-          tripId: options.tripId,
-        }),
-        afterDate && after && !Number.isNaN(afterDate.getTime())
-          ? or(
-              gt(trips.startsAt, afterDate),
-              and(eq(trips.startsAt, afterDate), gt(trips.title, after[1])),
-              and(eq(trips.startsAt, afterDate), eq(trips.title, after[1]), gt(trips.id, after[2])),
-            )
-          : undefined,
-        beforeDate && before && !Number.isNaN(beforeDate.getTime())
-          ? or(
-              lt(trips.startsAt, beforeDate),
-              and(eq(trips.startsAt, beforeDate), lt(trips.title, before[1])),
-              and(
-                eq(trips.startsAt, beforeDate),
-                eq(trips.title, before[1]),
-                lt(trips.id, before[2]),
-              ),
-            )
-          : undefined,
-      ),
-    )
-    .groupBy(trips.id, courses.id, diveSites.id)
-    .having(
-      options.minSeats
-        ? sql`count(${bookings.id}) + ${options.minSeats} <= ${tripSellableSeatsSql()}
+  const order = before
+    ? [desc(trips.startsAt), desc(trips.title), desc(trips.id)]
+    : [asc(trips.startsAt), asc(trips.title), asc(trips.id)];
+  // The keyset cursor carries all three keys (`src/db/cursor.ts`, issue
+  // #2175), so this filter resumes exactly after (or, reading back, exactly
+  // before) the row the cursor names.
+  const pageScope = and(
+    upcomingTripScope(shopId, {
+      from: lowerBound,
+      monthEnd: options.monthEnd,
+      tripType: options.tripType,
+      publicOnly: options.publicOnly,
+      lensId: options.lensId,
+      byMeetingDay: options.byMeetingDay,
+      tripId: options.tripId,
+    }),
+    afterDate && after && !Number.isNaN(afterDate.getTime())
+      ? or(
+          gt(trips.startsAt, afterDate),
+          and(eq(trips.startsAt, afterDate), gt(trips.title, after[1])),
+          and(eq(trips.startsAt, afterDate), eq(trips.title, after[1]), gt(trips.id, after[2])),
+        )
+      : undefined,
+    beforeDate && before && !Number.isNaN(beforeDate.getTime())
+      ? or(
+          lt(trips.startsAt, beforeDate),
+          and(eq(trips.startsAt, beforeDate), lt(trips.title, before[1])),
+          and(eq(trips.startsAt, beforeDate), eq(trips.title, before[1]), lt(trips.id, before[2])),
+        )
+      : undefined,
+  );
+
+  // On the public schedule and its embeds, with no seat filter, the page's rows
+  // do not depend on the counts, so pick the page's ids first and count seats for
+  // those rows only: a shop with a recurring series materialises months of
+  // departures, and counting every one of them to show fifteen was the cost
+  // (issue #4394). A seat filter needs the count to decide which rows qualify,
+  // and a staff read of a small window is cheaper as one statement, so both keep
+  // the one-step read.
+  const countsDecidePage = Boolean(options.minSeats || options.hasSpace || !options.publicOnly);
+  const pageIds = countsDecidePage
+    ? null
+    : (
+        await db
+          .select({ id: trips.id })
+          .from(trips)
+          .where(and(liveTrip(), pageScope))
+          .orderBy(...order)
+          .limit(limit + 1)
+      ).map((row) => row.id);
+
+  const rows =
+    pageIds?.length === 0
+      ? []
+      : await db
+          .select({
+            trip: trips,
+            course: boardCourseColumns,
+            diveSite: boardDiveSiteColumns,
+            booked: count(bookings.id),
+            bookedDivers: bookedDiversCount(),
+            certifiedPassengers: tripBoatCertifiedPassengers(),
+            boatCapacity: tripBoatCapacity(),
+            assignedCrewCount: tripAssignedCrewCount(),
+          })
+          .from(trips)
+          .leftJoin(courses, eq(courses.id, trips.courseId))
+          .leftJoin(diveSites, eq(diveSites.id, tripPrimarySiteId))
+          .leftJoin(bookings, liveBookingJoin)
+          .where(and(liveTrip(), pageIds ? inArray(trips.id, pageIds) : pageScope))
+          .groupBy(trips.id, courses.id, diveSites.id)
+          .having(
+            options.minSeats
+              ? sql`count(${bookings.id}) + ${options.minSeats} <= ${tripSellableSeatsSql()}
             and (${trips.snorkelerPriceCents} is not null or ${trips.riderPriceCents} is not null
               or ${trips.diverCapacity} is null
               or ${bookedDiversCount()} + ${options.minSeats} <= ${trips.diverCapacity})`
-        : hasSpaceHaving(options.hasSpace),
-    )
-    // The keyset cursor carries all three keys (`src/db/cursor.ts`, issue
-    // #2175), so the filter above resumes exactly after (or, reading back,
-    // exactly before) the row the cursor names.
-    .orderBy(
-      ...(before
-        ? [desc(trips.startsAt), desc(trips.title), desc(trips.id)]
-        : [asc(trips.startsAt), asc(trips.title), asc(trips.id)]),
-    )
-    .limit(limit + 1);
+              : hasSpaceHaving(options.hasSpace),
+          )
+          .orderBy(...order)
+          .limit(limit + 1);
 
   const hasMore = rows.length > limit;
   const kept = rows.slice(0, limit);

@@ -180,17 +180,32 @@ function quotedTable(identifier: string) {
   return `"${identifier}"`;
 }
 
+/** `"column" in (ids)` over one table, as one arm of {@link holdsStaffRecord}. */
+function personRowArm(
+  table: string,
+  column: string,
+  personIds: readonly string[],
+  shopId: string | null,
+) {
+  // `crew_person_id` on the roll-call ledger, `person_id` everywhere else: the
+  // registry row names the column, so a staff column with another name is
+  // still asked about rather than queried under the wrong one.
+  const ids = sql.join(
+    personIds.map((id) => sql`${id}`),
+    sql`, `,
+  );
+  const shop = shopId ? sql` "shop_id" = ${shopId} and` : sql``;
+  return sql`(select 1 from ${sql.raw(quotedTable(table))} where${shop} ${sql.raw(quotedTable(column))} in (${ids}))`;
+}
+
 async function hasPersonRow(
   db: DbExecutor,
   refused: { table: string; column: string },
   shopId: string,
   personId: string,
 ): Promise<boolean> {
-  // `crew_person_id` on the roll-call ledger, `person_id` everywhere else: the
-  // registry row names the column, so a staff column with another name is
-  // still asked about rather than queried under the wrong one.
   const result = await db.execute(
-    sql`select 1 from ${sql.raw(quotedTable(refused.table))} where "shop_id" = ${shopId} and ${sql.raw(quotedTable(refused.column))} = ${personId} limit 1`,
+    sql`${personRowArm(refused.table, refused.column, [personId], shopId)} limit 1`,
   );
   return result.rows.length > 0;
 }
@@ -204,21 +219,29 @@ function mergePurposes(merge: "follows" | "refuse") {
 }
 
 /**
- * Whether a person holds a capability that is a staff credential (a calendar
- * feed: `merge: "refuse"` in `CAPABILITY_POLICY`). `capabilities.person_id`
- * moves on a merge for the purposes that follow one; these refuse it instead,
- * as `staff_record`, revoked or live: authority never follows a merge.
+ * Whether any of these records is a staff record, in one round trip: a row on a
+ * staff-history table, on a person-only staff table, a named classroom
+ * coordinator even after the role is removed, or a capability that is a staff
+ * credential (a calendar feed: `merge: "refuse"` in `CAPABILITY_POLICY`;
+ * `capabilities.person_id` moves on a merge for the purposes that follow one,
+ * these refuse it, revoked or live: authority never follows a merge).
  */
-async function holdsStaffCapability(db: DbExecutor, shopId: string, personId: string) {
+async function holdsStaffRecord(db: DbExecutor, shopId: string, personIds: readonly string[]) {
+  const arms = [
+    ...STAFF_HISTORY_TABLES.map((refused) =>
+      personRowArm(refused.table, refused.column, personIds, shopId),
+    ),
+    personRowArm("recovery_activities", "coordinator_person_id", personIds, shopId),
+    ...STAFF_PERSON_ONLY_TABLES.map((tableName) =>
+      personRowArm(tableName, "person_id", personIds, null),
+    ),
+    sql`(select 1 from "capabilities" where "shop_id" = ${shopId} and "person_id" in (${sql.join(
+      personIds.map((id) => sql`${id}`),
+      sql`, `,
+    )}) and "purpose" in (${mergePurposes("refuse")}))`,
+  ];
   const result = await db.execute(
-    sql`select 1 from "capabilities" where "shop_id" = ${shopId} and "person_id" = ${personId} and "purpose" in (${mergePurposes("refuse")}) limit 1`,
-  );
-  return result.rows.length > 0;
-}
-
-async function hasPersonOnlyRow(db: DbExecutor, tableName: string, personId: string) {
-  const result = await db.execute(
-    sql`select 1 from ${sql.raw(quotedTable(tableName))} where "person_id" = ${personId} limit 1`,
+    sql`select 1 from (${sql.join(arms, sql` union all `)}) as staff_record limit 1`,
   );
   return result.rows.length > 0;
 }
@@ -622,40 +645,7 @@ async function assessMerge(
     );
   if (live.some((trip) => !hasReturned(trip.endsAt, now))) return refuse("departure_underway");
 
-  for (const refused of STAFF_HISTORY_TABLES) {
-    if (
-      (await hasPersonRow(db, refused, shopId, source.id)) ||
-      (await hasPersonRow(db, refused, shopId, survivor.id))
-    ) {
-      return refuse("staff_record");
-    }
-  }
-  // Named classroom coordination is a staff record even after the role is removed.
-  for (const person of [source, survivor]) {
-    if (
-      await hasPersonRow(
-        db,
-        { table: "recovery_activities", column: "coordinator_person_id" },
-        shopId,
-        person.id,
-      )
-    )
-      return refuse("staff_record");
-  }
-  for (const tableName of STAFF_PERSON_ONLY_TABLES) {
-    if (
-      (await hasPersonOnlyRow(db, tableName, source.id)) ||
-      (await hasPersonOnlyRow(db, tableName, survivor.id))
-    ) {
-      return refuse("staff_record");
-    }
-  }
-  if (
-    (await holdsStaffCapability(db, shopId, source.id)) ||
-    (await holdsStaffCapability(db, shopId, survivor.id))
-  ) {
-    return refuse("staff_record");
-  }
+  if (await holdsStaffRecord(db, shopId, ids)) return refuse("staff_record");
 
   const warnings: DiverMergeWarning[] = [];
   if (source.dateOfBirth && survivor.dateOfBirth && source.dateOfBirth !== survivor.dateOfBirth) {
@@ -1045,7 +1035,7 @@ export async function mergeDiverRecords(input: {
         }
       }
 
-      await rewriteBoardingSnapshotReviewer(tx, input.shopId, source.id, survivor.id);
+      await rewriteBoardingSnapshotReviewer(tx, input.shopId, [source.id], survivor.id);
       // A new identity must not inherit an unconfirmed instructor plan.
       await forgetTrainingPlanPeople(tx, input.shopId, [source.id]);
       const mergedAt = nowDate();

@@ -608,9 +608,9 @@ describe("who may run each action on the trip page", () => {
     // same terms as the tap above it: it appears only beside a name on that
     // session's own roster, and records a sentence rather than a credential.
     "saveCourseNextStepAction",
-    // The learning-materials tick (ADR 20261008-course-learning-materials) and the sent-to-the-agency
-    // tick (item 46), open on the same terms as the next step: course-roster bookkeeping that gates nothing.
+    // Roster ticks (ADR 20261008-course-learning-materials, item 46), open like the next step above.
     "setCourseMaterialsDoneAction",
+    "setCourseStepDoneAction",
     "markCardProcessedAction",
     "updateBookingPickupAction",
     "updateBookingDietaryNoteAction",
