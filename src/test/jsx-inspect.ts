@@ -1,4 +1,5 @@
 import type { ReactElement } from "react";
+import { ImportedHistoryTable } from "@/app/shop/[shopSlug]/orders/_components/ImportedHistoryTable";
 import { ImageFileInput } from "@/components/ImageFileInput";
 import { RemovablePhoto } from "@/components/RemovablePhoto";
 import { ChoicePill, ChoiceRow } from "@/components/ui/form";
@@ -140,4 +141,13 @@ export function hiddenInputNamesIn(node: unknown, found: string[] = []): string[
     hiddenInputNamesIn(element.props?.children, found);
   }
   return found;
+}
+
+/** Every href on the Orders page, imported-history rows included: that table is a component of its own, so it is in the page's tree only once called with the props the page gave it. */
+export function ordersHrefs(page: unknown): string[] {
+  const table = findElements<Parameters<typeof ImportedHistoryTable>[0]>(
+    page,
+    ImportedHistoryTable,
+  )[0];
+  return hrefsIn([page, table ? ImportedHistoryTable(table.props) : null]);
 }

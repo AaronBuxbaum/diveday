@@ -26,7 +26,7 @@ const photograph = (page: Parameters<typeof capture>[0], name: string) =>
   capture(page, name, "light", { locale: SPANISH });
 
 test.describe("the diver's public pages in Spanish", () => {
-  test("schedule, trip, courses, sites, reviews and packages", async ({ page }) => {
+  test("schedule, trip, courses, reviews and packages", async ({ page }) => {
     await page.goto("/s/blue-mantis");
     await publicReefCard(page).getByRole("link").waitFor();
     await publicReefCard(page).locator("[data-schedule-fact]").waitFor();
@@ -39,10 +39,6 @@ test.describe("the diver's public pages in Spanish", () => {
     await page.goto("/s/blue-mantis/courses");
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
     await photograph(page, "phone-public-courses");
-
-    await page.goto("/s/blue-mantis/sites");
-    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
-    await photograph(page, "phone-public-sites");
 
     await page.goto("/s/blue-mantis/reviews");
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
@@ -59,7 +55,7 @@ test.describe("the staff's daily pages in Spanish", () => {
   test("today, schedule, divers, gear, orders, inbox and a trip", async ({ page }) => {
     for (const [path, name] of [
       ["/shop/blue-mantis", "phone-staff-today"],
-      ["/shop/blue-mantis/schedule", "phone-staff-schedule"],
+      ["/shop/blue-mantis/schedule/board", "phone-staff-schedule"],
       ["/shop/blue-mantis/divers", "phone-staff-divers"],
       ["/shop/blue-mantis/gear", "phone-staff-gear"],
       ["/shop/blue-mantis/orders", "phone-staff-orders"],
@@ -72,7 +68,7 @@ test.describe("the staff's daily pages in Spanish", () => {
       await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
       await photograph(page, name);
     }
-    await page.goto("/shop/blue-mantis/schedule");
+    await page.goto("/shop/blue-mantis/schedule/board");
     await openTripFromBoard(page, REEF_TRIP);
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
     await photograph(page, "phone-staff-trip");

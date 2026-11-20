@@ -55,12 +55,13 @@ test("Wrapped up opens the log with the recorded facts", async ({ page }) => {
   await page.getByRole("link", { name: "Departure log" }).click();
   await page.waitForURL(/\/log$/);
 
-  // The screen keeps the full evidence table readable on a phone; the sheet lifts this floor.
+  // On a phone each row stacks into labelled lines, so the table fits the screen with nothing
+  // clipped or scrolled sideways; the sheet keeps the full table.
   await page.setViewportSize({ width: 390, height: 844 });
   const rosterTable = page.getByRole("table").first();
   expect(
     await rosterTable.evaluate((table) => table.getBoundingClientRect().width),
-  ).toBeGreaterThanOrEqual(896);
+  ).toBeLessThanOrEqual(390);
   await page.setViewportSize({ width: 1280, height: 720 });
 
   // The document header states what this is — and what it is not.

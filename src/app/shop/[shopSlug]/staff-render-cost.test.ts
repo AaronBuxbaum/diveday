@@ -639,7 +639,10 @@ const TODAY_CEILING = 76;
 // replaced, in the same wave.
 // 69 → 70 (#4474): the Trip page reads the dock sightings still waiting for a seat
 // (`openBoardingObservationsByTrip`), one statement in the overview's wave.
-const TRIP_CEILING = 70;
+// 70 → 72 (#4686): the guest list says a guest's open help request and when their
+// next reminder goes out: two statements in the guests wave (the invoice read waits
+// on a seat that owes money, and the reminder read on a reminder still ahead).
+const TRIP_CEILING = 72;
 
 /**
  * Serial phases, the same way: lower one when a change removes a wait, never
