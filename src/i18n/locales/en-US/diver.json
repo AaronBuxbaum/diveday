@@ -128,6 +128,10 @@
     "nextMonth": "Next month",
     "tripListLabel": "Upcoming trips",
     "monthNav": "Browse by month",
+    "monthView": "Show the month calendar",
+    "listView": "Show the list",
+    "monthCalendar": "Month calendar",
+    "boatsWithRoom": "{count, plural, one {# boat has room} other {# boats have room}}",
     "jumpToDay": "Jump to a day",
     "nextWithSpace": {
       "eyebrow": "Next boat with space",
