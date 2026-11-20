@@ -3217,6 +3217,13 @@ details[open]::details-content {
   }
 }
 
+/* A walk that does not play (reduced motion) never types: its fields hold the finished text. */
+@media (prefers-reduced-motion: reduce) {
+  [data-walk-phase="before"] [data-walk-before] [data-walk-char] {
+    animation: none;
+  }
+}
+
 /*
  * The sub-nav tabs used to carry a `.tab-accent` underline under the active
  * one, on top of the raised white pill and the primary label. Three signals for
