@@ -948,6 +948,12 @@
           "src/db/orders.test.ts": "3175 -> 3176",
           "src/features/checkout-recovery/store.test.ts": "901 -> 902"
         }
+      },
+      {
+        "why": "export.test.ts gains one FOLDED_TABLES entry for dive_not_made_events (#4681); the file is a table list, not a place to split",
+        "files": {
+          "src/db/export.test.ts": "939 -> 940"
+        }
       }
     ],
     "src/app/api/webhooks/stripe/route.replay.test.ts": 1250,
@@ -968,7 +974,7 @@
     "src/db/dive-sites.test.ts": 1156,
     "src/db/diver-merge.test.ts": 1158,
     "src/db/executed-dives.test.ts": 1085,
-    "src/db/export.test.ts": 939,
+    "src/db/export.test.ts": 940,
     "src/db/incident-reports.test.ts": 967,
     "src/db/manifests.test.ts": 3560,
     "src/db/notifications.test.ts": 1860,
