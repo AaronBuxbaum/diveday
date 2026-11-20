@@ -2,7 +2,7 @@ import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatTime } from "@/lib/format";
 import type { TripSentence } from "./trip-sentence";
 import { waterSentence } from "./water-copy";
-import type { WaterStanding } from "./water-standing";
+import { type WaterStanding, wasLogged } from "./water-standing";
 
 /**
  * **What is left to close out once the boat is back** (ADR
@@ -128,7 +128,10 @@ export function notMadeOfferFor(
   const row = items.find((item) => item.kind === "rollCall");
   if (row?.kind !== "rollCall" || row.dive < 1) return null;
   const stop = standing.timeline.find((entry) => entry.kind === "dive" && entry.dive === row.dive);
-  return stop?.kind === "dive" && stop.count === null ? row.dive : null;
+  // A count begun, or a log with times or a depth, says the dive was made.
+  return stop?.kind === "dive" && stop.count === null && !wasLogged(stop.logged ?? undefined)
+    ? row.dive
+    : null;
 }
 
 /**

@@ -738,6 +738,16 @@ const NOTICE_KEYS: Record<
     tone: "danger",
     key: "trips.notices.diveNotMadeCounted",
   },
+  "dive-not-made-logged": {
+    form: "close-out",
+    tone: "danger",
+    key: "trips.notices.diveNotMadeLogged",
+  },
+  "dive-not-made-not-left": {
+    form: "close-out",
+    tone: "danger",
+    key: "trips.notices.diveNotMadeNotLeft",
+  },
   "dive-not-made-stale": {
     form: "close-out",
     tone: "danger",

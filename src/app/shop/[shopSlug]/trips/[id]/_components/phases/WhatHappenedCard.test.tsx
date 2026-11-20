@@ -2,6 +2,8 @@
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
+import { nowDate, nowMs } from "@/lib/clock";
+import { formatWeekdayTime } from "@/lib/format";
 import type { WaterStanding } from "../water-standing";
 import { WhatHappenedCard } from "./WrappedPanels";
 
@@ -50,5 +52,59 @@ describe("What happened's records (issue #4683)", () => {
     expect(screen.queryByText(t("desk.lostFound.heading"))).toBeNull();
     // The card itself still says what happened.
     expect(screen.getByText(t("trips.clock.wrapped.noShows"))).toBeVisible();
+  });
+});
+
+/**
+ * **A dive recorded not made says on which day** (issue #4681): on a page read
+ * the day after, "Not made · Sal, 9:30 AM" would pass for this morning.
+ */
+describe("a dive recorded not made", () => {
+  const notMadeAt = (at: Date) =>
+    ({
+      timeline: [
+        {
+          kind: "dive",
+          state: "ahead",
+          dive: 2,
+          site: null,
+          count: null,
+          logged: null,
+          notMade: { by: "Sal Moretti", at },
+        },
+      ],
+    }) as unknown as WaterStanding;
+  const shown = (standing: WaterStanding) =>
+    render(
+      <WhatHappenedCard
+        standing={standing}
+        depth={(meters) => `${meters} m`}
+        logRow={() => null}
+        incidents={{ reports: [], mayStart: false }}
+        noShows={[]}
+        turnedAway={[]}
+        print={null}
+        shopSlug="blue-mantis"
+        tripId="trip-1"
+        locale="en-US"
+        timeZone="UTC"
+        t={t}
+      />,
+    );
+
+  it("says only the time when it was recorded today", () => {
+    shown(notMadeAt(nowDate()));
+    const what = screen.getByRole("region", { name: t("trips.clock.wrapped.whatHappened") });
+    expect(what.textContent).toMatch(/Not made · Sal Moretti, \d/);
+  });
+
+  it("names the day when it was recorded on another", () => {
+    const earlier = new Date(nowMs() - 2 * 24 * 60 * 60 * 1000);
+    shown(notMadeAt(earlier));
+    const what = screen.getByRole("region", { name: t("trips.clock.wrapped.whatHappened") });
+    expect(what).toHaveTextContent(
+      formatWeekdayTime(earlier, "en-US", "UTC").replace(/\s/gu, " "),
+      { normalizeWhitespace: true },
+    );
   });
 });

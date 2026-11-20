@@ -7,7 +7,9 @@ import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import { StatusMark } from "@/components/ui/StatusMark";
 import type { TripMoney } from "@/features/trip-money";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import { formatMoneyCents, formatTime, formatTimeRange } from "@/lib/format";
+import { calendarDateInTimezone } from "@/lib/calendar-date";
+import { nowDate } from "@/lib/clock";
+import { formatMoneyCents, formatTime, formatTimeRange, formatWeekdayTime } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { shopPath } from "@/lib/staff-notices";
 import { recordDiveNotMadeAction, undoDiveNotMadeAction } from "../../dive-not-made-actions";
@@ -307,7 +309,13 @@ export function WhatHappenedCard({
       notMade
         ? t("trips.clock.wrapped.notMade", {
             name: notMade.by,
-            time: formatTime(notMade.at, locale, timeZone),
+            // A record from another day names it, so yesterday's never reads
+            // as this morning's (a page read the day after, a liveaboard).
+            time:
+              calendarDateInTimezone(notMade.at, timeZone) ===
+              calendarDateInTimezone(nowDate(), timeZone)
+                ? formatTime(notMade.at, locale, timeZone)
+                : formatWeekdayTime(notMade.at, locale, timeZone),
           })
         : null,
       count || notMade ? null : t("trips.clock.wrapped.notCounted"),
@@ -379,7 +387,7 @@ export function WhatHappenedCard({
   }
   if (records?.leftAboard) {
     rows.push({
-      key: "left-aboard",
+      key: "leftAboard",
       label: t("desk.lostFound.heading"),
       value: t("trips.clock.wrapped.items", { count: records.leftAboard.count }),
       // Under More, which opens for it.

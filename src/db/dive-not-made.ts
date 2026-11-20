@@ -1,12 +1,21 @@
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNotNull, isNull, or } from "drizzle-orm";
 import { isStaff } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
+import { rollCallDayOf, rollCallDayStarts } from "@/lib/trip-days";
 import { boatHasLeft } from "./aboard-at-sea";
 import { loadActiveStaffRoles } from "./authz";
 import type { AppDb, DbExecutor } from "./client";
 import { recordTripActivity } from "./operations";
-import { diveNotMadeEvents, people, rollCallEvents, tripAssignments, trips } from "./schema";
-import { rollCallCurrentDayIndex, rollCallDayIndex } from "./trip-meeting-windows";
+import {
+  diveNotMadeEvents,
+  executedDives,
+  people,
+  rollCallEvents,
+  tripAssignments,
+  tripScheduleDays,
+  trips,
+} from "./schema";
+import { rollCallDayIndex } from "./trip-meeting-windows";
 import { liveTrip } from "./trips-live";
 
 /**
@@ -17,9 +26,14 @@ import { liveTrip } from "./trips-live";
  *   shop, on the departure's crew), with no further permission. Who and when
  *   are recorded on every word.
  * - **When**: once the boat has left the dock (`boatHasLeft`), for a dive the
- *   departure plans, while nobody has begun that dive's count today. A dive
- *   somebody counted was made, so a count refuses the record; and once a count
- *   begins after the record, the count wins at every reader.
+ *   departure plans, while nobody has begun that dive's count on the meeting
+ *   day being counted and nobody has logged it. A dive somebody counted or
+ *   logged was made, so either refuses the record; and once a count or a log
+ *   comes after the record, it wins at every reader.
+ * - **Which day**: each word belongs to the meeting day it was said on, the
+ *   roll-call day being counted then (`rollCallDayOf`). On a departure that
+ *   meets on several days, day one's dive 2 is not day two's: readers, the
+ *   second tap and the undo look at the day being counted only.
  * - **What it does**: closes only that dive's roll-call item on Wrapped up. It
  *   is never a count and never a completed dive, and it never hides an
  *   uncounted person, a missing-diver alert, or anybody not recorded back:
@@ -33,6 +47,7 @@ export type DiveNotMadeRefusal =
   | "boat_not_left"
   | "dive_not_planned"
   | "dive_counted"
+  | "dive_logged"
   | "already_not_made"
   | "not_recorded";
 
@@ -85,7 +100,8 @@ async function writeWord(
     if (!Number.isInteger(diveNumber) || diveNumber < 1 || diveNumber > trip.plannedDives) {
       return refused("dive_not_planned");
     }
-    const standing = (await standingWords(tx, shopId, tripId)).get(diveNumber) ?? null;
+    const day = await meetingDayAt(tx, tripId, now);
+    const standing = (await standingWords(tx, shopId, tripId, day)).get(diveNumber) ?? null;
     if (word === "undone") {
       if (standing?.word !== "not_made") return refused("not_recorded");
     } else {
@@ -93,12 +109,14 @@ async function writeWord(
       if (!(await boatHasLeft(tx, { shopId, tripId, startsAt: trip.startsAt, now }))) {
         return refused("boat_not_left");
       }
-      if (await countBegun(tx, { shopId, tripId, diveNumber, now })) return refused("dive_counted");
+      if (await countBegun(tx, { shopId, tripId, diveNumber, day })) return refused("dive_counted");
+      if (await diveLogged(tx, { shopId, tripId, diveNumber })) return refused("dive_logged");
     }
     await tx.insert(diveNotMadeEvents).values({
       shopId,
       tripId,
       diveNumber,
+      meetingDay: day,
       word,
       recordedByPersonId: personId,
       recordedAt: now,
@@ -136,10 +154,26 @@ export async function activeCrewOn(
         eq(tripAssignments.tripId, input.tripId),
         eq(tripAssignments.personId, input.personId),
         eq(trips.shopId, input.shopId),
+        liveTrip(),
       ),
     )
     .limit(1);
   return Boolean(assigned);
+}
+
+/**
+ * **The meeting day being counted at `now`** (0-based), as roll call reads it
+ * (`rollCallDayOf` over `rollCallDayStarts`, the same boundary
+ * `rollCallCurrentDayIndex` draws in SQL); 0 for a departure that meets once.
+ */
+async function meetingDayAt(db: DbExecutor, tripId: string, now: Date): Promise<number> {
+  const windows = await db
+    .select({ startsAt: tripScheduleDays.startsAt, endsAt: tripScheduleDays.endsAt })
+    .from(tripScheduleDays)
+    .where(eq(tripScheduleDays.tripId, tripId))
+    .orderBy(asc(tripScheduleDays.startsAt));
+  if (windows.length < 2) return 0;
+  return rollCallDayOf(rollCallDayStarts(windows), now);
 }
 
 /**
@@ -150,10 +184,10 @@ export async function activeCrewOn(
  */
 async function countBegun(
   db: DbExecutor,
-  input: { shopId: string; tripId: string; diveNumber: number; now: Date },
+  input: { shopId: string; tripId: string; diveNumber: number; day: number },
 ): Promise<boolean> {
   const rows = await db
-    .select({ day: rollCallDayIndex(), currentDay: rollCallCurrentDayIndex(input.now) })
+    .select({ day: rollCallDayIndex() })
     .from(rollCallEvents)
     .where(
       and(
@@ -164,16 +198,47 @@ async function countBegun(
         inArray(rollCallEvents.status, ["boarded", "not_boarded"]),
       ),
     );
-  return rows.some((row) => row.day === row.currentDay || row.day === -1);
+  // A result whose day is unknown (-1) may be today's, so it refuses too.
+  return rows.some((row) => row.day === input.day || row.day === -1);
+}
+
+/**
+ * **Somebody logged this dive** (`executed_dives`): an entry or exit time, or
+ * a depth, on a live log. A logged dive was made. The log is the departure's,
+ * not a day's, so it refuses the record on every day.
+ */
+async function diveLogged(
+  db: DbExecutor,
+  input: { shopId: string; tripId: string; diveNumber: number },
+): Promise<boolean> {
+  const [row] = await db
+    .select({ id: executedDives.id })
+    .from(executedDives)
+    .where(
+      and(
+        eq(executedDives.shopId, input.shopId),
+        eq(executedDives.tripId, input.tripId),
+        eq(executedDives.diveNumber, input.diveNumber),
+        isNull(executedDives.deletedAt),
+        or(
+          isNotNull(executedDives.enteredAt),
+          isNotNull(executedDives.exitedAt),
+          isNotNull(executedDives.maxDepthMeters),
+        ),
+      ),
+    )
+    .limit(1);
+  return Boolean(row);
 }
 
 type StandingWord = { word: "not_made" | "undone"; by: string; at: Date };
 
-/** The newest word per dive on this departure. */
+/** The newest word per dive on this departure's meeting day `day`. */
 async function standingWords(
   db: DbExecutor,
   shopId: string,
   tripId: string,
+  day: number,
 ): Promise<Map<number, StandingWord>> {
   const rows = await db
     .select({
@@ -185,7 +250,13 @@ async function standingWords(
     })
     .from(diveNotMadeEvents)
     .innerJoin(people, eq(people.id, diveNotMadeEvents.recordedByPersonId))
-    .where(and(eq(diveNotMadeEvents.shopId, shopId), eq(diveNotMadeEvents.tripId, tripId)))
+    .where(
+      and(
+        eq(diveNotMadeEvents.shopId, shopId),
+        eq(diveNotMadeEvents.tripId, tripId),
+        eq(diveNotMadeEvents.meetingDay, day),
+      ),
+    )
     .orderBy(desc(diveNotMadeEvents.recordedAt), desc(diveNotMadeEvents.seq));
   const standing = new Map<number, StandingWord>();
   for (const row of rows) {
@@ -195,17 +266,20 @@ async function standingWords(
 }
 
 /**
- * **The planned dives standing as not made**, by dive number: who recorded
- * it and when. A dive whose newest word is an undo is not here. Readers pair
- * it with the dive's count and let any count win (`waterStanding`).
+ * **The planned dives standing as not made** on the meeting day being counted
+ * at `now`, by dive number: who recorded it and when. A dive whose newest word
+ * is an undo is not here, nor is another meeting day's. Readers pair it with
+ * the dive's count and log and let either win (`waterStanding`).
  */
 export async function diveNotMadeStanding(
   db: DbExecutor,
   shopId: string,
   tripId: string,
+  now: Date = nowDate(),
 ): Promise<Map<number, { by: string; at: Date }>> {
   const out = new Map<number, { by: string; at: Date }>();
-  for (const [dive, row] of await standingWords(db, shopId, tripId)) {
+  const day = await meetingDayAt(db, tripId, now);
+  for (const [dive, row] of await standingWords(db, shopId, tripId, day)) {
     if (row.word === "not_made") out.set(dive, { by: row.by, at: row.at });
   }
   return out;

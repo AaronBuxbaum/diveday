@@ -2,7 +2,7 @@
   "type": "diff",
   "version": "9",
   "dialect": "postgres",
-  "id": "aebf3357-2ce9-486f-a13a-7a1bd1d3fc49",
+  "id": "be1942e5-8b10-4dcd-b1aa-9049812cb753",
   "prevIds": [
     "563c47ae-19db-4fa3-95a0-ae6f5acf934a"
   ],
@@ -83,6 +83,7 @@
         "n|sch|public",
         "n|col|public.dive_not_made_events.shop_id",
         "n|col|public.dive_not_made_events.trip_id",
+        "n|col|public.dive_not_made_events.meeting_day",
         "n|col|public.dive_not_made_events.dive_number",
         "n|col|public.dive_not_made_events.recorded_at",
         "n|col|public.dive_not_made_events.seq"
@@ -249,6 +250,22 @@
       "row": {
         "schema": "public",
         "table": "dive_not_made_events",
+        "name": "meeting_day",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "dive_not_made_events",
         "name": "word",
         "type": "dive_not_made_word",
         "typeSchema": "public",
@@ -349,6 +366,13 @@
           },
           {
             "value": "trip_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "meeting_day",
             "isExpression": false,
             "asc": true,
             "nullsFirst": false,
@@ -464,6 +488,16 @@
         "table": "dive_not_made_events",
         "name": "dive_not_made_events_dive_number_positive",
         "value": "\"dive_number\" >= 1",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "dive_not_made_events",
+        "name": "dive_not_made_events_meeting_day_nonnegative",
+        "value": "\"meeting_day\" >= 0",
         "entityType": "checks"
       }
     }

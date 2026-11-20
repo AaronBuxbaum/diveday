@@ -83,6 +83,8 @@
     "diveNotMadeNotCrew": "Only crew on this trip can record a dive not made.",
     "diveNotMadeCounted": "That dive has a roll call count, so it was made. Finish its count on Roll call.",
     "diveNotMadeStale": "That changed meanwhile. This is where it stands now.",
+    "diveNotMadeLogged": "That dive has a log, so it was made. Finish its count on Roll call.",
+    "diveNotMadeNotLeft": "The boat hasn’t left the dock, so no dive can be recorded as not made yet.",
     "nextStepSaved": "Next step saved",
     "nextStepTooLong": "Keep the next step under 280 characters.",
     "nextStepNotACourse": "This departure isn’t a course session, so there is no next step to record.",
@@ -1256,7 +1258,7 @@
       "species": "{count, plural, one {# species} other {# species}}",
       "items": "{count, plural, one {# item} other {# items}}",
       "notMadeAction": "Dive {dive} not made",
-      "notMadeConfirm": "Record that dive {dive} was not made? Anyone not recorded back stays on the list.",
+      "notMadeConfirm": "Record that dive {dive} was not made?",
       "notMade": "Not made · {name}, {time}",
       "notMadeUndo": "Undo"
     },

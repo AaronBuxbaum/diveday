@@ -9,7 +9,16 @@ import { aboardAtSeaBookingIds } from "./aboard-at-sea";
 import { createBooking } from "./bookings";
 import type { AppDb } from "./client";
 import { diveNotMadeStanding, recordDiveNotMade, undoDiveNotMade } from "./dive-not-made";
-import { activityEvents, diveNotMadeEvents, people, shops, tripAssignments, trips } from "./schema";
+import { upsertExecutedDive } from "./executed-dives";
+import {
+  activityEvents,
+  diveNotMadeEvents,
+  people,
+  shops,
+  tripAssignments,
+  tripScheduleDays,
+  trips,
+} from "./schema";
 import { listStaff } from "./trips";
 import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
@@ -152,6 +161,25 @@ describe("recordDiveNotMade refuses, and writes nothing", () => {
     expect(await words(db, tripId)).toEqual([]);
   });
 
+  it("refuses a dive somebody logged, even with nobody counted", async () => {
+    const { db, shopId, tripId, crewId } = await departure();
+    await sail(db, tripId);
+    const logged = await upsertExecutedDive(db, {
+      shopId,
+      tripId,
+      diveNumber: 2,
+      enteredAt: new Date(nowMs() - 60 * 60 * 1000),
+      exitedAt: new Date(nowMs() - 15 * 60 * 1000),
+      maxDepthMeters: null,
+      recordedByPersonId: crewId,
+    });
+    if (!logged.ok) throw new Error(`test log refused: ${logged.reason}`);
+    expect(
+      await recordDiveNotMade(db, { shopId, tripId, diveNumber: 2, personId: crewId }),
+    ).toEqual({ ok: false, reason: "dive_logged" });
+    expect(await words(db, tripId)).toEqual([]);
+  });
+
   it("refuses a cancelled departure and another shop's", async () => {
     const { db, shopId, tripId, crewId } = await departure();
     await sail(db, tripId);
@@ -246,5 +274,65 @@ describe("the not-made record", () => {
       .from(diveNotMadeEvents)
       .where(and(eq(diveNotMadeEvents.tripId, tripId), eq(diveNotMadeEvents.shopId, shopId)));
     expect(marks).toHaveLength(2);
+  });
+});
+
+/**
+ * **A departure that meets on two days** (a liveaboard, a two-day course):
+ * the record belongs to the meeting day it was said on, as roll call does. Day
+ * one's "dive 2 not made" says nothing about day two's dive 2.
+ */
+describe("a departure that meets on two days", () => {
+  const DAY = 24 * HOUR;
+  async function twoDays(db: AppDb, tripId: string) {
+    const base = nowMs();
+    const starts = [base - DAY - 2 * HOUR, base - 2 * HOUR];
+    await db
+      .update(trips)
+      .set({ startsAt: new Date(base - DAY - 2 * HOUR), endsAt: new Date(base + 2 * HOUR) })
+      .where(eq(trips.id, tripId));
+    await db.delete(tripScheduleDays).where(eq(tripScheduleDays.tripId, tripId));
+    await db.insert(tripScheduleDays).values(
+      starts.map((start, index) => ({
+        tripId,
+        dayNumber: index + 1,
+        startsAt: new Date(start),
+        endsAt: new Date(start + 4 * HOUR),
+      })),
+    );
+    return { dayOne: new Date(base - DAY), dayTwo: new Date(base) };
+  }
+
+  it("keeps day one's record to day one", async () => {
+    const { db, shopId, tripId, crewId } = await departure();
+    const { dayOne, dayTwo } = await twoDays(db, tripId);
+    const input = { shopId, tripId, diveNumber: 2, personId: crewId };
+    expect(await recordDiveNotMade(db, input, dayOne)).toEqual({ ok: true });
+    expect([...(await diveNotMadeStanding(db, shopId, tripId, dayOne)).keys()]).toEqual([2]);
+    // Day two's dive 2 is its own: nothing stands, nothing to undo, and it
+    // may be said again.
+    expect(await diveNotMadeStanding(db, shopId, tripId, dayTwo)).toEqual(new Map());
+    expect(await undoDiveNotMade(db, input, dayTwo)).toEqual({
+      ok: false,
+      reason: "not_recorded",
+    });
+    expect(await recordDiveNotMade(db, input, dayTwo)).toEqual({ ok: true });
+    // Undoing day two's leaves day one's standing.
+    expect(await undoDiveNotMade(db, input, new Date(dayTwo.getTime() + 1000))).toEqual({
+      ok: true,
+    });
+    expect(await diveNotMadeStanding(db, shopId, tripId, dayTwo)).toEqual(new Map());
+    expect([...(await diveNotMadeStanding(db, shopId, tripId, dayOne)).keys()]).toEqual([2]);
+    expect(
+      await db
+        .select({ day: diveNotMadeEvents.meetingDay, word: diveNotMadeEvents.word })
+        .from(diveNotMadeEvents)
+        .where(eq(diveNotMadeEvents.tripId, tripId))
+        .orderBy(diveNotMadeEvents.seq),
+    ).toEqual([
+      { day: 0, word: "not_made" },
+      { day: 1, word: "not_made" },
+      { day: 1, word: "undone" },
+    ]);
   });
 });

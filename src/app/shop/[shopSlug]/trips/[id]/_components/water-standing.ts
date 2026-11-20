@@ -437,8 +437,10 @@ function timeline(
       site: input.plannedDives.find((planned) => planned.diveNumber === dive)?.site ?? null,
       count,
       logged: input.logged.get(dive) ?? null,
-      // A count outranks the record: whoever began counting the dive saw it made.
-      notMade: count ? null : (input.notMade?.get(dive) ?? null),
+      // A count or a log outranks the record: whoever began counting the dive,
+      // or logged its times or depth, saw it made.
+      notMade:
+        count || wasLogged(input.logged.get(dive)) ? null : (input.notMade?.get(dive) ?? null),
     });
   }
   stops.push({
@@ -448,4 +450,9 @@ function timeline(
     scheduled: input.endsAt,
   });
   return stops;
+}
+
+/** A log with an entry or exit time, or a depth, says the dive was made. */
+export function wasLogged(log: LoggedDive | undefined): boolean {
+  return Boolean(log && (log.enteredAt || log.exitedAt || log.maxDepthMeters != null));
 }

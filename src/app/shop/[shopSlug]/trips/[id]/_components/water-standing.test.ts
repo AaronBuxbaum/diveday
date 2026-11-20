@@ -473,6 +473,21 @@ describe("a dive recorded not made", () => {
     });
   });
 
+  it("gives way to a log of that dive: a dive with times or a depth was made", () => {
+    for (const log of [
+      { enteredAt: at("11:00"), exitedAt: null, maxDepthMeters: null },
+      { enteredAt: null, exitedAt: at("11:45"), maxDepthMeters: null },
+      { enteredAt: null, exitedAt: null, maxDepthMeters: 12 },
+    ]) {
+      const { standing } = read({
+        counts: counts({ ...dockDone, after_dive_1: { tom: said("boarded", "10:30") } }),
+        logged: new Map([[2, log]]),
+        notMade,
+      });
+      expect(dive(standing, 2)).toMatchObject({ notMade: null });
+    }
+  });
+
   it("never takes anybody off the people not recorded back, or quiets an alert", () => {
     const { standing, headline } = read({
       counts: counts({

@@ -64,9 +64,13 @@ function noticeFor(outcome: DiveNotMadeOutcome, which: "record" | "undo"): strin
       return "dive-not-made-not-crew";
     case "dive_counted":
       return "dive-not-made-counted";
+    case "dive_logged":
+      return "dive-not-made-logged";
+    case "boat_not_left":
+      return "dive-not-made-not-left";
     default:
-      // Already said, already undone, the boat back at the dock, a dive the
-      // plan no longer holds: the page as it stands now says which.
+      // Already said, already undone, a dive the plan no longer holds, a
+      // departure no longer there: the page as it stands now says which.
       return "dive-not-made-stale";
   }
 }

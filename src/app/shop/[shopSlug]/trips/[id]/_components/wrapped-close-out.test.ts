@@ -386,4 +386,20 @@ describe("a dive recorded not made", () => {
     const dock = standing({ latest: count(0, false) }, [open(1)]);
     expect(notMadeOfferFor(dock, items(dock))).toBeNull();
   });
+
+  it("is not offered for a dive somebody logged, though nobody counted it", () => {
+    const at = new Date("2026-11-16T11:00:00.000-05:00");
+    const logged = standing({ latest: count(1, true) }, [
+      dive1(),
+      {
+        kind: "dive",
+        state: "ahead",
+        dive: 2,
+        site: null,
+        count: null,
+        logged: { enteredAt: at, exitedAt: null, maxDepthMeters: null },
+      },
+    ]);
+    expect(notMadeOfferFor(logged, items(logged))).toBeNull();
+  });
 });

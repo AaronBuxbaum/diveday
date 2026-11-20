@@ -83,6 +83,8 @@
     "diveNotMadeNotCrew": "Solo la tripulación de esta salida puede registrar una inmersión como no realizada.",
     "diveNotMadeCounted": "Esa inmersión tiene un recuento en el pase de lista, así que se realizó. Termina su recuento en el pase de lista.",
     "diveNotMadeStale": "Eso cambió mientras tanto. Así está ahora.",
+    "diveNotMadeLogged": "Esa inmersión tiene un registro, así que se realizó. Termina su recuento en el pase de lista.",
+    "diveNotMadeNotLeft": "El barco aún no ha salido del muelle, así que todavía no se puede registrar ninguna inmersión como no realizada.",
     "nextStepSaved": "Siguiente paso guardado",
     "nextStepTooLong": "Mantén el siguiente paso por debajo de 280 caracteres.",
     "nextStepNotACourse": "Esta salida no es una sesión de curso, así que no hay un siguiente paso que registrar.",
@@ -1256,7 +1258,7 @@
       "species": "{count, plural, one {# especie} other {# especies}}",
       "items": "{count, plural, one {# objeto} other {# objetos}}",
       "notMadeAction": "Inmersión {dive} no realizada",
-      "notMadeConfirm": "¿Registrar que la inmersión {dive} no se realizó? Quien no esté registrado de vuelta sigue en la lista.",
+      "notMadeConfirm": "¿Registrar que la inmersión {dive} no se realizó?",
       "notMade": "No realizada · {name}, {time}",
       "notMadeUndo": "Deshacer"
     },

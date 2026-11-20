@@ -359,7 +359,9 @@ export const diveNotMadeWord = pgEnum("dive_not_made_word", ["not_made", "undone
  * beside it. Any active crew member on the departure writes it, once the boat
  * has left and before anybody began that dive's count (`recordDiveNotMade`,
  * `src/db/dive-not-made.ts`); a mistake is corrected by an `undone` row, and
- * both stay. The newest word per dive stands.
+ * both stay. The newest word per dive of the meeting day stands: on a
+ * departure that meets on several days (a liveaboard, a course's weekends),
+ * day one's dive 2 is not day two's, exactly as roll call keeps them apart.
  *
  * It closes only that dive's roll-call item on Wrapped up. It is never a
  * count: nothing here says who is aboard, it never reads as a finished count
@@ -378,6 +380,11 @@ export const diveNotMadeEvents = pgTable(
       .references(() => trips.id, { onDelete: "cascade" }),
     /** The planned dive, 1-based, as its after-dive checkpoint numbers it. */
     diveNumber: integer("dive_number").notNull(),
+    /**
+     * The meeting day the record was said on (0-based, the roll-call day being
+     * counted then: `rollCallDayOf`); 0 on a departure that meets once.
+     */
+    meetingDay: integer("meeting_day").notNull(),
     word: diveNotMadeWord("word").notNull(),
     recordedByPersonId: uuid("recorded_by_person_id")
       .notNull()
@@ -388,12 +395,14 @@ export const diveNotMadeEvents = pgTable(
   },
   (table) => [
     check("dive_not_made_events_dive_number_positive", sql`${table.diveNumber} >= 1`),
+    check("dive_not_made_events_meeting_day_nonnegative", sql`${table.meetingDay} >= 0`),
     // Leads on the person column so deleting a person probes this foreign key
     // by index (`people-fk-indexes.test.ts`).
     index("dive_not_made_events_recorded_by_person_id_idx").on(table.recordedByPersonId),
     index("dive_not_made_events_shop_trip_idx").on(
       table.shopId,
       table.tripId,
+      table.meetingDay,
       table.diveNumber,
       table.recordedAt,
       table.seq,
