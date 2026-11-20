@@ -81,6 +81,9 @@ export function SettingsRail({
   const hubPath = `${shopBasePath}/settings`;
   const onHub = pathname === hubPath;
   const scrollerRef = useRef<HTMLDivElement>(null);
+  // Whether a reader has ever touched the box on this mount: a wheel, a tap, a
+  // key. Until then every position the box has is one the rail chose itself.
+  const touchedRef = useRef(false);
 
   // The rail scrolls in a box of its own. Every way in (a direct link, ⌘K's
   // "Go to", the hub's own rows) brings the current destination into view:
@@ -92,8 +95,15 @@ export function SettingsRail({
   // on the next, and now waits for this mark instead.
   const [settledFor, setSettledFor] = useState<string | null | undefined>(undefined);
   useEffect(() => {
+    // Until a reader touches the box, every reveal recentres from scratch rather
+    // than leaving an in-sight row where an earlier reveal put it. That makes the
+    // box's place a function of the layout alone: Chromium's full-page screenshot
+    // resets the box mid-shot and fires a resize, and the reveal answering it
+    // then lands exactly where the box already was, instead of a row away
+    // (`settings-dive-site-import` and `settings-export-file-grid`, #4703).
     const reveal = () => {
-      if (currentId && scrollerRef.current) revealCurrentRow(scrollerRef.current);
+      if (currentId && scrollerRef.current)
+        revealCurrentRow(scrollerRef.current, { recentre: !touchedRef.current });
     };
     reveal();
     setSettledFor(currentId);
@@ -108,6 +118,7 @@ export function SettingsRail({
     let handled = false;
     const markHandled = () => {
       handled = true;
+      touchedRef.current = true;
     };
     const resettle = () => {
       if (!handled) reveal();
@@ -235,14 +246,15 @@ function useMoreBelow(scrollerRef: React.RefObject<HTMLDivElement | null>): bool
  * Scroll the rail's own box so its current row is in sight when it is not:
  * along the phone's horizontal bar, below the desktop box's fold, or under a
  * group label stuck at the top.
- * A row already in sight is left where it is, so a click inside the rail keeps
- * the reader's place.
+ * Once the reader has touched the box, a row already in sight on the desktop
+ * map is left where it is, so a click inside the rail keeps the reader's place;
+ * before that, `recentre` places it from the layout alone.
  *
  * `scrollTop` or `scrollLeft` on the box, never `scrollIntoView`: that scrolls
  * every scrolling ancestor to the row, the page included, and the reader came
  * to the pane. A zero-sized box is left alone.
  */
-function revealCurrentRow(scroller: HTMLElement) {
+function revealCurrentRow(scroller: HTMLElement, { recentre }: { recentre: boolean }) {
   const row = scroller.querySelector<HTMLElement>('[aria-current="true"]');
   if (!row) return;
   // Re-measure after a resize or route change; a banner above the rail can
@@ -273,7 +285,7 @@ function revealCurrentRow(scroller: HTMLElement) {
   // A demo banner or other chrome can put the bottom of the rail below the
   // viewport even when the row fits inside the rail's own scroll box.
   const visibleBottom = Math.min(box.bottom, window.innerHeight);
-  if (rect.top >= box.top + cover && rect.bottom <= visibleBottom - fade) return;
+  if (!recentre && rect.top >= box.top + cover && rect.bottom <= visibleBottom - fade) return;
   scroller.scrollTop += rect.top + rect.height / 2 - (box.top + visibleBottom) / 2;
   settleOnRowEdge(scroller, box);
   if (scroller.style.maxHeight) {

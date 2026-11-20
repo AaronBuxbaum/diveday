@@ -118,6 +118,22 @@ test.describe("as owner", () => {
     await expect(selected).toHaveCSS("font-size", "16px");
   });
 
+  test("a full-page screenshot leaves the rail where it settled", async ({ page }) => {
+    // Chromium's full-page capture resets the rail's scroll box and fires a
+    // window resize mid-shot. The rail answers that resize by revealing its row
+    // again, so unless every unprompted reveal lands on the same place, the
+    // shutter catches one position or the other: `settings-dive-site-import`
+    // and `settings-export-file-grid` started one row apart between runs (#4703).
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto(`/shop/${SHOP}/settings/import`);
+    const scroller = (await openSettingsRail(page)).locator("[data-settings-rail-scroller]");
+    const scrollTop = () => scroller.evaluate((box) => box.scrollTop);
+    const settled = await scrollTop();
+    expect(settled).toBeGreaterThan(0);
+    await page.screenshot({ fullPage: true });
+    expect(await scrollTop()).toBe(settled);
+  });
+
   test("the phone uses the horizontal rail and returns to its selected setting", async ({
     page,
   }) => {

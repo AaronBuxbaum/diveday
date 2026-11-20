@@ -444,7 +444,9 @@ describe("the rail keeps the current row in view", () => {
     stubBoxes(boxes);
     const { unmount } = renderRail();
     const scroller = railScroller();
-    expect(scroller.scrollTop).toBe(0);
+    // Centred: 678 − (56 + 372).
+    expect(scroller.scrollTop).toBe(250);
+    scroller.scrollTop = 0;
 
     // Late chrome reduces the CSS-sized viewport, not the size of the list.
     boxes.scroller = { top: 125, height: 595 };
@@ -455,17 +457,26 @@ describe("the rail keeps the current row in view", () => {
           if (elements.has(scroller)) callback([], {} as ResizeObserver);
         }
       });
+    // The row now moves with the box's scroll, as a real one does.
+    Object.defineProperty(boxes, "row", {
+      configurable: true,
+      get: () => ({ top: 719 - scroller.scrollTop, height: 56 }),
+    });
     resizeBox();
     expect(scroller.scrollTop).toBeGreaterThan(0);
     const settledTop = scroller.scrollTop;
-    boxes.row = { top: 400, height: 56 };
+    // Chromium's full-page screenshot resets the box mid-shot and fires a
+    // resize; the rail lands back exactly where it was, not a row away (#4703).
+    scroller.scrollTop = 0;
+    fireEvent(window, new Event("resize"));
+    expect(scroller.scrollTop).toBe(settledTop);
     resizeBox();
     expect(scroller.scrollTop).toBe(settledTop);
 
     // Once the reader scrolls, a further resize must not pull them back.
     fireEvent.wheel(scroller);
     scroller.scrollTop = 123;
-    boxes.row = { top: 900, height: 56 };
+    Object.defineProperty(boxes, "row", { value: { top: 900, height: 56 }, writable: true });
     resizeBox();
     expect(scroller.scrollTop).toBe(123);
     unmount();
@@ -514,17 +525,41 @@ describe("the rail keeps the current row in view", () => {
     expect(scrollIntoView).not.toHaveBeenCalled();
   });
 
-  it("leaves the box where it is when the current row is already in view", () => {
+  it("leaves the box where it is when a reader clicks a row already in view", () => {
     // A click inside the rail keeps the reader's place.
+    pathname = `${BASE}/settings/team`;
+    const boxes: Boxes = {
+      scroller: { top: 56, height: 744 },
+      row: { top: 400, height: 44 },
+      label: { top: 80, height: 24 },
+    };
+    stubBoxes(boxes);
+    const { rerender } = renderRail();
+    const scroller = railScroller();
+    scroller.scrollTop = 0;
+
+    fireEvent.pointerDown(scroller);
+    pathname = `${BASE}/settings/import`;
+    boxes.row = { top: 500, height: 44 };
+    rerender(rail());
+
+    expect(scroller.scrollTop).toBe(0);
+  });
+
+  it("centres an untouched rail's row even when it is already in view", () => {
+    // Where the box sits is the layout's answer alone, never what an earlier
+    // reveal left behind: that history put the rail one row apart in two
+    // captures of the same page (#4703).
     pathname = `${BASE}/settings/team`;
     stubBoxes({
       scroller: { top: 56, height: 744 },
-      row: { top: 400, height: 44 },
+      row: { top: 600, height: 44 },
       label: { top: 80, height: 24 },
     });
     renderRail();
 
-    expect(railScroller().scrollTop).toBe(0);
+    // The row's centre on the box's centre: 622 − (56 + 372).
+    expect(railScroller().scrollTop).toBe(194);
   });
 
   it("treats a current row in the faded foot as out of sight", () => {
