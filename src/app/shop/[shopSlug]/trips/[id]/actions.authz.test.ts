@@ -600,9 +600,8 @@ describe("who may run each action on the trip page", () => {
     "moveTripCrewAction",
     "withdrawCrewAwayAcknowledgementAction",
     // Same H-20260814-may-sight-card trust boundary as reviewCertification (any active staff
-    // role, not instructor-only) — scoped to the surface rather than the
-    // role: the tap only ever lands beside a name on that session's own
-    // roster (issue #717).
+    // role, not instructor-only) — scoped to the surface rather than the role: the tap only
+    // ever lands beside a name on that session's own roster (issue #717).
     "certifyDiverFromRosterAction",
     "setCourseStepDoneAction",
     // The other half of teaching a session (issues #1196, #1205), open on the
