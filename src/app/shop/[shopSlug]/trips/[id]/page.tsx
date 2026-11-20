@@ -357,7 +357,7 @@ export default async function ManageTripPage({
           <FillingPhase guests={guestList} next={slots.panel} />
         ) : frame.shown === "ready" ? (
           <ReadyPhase
-            {...{ ...phase, guests: guestList }}
+            {...{ ...phase, guests: guestList, deskOpen: Boolean(desk) }}
             prep={slots.panel}
             buddies={<BuddyTeamsCard {...buddyArgs} surface="ready" open={buddies === "open"} />}
           />

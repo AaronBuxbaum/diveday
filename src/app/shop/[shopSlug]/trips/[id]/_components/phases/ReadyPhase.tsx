@@ -14,8 +14,10 @@ export function ReadyPhase({
   prep,
   buddies,
   record,
+  deskOpen,
 }: {
   record: PhaseRecordContext;
+  deskOpen: boolean;
   guests: ReactNode;
   prep: ReactNode;
   /** Buddy teams, for a shop that runs them (`BuddyTeamsCard`). */
@@ -30,12 +32,16 @@ export function ReadyPhase({
     <div data-phase-panel="ready" className="space-y-6">
       {guests}
       <p>
-        <Link
-          className={buttonClass({ variant: "link", flush: true })}
-          href={`${shopPath(shop.slug, "trips", tripId)}?phase=checkin`}
-        >
-          {t("trips.clock.ready.paperPasses")}
-        </Link>
+        {deskOpen ? (
+          <Link
+            className={buttonClass({ variant: "link", flush: true })}
+            href={`${shopPath(shop.slug, "trips", tripId)}?phase=checkin`}
+          >
+            {t("trips.clock.ready.paperPasses")}
+          </Link>
+        ) : (
+          t("trips.clock.ready.paperPassesUnavailable")
+        )}
       </p>
       {prep}
       {buddies}

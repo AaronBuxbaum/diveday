@@ -1141,6 +1141,7 @@
       "heading": "Esta salida"
     },
     "ready": {
+      "paperPassesUnavailable": "Los pases en papel están disponibles en Registro mientras las llegadas estén abiertas.",
       "paperPasses": "Pases en papel: abre Registro para huéspedes llegados y autorizados",
       "gearHeading": "Equipo para cargar",
       "pullList": "Lista de carga",

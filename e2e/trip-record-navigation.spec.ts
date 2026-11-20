@@ -1,5 +1,6 @@
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, signedInAsOwner, test } from "./fixtures";
+import { openCounterFor, openRosterDetails, rosterRow } from "./helpers";
 import { seedFacts } from "./shop-facts";
 
 const t = staffTranslator("en-US");
@@ -21,10 +22,10 @@ test.describe("private trip", () => {
       )) as { boatOnTheWater: { tripId: string } };
       const trip = `/shop/${privateShop.slug}/trips/${boatOnTheWater.tripId}`;
       await page.goto(`${trip}?phase=ready`);
-      const passes = page.getByRole("link", { name: t("trips.clock.ready.paperPasses") });
-      await expect(passes).toBeVisible();
-      await passes.click();
-      await expect(page).toHaveURL(/phase=checkin/);
+      await expect(
+        page.getByRole("link", { name: t("trips.clock.ready.paperPasses") }),
+      ).toHaveCount(0);
+      await expect(page.getByText(t("trips.clock.ready.paperPassesUnavailable"))).toBeVisible();
       await page.goto(`${trip}?phase=wrapped`);
       await page.getByRole("link", { name: t("desk.lostFound.heading"), exact: true }).click();
       await expect(page.locator("#wrapped-more")).toHaveAttribute("open", "");
@@ -51,5 +52,26 @@ test.describe("existing sightings", () => {
     await expect(sightings).toBeVisible();
     await sightings.click();
     await expect(page.locator("#seen-heading")).toBeVisible();
+  });
+});
+
+test.describe("available paper passes", () => {
+  test.use({ storageState: { cookies: [], origins: [] } });
+  test("Getting ready leads to a cleared arrived guest's pass", async ({ page, privateShop }) => {
+    test.slow();
+    await openCounterFor(page, privateShop.slug, "Diego Alvarez");
+    await expect(page.locator("[data-check-in-queue]")).toHaveAttribute("data-hydrated", "true");
+    const row = await rosterRow(page, "Diego Alvarez");
+    await row.getByRole("button", { name: "Check in Diego Alvarez" }).click();
+    await expect(
+      row.getByRole("button", { name: "Undo check-in for Diego Alvarez" }),
+    ).toBeVisible();
+    const trip = page.url().split("?")[0];
+    await page.goto(`${trip}?phase=ready`);
+    await page.getByRole("link", { name: t("trips.clock.ready.paperPasses") }).click();
+    const arrived = await rosterRow(page, "Diego Alvarez");
+    await openRosterDetails(arrived);
+    await arrived.getByRole("link", { name: "Print a pass" }).click();
+    await expect(page.locator(".paper-sheet").getByText("Diego Alvarez").first()).toBeVisible();
   });
 });

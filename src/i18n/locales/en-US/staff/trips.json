@@ -1141,6 +1141,7 @@
       "heading": "This trip"
     },
     "ready": {
+      "paperPassesUnavailable": "Paper passes are available from Check-in while arrivals are open.",
       "paperPasses": "Paper passes: open Check-in for arrived and cleared guests",
       "gearHeading": "Gear to pack",
       "pullList": "Pull list",
