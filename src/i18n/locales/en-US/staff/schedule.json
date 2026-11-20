@@ -4,7 +4,19 @@
     "label": "Schedule views",
     "week": "Trips",
     "crew": "Crew",
-    "plan": "Shifts"
+    "plan": "Shifts",
+    "boats": "Boats"
+  },
+  "boats": {
+    "heading": "Every boat, one day",
+    "noBoat": "No boat named",
+    "empty": "Nothing sails this day.",
+    "previousDay": "Previous day",
+    "nextDay": "Next day",
+    "today": "Today",
+    "noCrew": "No crew yet",
+    "crewClash": "{name} is crewing {first} and {second} at the same time.",
+    "boatClash": "{boat} is on {first} and {second} at the same time."
   },
   "viewPublicPage": "View public page",
   "more": "More",
