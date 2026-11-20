@@ -1246,7 +1246,10 @@
       "owed": "Pendiente",
       "nothingOwed": "Nada",
       "otherCurrency": "{count, plural, one {# plaza pagó} other {# plazas pagaron}} en otra moneda; no se cuentan aquí.",
-      "followUp": "Hacer seguimiento"
+      "followUp": "Hacer seguimiento",
+      "seen": "Visto",
+      "species": "{count, plural, one {# especie} other {# especies}}",
+      "items": "{count, plural, one {# objeto} other {# objetos}}"
     },
     "edit": {
       "schedule": "Agenda",

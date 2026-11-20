@@ -866,7 +866,8 @@
   the hull, the meeting point, the shop's dock call, what to bring, and a code carrying **the
   booking's id and nothing else**. A booking id is not a capability — the counter resolves it inside
   its own shop — so a pass left on a boat seat hands a finder nothing. It carries the diver's name
-  and no readiness, waiver or medical state.
+  and no readiness, waiver or medical state. Its door is on each cleared guest in Getting ready, the
+  day before (issue #4683), and on each cleared guest the counter has just checked in.
 - **Trip packet** — the browser-print document for one departure (`/shop/<slug>/trips/<id>?print=1`,
   `TripPacket`): three sections, each on its own sheet — the **dive plan** in words, the **manifest**
   (the roster in roll-call order with each person's emergency contact, the shop's **emergency

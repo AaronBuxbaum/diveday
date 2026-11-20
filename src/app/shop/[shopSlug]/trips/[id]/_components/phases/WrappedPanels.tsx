@@ -13,6 +13,7 @@ import { startIncidentReportAction } from "../../incidents/actions";
 import { diveLogHash } from "../TripDiveRecord";
 import type { WaterStanding } from "../water-standing";
 import type { CloseOutItem } from "../wrapped-close-out";
+import type { WrappedRecords } from "../wrapped-records";
 
 const LINK = buttonClass({ variant: "link", size: "sm", flush: true });
 /** The first thing left carries the one primary; the rest are secondary (finding 5). */
@@ -214,7 +215,9 @@ export function IncidentsLine({
  * 4): each dive as recorded (site, times, deepest, when its count closed),
  * opening in place to its log once its count has begun; then the incident
  * reports, no-shows and turn-aways. A dive nobody counted says "Not counted",
- * one nobody logged "Not logged"; neither is guessed.
+ * one nobody logged "Not logged"; neither is guessed. Last, a short row for
+ * what the crew saw and what was left aboard, each opening its record
+ * (issue #4683).
  */
 export function WhatHappenedCard({
   standing,
@@ -224,6 +227,7 @@ export function WhatHappenedCard({
   noShows,
   turnedAway,
   print,
+  records,
   shopSlug,
   tripId,
   locale,
@@ -238,6 +242,8 @@ export function WhatHappenedCard({
   noShows: readonly string[];
   turnedAway: readonly string[];
   print: ReactNode;
+  /** What was seen and left aboard (`wrappedRecords`); absent, no rows. */
+  records?: WrappedRecords;
   shopSlug: string;
   tripId: string;
 } & Words) {
@@ -303,6 +309,35 @@ export function WhatHappenedCard({
       key: "turned-away",
       label: t("trips.clock.wrapped.turnedAway"),
       value: listOf(locale, turnedAway),
+    });
+  }
+  if (records?.seen) {
+    const { dive } = records.seen;
+    rows.push({
+      key: "seen",
+      label: t("trips.clock.wrapped.seen"),
+      value: t("trips.clock.wrapped.species", { count: records.seen.species }),
+      action: (
+        <Link
+          href={`${shopPath(shopSlug, "trips", tripId, "manifest")}${dive ? `?checkpoint=after_dive_${dive}` : ""}`}
+          className={LINK}
+        >
+          {t("trips.clock.water.openRollCall")}
+        </Link>
+      ),
+    });
+  }
+  if (records?.leftAboard) {
+    rows.push({
+      key: "left-aboard",
+      label: t("desk.lostFound.heading"),
+      value: t("trips.clock.wrapped.items", { count: records.leftAboard.count }),
+      // Under More, which opens for it.
+      action: (
+        <a href="#found-aboard" className={LINK}>
+          {t("trips.about.view")}
+        </a>
+      ),
     });
   }
   const GRID =

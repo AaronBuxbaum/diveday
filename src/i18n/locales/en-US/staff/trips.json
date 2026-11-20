@@ -1246,7 +1246,10 @@
       "owed": "Owed",
       "nothingOwed": "Nothing",
       "otherCurrency": "{count, plural, one {# seat paid} other {# seats paid}} in another currency, not counted here.",
-      "followUp": "Follow up"
+      "followUp": "Follow up",
+      "seen": "Seen",
+      "species": "{count, plural, one {# species} other {# species}}",
+      "items": "{count, plural, one {# item} other {# items}}"
     },
     "edit": {
       "schedule": "Schedule",
