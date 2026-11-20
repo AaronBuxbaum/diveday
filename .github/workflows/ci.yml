@@ -1541,7 +1541,10 @@ jobs:
   ci-result:
     name: CI result
     # Failed or skipped dependencies still need a verdict; a canceled run needs no new job.
-    if: ${{ !cancelled() && github.event_name != 'schedule' && needs.stack-gate.outputs.run != 'false' }}
+    # A lower stack layer answers too: its run is skipped by design, and a skipped required check is
+    # not a pass to the merge button (or to Merge on the stack's top), so the layer reports green here
+    # and the top layer's run carries the verdict.
+    if: ${{ !cancelled() && github.event_name != 'schedule' }}
     needs:
       - stack-gate
       - repo-safeguards
@@ -1566,9 +1569,13 @@ jobs:
       checks: read
       pull-requests: read
     steps:
+      - name: Lower layer of a stack
+        if: ${{ needs.stack-gate.outputs.run == 'false' }}
+        run: echo 'This layer is skipped by design: CI runs on the top of its stack (stack-gate). Add the ci-now label to run it here.' >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: ${{ needs.stack-gate.outputs.run != 'false' }}
       - name: Collect exact-attempt CI evidence
-        if: always()
+        if: ${{ always() && needs.stack-gate.outputs.run != 'false' }}
         run: node scripts/ci-evidence.mjs
         env:
           GH_TOKEN: ${{ github.token }}
@@ -1576,15 +1583,16 @@ jobs:
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        if: always()
+        if: ${{ always() && needs.stack-gate.outputs.run != 'false' }}
         with:
           name: ci-result-${{ github.run_attempt }}
           path: .agent-out/ci-result.json
           retention-days: 30
       - name: Evidence artifact
-        if: always()
+        if: ${{ always() && needs.stack-gate.outputs.run != 'false' }}
         run: echo 'Download ci-result-${{ github.run_attempt }} for job failures, annotations, reproduction commands and artifact links.' >> "$GITHUB_STEP_SUMMARY"
       - name: Every required job passed
+        if: ${{ needs.stack-gate.outputs.run != 'false' }}
         env:
           CI_NEEDS: ${{ toJSON(needs) }}
           GITHUB_EVENT_NAME: ${{ github.event_name }}

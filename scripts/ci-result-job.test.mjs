@@ -40,8 +40,11 @@ describe("the CI result job", () => {
     const job = CI.slice(CI.indexOf("\n  ci-result:\n"));
     expect(job).toMatch(/^ {4}name: CI result$/mu);
     expect(job).toMatch(
-      /^ {4}if: \$\{\{ !cancelled\(\) && github\.event_name != 'schedule' && needs\.stack-gate\.outputs\.run != 'false' \}\}$/mu,
+      /^ {4}if: \$\{\{ !cancelled\(\) && github\.event_name != 'schedule' \}\}$/mu,
     );
+    // A lower layer reports a pass of its own: a skipped required check does not satisfy Merge.
+    expect(job).toContain("Lower layer of a stack");
+    expect(job).toMatch(/- name: Every required job passed\n {8}if: \$\{\{ needs\.stack-gate\.outputs\.run != 'false' \}\}/u);
   });
 
   it("checks current PR candidate identity with read-only pull request access", () => {

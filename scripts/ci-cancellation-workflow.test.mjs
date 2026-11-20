@@ -70,7 +70,7 @@ describe("CI job cancellation", () => {
     ["skipped optional jobs still need a verdict", { dependency: "skipped" }, true],
     ["canceled run needs no new verdict job", { canceled: true }, false],
     ["nightly", { event: "schedule" }, false],
-    ["lower stack layer", { stackRun: "false" }, false],
+    ["lower stack layer", { stackRun: "false" }, true],
   ])("CI result: %s", (_name, state, expected) => {
     expect(runs("ci", "ci-result", state)).toBe(expected);
   });

@@ -22,7 +22,7 @@ depth.
 **CI runs on the top layer only** (ADR [20261105-ci-runs-on-the-top-of-the-stack](../../../docs/architecture/decisions/20261105-ci-runs-on-the-top-of-the-stack.md)):
 the account has a fixed number of runners and Aaron merges the whole stack from the top, so
 `stack-gate` in `ci.yml` skips every lower layer, and a slice of CI across layers never happens.
-A lower layer shows skipped checks, which are not green; label it `ci-now` and re-run (or push) to run CI there when the top is red and Aaron wants to merge up to it. Fix a red top from the top; do not hold a
+A lower layer's `CI result` reports a pass that says it was skipped by design (a skipped required check does not satisfy Merge); label it `ci-now` and re-run (or push) to run CI there when the top is red and Aaron wants to merge up to it. Fix a red top from the top; do not hold a
 push for the layer below.
 
 ## Commands
@@ -50,7 +50,7 @@ gh stack push                                # force-with-lease; plain `git push
 - **`gh stack submit` leaves empty PR bodies.** Right after it, `gh pr edit` each body with its
   position line ([position.md](position.md)) and the repository's PR body rows.
 - Merging is `gh stack merge <pr> --yes`, or the Merge button on the top PR. It checks only that
-  each PR is open and not a draft; GitHub enforces protections. Merging is Aaron's.
+  each PR is open and not a draft; GitHub enforces protections. Merging is Aaron's. **Merge the top, once.** Squash-merging a lower layer by itself rewrites its commits on `main`, so the layer above shows conflicts that are not real (its branch still carries the original commits); the Merge button on the top PR lands every layer as one unit and avoids them. If it already happened, `git merge origin/main` on the top taking its own side clears it.
 
 ## Reference
 
