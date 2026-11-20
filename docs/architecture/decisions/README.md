@@ -179,8 +179,8 @@ script again.
 | 20260802-ses-adapter-and-webhook | ~~Write the SES adapter with…~~ → 20260803-ses-sole-email-provider |
 | 20260802-ses-email-transition-prep | ~~Provision dormant SES/SNS infra ahead…~~ → 20260803-ses-sole-email-provider |
 | 20260802-shard-visual-regression-ci | Shard the visual-capture CI job,… |
-| 20260802-sms-delivery-receipts-in-cloudformation | Switch SMS delivery-status logging on… |
 | 20260802-sms-delivery-receipts | ~~Route SNS SMS delivery receipts…~~ → 20260802-sms-delivery-receipts-in-cloudformation |
+| 20260802-sms-delivery-receipts-in-cloudformation | Switch SMS delivery-status logging on… |
 | 20260802-sns-sms-adapter | Swap Twilio for AWS SNS… |
 | 20260802-visual-diff-pr-comment | Warn loudly on visual diffs;… |
 | 20260802-whatsapp-cloud-api-per-shop | ~~Add WhatsApp via Meta's Cloud…~~ → 20260802-whatsapp-embedded-signup |
