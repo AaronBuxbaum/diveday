@@ -8,7 +8,7 @@ import { getDb } from "@/db/client";
 import { isDemoShopWithDemoOwnerOrCaptainAccount } from "@/db/demo-account-guard";
 import { DemoSightingCleanupBlocked } from "@/db/demo-sighting-guard";
 import { demoRoleEmail } from "@/db/people";
-import { createDemoShop, resetDemoSchedule } from "@/db/seed";
+import { resetDemoSchedule } from "@/db/seed";
 import { dismissDemoStarts, getShopById, getShopBySlug } from "@/db/shops";
 import {
   findPreview,
@@ -24,6 +24,7 @@ import {
   signDemoSeat,
 } from "@/features/demo-seat";
 import { demoStartDeparture, demoStartFrom } from "@/features/demo-starts";
+import { mintDemoShop } from "@/features/demo-template";
 import { isQuietDemoDevice, QUIET_DEMO_COOKIE } from "@/features/quiet-demo-device";
 import { requireStaffSession } from "@/features/session";
 import { auth, getAuth } from "@/lib/auth";
@@ -153,9 +154,7 @@ export async function enterDemoAction(formData?: FormData) {
   let minted: { slug: string; ownerEmail: string } | null = null;
   for (let attempt = 0; attempt < 2 && !minted; attempt++) {
     try {
-      minted = await db.transaction(async (tx) =>
-        createDemoShop(tx, { brand: true, onTiming: timing?.record }),
-      );
+      minted = await mintDemoShop(db, { onTiming: timing?.record, defer: (work) => after(work) });
     } catch (err) {
       // Protected evidence leaves no safe slot to mint. Do not retry or count
       // a demo entry; the normal unavailable redirect runs after this loop.

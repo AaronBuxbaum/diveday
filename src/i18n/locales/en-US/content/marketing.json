@@ -974,38 +974,6 @@
     "lockNote": "Today’s price, locked for one year for founding shops.",
     "trialNote": "Try a shop of your own free for 2 weeks, with no card. Your shop keeps working after the trial while you arrange the move to a paid plan with {email}.",
     "earlyAccessBadge": "Early access",
-    "invoice": {
-      "title": "The invoice",
-      "setup": {
-        "label": "Setup",
-        "value": "None"
-      },
-      "logins": {
-        "label": "Staff logins",
-        "value": "All of them"
-      },
-      "tiers": {
-        "label": "Feature tiers",
-        "value": "One plan"
-      },
-      "cut": {
-        "label": "Cut of your bookings",
-        "value": "None"
-      },
-      "cards": {
-        "label": "Card processing",
-        "value": "Stripe’s fee, paid to Stripe"
-      },
-      "contract": {
-        "label": "Contract",
-        "value": "Month to month"
-      },
-      "leaving": {
-        "label": "Data export",
-        "value": "A ZIP from Settings, any day",
-        "pointer": "Your records go with you. See below."
-      }
-    },
     "notes": {
       "title": "Notes",
       "note1": "Every staff login is in the price, front desk to captain. Nothing is counted per seat.",
@@ -1080,15 +1048,13 @@
     "closingTitle": "Every feature and every staff login are in the price",
     "percentArm": {
       "cadence": "of money recorded as received in DiveDay{hasBase, select, yes {, plus {base} a month} other {, with no monthly fee}}",
-      "invoiceFeeLabel": "DiveDay’s fee",
-      "invoiceFeeValue": "{percent} of money recorded as received in DiveDay",
       "whatCountsQuestion": "What counts toward the {percent}?",
       "whatCountsAnswer": "Money recorded as received in DiveDay, whether paid online, in cash, by bank transfer, on your own card machine or another method. Deposits count when received; an unpaid booking does not. Packages count when sold, never again when redeemed. Separately recorded tips, tax and pass-through fees, and imported history, are excluded. An amount without a separate tax breakdown counts in full. Refunds receive a credit at the original rate."
     },
     "compare": {
       "title": "What a month could cost",
-      "lede": "Move the slider to the money your shop takes in. Each column adds the software’s fee to the card transaction fee, so you see what leaves your account.",
-      "sliderLabel": "Money received in a month",
+      "lede": "Move the slider to what your trips and courses bring in. Each column adds the software’s fee to the card transaction fee, so you see what leaves your account.",
+      "sliderLabel": "Trip and course money in a month",
       "systems": {
         "fareharbor": {
           "estimated": "(estimated)"
@@ -1104,7 +1070,7 @@
       },
       "totalNote": "{percent} of the month’s money",
       "assumptionsTitle": "How we counted",
-      "assumptions": "These are estimates, not quotes. The card transaction fee is counted in both columns, with every sale a card payment averaging {sale}, at Stripe’s published rate of 2.9% plus 30¢. FareHarbor publishes no rates and charges no subscription. Its 6% of a booking, with the card transaction fee charged on top, is what three industry write-ups report (CaptainBook, April 9, 2026; TrekkSoft, June 30, 2026; Levy, 2026), and a fourth (hamzaliaqat.com, April 29, 2026) says processing is included, so we use the reading that is more common. It adds a 2% OTA booking fee on bookings that come through online travel agencies, and its contract is negotiated shop by shop. DiveDay adds no fee on those bookings. Every percent is taken off the full sale, never off what is left after another fee. Checked November 18, 2026.",
+      "assumptions": "These are estimates, not quotes. The card transaction fee is counted in both columns, with every sale a card payment averaging {sale}, at Stripe’s published rate of 2.9% plus 30¢. FareHarbor publishes no rates and charges no subscription. Its 6% of a booking, with the card transaction fee charged on top, is what three industry write-ups report (CaptainBook, April 9, 2026; TrekkSoft, June 30, 2026; Levy, 2026), and a fourth (hamzaliaqat.com, April 29, 2026) says processing is included, so we use the reading that is more common. It adds a 2% OTA booking fee, on top of the booking price, on bookings that come through online travel agencies, and its contract is negotiated shop by shop. DiveDay adds no fee on those bookings. Both columns take the same month, and every percent is taken off the full amount, never off what is left after another fee. Checked November 18, 2026.",
       "guideLink": "What moving off {competitor} looks like",
       "otaFootnote": "Assumes {share} of bookings come through online travel agencies (OTAs).",
       "otaSource": "Source: Arival"

@@ -528,7 +528,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return false;
   }
   const local = from.hostname === "localhost" || from.hostname === "127.0.0.1";
-  const diveDay = from.protocol === "https:" && from.hostname === "dive.day";
+  const diveDay = from.protocol === "https:" && from.hostname === "www.dive.day";
   if ((!diveDay && !local) || !from.pathname.startsWith("/shop/")) return false;
   if (message?.type === HELLO_REQUEST_TYPE) {
     sendResponse({

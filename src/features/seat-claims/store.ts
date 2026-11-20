@@ -1,5 +1,6 @@
 import { and, asc, desc, eq, isNotNull, isNull, ne, or, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
+import { nextOfflineGeneration } from "@/db/offline-generation";
 import { livePerson, liveTrip, seatNotCancelled } from "@/db/trips";
 import { type AboardHold, heldAtTheDoor } from "../../db/aboard-at-sea";
 import { seatCheckedIn, standingArrivalStatus } from "../../db/arrival-provenance";
@@ -470,7 +471,7 @@ async function claimSeatRecord(tx: DbExecutor, input: ClaimSeatInput): Promise<C
     .update(bookings)
     .set({
       personId: person.id,
-      offlineAssignmentGeneration: sql`case when ${bookings.personId} is distinct from ${person.id}::uuid then ${bookings.offlineAssignmentGeneration} + 1 else ${bookings.offlineAssignmentGeneration} end`,
+      offlineAssignmentGeneration: sql`case when ${bookings.personId} is distinct from ${person.id}::uuid then ${nextOfflineGeneration(bookings.offlineAssignmentGeneration)} else ${bookings.offlineAssignmentGeneration} end`,
       claimedAt: now,
       identityUnconfirmedAt: null,
       identityBookedAs: null,

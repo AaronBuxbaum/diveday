@@ -7,30 +7,37 @@ const byName = (rows: ReturnType<typeof compareMonth>) =>
   Object.fromEntries(rows.map((row) => [row.system, row]));
 
 describe("compareMonth", () => {
-  it("counts a $60,000 month the same way in both columns, 37% of it through online travel agencies", () => {
+  it("takes DiveDay's 1% and FareHarbor's 6% off the same full amount", () => {
+    const rows = byName(compareMonth(3_000_000, OFFER));
+    expect(rows.diveday?.bookingFeeCents).toBe(30_000); // 1% of $30,000
+    expect(rows.fareharbor?.bookingFeeCents).toBe(180_000); // 6% of $30,000
+    expect(rows.fareharbor?.otaFeeCents).toBe(22_200); // 2% on top, of the $11,100 through agencies
+    expect(rows.diveday?.otaFeeCents).toBe(0);
+  });
+
+  it("counts the same card processing in both columns", () => {
     const rows = byName(compareMonth(6_000_000, OFFER));
-    // $22,200 through the agencies, $37,800 taken directly.
-    const processing = 109_620 + 7_560; // 2.9% + 30c over 252 sales of $150
+    const processing = 174_000 + 400 * 30; // 2.9% + 30c over 400 sales of $150
     expect(rows.fareharbor).toMatchObject({
       subscriptionCents: 0,
-      bookingFeeCents: 226_800, // 6% of the direct money
-      otaFeeCents: 44_400, // 2% of the agency money
+      bookingFeeCents: 360_000,
+      otaFeeCents: 44_400,
       processingCents: processing,
-      totalCents: 226_800 + 44_400 + processing,
+      totalCents: 360_000 + 44_400 + processing,
     });
     expect(rows.diveday).toMatchObject({
       subscriptionCents: 0,
-      bookingFeeCents: 37_800, // the offer's 1% of the direct money
+      bookingFeeCents: 60_000,
       otaFeeCents: 0,
       processingCents: processing,
-      totalCents: 37_800 + processing,
+      totalCents: 60_000 + processing,
     });
   });
 
   it("follows the configured offer, including a monthly subscription", () => {
     const rows = byName(compareMonth(6_000_000, { monthlyCents: 4_900, basisPoints: 300 }));
     expect(rows.diveday?.subscriptionCents).toBe(4_900);
-    expect(rows.diveday?.bookingFeeCents).toBe(113_400);
+    expect(rows.diveday?.bookingFeeCents).toBe(180_000);
   });
 
   it("is zero for both in a month with no money, and for a negative amount", () => {
@@ -39,14 +46,5 @@ describe("compareMonth", () => {
       expect(rows.fareharbor?.totalCents).toBe(0);
       expect(rows.diveday?.totalCents).toBe(0);
     }
-  });
-
-  it("takes every percent off the full amount, never off what another fee leaves", () => {
-    // $10,000: $3,700 through the agencies, $6,300 direct.
-    const rows = byName(compareMonth(1_000_000, OFFER));
-    expect(rows.fareharbor?.bookingFeeCents).toBe(37_800);
-    expect(rows.fareharbor?.otaFeeCents).toBe(7_400);
-    expect(rows.diveday?.bookingFeeCents).toBe(6_300);
-    expect(rows.diveday?.processingCents).toBe(18_270 + 42 * 30);
   });
 });

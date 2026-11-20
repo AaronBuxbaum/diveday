@@ -31,7 +31,7 @@ It does nothing on its own: it runs only when a staff member presses a check but
 
 Without the extension DiveDay still links each card to its agency's lookup page. Phones do not run extensions, so this is for the front-desk computer.
 
-Privacy: https://dive.day/privacy#extension
+Privacy: https://www.dive.day/privacy#extension
 
 **Screenshots** (1280×800): see [the runbook](../../docs/engineering/cert-check-extension-runbook.md#store-screenshots). They show the demo shop's made-up divers only.
 
@@ -55,7 +55,7 @@ Looks up a diver's dive certification on the certifying agency's own public or m
 | `https://portal.cmas.org/*` | Fills in the CMAS certification search form when a DiveDay staff member asks, and reads the answer. |
 | `https://pro.padi.com/*` | Fills in PADI's DiveChek and eLearning search on the PADI Pros' Site the staff member is already signed in to, when they ask, and reads only the lines about that diver. |
 | `https://pros.padi.com/*` | PADI's other Pros' Site address, which PADI may send the same tab to; used only as `https://pro.padi.com/*` is. |
-| Content script on `https://dive.day/shop/*` | Shows DiveDay's staff pages that the extension is installed and carries a staff member's check request to the extension. It runs on no other site. |
+| Content script on `https://www.dive.day/shop/*` | Shows DiveDay's staff pages that the extension is installed and carries a staff member's check request to the extension. It runs on no other site. |
 
 **Remote code:** No. Every script is in the package; nothing is fetched and run.
 
@@ -75,7 +75,7 @@ Looks up a diver's dive certification on the certifying agency's own public or m
 
 **Certifications** (tick all three): the data is not sold or transferred to third parties outside the approved use; it is not used or transferred for purposes unrelated to the single purpose; it is not used or transferred to determine creditworthiness or for lending.
 
-**Privacy policy URL:** https://dive.day/privacy#extension
+**Privacy policy URL:** https://www.dive.day/privacy#extension
 
 ## Distribution
 
