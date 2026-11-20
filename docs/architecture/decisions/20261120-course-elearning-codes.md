@@ -16,7 +16,7 @@ which deferred a code per student until a shop asked. No agency issues codes thr
 1. **A table of codes per course, `course_elearning_codes`.** One row per code: shop, course, the
    code as pasted, and, once handed out, the booking holding it, when, and which staffer (null when
    the confirmation did it). `(shop, course, code)` is unique, so pasting an order twice adds nothing;
-   a booking holds at most one code, by a partial unique index. `assigned_at` and `booking_id` are
+   a booking holds at most one code, by a partial unique index. Unused codes can be removed (soft); a handed-out one stays. `assigned_at` and `booking_id` are
    paired by a check.
 2. **Staff paste codes into the course editor.** A box in the editor's one Save takes one code per
    line (or separated by commas, semicolons or spaces), always empty on arrival: a stored code is
@@ -37,12 +37,12 @@ which deferred a code per student until a shop asked. No agency issues codes thr
 
 ## Alternatives considered
 
-- **A code column on `bookings`.** Rejected: the stock exists before any student, and its count is the point.
+- **A code column on `bookings`.** Rejected: the stock exists before any student.
 - **Assigning when payment settles.** Rejected: the confirmation already runs after the seat is taken, and hooking each payment path adds writers for the same effect.
-- **Encrypting codes at rest.** Rejected: staff read them back on the roster, and the experience-over-hardening rule applies.
+- **Encrypting codes at rest.** Rejected: staff read them back on the roster.
 
 ## Consequences
 
 - **Easy:** one additive table; the export carries the ledger.
 - **Commits us to:** copy that never implies a code means finished theory.
-- **Not built:** removing an unused code, and any agency integration.
+- **Not built:** any agency integration.

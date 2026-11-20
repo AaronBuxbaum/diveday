@@ -94,6 +94,7 @@
     "notIncludedPlaceholder": "Tasa del parque marino\nTraslados de hotel",
     "codesLegend": "Códigos de eLearning",
     "codesDescription": "Pega los códigos que compraste a la agencia. Cada alumno recibe uno con su confirmación, y puedes dar uno desde la lista. {left, plural, =0 {No queda ninguno} one {Queda #} other {Quedan #}}, {handedOut} entregados.",
+    "codesRemove": "Quitar primero {left, plural, one {# código sin usar} other {# códigos sin usar}}. Los códigos ya entregados a un alumno se quedan.",
     "codesLabel": "Agregar códigos",
     "codesFieldHint": "Uno por línea, hasta {max} a la vez. Un código que ya agregaste se omite.",
     "errorCodesTooMany": "Pega {max, plural, one {# código} other {# códigos}} o menos a la vez.",

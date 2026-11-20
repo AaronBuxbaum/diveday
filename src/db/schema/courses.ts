@@ -361,15 +361,19 @@ export const courseElearningCodes = pgTable(
     assignedAt: timestamp("assigned_at", { withTimezone: true }),
     /** The staffer who handed it out; null when the confirmation did it. */
     assignedByPersonId: uuid("assigned_by_person_id").references(() => people.id),
+    /** Set when the shop removes an unused code; a handed-out code is never removed. */
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (t) => [
-    uniqueIndex("course_elearning_codes_code_unique").on(t.shopId, t.courseId, t.code),
+    uniqueIndex("course_elearning_codes_code_unique")
+      .on(t.shopId, t.courseId, t.code)
+      .where(sql`${t.deletedAt} is null`),
     uniqueIndex("course_elearning_codes_booking_unique")
       .on(t.bookingId)
       .where(sql`${t.bookingId} is not null`),
     index("course_elearning_codes_stock_idx")
       .on(t.shopId, t.courseId, t.createdAt)
-      .where(sql`${t.bookingId} is null`),
+      .where(sql`${t.bookingId} is null and ${t.deletedAt} is null`),
     check("course_elearning_codes_named", sql`length(btrim(${t.code})) > 0`),
     check(
       "course_elearning_codes_assigned_pair",

@@ -56,6 +56,7 @@ export async function courseCodeCounts(
       and(
         eq(courseElearningCodes.shopId, input.shopId),
         eq(courseElearningCodes.courseId, input.courseId),
+        isNull(courseElearningCodes.deletedAt),
       ),
     )
     .groupBy(isNotNull(courseElearningCodes.bookingId));
@@ -78,6 +79,7 @@ export async function courseCodesByBooking(
       and(
         eq(courseElearningCodes.shopId, input.shopId),
         inArray(courseElearningCodes.bookingId, [...input.bookingIds]),
+        isNull(courseElearningCodes.deletedAt),
       ),
     );
   const held = new Map<string, string>();
@@ -128,6 +130,7 @@ export async function issueCourseCode(
           eq(courseElearningCodes.shopId, input.shopId),
           eq(courseElearningCodes.courseId, seat.courseId),
           isNull(courseElearningCodes.bookingId),
+          isNull(courseElearningCodes.deletedAt),
         ),
       )
       .orderBy(asc(courseElearningCodes.createdAt), asc(courseElearningCodes.code))
@@ -140,7 +143,13 @@ export async function issueCourseCode(
         assignedAt: nowDate(),
         assignedByPersonId: input.staffPersonId,
       })
-      .where(and(eq(courseElearningCodes.id, next.id), isNull(courseElearningCodes.bookingId)))
+      .where(
+        and(
+          eq(courseElearningCodes.id, next.id),
+          isNull(courseElearningCodes.bookingId),
+          isNull(courseElearningCodes.deletedAt),
+        ),
+      )
       .returning({ code: courseElearningCodes.code })
       .catch((error: unknown) => {
         if (isUniqueViolation(error)) return [];
@@ -160,6 +169,29 @@ export async function issueCourseCode(
 function isUniqueViolation(error: unknown): boolean {
   const code = (error as { code?: string; cause?: { code?: string } } | null) ?? {};
   return code.code === "23505" || code.cause?.code === "23505";
+}
+
+/**
+ * **Remove the codes of a course nobody holds** (a mistaken paste). A handed-out code stays: a
+ * student has it. Soft: the row keeps `deleted_at`, and the same text can be pasted again.
+ */
+export async function cancelUnusedCourseCodes(
+  db: DbExecutor,
+  input: { shopId: string; courseId: string },
+): Promise<{ removed: number }> {
+  const rows = await db
+    .update(courseElearningCodes)
+    .set({ deletedAt: nowDate() })
+    .where(
+      and(
+        eq(courseElearningCodes.shopId, input.shopId),
+        eq(courseElearningCodes.courseId, input.courseId),
+        isNull(courseElearningCodes.bookingId),
+        isNull(courseElearningCodes.deletedAt),
+      ),
+    )
+    .returning({ id: courseElearningCodes.id });
+  return { removed: rows.length };
 }
 
 /** Take a student's code back into the course's stock (a wrong student, or a student who dropped). */

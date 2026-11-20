@@ -94,6 +94,7 @@
     "notIncludedPlaceholder": "Marine park fee\nHotel transfers",
     "codesLegend": "eLearning codes",
     "codesDescription": "Paste the codes you bought from the agency. Each student gets one with their confirmation, and you can hand one out from the roster. {left, plural, =0 {None left} one {# left} other {# left}}, {handedOut} handed out.",
+    "codesRemove": "Remove the {left, plural, one {# unused code} other {# unused codes}} first. Codes already handed to a student stay.",
     "codesLabel": "Add codes",
     "codesFieldHint": "One per line, up to {max} at a time. A code you already added is skipped.",
     "errorCodesTooMany": "Paste {max, plural, one {# code} other {# codes}} or fewer at a time.",
