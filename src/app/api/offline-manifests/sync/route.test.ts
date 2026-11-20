@@ -50,7 +50,7 @@ function postRequest(body: unknown, headers: Record<string, string> = {}) {
   return new Request("http://localhost/api/offline-manifests/sync", {
     method: "POST",
     headers: {
-      "x-diveday-roll-call-protocol": "2",
+      "x-diveday-roll-call-protocol": "3",
       "content-type": "application/json",
       ...headers,
     },

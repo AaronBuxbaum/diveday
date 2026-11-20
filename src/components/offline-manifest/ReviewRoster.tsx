@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { proseLinkClass } from "@/components/ui/button";
 import { formatDateTimeTz } from "@/lib/format";
 import type { OfflineManifestPayload, OfflineRollCallEvent } from "@/lib/offline-manifests";
 import { shopPath } from "@/lib/staff-notices";
@@ -71,7 +72,7 @@ export function ReviewRoster({
           {t("shared.offlineManifest.single.reviewCrewInstruction")}{" "}
           <Link
             href={`${shopPath(current.shop.slug, "trips", event.tripId, "manifest")}?checkpoint=${encodeURIComponent(event.checkpoint)}`}
-            className="underline"
+            className={proseLinkClass}
           >
             {t("shared.offlineManifest.single.reviewCrewLink")}
           </Link>

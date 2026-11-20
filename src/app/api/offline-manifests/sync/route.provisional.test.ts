@@ -798,7 +798,7 @@ it("opens only the witnessed original person for authorized review, and stops af
   expect(await (await identify(request())).json()).toEqual({ name: null, sameAssignment: false });
 });
 
-it("does not sign off an old checklist after a schedule edit and revert", async () => {
+it("preserves status-aware checklist replay after a schedule edit and revert", async () => {
   const { db, shop, trip, staffPersonId } = await seededContext();
   vi.mocked(getDb).mockResolvedValue(db);
   auth.mockResolvedValue(staffSession(shop.id, staffPersonId));
@@ -835,13 +835,12 @@ it("does not sign off an old checklist after a schedule edit and revert", async 
   expect(response.status).toBe(200);
   expect((await response.json()).results).toContainEqual({
     clientEventId: id,
-    status: "rejected",
-    reason: "review_required",
+    status: "applied",
   });
   expect(
     await db
       .select()
       .from(preDepartureCheckEvents)
       .where(eq(preDepartureCheckEvents.clientEventId, id)),
-  ).toHaveLength(0);
+  ).toHaveLength(1);
 });

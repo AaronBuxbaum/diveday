@@ -1346,7 +1346,7 @@ export function buildTripManifest(input: {
         notBackAboard: summary.notBackAboard,
         crew: input.crew,
       }),
-      ...((summary.historicalReviewRequired ?? 0) > 0 ? { complete: false } : {}),
+      ...(summary.historicalReviewRequired > 0 ? { complete: false } : {}),
     },
     divers,
     summary,

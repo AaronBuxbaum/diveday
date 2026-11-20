@@ -300,16 +300,12 @@ async function dayTrips(
   // **The roster, and the subset of it the boat carried** (issue #1689). One
   // walk, one rule per seat, so the two numbers can never be derived by
   // different readings of the same rows.
-  const afterDiveSpoken = afterDiveReads.afterDive;
+  const countsAsSailed = closeoutSailedReader(dockResults, afterDiveReads);
   const bookedByTrip = new Map<string, number>();
   const sailedByTrip = new Map<string, number>();
   for (const seat of roster) {
     bookedByTrip.set(seat.tripId, (bookedByTrip.get(seat.tripId) ?? 0) + 1);
-    const sailed = seatSailed({
-      noShow: seat.status === "no_show",
-      dockResult: dockResults.get(seat.tripId)?.get(seat.bookingId) ?? null,
-      afterDiveResultStands: afterDiveSpoken.get(seat.tripId)?.has(seat.bookingId) === true,
-    });
+    const sailed = countsAsSailed(seat);
     if (sailed) sailedByTrip.set(seat.tripId, (sailedByTrip.get(seat.tripId) ?? 0) + 1);
   }
   const photosByTrip = new Map<string, typeof photos>();
@@ -360,7 +356,9 @@ async function dayTrips(
   const standingCrewResult = new Map<string, "boarded" | "not_boarded">();
   // Past-day closeout is historical; today's operational count applies current eligibility.
   const effectiveCrew =
-    options.rehearsals === false ? crewResults : await effectiveCausalRowsForDb(db, crewResults);
+    options.rehearsals === false
+      ? crewResults
+      : await effectiveCausalRowsForDb(db, crewResults, { allSubjectEvents: true });
   for (const { event } of effectiveCrew) {
     if (!event.crewPersonId) continue;
     const key = `${event.tripId}\0${event.crewPersonId}\0${event.checkpoint}`;
@@ -393,11 +391,7 @@ async function dayTrips(
         .map((seat) => ({
           personId: seat.personId,
           confirmed: seat.identityUnconfirmedAt === null,
-          sailed: seatSailed({
-            noShow: seat.status === "no_show",
-            dockResult: dockResults.get(row.id)?.get(seat.bookingId) ?? null,
-            afterDiveResultStands: afterDiveSpoken.get(row.id)?.has(seat.bookingId) === true,
-          }),
+          sailed: countsAsSailed(seat),
           back:
             afterDiveReads.checkpoints.get(row.id)?.get(closing)?.get(seat.bookingId) === "boarded",
         })),
@@ -438,6 +432,23 @@ async function dayTrips(
       crewPhotos: crewPhotosByTrip.get(row.id) ?? [],
     };
   });
+}
+
+function closeoutSailedReader(
+  dockResults: Awaited<ReturnType<typeof listDepartureRollCallByTrip>>,
+  reads: Awaited<ReturnType<typeof readAfterDiveRollCallByTrip>>,
+) {
+  return (seat: { tripId: string; bookingId: string; status: string }) => {
+    const dock = dockResults.get(seat.tripId)?.get(seat.bookingId) ?? null;
+    const afterDive = reads.afterDive.get(seat.tripId)?.has(seat.bookingId) === true;
+    if (reads.uncertain.get(seat.tripId)?.has(seat.bookingId) && dock !== "boarded" && !afterDive)
+      return false;
+    return seatSailed({
+      noShow: seat.status === "no_show",
+      dockResult: dock,
+      afterDiveResultStands: afterDive,
+    });
+  };
 }
 
 /**

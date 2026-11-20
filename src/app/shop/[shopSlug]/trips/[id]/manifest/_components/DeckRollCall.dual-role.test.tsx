@@ -46,6 +46,7 @@ function dualRole(state: "boarded" | "missing" | "awaiting" | "conflict" = "boar
   const view = {
     manifest: {
       trip: { id: context.tripId },
+      summary: {},
       divers,
       crew,
       completeness: { complete: state === "boarded" },

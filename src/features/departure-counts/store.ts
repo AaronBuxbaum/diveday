@@ -48,8 +48,9 @@ export type DepartureCount = Readonly<{
    * any standing after-dive word, then the desk's no-show mark.
    *
    * Before anyone has counted at the dock this is every seat not marked a
-   * no-show, because that rule's last fallback is the desk. Read it as "who
-   * went out" only once the boat has left.
+   * no-show, because that rule's last fallback is the desk. A person whose
+   * offline evidence needs recount is excluded from that fallback. Read it as
+   * "who went out" only once the boat has left.
    *
    * It asks how many the vessel *left the dock with*, so a seat the crew
    * marked `not_boarded` at the dock stays out of it even when a chase boat
@@ -160,7 +161,9 @@ export async function departureCounts(
         .orderBy(...newestMarkFirst()),
   ]);
   const readiness = await readinessFor(db, shopId, roster, options);
-  const { rows: effective, recount } = await rollCallProjectionForDb(db, events);
+  const { rows: effective, recount } = await rollCallProjectionForDb(db, events, {
+    allSubjectEvents: true,
+  });
   const currentDayByTrip = new Map(events.map((row) => [row.event.tripId, row.currentDay]));
   const recountByTrip = new Map<string, Map<number, Set<string>>>();
   for (const row of events) {
@@ -245,18 +248,8 @@ export async function departureCounts(
     for (const seat of seats) {
       const held = seatIsHeld(seat.status);
       const said = words.get(seatKey(tripId, seat.id));
-      const seatHasSailed = seatSailed({
-        noShow: seat.status === "no_show",
-        dockResult: said?.dock ?? null,
-        afterDiveResultStands: (said?.afterDive.size ?? 0) > 0,
-      });
-      if (held) booked += 1;
-      if (seatHasSailed) sailed += 1;
-      if (said?.dock === "boarded") boarded += 1;
-      if (latest > 0 && said?.afterDive.get(latest) === "boarded") back += 1;
-      if (said && isMissing(said.afterDive)) missing += 1;
       const day = currentDayByTrip.get(tripId);
-      if (
+      const needsRecount =
         day !== undefined &&
         recountApplies(
           recount,
@@ -265,9 +258,24 @@ export async function departureCounts(
           seat.id,
           latest === 0 ? "departure" : `after_dive_${latest}`,
           day,
-        )
+        );
+      const seatHasSailed = seatSailed({
+        noShow: seat.status === "no_show",
+        dockResult: said?.dock ?? null,
+        afterDiveResultStands: (said?.afterDive.size ?? 0) > 0,
+      });
+      if (held) booked += 1;
+      // A booking-only fallback is a forecast, not proof that an uncertain
+      // person was carried. An eligible explicit mark still speaks for itself.
+      if (
+        seatHasSailed &&
+        (!needsRecount || said?.dock === "boarded" || (said?.afterDive.size ?? 0) > 0)
       )
-        recountRequired += 1;
+        sailed += 1;
+      if (said?.dock === "boarded") boarded += 1;
+      if (latest > 0 && said?.afterDive.get(latest) === "boarded") back += 1;
+      if (said && isMissing(said.afterDive)) missing += 1;
+      if (needsRecount) recountRequired += 1;
       if (rosterRowIsBlocked(readiness.get(seat.id))) blocked += 1;
     }
     counts.set(

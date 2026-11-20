@@ -274,16 +274,11 @@ async function listLatestRollCallsByCheckpoint(
     })
     .from(rollCallEvents)
     .innerJoin(people, eq(people.id, rollCallEvents.recordedByPersonId))
-    .where(
-      and(
-        eq(rollCallEvents.shopId, shopId),
-        seatMarks(),
-        eq(rollCallEvents.tripId, tripId),
-        inArray(rollCallEvents.checkpoint, [...checkpoints]),
-      ),
-    )
+    .where(and(eq(rollCallEvents.shopId, shopId), seatMarks(), eq(rollCallEvents.tripId, tripId)))
     .orderBy(...newestMarkFirst());
-  const effective = await effectiveCausalRowsForDb(db, rows);
+  const effective = (await effectiveCausalRowsForDb(db, rows, { allSubjectEvents: true })).filter(
+    ({ event }) => checkpoints.includes(event.checkpoint as RollCallCheckpoint),
+  );
   // The newest result per booking and checkpoint on the meeting day being
   // counted (#2557): a course's later day starts empty, except that an
   // earlier day's stated missing diver stays on screen until counted again,
@@ -395,19 +390,14 @@ export async function listDepartureRollCallByTrip(
     .from(rollCallEvents)
     .innerJoin(bookings, and(eq(bookings.id, rollCallEvents.bookingId), seatNotCancelled))
     .where(
-      and(
-        eq(rollCallEvents.shopId, shopId),
-        seatMarks(),
-        inArray(rollCallEvents.tripId, tripIds),
-        eq(rollCallEvents.checkpoint, "departure"),
-      ),
+      and(eq(rollCallEvents.shopId, shopId), seatMarks(), inArray(rollCallEvents.tripId, tripIds)),
     )
     .orderBy(...newestMarkFirst());
-  const effective = await effectiveCausalRowsForDb(db, rows);
+  const effective = await effectiveCausalRowsForDb(db, rows, { allSubjectEvents: true });
   // Newest first, so the first row seen per booking is its latest event.
   const seen = new Set<string>();
   for (const row of effective) {
-    if (row.day !== row.currentDay) continue;
+    if (row.day !== row.currentDay || row.event.checkpoint !== "departure") continue;
     const event = asSeatMark(row.event);
     if (seen.has(event.bookingId)) continue;
     seen.add(event.bookingId);
@@ -464,7 +454,7 @@ export async function listBoardedAtAnyCheckpointByTrip(
       ),
     )
     .orderBy(...newestMarkFirst());
-  const effective = await effectiveCausalRowsForDb(db, rows);
+  const effective = await effectiveCausalRowsForDb(db, rows, { allSubjectEvents: true });
   // Newest first, so the first row per booking and checkpoint is that
   // checkpoint's standing result.
   const seen = new Set<string>();
@@ -539,11 +529,17 @@ async function seatRollCallRows(
   shopId: string,
   tripIds: readonly string[],
 ): Promise<AfterDiveRow[]> {
-  if (tripIds.length === 0) return [];
+  return (await seatRollCallProjection(db, shopId, tripIds)).rows;
+}
+
+async function seatRollCallProjection(db: DbExecutor, shopId: string, tripIds: readonly string[]) {
+  const uncertain = new Map<string, Set<string>>();
+  if (tripIds.length === 0) return { rows: [] as AfterDiveRow[], uncertain };
   const rows = await db
     .select({
       event: rollCallEvents,
       day: rollCallDayIndex(),
+      currentDay: rollCallCurrentDayIndex(),
     })
     .from(rollCallEvents)
     .innerJoin(bookings, and(eq(bookings.id, rollCallEvents.bookingId), seatNotCancelled))
@@ -555,8 +551,25 @@ async function seatRollCallRows(
       ),
     )
     .orderBy(...newestMarkFirst());
-  const effective = await effectiveCausalRowsForDb(db, rows);
-  return effective.map(({ event: raw, day }) => {
+  const projection = await rollCallProjectionForDb(db, rows, { allSubjectEvents: true });
+  for (const { event, currentDay } of rows) {
+    if (
+      !event.bookingId ||
+      !recountApplies(
+        projection.recount,
+        shopId,
+        event.tripId,
+        event.bookingId,
+        "after_dive_6",
+        currentDay,
+      )
+    )
+      continue;
+    const subjects = uncertain.get(event.tripId) ?? new Set<string>();
+    subjects.add(event.bookingId);
+    uncertain.set(event.tripId, subjects);
+  }
+  const effective = projection.rows.map(({ event: raw, day }) => {
     const event = asSeatMark(raw);
     return {
       tripId: event.tripId,
@@ -569,6 +582,7 @@ async function seatRollCallRows(
       retracts: event.retractsEventId,
     };
   });
+  return { rows: effective, uncertain };
 }
 
 /**
@@ -632,8 +646,9 @@ export async function readAfterDiveRollCallByTrip(
   afterDive: Map<string, Map<string, "boarded" | "missing_after_dive">>;
   unaccounted: Map<string, Set<string>>;
   checkpoints: Map<string, Map<string, Map<string, "boarded" | "not_boarded">>>;
+  uncertain: Map<string, Set<string>>;
 }> {
-  const rows = await seatRollCallRows(db, shopId, tripIds);
+  const { rows, uncertain } = await seatRollCallProjection(db, shopId, tripIds);
   const checkpoints = new Map<string, Map<string, Map<string, "boarded" | "not_boarded">>>();
   for (const row of foldStandingAfterDive(rows)) {
     const trip = checkpoints.get(row.tripId) ?? new Map();
@@ -646,6 +661,7 @@ export async function readAfterDiveRollCallByTrip(
     afterDive: foldAfterDiveByTrip(rows),
     unaccounted: foldUnaccountedByTrip(rows),
     checkpoints,
+    uncertain,
   };
 }
 

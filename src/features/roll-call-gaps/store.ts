@@ -427,9 +427,11 @@ export async function listRollCallGaps(
       )
       .orderBy(...oldestMarkFirst()),
   ]);
-  const projection = await rollCallProjectionForDb(db, rawEvents);
+  const projection = await rollCallProjectionForDb(db, rawEvents, { allSubjectEvents: true });
   const events = projection.rows.map(gapDiverEvent);
-  const crewProjection = await rollCallProjectionForDb(db, rawCrewEvents);
+  const crewProjection = await rollCallProjectionForDb(db, rawCrewEvents, {
+    allSubjectEvents: true,
+  });
   const crewEvents = crewProjection.rows.map(gapCrewEvent);
 
   // Seats the desk turned away: off the boat at any checkpoint nobody at the

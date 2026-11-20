@@ -20,7 +20,7 @@ const { POST } = await import("./route");
 function postRequest(body: unknown) {
   return new Request("http://localhost/api/offline-manifests/sync", {
     method: "POST",
-    headers: { "x-diveday-roll-call-protocol": "2", "content-type": "application/json" },
+    headers: { "x-diveday-roll-call-protocol": "3", "content-type": "application/json" },
     body: JSON.stringify(body),
   });
 }

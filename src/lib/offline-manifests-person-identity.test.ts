@@ -54,6 +54,7 @@ it("saves unresolved count markers for both passengers and crew", () => {
         emergencyContactName: null,
         emergencyContactPhone: null,
         recountRequired: true,
+        historicalReviewRequired: true,
       },
     ],
     divers: [
@@ -68,6 +69,7 @@ it("saves unresolved count markers for both passengers and crew", () => {
         nitroxRequested: false,
         readiness: { status: "ready", blockers: [] },
         historicalReviewRequired: true,
+        recountRequired: true,
       },
     ],
   });
@@ -82,5 +84,7 @@ it("saves unresolved count markers for both passengers and crew", () => {
     () => "",
   );
   expect(saved.manifests[0]?.crew[0]?.recountRequired).toBe(true);
+  expect(saved.manifests[0]?.crew[0]?.historicalReviewRequired).toBe(true);
   expect(saved.manifests[0]?.divers[0]?.historicalReviewRequired).toBe(true);
+  expect(saved.manifests[0]?.divers[0]?.recountRequired).toBe(true);
 });

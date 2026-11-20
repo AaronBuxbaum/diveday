@@ -119,8 +119,9 @@ export function effectiveCausalRows<T extends { event: CausalEvent; day: number 
 export async function effectiveCausalRowsForDb<T extends { event: CausalEvent; day: number }>(
   db: DbExecutor,
   rows: readonly T[],
+  options: { allSubjectEvents?: boolean } = {},
 ): Promise<T[]> {
-  return (await rollCallProjectionForDb(db, rows)).rows;
+  return (await rollCallProjectionForDb(db, rows, options)).rows;
 }
 
 export function recountKey(event: CausalEvent, day: number): string {
@@ -246,8 +247,11 @@ async function offlineSourcesForRows<T extends { event: CausalEvent; day: number
 export async function rollCallProjectionForDb<T extends { event: CausalEvent; day: number }>(
   db: DbExecutor,
   rows: readonly T[],
+  options: { allSubjectEvents?: boolean } = {},
 ): Promise<{ rows: T[]; recount: Set<string> }> {
-  const sources = [...rows, ...(await offlineSourcesForRows(db, rows))];
+  const sources = options.allSubjectEvents
+    ? rows
+    : [...rows, ...(await offlineSourcesForRows(db, rows))];
   const bound = sources.filter(
     ({ event }) =>
       event.source === "offline" &&
@@ -332,7 +336,7 @@ export async function rollCallProjectionForDb<T extends { event: CausalEvent; da
     ...new Set(stale.flatMap(({ event }) => (event.crewPersonId ? [event.crewPersonId] : []))),
   ];
   const laterLive =
-    tripIds.length && (seatIds.length || crewIds.length)
+    !options.allSubjectEvents && tripIds.length && (seatIds.length || crewIds.length)
       ? await db
           .select()
           .from(rollCallEvents)
