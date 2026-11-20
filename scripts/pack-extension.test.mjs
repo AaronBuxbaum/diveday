@@ -15,7 +15,7 @@ const manifest = (overrides = {}) => ({
   manifest_version: 3,
   version: "1.4.0",
   host_permissions: ["https://www.naui.org/*", "https://pro.padi.com/*"],
-  content_scripts: [{ matches: ["https://dive.day/shop/*"], js: ["protocol.js", "bridge.js"] }],
+  content_scripts: [{ matches: ["https://www.dive.day/shop/*"], js: ["protocol.js", "bridge.js"] }],
   ...overrides,
 });
 const PROTOCOL = 'const X = {\n  VERSION: "1.4.0",\n};\n';
@@ -53,11 +53,11 @@ describe("packingRefusals", () => {
     "http://localhost/shop/*",
     "https://localhost/*",
     "http://127.0.0.1/*",
-    "*://dive.day/shop/*",
-    "http://dive.day/shop/*",
+    "*://www.dive.day/shop/*",
+    "http://www.dive.day/shop/*",
   ])("refuses the local-testing match %s", (pattern) => {
     const found = refusals({
-      content_scripts: [{ matches: ["https://dive.day/shop/*", pattern], js: ["bridge.js"] }],
+      content_scripts: [{ matches: ["https://www.dive.day/shop/*", pattern], js: ["bridge.js"] }],
     });
     expect(found).toHaveLength(1);
     expect(found[0]).toContain(pattern);
@@ -87,7 +87,7 @@ describe("packingRefusals", () => {
     "<all_urls>",
     "https://*/*",
     "file:///*",
-    "https://dive.day/*",
+    "https://www.dive.day/*",
     "https://*.dive.day/shop/*",
   ])("refuses the content-script match %s, which is not DiveDay's staff pages", (pattern) => {
     const found = refusals({ content_scripts: [{ matches: [pattern], js: ["bridge.js"] }] });
