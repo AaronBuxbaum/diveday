@@ -4,6 +4,7 @@
 - **Date:** 2026-10-24
 - **Amends:** [20260815-per-test-private-shops](20260815-per-test-private-shops.md) (how the
   per-test reset is served, not what it restores)
+- **Amended by:** [20261120-e2e-purge-settles-by-set](20261120-e2e-purge-settles-by-set.md) (the purge)
 
 ## Context
 

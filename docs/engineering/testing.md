@@ -791,8 +791,9 @@ the acceptance evidence is reviewed and the trial lands (or is reverted for fail
   point each worker at its own server and reset the demo shop's schedule (`POST /api/test/reset`)
   before each test. A server's first reset is a real `resetDemoSchedule` and copies what it wrote;
   every later one runs the delete half and replays that copy (`src/features/demo-reset-snapshot/store.ts`, ADR
-  20261024-e2e-reset-replays-a-snapshot), and says in a `Server-Timing` header how it was served and
-  what it cost. Iterating on a
+  20261024-e2e-reset-replays-a-snapshot); the demos earlier tests minted are deleted the same way,
+  foreign-key checks settled by set (ADR 20261120-e2e-purge-settles-by-set), and says in a
+  `Server-Timing` header how it was served and what it cost. Iterating on a
   single spec, `playwright test <spec>` reuses the existing build; `next start`'s production runtime
   needs `AUTH_SECRET`/`AUTH_TRUST_HOST` and the `DIVEDAY_E2E` reset opt-in, which the config supplies.
 - **The reset restores the shop's schedule, not its settings — and a spec that writes settings takes

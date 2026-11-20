@@ -537,13 +537,21 @@ export async function reapExpiredDemoShops(
  * live demo" mints (age-based reaping is unreliable under the frozen e2e clock,
  * since `created_at` is a real wall-clock default).
  */
-export async function purgeMintedDemoShops(db: AppDb): Promise<number> {
+export async function purgeMintedDemoShops(
+  db: AppDb,
+  /**
+   * How one shop goes, inside its own transaction. The e2e reset passes one
+   * that runs this same cascade with its foreign-key triggers settled by set
+   * (`src/features/demo-reset-snapshot/store.ts`).
+   */
+  deleteShop: (tx: DbExecutor, shopId: string) => Promise<void> = deleteDemoShopCascade,
+): Promise<number> {
   const minted = await db
     .select({ id: shops.id })
     .from(shops)
     .where(and(eq(shops.isDemo, true), ne(shops.slug, DEMO_SHOP_SLUG)));
   for (const shop of minted) {
-    await db.transaction(async (tx) => deleteDemoShopCascade(tx, shop.id));
+    await db.transaction(async (tx) => deleteShop(tx, shop.id));
   }
   return minted.length;
 }

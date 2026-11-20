@@ -2,7 +2,6 @@ import { sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
 import { DEMO_SHOP_SLUG } from "@/db/demo-shop";
-import { purgeMintedDemoShops } from "@/db/seed";
 import { getShopBySlug } from "@/db/shops";
 import {
   clearNavigationGates,
@@ -10,7 +9,12 @@ import {
   testRouteRefused,
 } from "@/features/e2e-test-routes";
 import { expireShopRowsCaches } from "@/features/runtime-cache";
-import { type DemoReset, resetDemoFromSnapshot } from "../../../../features/demo-reset-snapshot";
+import {
+  type DemoPurge,
+  type DemoReset,
+  purgeMintedDemoShopsWithoutTriggers,
+  resetDemoFromSnapshot,
+} from "../../../../features/demo-reset-snapshot";
 import { restoreBootClock } from "../../../../features/test-clock";
 
 /**
@@ -54,10 +58,11 @@ export async function POST(request: Request) {
   const mode = reset?.mode ?? "skipped";
   const resetAt = performance.now();
   // Clear any disposable demo shops earlier tests minted via "Try the live
-  // demo", so they don't accumulate and bloat the shared test database.
-  const purged = await purgeMintedDemoShops(db);
+  // demo", so they don't accumulate and bloat the shared test database. Its
+  // foreign-key checks run by set, not per row (#4763).
+  const purged = await purgeMintedDemoShopsWithoutTriggers(db);
   const purgedAt = performance.now();
-  await reclaimDeadTuples(db, purged > 0 ? null : (reset?.wrote ?? null));
+  await reclaimDeadTuples(db, vacuumTables(reset?.wrote ?? null, purged));
   const doneAt = performance.now();
   const timing = {
     reset: resetAt - startedAt,
@@ -78,6 +83,17 @@ export async function POST(request: Request) {
       },
     },
   );
+}
+
+/**
+ * The tables this reset left dead tuples in: a replay's, plus a purge's when
+ * it can name them. Null asks for the whole database.
+ */
+function vacuumTables(replayed: string[] | null, purged: DemoPurge): string[] | null {
+  if (replayed === null) return null;
+  if (purged.shops === 0) return replayed;
+  if (purged.deletedFrom === null) return null;
+  return [...new Set([...replayed, ...purged.deletedFrom])].sort();
 }
 
 /**
@@ -183,9 +199,11 @@ async function reclaimDeadTuples(
     // A replay names the tables it deleted seeded rows from and wrote them
     // back to, which is where a round's dead tuples are: vacuuming those
     // alone cost a fraction of the whole database (catalogs and the
-    // snapshot's own copies included) on the same loaded box. The few rows a
-    // spec wrote elsewhere wait for the next whole vacuum, which anything
-    // other than a replay (a real reset, a purge of minted shops) still runs.
+    // snapshot's own copies included) on the same loaded box. A purge of
+    // minted shops adds the tables it deleted from, which skipped ~200ms of
+    // catalog vacuuming per reset after a minting test (#4763). The few rows a
+    // spec wrote elsewhere wait for the next whole vacuum, which a real reset
+    // or a purge that fell back to its triggers still runs.
     await db.execute(
       tables && tables.length > 0
         ? sql.raw(

@@ -261,6 +261,13 @@ export async function seedCatalog(db: DbExecutor, shopId: string) {
     minimumCertificationLevel: template.minimumCertificationLevel,
     isIntroCourse: template.content.isIntroCourse,
   }));
+  // The demo shop starts where a real shop does: every course pre-filled with
+  // DiveDay's default page copy. That default content is the shop's starting
+  // point — it edits from there. Open Water is the one a visitor is most
+  // likely to open, so it is the most complete. It goes in with the row, the
+  // first row a template names, rather than as an update per course after it
+  // (#4763: 54 statements of every mint).
+  const contentTaken = new Set<string>();
   const courseRows = await db
     .insert(courses)
     .values(
@@ -268,6 +275,8 @@ export async function seedCatalog(db: DbExecutor, shopId: string) {
         const template =
           templateByKey.get(templateKey(course.agency, course.title)) ??
           templateBySlug.get(courseSlug(course.title));
+        const content = template && !contentTaken.has(template.slug) ? template.content : null;
+        if (template) contentTaken.add(template.slug);
         const isIntroCourse = template?.content.isIntroCourse ?? course.isIntroCourse ?? false;
         const minimumCertificationLevel = template
           ? template.minimumCertificationLevel
@@ -306,6 +315,7 @@ export async function seedCatalog(db: DbExecutor, shopId: string) {
             ["discover-scuba-diving", "open-water-diver", "scuba-refresher"].includes(template.slug)
               ? [...CORE_RENTAL_KINDS]
               : [],
+          ...content,
         };
       }),
     )
@@ -313,15 +323,10 @@ export async function seedCatalog(db: DbExecutor, shopId: string) {
   const discoverCourse = courseRows.find((course) => course.title === "Discover Scuba Diving");
   if (!discoverCourse) throw new Error("seed: DSD course missing");
 
-  // The demo shop starts where a real shop does: every course pre-filled with
-  // DiveDay's default page copy. That default content is the shop's starting
-  // point — it edits from there. Open Water is the one a visitor is most
-  // likely to open, so it is the most complete.
   for (const template of COURSE_TEMPLATES) {
     const course = courseRows.find((row) => row.sourceTemplateSlug === template.slug);
     if (!course) continue;
-    await db.update(courses).set(template.content).where(eq(courses.id, course.id));
-    // And the forms its agency expects, by title and empty, the same as a
+    // The forms its agency expects, by title and empty, the same as a
     // template sync sets up (ADR 20261008-course-forms).
     await attachStandardCourseForms(db, {
       shopId,
