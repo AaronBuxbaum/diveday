@@ -1937,6 +1937,13 @@ select:not([multiple]):not([size]):dir(rtl) {
   animation-delay: calc(var(--type-delay, 0ms) + var(--i, 0) * var(--type-ms, 40ms));
 }
 
+/* A walk that does not play (reduced motion) never types: its fields hold the finished text. */
+@media (prefers-reduced-motion: reduce) {
+  [data-walk-phase="before"] [data-walk-before] [data-walk-char] {
+    animation: none;
+  }
+}
+
 /* Something that happens to the first screen in the first phase (`data-walk-late`, such as her tap
    on a choice): it is not there until `--late-delay`, and what it replaces (`data-walk-gone`) goes
    at the same moment. The tap phase and the finished screen show the result. */
