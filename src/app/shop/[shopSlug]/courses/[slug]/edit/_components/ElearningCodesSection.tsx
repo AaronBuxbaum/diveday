@@ -1,4 +1,4 @@
-import { Field, textareaClassFor } from "@/components/ui/form";
+import { ChoiceRow, Field, textareaClassFor } from "@/components/ui/form";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { MAX_ELEARNING_CODES_PER_PASTE } from "@/lib/course-codes";
 import { CourseSection, type CourseSectionRef } from "./CourseSection";
@@ -38,6 +38,16 @@ export function ElearningCodesSection({
           className={`${textareaClassFor(6)} font-mono`}
         />
       </Field>
+      {counts.left > 0 ? (
+        <ChoiceRow
+          type="checkbox"
+          name="removeUnusedElearningCodes"
+          value="true"
+          className="mt-4 text-sm"
+        >
+          {t("courses.edit.codesRemove", { left: counts.left })}
+        </ChoiceRow>
+      ) : null}
     </CourseSection>
   );
 }

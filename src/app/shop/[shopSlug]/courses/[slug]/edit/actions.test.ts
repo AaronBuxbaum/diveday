@@ -42,7 +42,10 @@ vi.mock("@/db/shop-text-translations", () => ({
   readTranslations: vi.fn(async () => new Map()),
   recordTranslation: vi.fn(async () => "saved"),
 }));
-vi.mock("@/db/course-codes", () => ({ recordCourseCodes: vi.fn(async () => ({ ok: true })) }));
+vi.mock("@/db/course-codes", () => ({
+  recordCourseCodes: vi.fn(async () => ({ ok: true })),
+  cancelUnusedCourseCodes: vi.fn(async () => ({ removed: 0 })),
+}));
 vi.mock("@/db/course-forms", () => ({
   courseFormListRefusal: vi.fn(async () => null),
   listCourseFormRequirements: vi.fn(async () => []),
@@ -64,7 +67,7 @@ const { canPersonEditCourseTemplates } = await import("@/db/authz");
 const { queueAndAttemptMediaDeletion } = await import("@/db/media-deletions");
 const { storeCourseImage } = await import("@/lib/storage");
 const { courseFormListRefusal, setCourseFormRequirements } = await import("@/db/course-forms");
-const { recordCourseCodes } = await import("@/db/course-codes");
+const { recordCourseCodes, cancelUnusedCourseCodes } = await import("@/db/course-codes");
 const { pullCourseTemplateUpdatesAction, saveCourseContentAction, setCourseVisibilityAction } =
   await import("./actions");
 
@@ -387,6 +390,17 @@ describe("saveCourseContentAction, with eLearning codes pasted", () => {
       courseId: COURSE_ID,
       text: "AAA1\nBBB2",
     });
+  });
+
+  it("removes the unused codes first when asked, then adds the paste", async () => {
+    await savedTo(
+      coursePage([
+        ["removeUnusedElearningCodes", "true"],
+        ["newElearningCodes", "CCC3"],
+      ]),
+    );
+    expect(cancelUnusedCourseCodes).toHaveBeenCalledOnce();
+    expect(recordCourseCodes).toHaveBeenCalledOnce();
   });
 
   it("adds nothing when the box is empty or the page did not draw it", async () => {

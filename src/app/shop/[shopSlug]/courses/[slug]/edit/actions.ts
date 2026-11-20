@@ -5,7 +5,7 @@ import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
 import { canPersonEditCourseTemplates } from "@/db/authz";
 import { getDb } from "@/db/client";
-import { recordCourseCodes } from "@/db/course-codes";
+import { cancelUnusedCourseCodes, recordCourseCodes } from "@/db/course-codes";
 import { queueAndAttemptMediaDeletion } from "@/db/media-deletions";
 import { getShopById } from "@/db/shops";
 import {
@@ -84,6 +84,8 @@ const contentSchemaFor = (currency: string) =>
     learningMaterialsJson: z.string().max(COURSE_CONTENT_LIMITS.learningMaterialsJson).optional(),
     // The eLearning codes pasted this time (ADR 20261120-course-elearning-codes); absent or blank adds none.
     newElearningCodes: z.string().max(20_000).optional(),
+    // Remove the unused codes first (a mistaken paste); handed-out codes stay.
+    removeUnusedElearningCodes: z.string().optional(),
     price: moneyFor(currency),
     eLearningPrice: moneyFor(currency),
     privatePrice: moneyFor(currency),
@@ -384,6 +386,9 @@ async function persistCourseContent(input: {
   // when the row disappears out from under it.
   if (!saved.ok) notFound();
   progress.landed = true;
+  if (value.removeUnusedElearningCodes === "true") {
+    await cancelUnusedCourseCodes(db, { shopId: staff.user.shopId, courseId: course.id });
+  }
   if (pastedCodes.codes.length > 0) {
     await recordCourseCodes(db, {
       shopId: staff.user.shopId,
