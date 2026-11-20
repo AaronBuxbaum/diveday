@@ -128,6 +128,10 @@
     "nextMonth": "Mes siguiente",
     "tripListLabel": "Próximas salidas",
     "monthNav": "Explorar por mes",
+    "monthView": "Ver el calendario del mes",
+    "listView": "Ver la lista",
+    "monthCalendar": "Calendario del mes",
+    "boatsWithRoom": "{count, plural, one {# barco con plazas} other {# barcos con plazas}}",
     "jumpToDay": "Ir a un día",
     "nextWithSpace": {
       "eyebrow": "Próxima salida con plazas",

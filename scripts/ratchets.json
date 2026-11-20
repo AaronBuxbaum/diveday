@@ -1080,7 +1080,7 @@
       }
     ],
     "src/app/(token)/ready/[token]/page.tsx": 613,
-    "src/app/s/[shopSlug]/page.tsx": 598,
+    "src/app/s/[shopSlug]/page.tsx": 597,
     "src/app/shop/[shopSlug]/gear/[id]/page.tsx": 577,
     "src/app/shop/[shopSlug]/orders/page.tsx": 507,
     "src/app/shop/[shopSlug]/page.tsx": 576,
