@@ -23,5 +23,9 @@ export function PageEnter({ children }: { children: ReactNode }) {
   useEffect(() => {
     hasShownAPage = true;
   }, []);
-  return <div className={animate ? "page-enter" : undefined}>{children}</div>;
+  return (
+    <div data-page-enter="" className={animate ? "page-enter" : undefined}>
+      {children}
+    </div>
+  );
 }
