@@ -14,7 +14,7 @@ import {
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { CREW_PUBLIC_NAME_MAX, defaultCrewPublicName } from "@/lib/crew-public-name";
 import type { PublicStaffProfile } from "@/lib/public-staff-profile";
-import { MAX_IMAGE_MB } from "@/lib/storage/limits";
+import { MAX_IMAGE_MB } from "@/lib/storage";
 import { saveCrewPublicConsentAction } from "../profile-actions";
 import { saveStaffProfileAction } from "../staff-profile-actions";
 export function PublicProfileSection({

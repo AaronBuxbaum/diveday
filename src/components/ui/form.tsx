@@ -551,9 +551,6 @@ export function Field({
   // a `useActionState` update), so the node is *inserted* carrying its text,
   // which is what an alert region announces. Same shape as `ImageFileInput`'s
   // client-side refusal, so both sound identical.
-  // At 14px with 2px more air than the 4px gap: the one line that says why a
-  // field was refused read as the smallest text on a phone, tucked against the
-  // control's focus ring (`diver-record-dob-clear-refused`).
   const errorSpan = error ? (
     <span id={errorId} role="alert" className="mt-0.5 text-sm font-medium text-danger">
       {error}
