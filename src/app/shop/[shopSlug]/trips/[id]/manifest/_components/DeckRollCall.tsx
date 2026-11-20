@@ -141,7 +141,7 @@ export function DeckRollCall({
           !diver.notHere &&
           !diver.turnedAway &&
           view.cancelled !== "closed" ? (
-            <div className="mb-8 space-y-3">
+            <div className="space-y-3">
               <p>{t("manifest.deck.physicalHint")}</p>
               {control("boarded", true)}
             </div>
