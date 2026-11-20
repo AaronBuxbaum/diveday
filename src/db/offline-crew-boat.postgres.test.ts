@@ -5,7 +5,8 @@ import {
 } from "@/features/offline-manifest-snapshots";
 import { nowDate } from "@/lib/clock";
 import { clientRollCallEvidenceId } from "@/lib/roll-call-causality";
-import { describePostgres, postgresTestDb } from "@/test/postgres";
+import { describePostgres, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
+import type { AppDb } from "./client";
 import { getTripManifest, recordCrewRollCall } from "./manifests";
 import { boats } from "./schema";
 import { seedDemo } from "./seed";
@@ -18,6 +19,89 @@ beforeAll(() => vi.stubEnv("DIVEDAY_OFFLINE_ROLL_CALL_WITNESS", "1"));
 afterAll(() => vi.unstubAllEnvs());
 
 describePostgres("offline crew count after a boat replacement", () => {
+  for (const order of ["boat first", "intake first"] as const)
+    it(`serializes a boat change and crew intake when ${order}`, async () => {
+      const pg = await postgresTestDb();
+      await seedDemo(pg.db, "lean");
+      const shop = await getShopBySlug(pg.db, "blue-mantis");
+      if (!shop) throw new Error("shop missing");
+      const trip = (await upcomingTripsWithCounts(pg.db, shop.id, new Date(0))).find((row) =>
+        row.title.startsWith("Two-Tank Reef — Molasses"),
+      );
+      const owner = (await listStaff(pg.db, shop.id)).find((staff) =>
+        staff.roles.includes("owner"),
+      );
+      if (!trip || !owner) throw new Error("fixture missing");
+      const saved = (await buildOfflineManifestCopies(pg.db, shop, owner.person.id, [trip.id]))
+        .payloads[0];
+      const crew = (await getTripManifest(pg.db, shop.id, trip.id, "departure"))?.crew[0];
+      if (!saved?.snapshotId || !crew) throw new Error("crew or snapshot missing");
+      const witness = saved.rollCallWitnesses?.[`crew:${crew.id}:departure`];
+      if (!witness) throw new Error("crew witness missing");
+      const [replacement] = await pg.db
+        .insert(boats)
+        .values({ shopId: shop.id, name: "Gated replacement", capacity: 200 })
+        .returning();
+      if (!replacement) throw new Error("boat missing");
+      const input = {
+        shopId: shop.id,
+        tripId: trip.id,
+        personId: crew.id,
+        recordedByPersonId: owner.person.id,
+        checkpoint: "departure" as const,
+        status: "boarded" as const,
+        source: "offline" as const,
+        clientEventId: crypto.randomUUID(),
+        meetingDay: saved.rollCallMeetingDay ?? 0,
+        offlineSnapshotId: saved.snapshotId,
+        offlineErasureEpochToken: saved.erasureEpochToken,
+        offlineSnapshotSavedAt: nowDate(),
+        observedEvidenceIds: [],
+        rollCallWitness: witness,
+      };
+      let entered!: () => void;
+      let release!: () => void;
+      const holding = new Promise<void>((resolve) => {
+        entered = resolve;
+      });
+      const gate = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      const first = pg.connect().transaction(async (tx) => {
+        const db = tx as unknown as AppDb;
+        const result =
+          order === "boat first"
+            ? await editTripSection(db, shop.id, trip.id, { boatId: replacement.id })
+            : await recordCrewRollCall(db, input);
+        entered();
+        await gate;
+        return result;
+      });
+      await Promise.race([
+        holding,
+        first.then(() => {
+          throw new Error("first transaction ended early");
+        }),
+      ]);
+      const second =
+        order === "boat first"
+          ? recordCrewRollCall(pg.connect(), input)
+          : editTripSection(pg.connect(), shop.id, trip.id, { boatId: replacement.id });
+      try {
+        await waitForLockWaiters(pg.db, 1);
+      } finally {
+        release();
+      }
+      expect(await first).toMatchObject({ ok: true });
+      expect(await second).toMatchObject(
+        order === "boat first" ? { ok: false, reason: "review_required" } : { ok: true },
+      );
+      const subject = (await getTripManifest(pg.db, shop.id, trip.id, "departure"))?.crew.find(
+        (item) => item.id === crew.id,
+      );
+      expect(subject?.rollCall).toBeUndefined();
+      expect(subject?.recountRequired).toBe(order === "intake first");
+    });
   for (const order of ["boat first", "intake first", "crew reassigned"] as const)
     it(`does not count a saved old-boat crew mark when ${order}`, async () => {
       const pg = await postgresTestDb();

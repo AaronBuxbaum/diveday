@@ -29,8 +29,7 @@ export async function liveCrewCaptureValid(
 ): Promise<boolean> {
   if (!offlineRollCallWitnessEnabled()) return true;
   const { causal, recount } = await manifestRollCallReads(db, input.shopId, input.tripId);
-  if (recountHasUnknownDay(recount, input.shopId, input.tripId, `crew:${input.personId}`))
-    return false;
+  const unknownDay = recountHasUnknownDay(recount, input.shopId, input.tripId, `crew:${input.personId}`);
   const requires = recountApplies(
     recount,
     input.shopId,
@@ -39,7 +38,7 @@ export async function liveCrewCaptureValid(
     input.checkpoint,
     causal.meetingDay,
   );
-  if (!requires && !proof) return true;
+  if (!requires && !unknownDay && !proof) return true;
   if (!proof || proof.meetingDay !== causal.meetingDay || meetingDay !== proof.meetingDay)
     return false;
   const witness = verifyRollCallWitness(proof.witness, {

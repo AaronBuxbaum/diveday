@@ -32,6 +32,7 @@
   "summaryAshore": "Ashore",
   "summaryAwaiting": "Awaiting",
   "recountRequired": "{count, plural, one {# person needs a recount} other {# people need a recount}}",
+  "historicalReviewRequired": "{count, plural, one {An earlier observation for # person needs review} other {Earlier observations for # people need review}}",
   "soulsOnBoardOverlap": "{count, plural, one {# person has both roles} other {# people have both roles}}",
   "soulsOnBoardLine": "Passengers {passengers} · Crew {crew} · Souls on board {souls}",
   "soulsOnBoardLineSplit": "Passengers {passengers} ({split}) · Crew {crew} · Souls on board {souls}",

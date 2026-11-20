@@ -234,7 +234,7 @@ export async function readOfflineManifestRosterWithWindows(
         offlineRollCallWitnessEnabled() &&
         manifests.some(
           (manifest) =>
-            manifest.divers.some((diver) => diver.recountRequired) || manifest.crew.length > 0,
+            manifest.divers.some((diver) => diver.recountRequired || diver.historicalReviewRequired) || manifest.crew.length > 0,
         )
       ) {
         const seats = await tx
@@ -256,7 +256,7 @@ export async function readOfflineManifestRosterWithWindows(
             const context = diver.rollCallContext;
             const generation = generations.get(diver.bookingId);
             if (
-              !diver.recountRequired ||
+              (!diver.recountRequired && !diver.historicalReviewRequired) ||
               !diver.personId ||
               !context ||
               context.unknownMeetingDay ||

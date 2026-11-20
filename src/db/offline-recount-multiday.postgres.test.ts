@@ -200,6 +200,12 @@ describePostgres("recount across meeting days", () => {
       .update(rollCallEvents)
       .set({ meetingDay: null })
       .where(and(eq(rollCallEvents.tripId, trip.id), eq(rollCallEvents.source, "offline")));
+    const [anotherBoat] = await pg.db
+      .insert(boats)
+      .values({ shopId: shop.id, name: "Another replacement", capacity: 200 })
+      .returning();
+    if (!anotherBoat) throw new Error("boat missing");
+    expect(await editTripSection(pg.db, shop.id, trip.id, { boatId: anotherBoat.id })).toMatchObject({ ok: true });
     const ambiguous = await getTripManifest(pg.db, shop.id, trip.id, "after_dive_1");
     expect(ambiguous?.divers.find((item) => item.bookingId === seat.booking.id)).toMatchObject({
       recountRequired: true,
@@ -225,7 +231,7 @@ describePostgres("recount across meeting days", () => {
         source: "live",
         liveRecountProof: ambiguousProof,
       }),
-    ).toMatchObject({ ok: false, reason: "review_required" });
+    ).toMatchObject({ ok: true });
     const ambiguousCrewProof = ambiguousPage?.manifests
       .find((item) => item.checkpoint === "after_dive_1")
       ?.crew.find((item) => item.id === crew.id)?.rollCallContext?.liveRecountProof;
@@ -240,6 +246,17 @@ describePostgres("recount across meeting days", () => {
         source: "live",
         liveRecountProof: ambiguousCrewProof,
       }),
-    ).toMatchObject({ ok: false, reason: "review_required" });
+    ).toMatchObject({ ok: true });
+    const recounted = await getTripManifest(pg.db, shop.id, trip.id, "after_dive_1");
+    expect(recounted?.divers.find((item) => item.bookingId === seat.booking.id)).toMatchObject({
+      recountRequired: false,
+      historicalReviewRequired: true,
+      rollCall: { state: "boarded" },
+    });
+    expect(recounted?.crew.find((item) => item.id === crew.id)).toMatchObject({
+      recountRequired: false,
+      historicalReviewRequired: true,
+      rollCall: { state: "boarded" },
+    });
   });
 });

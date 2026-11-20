@@ -90,6 +90,7 @@ import {
   manifestRollCallReads,
   prepareCausalRollCall,
   recountApplies,
+  recountHasUnknownDay,
   refreshCausalRollCall,
   rollCallProjectionForDb,
 } from "./roll-call-causal-store";
@@ -1491,6 +1492,7 @@ export async function getTripManifests(
       checkpoint,
       crew: crew.map((member) => ({
         ...member,
+        historicalReviewRequired: recountHasUnknownDay(recount, shopId, tripId, `crew:${member.id}`),
         ...manifestRecount(
           recountApplies(
             recount,
@@ -1512,6 +1514,7 @@ export async function getTripManifests(
       })),
       divers: diverInputs.map((diver) => ({
         ...diver,
+        historicalReviewRequired: recountHasUnknownDay(recount, shopId, tripId, diver.bookingId),
         ...manifestRecount(
           recountApplies(recount, shopId, tripId, diver.bookingId, checkpoint, causal.meetingDay),
           causalRecord(

@@ -339,6 +339,11 @@ export function SummaryPanel({
             {t("manifest.recountRequired", { count: summary.recountRequired ?? 0 })}
           </p>
         ) : null}
+        {(summary.historicalReviewRequired ?? 0) > 0 ? (
+          <p className="mt-2 text-base font-bold text-danger" role="status">
+            {t("manifest.historicalReviewRequired", { count: summary.historicalReviewRequired ?? 0 })}
+          </p>
+        ) : null}
         {/* Everything below stays *pinned*: each of these lines says a person
             is unaccounted for, and a captain scrolling the roster must not be
             able to push that off the top of the screen. */}

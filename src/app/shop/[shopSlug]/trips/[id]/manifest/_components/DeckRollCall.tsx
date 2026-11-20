@@ -239,6 +239,11 @@ export function DeckRollCall({
               {t("manifest.recountRequired", { count: manifest.summary.recountRequired ?? 0 })}
             </p>
           ) : null}
+          {(manifest.summary.historicalReviewRequired ?? 0) > 0 ? (
+            <p className="text-danger" role="status">
+              {t("manifest.historicalReviewRequired", { count: manifest.summary.historicalReviewRequired ?? 0 })}
+            </p>
+          ) : null}
           <MixedTrainingDepthWarning
             show={mixedTrainingDepthAdvisory(
               divers.flatMap((diver) =>

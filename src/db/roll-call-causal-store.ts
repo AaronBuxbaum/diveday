@@ -148,6 +148,10 @@ export function recountScopeKey(
   ]);
 }
 
+function currentUnknownKey(shopId: string, tripId: string, subjectId: string, checkpoint: string, day: number) {
+  return `current:${recountScopeKey(shopId, tripId, subjectId, checkpoint, day)}`;
+}
+
 /** Unresolved earlier and unknown-day presence stays visible at later counts. */
 export function recountApplies(
   recount: ReadonlySet<string>,
@@ -162,7 +166,10 @@ export function recountApplies(
   if (current < 0) return false;
   for (let index = 0; index <= 6; index++) {
     const source = index === 0 ? "departure" : `after_dive_${index}`;
-    if (recount.has(recountScopeKey(shopId, tripId, subjectId, source, -1))) return true;
+    if (
+      recount.has(recountScopeKey(shopId, tripId, subjectId, source, -1)) &&
+      !recount.has(currentUnknownKey(shopId, tripId, subjectId, checkpoint, day))
+    ) return true;
     for (let earlier = 0; earlier < day; earlier++)
       if (recount.has(recountScopeKey(shopId, tripId, subjectId, source, earlier))) return true;
     if (index <= current && recount.has(recountScopeKey(shopId, tripId, subjectId, source, day)))
@@ -411,6 +418,27 @@ export async function rollCallProjectionForDb<T extends { event: CausalEvent; da
       );
     });
     if (!resolved) recount.add(key);
+  }
+  // A current, witnessed physical count can answer the present checkpoint without
+  // assigning an unknown historical observation to a made-up day.
+  for (const [key, events] of liveByKey) {
+    const live = events.reduce<CausalEvent | undefined>(
+      (latest, candidate) => (!latest || latest.seq < candidate.seq ? candidate : latest),
+      undefined,
+    );
+    if (!live || live.meetingDay === null || live.captureContext?.liveRecountVerified !== true ||
+        (live.statementStatus ?? live.status) === "cleared") continue;
+    const subjectId = live.bookingId ?? (live.crewPersonId ? `crew:${live.crewPersonId}` : null);
+    if (!subjectId || !recountHasUnknownDay(recount, live.shopId, live.tripId, subjectId)) continue;
+    if (stale.some(({ event, day }) => day === -1 && event.shopId === live.shopId &&
+      event.tripId === live.tripId && (event.bookingId ?? (event.crewPersonId ? `crew:${event.crewPersonId}` : null)) === subjectId && event.seq >= live.seq)) continue;
+    const seat = live.bookingId ? byId.get(live.bookingId) : undefined;
+    const crew = live.crewPersonId ? crewById.get(`${live.tripId}:${live.crewPersonId}`) : undefined;
+    if ((seat && seat.shopId === live.shopId && seat.tripId === live.tripId &&
+         live.offlineMeetingGeneration === seat.meeting && live.offlineAssignmentGeneration === seat.assignment) ||
+        (crew && crew.shopId === live.shopId && live.offlineMeetingGeneration === crew.meeting &&
+         live.offlineCrewAssignmentId === crew.incarnation))
+      recount.add(`current:${key}`);
   }
   const kept = rows.filter(({ event, day }) => {
     const subjectId = event.bookingId ?? (event.crewPersonId ? `crew:${event.crewPersonId}` : null);

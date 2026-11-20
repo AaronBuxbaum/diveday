@@ -49,8 +49,7 @@ export async function validateOfflineRollCallCapture(
     return { ok: false as const };
   if (source === "live" && offlineRollCallWitnessEnabled()) {
     const { causal, recount } = await manifestRollCallReads(tx, input.shopId, input.tripId);
-    if (recountHasUnknownDay(recount, input.shopId, input.tripId, input.bookingId))
-      return { ok: false as const };
+    const unknownDay = recountHasUnknownDay(recount, input.shopId, input.tripId, input.bookingId);
     const needsRecount = recountApplies(
       recount,
       input.shopId,
@@ -59,7 +58,7 @@ export async function validateOfflineRollCallCapture(
       checkpoint,
       causal.meetingDay,
     );
-    if ((needsRecount || input.liveRecountProof) && !input.reviewWitness) {
+    if ((needsRecount || unknownDay || input.liveRecountProof) && !input.reviewWitness) {
       const proof = input.liveRecountProof;
       if (!proof || proof.meetingDay !== causal.meetingDay || input.meetingDay !== proof.meetingDay)
         return { ok: false as const };

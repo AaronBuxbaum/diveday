@@ -290,6 +290,7 @@ export type ManifestDiverInput = {
   rollCall?: RollCallRecord;
   /** A prior offline presence needs a fresh count for this meeting. */
   recountRequired?: boolean;
+  historicalReviewRequired?: boolean;
   rollCallContext?: RollCallCausalContext;
   /**
    * The buddy team staff put this diver on, when they did
@@ -361,6 +362,7 @@ export type ManifestDiverInput = {
 
 export type ManifestCrewMember = {
   recountRequired?: boolean;
+  historicalReviewRequired?: boolean;
   /**
    * The crew member's `people.id` — the **subject** of their roll-call result
    * (ADR 20260803-per-person-crew-roll-call). Carrying it is what made a
@@ -1105,6 +1107,7 @@ export type TripManifest = {
     awaiting: number;
     /** A subset of awaiting whose earlier offline observation needs a fresh count. */
     recountRequired?: number;
+    historicalReviewRequired?: number;
     /**
      * `awaiting + notBackAboard`. The number that decides whether this
      * checkpoint's diver half is closed — never `awaiting` on its own.
@@ -1309,6 +1312,10 @@ export function buildTripManifest(input: {
     recountRequired: physicalPeople(
       counted.filter((diver) => diver.recountRequired),
       crew.filter((member) => member.recountRequired),
+    ),
+    historicalReviewRequired: physicalPeople(
+      counted.filter((diver) => diver.historicalReviewRequired),
+      crew.filter((member) => member.historicalReviewRequired),
     ),
     unaccountedFor: awaiting + notBackAboard,
     // Unknown capacity is silence, never an all-clear — the field's own
