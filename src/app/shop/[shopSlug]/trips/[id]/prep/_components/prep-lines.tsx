@@ -52,9 +52,7 @@ export const unitLine = (
   forNitroxDiver = false,
 ) =>
   [
-    // The tag and its size hold together: wrapped between them, "Proposed:
-    // Boots #10 · 10" left a lone "· 10" on a phone's second line.
-    unit.size ? `${unit.label}\u00a0·\u00a0${unit.size}` : unit.label,
+    unit.size ? `${unit.label} · ${unit.size}` : unit.label,
     // A wetsuit's thickness, so a staffer picking by hand sees the 3 mm from
     // the 7 mm without reading it off a tag (issue #2206).
     unit.thicknessMm ? t("gear.prep.optionThickness", { mm: unit.thicknessMm }) : null,

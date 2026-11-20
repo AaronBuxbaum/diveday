@@ -105,7 +105,7 @@ describe("proposed units on the Gear tab", () => {
     fireEvent.click(screen.getByRole("button", { name: t("gear.prep.proposal.pick") }));
     expect(
       screen.getByRole("option", {
-        name: `BCD #4\u00a0·\u00a0S · ${t("gear.prep.optionServiceConcern")}`,
+        name: `BCD #4 · S · ${t("gear.prep.optionServiceConcern")}`,
       }),
     ).toBeInTheDocument();
   });
