@@ -4,6 +4,7 @@ import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { trips } from "./schema";
 import { createTrip, pagedUpcomingTripsWithCounts } from "./trips";
+import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
 /** One PGlite for the file, a rolled-back transaction per test (issue #1244). */
 const ctx = fileScopedShopContext();
@@ -77,5 +78,65 @@ describe("paged schedule, reading backward", () => {
     const firstPage = await pagedUpcomingTripsWithCounts(db, shop.id);
     expect(forgedPage.trips.map((t) => t.id)).toEqual(firstPage.trips.map((t) => t.id));
     expect(forgedPage.prevCursor).toBeNull();
+  });
+});
+
+/**
+ * **The page is chosen before seats are counted** (issue #4394). With no seat
+ * filter the read picks the page's ids first and counts those rows only; with
+ * `hasSpace` the count decides which rows qualify, so it counts first. Each read must walk the
+ * unbounded fixture read's rows in its order, with its counts.
+ */
+describe("paged schedule, counting only the page", () => {
+  it("walks the same pages with and without a seat filter, with the fixture read's counts", async () => {
+    const { db, shop } = ctx;
+    const startsAt = new Date(nowDate().getTime() + 500 * 24 * 60 * 60 * 1000);
+    const endsAt = new Date(startsAt.getTime() + 4 * 60 * 60 * 1000);
+    for (let n = 0; n < 5; n++) {
+      await createTrip(db, {
+        shopId: shop.id,
+        title: `Counted ${n}`,
+        startsAt,
+        endsAt,
+        capacity: 10,
+        plannedDives: 2,
+      });
+    }
+    const everything = await upcomingTripsWithCounts(db, shop.id);
+
+    for (const limit of [1, 3, 7, 50]) {
+      const walks = await Promise.all(
+        [undefined, true].map(async (hasSpace) => {
+          const rows: Page["trips"] = [];
+          let cursor: string | undefined;
+          for (let hops = 0; hops < 200; hops++) {
+            const page = await pagedUpcomingTripsWithCounts(db, shop.id, {
+              cursor,
+              limit,
+              hasSpace,
+            });
+            rows.push(...page.trips);
+            if (!page.nextCursor) break;
+            cursor = page.nextCursor;
+          }
+          return rows;
+        }),
+      );
+      const withRoom = everything.filter((t) => t.booked < t.sellableCapacity);
+      for (const [index, rows] of walks.entries()) {
+        const expected = index === 0 ? everything : withRoom;
+        expect(rows.map((t) => t.id)).toEqual(expected.map((t) => t.id));
+        expect(rows.map((t) => [t.booked, t.bookedDivers])).toEqual(
+          expected.map((t) => [t.booked, t.bookedDivers]),
+        );
+      }
+    }
+  });
+
+  it("returns an empty page, with no cursors, when nothing is upcoming", async () => {
+    const { db, shop } = ctx;
+    const far = new Date(nowDate().getTime() + 5000 * 24 * 60 * 60 * 1000);
+    const page = await pagedUpcomingTripsWithCounts(db, shop.id, { from: far });
+    expect(page).toEqual({ trips: [], nextCursor: null, prevCursor: null });
   });
 });
