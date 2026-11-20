@@ -20,7 +20,7 @@ import type {
 } from "@/lib/courses";
 import type { RentableItemKind } from "@/lib/rentals";
 import { appNowTimestamp } from "./columns";
-import { certificationLevel, shops } from "./core";
+import { certificationLevel, people, shops } from "./core";
 
 /**
  * Courses (the date requests divers send about them are `interests`, `./interests.ts`).
@@ -296,5 +296,43 @@ export const courses = pgTable(
  * certification progression is gone, catalog order carries what it said
  * (ADR 20260805-remove-certification-paths).
  */
+
+/**
+ * **Which sessions of a course a student has completed** (ADR 20261120-course-session-progress).
+ * One row per student, course and outline step, stamped with the staffer and the time. The shop's
+ * own word, never agency evidence, and nothing in admission, readiness, the manifest or Certify
+ * reads it. A step is named by its outline title, so the row survives a course whose outline
+ * is reordered. Taking a tick back deletes the row.
+ */
+export const courseSessionProgress = pgTable(
+  "course_session_progress",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    personId: uuid("person_id")
+      .notNull()
+      .references(() => people.id, { onDelete: "cascade" }),
+    courseId: uuid("course_id")
+      .notNull()
+      .references(() => courses.id),
+    stepTitle: text("step_title").notNull(),
+    doneAt: appNowTimestamp("done_at").notNull(),
+    doneByPersonId: uuid("done_by_person_id")
+      .notNull()
+      .references(() => people.id),
+  },
+  (t) => [
+    uniqueIndex("course_session_progress_step_unique").on(
+      t.shopId,
+      t.personId,
+      t.courseId,
+      t.stepTitle,
+    ),
+    index("course_session_progress_course_idx").on(t.courseId),
+    check("course_session_progress_step_named", sql`length(btrim(${t.stepTitle})) > 0`),
+  ],
+);
 
 export type Course = typeof courses.$inferSelect;

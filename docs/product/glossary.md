@@ -245,6 +245,7 @@ word in a message bundle fails `pnpm check:repo`. The Spanish reasoning is
 - Course page
 - Course personal kit
 - Course preparation follow-up
+- Course progress
 - Course session
 - Courtesy message
 - Crew clash

@@ -333,6 +333,7 @@ async function readPersonalInstrumentHistory(
   return {
     priorVisitRows: await readScoped(tx, "priorVisits", scope),
     tripCreditRows: await readScoped(tx, "tripCreditEntries", scope),
+    courseSessionProgressRows: await readScoped(tx, "courseSessionProgress", scope),
     computerImportBatchesRows: await readScoped(tx, "computerImportBatches", scope),
     computerDivesRows: await readScoped(tx, "computerDives", scope),
     computerDiveProfilesRows: await readScoped(tx, "computerDiveProfiles", scope),
@@ -1484,6 +1485,8 @@ export async function loadShopExportCounts(
     "departure_boat_safety_snapshots.csv": async () =>
       scoped("departure_boat_safety_snapshots.csv", "departureBoatSafetySnapshots"),
     "prior_visits.csv": async () => scoped("prior_visits.csv", "priorVisits"),
+    "course_session_progress.csv": async () =>
+      scoped("course_session_progress.csv", "courseSessionProgress"),
     "computer_import_batches.csv": async () =>
       scoped("computer_import_batches.csv", "computerImportBatches"),
     "computer_dives.csv": async () => scoped("computer_dives.csv", "computerDives"),

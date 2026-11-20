@@ -3,6 +3,7 @@ import {
   markCardProcessedAction,
   saveCourseNextStepAction,
   setCourseMaterialsDoneAction,
+  setCourseStepDoneAction,
 } from "../course-actions";
 import { elearningCheckAction } from "../elearning-actions";
 import { referralStudentAction } from "../referral-actions";
@@ -25,6 +26,7 @@ export function courseRosterActions(isCourseSession: boolean, shopSlug: string, 
     saveCourseNextStepAction: saveCourseNextStepAction.bind(null, shopSlug, tripId),
     markCardProcessedAction: markCardProcessedAction.bind(null, shopSlug, tripId),
     setCourseMaterialsDoneAction: setCourseMaterialsDoneAction.bind(null, shopSlug, tripId),
+    setCourseStepDoneAction: setCourseStepDoneAction.bind(null, shopSlug, tripId),
     elearningCheckAction: elearningCheckAction.bind(null, shopSlug, tripId),
     // A referral student and the papers the desk collects (loop 5, row 10).
     referralStudentAction: referralStudentAction.bind(null, shopSlug, tripId),

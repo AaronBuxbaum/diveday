@@ -145,6 +145,13 @@ exports[`the diver bundle's headers > are exactly the columns decided for the di
     "created_at",
     "form_body",
   ],
+  "course_session_progress.csv": [
+    "id",
+    "person_id",
+    "course_id",
+    "step_title",
+    "done_at",
+  ],
   "customer_gear_items.csv": [
     "id",
     "kind",

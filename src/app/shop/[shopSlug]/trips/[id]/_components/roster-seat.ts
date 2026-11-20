@@ -5,7 +5,7 @@ import { readinessBlockerText } from "@/i18n/readiness-labels";
 import { ageOnDate, birthdayCallout, isMinorOnDate } from "@/lib/age";
 import { checkDrysuitCard } from "@/lib/drysuit-card";
 import { depthAdvisoryIn } from "@/lib/findings";
-import { formatDateTimeTz, formatMoneyCents } from "@/lib/format";
+import { formatDateTimeTz, formatMoneyCents, formatShortDate } from "@/lib/format";
 import { guardianSignatureOf, guardianSignatureRequired } from "@/lib/guardian";
 import { heldSeatBlockers } from "@/lib/identity-match";
 import { cachedListFormat } from "@/lib/intl-cache";
@@ -63,6 +63,7 @@ function courseSeatActions(actions: RosterRowContext["actions"]) {
     saveCourseNextStepAction,
     markCardProcessedAction,
     setCourseMaterialsDoneAction,
+    setCourseStepDoneAction,
     referralStudentAction,
     elearningCheckAction,
     recordPaperCourseFormAction,
@@ -71,6 +72,7 @@ function courseSeatActions(actions: RosterRowContext["actions"]) {
     saveCourseNextStepAction,
     markCardProcessedAction,
     setCourseMaterialsDoneAction,
+    setCourseStepDoneAction,
     referralStudentAction,
     elearningCheckAction,
     recordPaperCourseFormAction,
@@ -115,6 +117,7 @@ export function rosterSeat(entry: RosterEntry, settled: boolean, context: Roster
     splitAsksDateOfBirth = false,
     certifyDefaultLevel = null,
     courseHasMaterials = false,
+    courseSteps = [],
     courseMaterialsOpen = false,
   } = trip;
   const {
@@ -127,6 +130,7 @@ export function rosterSeat(entry: RosterEntry, settled: boolean, context: Roster
     elearningQueryByBooking,
     elearningChecksOff,
     courseMaterialsDoneByPerson,
+    courseProgressByPerson,
     issuedCardByPerson,
     sameNameHeldSeats,
     sameNamePeople,
@@ -171,6 +175,16 @@ export function rosterSeat(entry: RosterEntry, settled: boolean, context: Roster
     (booking.courseMaterialsDoneAt
       ? { at: booking.courseMaterialsDoneAt, byName: null as string | null }
       : null);
+  // Which outline steps this student has been ticked through, each with its own "Nov 5 · Ana"
+  // line once done. The shop's word: nothing in readiness or boarding reads it.
+  const courseProgress = courseSteps.map((title) => {
+    const done = courseProgressByPerson?.get(person.id)?.get(title);
+    const date = done ? formatShortDate(done.at, locale, shopTimezone) : null;
+    return {
+      title,
+      doneLine: done && date ? (done.byName ? `${date} · ${done.byName}` : date) : null,
+    };
+  });
   const materialsPending = courseHasMaterials && courseMaterialsOpen && !materialsDone;
   const seatRow = readinessByBooking.get(booking.id);
   const readiness = seatRow?.readiness;
@@ -399,6 +413,7 @@ export function rosterSeat(entry: RosterEntry, settled: boolean, context: Roster
     removeRefusedAboard: aboardAtSea?.get(booking.id) ?? null,
     carriedChartersNote,
     materialsDone,
+    courseProgress,
     materialsPending,
     readiness,
     paymentStatus,

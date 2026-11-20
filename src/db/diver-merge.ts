@@ -778,6 +778,7 @@ export const DIVER_MERGE_COUNT_GROUPS = {
     "computer_dive_profiles",
     "computer_dives",
     "computer_import_batches",
+    "course_session_progress",
   ],
   media: ["media_deletion_attempts", "private_person_photo_uploads"],
   lists: ["interests", "capabilities", "trip_blowout_divers", "recovery_activity_participants"],
@@ -1179,6 +1180,12 @@ export async function mergeDiverRecords(input: {
           sql`delete from ${sql.raw(quotedTable(tableName))} where "shop_id" = ${input.shopId} and "person_id" = ${sourceWins ? survivor.id : source.id}`,
         );
       }
+
+      // A ticked course step is one row per person, course and step: where both
+      // records ticked the same step, the kept record's tick stands.
+      await tx.execute(
+        sql`delete from "course_session_progress" where "shop_id" = ${input.shopId} and "person_id" = ${source.id} and ("course_id", "step_title") in (select "course_id", "step_title" from "course_session_progress" where "shop_id" = ${input.shopId} and "person_id" = ${survivor.id})`,
+      );
 
       // Interests are unique per person per departure (both records on one
       // departure's wait list, or both offered it, would collide on the

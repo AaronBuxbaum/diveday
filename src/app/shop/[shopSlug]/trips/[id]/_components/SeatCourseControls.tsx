@@ -27,6 +27,8 @@ export function SeatCourseControls({
   saveCourseNextStepAction,
   nextStep,
   setCourseMaterialsDoneAction,
+  setCourseStepDoneAction,
+  progress = [],
   materialsDoneLine,
   certifyMaterialsNote = null,
   markCardProcessedAction,
@@ -42,6 +44,10 @@ export function SeatCourseControls({
   saveCourseNextStepAction?: (formData: FormData) => void;
   nextStep: string;
   setCourseMaterialsDoneAction?: (formData: FormData) => void;
+  /** Tick one outline step done, or take it back (ADR 20261120-course-session-progress). */
+  setCourseStepDoneAction?: (formData: FormData) => void;
+  /** The course outline's steps for this student, each with "Nov 5 · Ana" once ticked. */
+  progress?: readonly { title: string; doneLine: string | null }[];
   /** "Materials done · Oct 7" once ticked; null while they are not. */
   materialsDoneLine: string | null;
   /**
@@ -93,6 +99,48 @@ export function SeatCourseControls({
               : t("trips.roster.materialsMarkDone")}
           </SubmitButton>
         </form>
+      ) : null}
+
+      {/* **Course progress** (ADR 20261120-course-session-progress): which sessions of the
+          outline this student has been through, carried across the course's departures. The
+          shop's own word; nothing in boarding or Certify reads it. */}
+      {setCourseStepDoneAction && progress.length > 0 ? (
+        <details className="mt-3">
+          <summary
+            className={buttonClass({
+              variant: "secondary",
+              size: "sm",
+              className: "cursor-pointer list-none",
+            })}
+          >
+            {t("trips.roster.progressSummary", {
+              done: progress.filter((step) => step.doneLine).length,
+              total: progress.length,
+            })}
+          </summary>
+          <ul className="mt-2 space-y-1 text-sm">
+            {progress.map(({ title, doneLine }) => (
+              <li key={title}>
+                <form
+                  action={setCourseStepDoneAction}
+                  className="flex flex-wrap items-center gap-x-3 gap-y-1"
+                >
+                  <input type="hidden" name="bookingId" value={bookingId} />
+                  <input type="hidden" name="step" value={title} />
+                  <input type="hidden" name="done" value={doneLine ? "false" : "true"} />
+                  <span className={doneLine ? "text-muted" : "font-medium"}>{title}</span>
+                  {doneLine ? <span className="text-muted">{doneLine}</span> : null}
+                  <SubmitButton
+                    pendingLabel={t("words.busy.saving")}
+                    className={buttonClass({ variant: "link", size: "sm", flush: true })}
+                  >
+                    {doneLine ? t("trips.roster.progressUndo") : t("trips.roster.progressMark")}
+                  </SubmitButton>
+                </form>
+              </li>
+            ))}
+          </ul>
+        </details>
       ) : null}
 
       {/* **A referral student** (loop 5, row 10): theory and pool done with

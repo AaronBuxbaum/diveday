@@ -773,6 +773,7 @@
   and enrolled students. Instructor-to-student **ratios** are agency-mandated and vary by
   course and environment. A course session can plan up to five dives; an ordinary departure
   can plan up to four. The count is a plan, not a record of underwater groups or completed dives.
+- **Course progress** — which outline sessions of a course the instructor has ticked for a student (a note, not an agency skill sign-off), one tick per student and outline day, stamped with the staffer and the time (`course_session_progress`, [ADR 20261120-course-session-progress](../../architecture/decisions/20261120-course-session-progress.md)). It belongs to the student's course, not one departure, so a pool-night tick shows on the open-water weekend. It is the shop's word, never agency evidence, and never gates admission, readiness, the manifest or Certify. `src/features/course-progress/store.ts`.
 - **Meeting day** — one dated window of a departure that meets on more than one day (a course on
   two Saturdays, a pool night then an open-water weekend), stored in `trip_schedule_days`. Each
   has its own hours and its own roll call: a result belongs to the meeting day it was taken on,

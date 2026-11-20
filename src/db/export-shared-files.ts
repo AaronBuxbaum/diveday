@@ -1926,6 +1926,27 @@ export const DIVE_PACKAGE_ENTITLEMENTS_CSV = sharedFile<ShopRow<"entitlementRows
   },
 });
 
+/** Which outline sessions of a course each student has been ticked through, and by whom. */
+export const COURSE_SESSION_PROGRESS_CSV = sharedFile<ShopRow<"courseSessionProgressRows">>({
+  file: "course_session_progress.csv",
+  columns: [
+    { header: "id", in: "both", value: (row) => row.id },
+    { header: "person_id", in: "both", value: (row) => row.personId },
+    { header: "course_id", in: "both", value: (row) => row.courseId },
+    { header: "step_title", in: "both", value: (row) => row.stepTitle },
+    { header: "done_at", in: "both", value: (row) => row.doneAt },
+    { header: "done_by_person_id", in: "shop", value: (row) => row.doneByPersonId },
+  ],
+  shop: {
+    rows: (context) => context.courseSessionProgressRows,
+    note: EXPORT_FILE_NOTES["course_session_progress.csv"],
+  },
+  diver: {
+    rows: (context) => context.courseSessionProgressRows,
+    note: EXPORT_FILE_NOTES["course_session_progress.csv"],
+  },
+});
+
 /** Inert personal computer evidence, including records marked deleted. */
 export const COMPUTER_IMPORT_BATCHES_CSV = sharedFile<ShopRow<"computerImportBatchesRows">>({
   file: "computer_import_batches.csv",

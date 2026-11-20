@@ -18,6 +18,7 @@ import { isCardKind, setCardProcessed } from "@/features/agency-processing";
 import { tellCourseCertified } from "@/features/course-certified";
 import { recordCourseMaterialsDone } from "@/features/course-materials";
 import { recordCourseNextStep } from "@/features/course-next-step";
+import { recordCourseStepDone } from "@/features/course-progress";
 import { formValue, readForm, text } from "@/features/form-parse";
 import { revalidateAndRedirect } from "@/features/navigation";
 import { requireShopSurface } from "@/features/session";
@@ -52,6 +53,7 @@ const courseRosterForm = z.object({
   paperCopy: formValue(),
   personId: text(),
   signedOn: text(),
+  step: text(),
 });
 
 /**
@@ -259,6 +261,36 @@ export async function setCourseMaterialsDoneAction(
           : "invalid",
       { bid: bookingId },
     ),
+  );
+}
+
+/**
+ * **One outline step of a student's course, ticked done or taken back** (ADR
+ * 20261120-course-session-progress). Any live staffer, like the materials tick; the writer
+ * refuses a step the outline does not name and another shop's booking. Informs, never gates.
+ */
+export async function setCourseStepDoneAction(
+  shopSlug: string,
+  tripId: string,
+  formData: FormData,
+) {
+  const fields = readForm(courseRosterForm, formData);
+  const back = tripPath(shopSlug, tripId);
+  const s = (await requireShopSurface(shopSlug)).session;
+  const bookingId = fields.bookingId;
+  if (!uuidParam(tripId) || !uuidParam(bookingId)) redirect(back);
+  const db = await getDb();
+  await requireRosterBooking(db, s.user.shopId, tripId, bookingId, back);
+  const outcome = await recordCourseStepDone(db, {
+    shopId: s.user.shopId,
+    bookingId,
+    staffPersonId: s.user.personId,
+    stepTitle: fields.step,
+    done: fields.done === "true",
+  });
+  revalidateAndRedirect(
+    back,
+    noticeUrl(back, outcome.ok ? "progress-saved" : "invalid", { bid: bookingId }),
   );
 }
 

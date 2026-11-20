@@ -34,6 +34,7 @@ import {
   courseFormRequirements,
   courseForms,
   courseFormVersions,
+  courseSessionProgress,
   courses,
   crewAwayAcknowledgements,
   customerGearItems,
@@ -651,6 +652,14 @@ export const EXPORT_TABLES = {
     table: departureBoatSafetySnapshots,
     order: [asc(departureBoatSafetySnapshots.capturedAt), asc(departureBoatSafetySnapshots.id)],
     scope: { shopColumn: departureBoatSafetySnapshots.shopId },
+  },
+  courseSessionProgress: {
+    table: courseSessionProgress,
+    order: [asc(courseSessionProgress.doneAt), asc(courseSessionProgress.id)],
+    scope: {
+      shopColumn: courseSessionProgress.shopId,
+      personColumn: courseSessionProgress.personId,
+    },
   },
   computerImportBatches: {
     table: computerImportBatches,
