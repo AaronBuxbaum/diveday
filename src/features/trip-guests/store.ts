@@ -461,6 +461,9 @@ export async function getTripGuests(
       tripId,
       trip.startsAt,
       roster.map(({ booking }) => booking.id),
+      roster
+        .filter(({ booking }) => (paymentMarksByBooking.get(booking.id)?.balanceOwedCents ?? 0) > 0)
+        .map(({ booking }) => booking.id),
     ),
   ]);
 
