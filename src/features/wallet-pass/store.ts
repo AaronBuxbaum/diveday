@@ -297,8 +297,12 @@ export async function voidWalletPassesForPerson(
         ),
       ),
     );
+  if (rows.length === 0) return;
   const now = nowDate();
-  for (const row of rows) {
+  // One statement for every pass, and one for the registrations of the owned
+  // ones: each pass carries its own rewritten content and hash, so they travel
+  // as a recordset the update joins to (issue #4600).
+  const rewritten = rows.map((row) => {
     const owned = ownedBookings.has(row.bookingId);
     const content: PassContent = {
       ...row.contentJson,
@@ -308,28 +312,48 @@ export async function voidWalletPassesForPerson(
         : row.contentJson.auxiliaryFields,
       backFields: row.contentJson.backFields.filter((field) => field.key !== "crew"),
     };
+    return {
+      id: row.id,
+      owned,
+      content,
+      hash: passContentHash(content),
+      updated_at: new Date(Math.max(now.getTime(), row.updatedAt.getTime() + 1)).toISOString(),
+    };
+  });
+  const recordset = sql`jsonb_to_recordset(${JSON.stringify(rewritten)}::jsonb)
+    as rewrite(id uuid, owned boolean, content jsonb, hash text, updated_at timestamptz)`;
+  const rewrittenOf = (column: "content" | "hash" | "updated_at" | "owned") =>
+    sql`(select rewrite.${sql.raw(column)} from ${recordset} where rewrite.id = ${walletPasses.id})`;
+  await tx
+    .update(walletPasses)
+    .set({
+      contentJson: rewrittenOf("content") as unknown as PassContent,
+      contentHash: rewrittenOf("hash") as unknown as string,
+      updatedAt: rewrittenOf("updated_at") as unknown as Date,
+      // A pending scrub must be delivered even when the pass is already expired.
+      lastPushedAt: null,
+      voidedAt: sql`case when ${rewrittenOf("owned")} then ${now} else ${walletPasses.voidedAt} end`,
+      deletedAt: sql`case when ${rewrittenOf("owned")} then ${now} else ${walletPasses.deletedAt} end`,
+    })
+    .where(
+      and(
+        eq(walletPasses.shopId, input.shopId),
+        inArray(
+          walletPasses.id,
+          rewritten.map((pass) => pass.id),
+        ),
+      ),
+    );
+  const ownedPassIds = rewritten.filter((pass) => pass.owned).map((pass) => pass.id);
+  if (ownedPassIds.length > 0)
     await tx
-      .update(walletPasses)
-      .set({
-        contentJson: content,
-        contentHash: passContentHash(content),
-        updatedAt: new Date(Math.max(now.getTime(), row.updatedAt.getTime() + 1)),
-        // A pending scrub must be delivered even when the pass is already expired.
-        lastPushedAt: null,
-        voidedAt: owned ? now : row.voidedAt,
-        deletedAt: owned ? now : row.deletedAt,
-      })
-      .where(and(eq(walletPasses.id, row.id), eq(walletPasses.shopId, input.shopId)));
-    if (owned)
-      await tx
-        .update(walletPassRegistrations)
-        .set({ deletedAt: now })
-        .where(
-          and(
-            eq(walletPassRegistrations.passId, row.id),
-            eq(walletPassRegistrations.shopId, input.shopId),
-            isNull(walletPassRegistrations.deletedAt),
-          ),
-        );
-  }
+      .update(walletPassRegistrations)
+      .set({ deletedAt: now })
+      .where(
+        and(
+          inArray(walletPassRegistrations.passId, ownedPassIds),
+          eq(walletPassRegistrations.shopId, input.shopId),
+          isNull(walletPassRegistrations.deletedAt),
+        ),
+      );
 }
