@@ -70,11 +70,13 @@ export type RowOutstandingInput = Pick<
   | "markCardProcessedAction"
   | "issuedCard"
   | "setCourseMaterialsDoneAction"
+  | "setCourseStepDoneAction"
   | "referralStudentAction"
   | "elearningCheckAction"
   | "recordPaperCourseFormAction"
   | "actions"
   | "materialsDone"
+  | "courseProgress"
   | "paymentStatus"
   | "paymentSource"
   | "paymentMark"
@@ -218,6 +220,8 @@ export function rowOutstanding(
     markCardProcessedAction,
     issuedCard,
     setCourseMaterialsDoneAction,
+    setCourseStepDoneAction,
+    courseProgress,
     referralStudentAction,
     elearningCheckAction,
     recordPaperCourseFormAction,
@@ -423,6 +427,8 @@ export function rowOutstanding(
               : null
           }
           setCourseMaterialsDoneAction={setCourseMaterialsDoneAction}
+          setCourseStepDoneAction={setCourseStepDoneAction}
+          progress={courseProgress}
           materialsDoneLine={
             materialsDone
               ? materialsDone.byName
@@ -497,6 +503,7 @@ export function rowOutstanding(
     Boolean(certifyDiverAction) ||
     Boolean(saveCourseNextStepAction) ||
     Boolean(setCourseMaterialsDoneAction) ||
+    Boolean(setCourseStepDoneAction) ||
     trainingMark !== null ||
     requiresPayment;
 

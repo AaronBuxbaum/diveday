@@ -7,6 +7,7 @@ import {
 } from "@/features/course-dependent-seats";
 import { type CourseMaterialsDone, courseMaterialsDoneByPerson } from "@/features/course-materials";
 import { courseNextStepsByBooking } from "@/features/course-next-step";
+import { courseProgressFor } from "@/features/course-progress";
 import { demandRecommendation } from "@/features/demand";
 import { findSimilarDivers, lastDiveDaysHere, listBookableDivers } from "@/features/divers";
 import { otherSameNamePeople } from "@/features/identity-repoint";
@@ -548,6 +549,7 @@ export async function getTripGuests(
      * The tick itself is on the booking row the roster already read.
      */
     courseHasMaterials: readLearningMaterials(trip.course?.learningMaterials).length > 0,
+    ...(await courseProgressFor(db, shop.id, trip.courseId, roster)),
     /**
      * What the DiveDay browser extension would search the agency's eLearning
      * page for, per seat, where it can (H-20261008-padi-elearning-check): a PADI course with materials.

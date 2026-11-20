@@ -777,6 +777,7 @@ export const DIVER_MERGE_COUNT_GROUPS = {
     "computer_dive_profiles",
     "computer_dives",
     "computer_import_batches",
+    "course_session_progress",
   ],
   media: ["media_deletion_attempts", "private_person_photo_uploads"],
   lists: ["interests", "capabilities", "trip_blowout_divers", "recovery_activity_participants"],

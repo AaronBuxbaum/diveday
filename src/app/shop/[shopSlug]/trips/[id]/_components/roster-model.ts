@@ -10,6 +10,7 @@ import type { listBookingNotes } from "@/db/operations";
 import type { TrainingMarkRosterSeat } from "@/db/training-marks";
 import type { IssuedCard } from "@/features/agency-processing";
 import type { CourseMaterialsDone } from "@/features/course-materials";
+import type { CourseStepDone } from "@/features/course-progress";
 import type { SameNamePerson } from "@/features/identity-repoint";
 import type { PaymentMarkFacts } from "@/features/payment-marks";
 import { rosterRowIsBlocked } from "@/features/roster-filters";
@@ -110,6 +111,8 @@ export type RosterTrip = {
    * 20261008-course-learning-materials).
    */
   courseHasMaterials?: boolean;
+  /** The course outline's step titles, in order: what a student can be ticked through. */
+  courseSteps?: readonly string[];
   /**
    * The session has not yet ended, so a student with materials still to do
    * wears the "Materials not done" capsule. After the last day it is history.
@@ -157,6 +160,8 @@ export type RosterRows = {
    * the course (`courseMaterialsDoneByPerson`): the roster's "done" reads here.
    */
   courseMaterialsDoneByPerson?: ReadonlyMap<string, CourseMaterialsDone>;
+  /** Per student, the outline steps ticked done, by step title (ADR 20261120-course-session-progress). */
+  courseProgressByPerson?: ReadonlyMap<string, ReadonlyMap<string, CourseStepDone>>;
   /** Per held seat, the other held seats a split may move with it (`sameNameHeldSeats`). */
   sameNameHeldSeats?: ReadonlyMap<string, ReadonlyArray<SameNameHeldSeat>>;
   /** Seats the boat carried or may be carrying: Remove refuses them (H-20261015-aboard-diver-removal-at). */
@@ -281,6 +286,8 @@ export type RosterActions = {
    * whose course carries materials.
    */
   setCourseMaterialsDoneAction?: (formData: FormData) => void;
+  /** Tick one outline step of a student's course done, or take it back. Course sessions with an outline only. */
+  setCourseStepDoneAction?: (formData: FormData) => void;
   referralStudentAction?: (formData: FormData) => void; // loop 5, row 10: course rosters only
   /** Tick the materials from PADI's own eLearning page (H-20261008-padi-elearning-check); beside the tick above. */
   elearningCheckAction?: (

@@ -73,6 +73,7 @@ export type TripRosterActions = {
   saveCourseNextStepAction?: FormAction;
   markCardProcessedAction?: FormAction;
   setCourseMaterialsDoneAction?: FormAction;
+  setCourseStepDoneAction?: FormAction;
   referralStudentAction?: FormAction;
   elearningCheckAction?: RosterActions["elearningCheckAction"];
   agencyCheckAction?: RosterActions["agencyCheckAction"];
@@ -261,6 +262,7 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
         splitAsksDateOfBirth: guests.splitAsksDateOfBirth,
         certifyDefaultLevel: guests.certifyDefaultLevel,
         courseHasMaterials: guests.courseHasMaterials,
+        courseSteps: guests.courseSteps,
         courseMaterialsOpen: guests.courseMaterialsOpen,
       }}
       rows={{
@@ -277,6 +279,7 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
         agencyCheckCardsByPerson: guests.agencyCheckCardsByPerson,
         issuedCardByPerson: guests.issuedCardByPerson,
         courseMaterialsDoneByPerson: guests.courseMaterialsDoneByPerson,
+        courseProgressByPerson: guests.courseProgressByPerson,
         sameNameHeldSeats: guests.sameNameHeldSeats,
         aboardAtSea: guests.aboardAtSea,
         sameNamePeople: guests.sameNamePeople,
@@ -312,6 +315,8 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
         setCourseMaterialsDoneAction: guests.courseHasMaterials
           ? actions.setCourseMaterialsDoneAction
           : undefined,
+        setCourseStepDoneAction:
+          guests.courseSteps.length > 0 ? actions.setCourseStepDoneAction : undefined,
         elearningCheckAction: guests.courseHasMaterials ? actions.elearningCheckAction : undefined,
         referralStudentAction: actions.referralStudentAction,
         // A finished departure is its record: nothing on it is checked.

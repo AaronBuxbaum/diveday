@@ -1,0 +1,460 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "1f175c0b-fcc0-4752-90c6-96a468ce162f",
+  "prevIds": [
+    "3c1b900b-810e-41dd-bfd3-f97b8f8295f0"
+  ],
+  "footprints": [
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "course_session_progress"
+      ],
+      "writes": [
+        "s|tbl|public.course_session_progress",
+        "n|tbl|public.course_session_progress",
+        "e|tbl|public.course_session_progress",
+        "n|rel|public.course_session_progress",
+        "n|type|public.course_session_progress",
+        "n|rel|public.course_session_progress_pkey"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "course_session_progress",
+        "course_session_progress_step_unique"
+      ],
+      "writes": [
+        "s|idx|public.course_session_progress_step_unique",
+        "n|idx|public.course_session_progress_step_unique",
+        "e|idx|public.course_session_progress_step_unique",
+        "n|rel|public.course_session_progress_step_unique"
+      ],
+      "reads": [
+        "n|tbl|public.course_session_progress",
+        "n|sch|public",
+        "n|col|public.course_session_progress.shop_id",
+        "n|col|public.course_session_progress.person_id",
+        "n|col|public.course_session_progress.course_id",
+        "n|col|public.course_session_progress.step_title"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "course_session_progress",
+        "course_session_progress_course_idx"
+      ],
+      "writes": [
+        "s|idx|public.course_session_progress_course_idx",
+        "n|idx|public.course_session_progress_course_idx",
+        "e|idx|public.course_session_progress_course_idx",
+        "n|rel|public.course_session_progress_course_idx"
+      ],
+      "reads": [
+        "n|tbl|public.course_session_progress",
+        "n|sch|public",
+        "n|col|public.course_session_progress.course_id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "course_session_progress"
+      ],
+      "writes": [
+        "s|fk|public.course_session_progress.course_session_progress_shop_id_shops_id_fkey",
+        "n|fk|public.course_session_progress.course_session_progress_shop_id_shops_id_fkey",
+        "e|fk|public.course_session_progress.course_session_progress_shop_id_shops_id_fkey",
+        "n|con|public.course_session_progress.course_session_progress_shop_id_shops_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.course_session_progress",
+        "n|sch|public",
+        "n|tbl|public.shops",
+        "n|sch|public",
+        "n|col|public.course_session_progress.shop_id",
+        "n|col|public.shops.id",
+        "e|uniqueness|public.shops.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "course_session_progress"
+      ],
+      "writes": [
+        "s|fk|public.course_session_progress.course_session_progress_person_id_people_id_fkey",
+        "n|fk|public.course_session_progress.course_session_progress_person_id_people_id_fkey",
+        "e|fk|public.course_session_progress.course_session_progress_person_id_people_id_fkey",
+        "n|con|public.course_session_progress.course_session_progress_person_id_people_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.course_session_progress",
+        "n|sch|public",
+        "n|tbl|public.people",
+        "n|sch|public",
+        "n|col|public.course_session_progress.person_id",
+        "n|col|public.people.id",
+        "e|uniqueness|public.people.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "course_session_progress"
+      ],
+      "writes": [
+        "s|fk|public.course_session_progress.course_session_progress_course_id_courses_id_fkey",
+        "n|fk|public.course_session_progress.course_session_progress_course_id_courses_id_fkey",
+        "e|fk|public.course_session_progress.course_session_progress_course_id_courses_id_fkey",
+        "n|con|public.course_session_progress.course_session_progress_course_id_courses_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.course_session_progress",
+        "n|sch|public",
+        "n|tbl|public.courses",
+        "n|sch|public",
+        "n|col|public.course_session_progress.course_id",
+        "n|col|public.courses.id",
+        "e|uniqueness|public.courses.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "course_session_progress"
+      ],
+      "writes": [
+        "s|fk|public.course_session_progress.course_session_progress_done_by_person_id_people_id_fkey",
+        "n|fk|public.course_session_progress.course_session_progress_done_by_person_id_people_id_fkey",
+        "e|fk|public.course_session_progress.course_session_progress_done_by_person_id_people_id_fkey",
+        "n|con|public.course_session_progress.course_session_progress_done_by_person_id_people_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.course_session_progress",
+        "n|sch|public",
+        "n|tbl|public.people",
+        "n|sch|public",
+        "n|col|public.course_session_progress.done_by_person_id",
+        "n|col|public.people.id",
+        "e|uniqueness|public.people.id"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "course_session_progress",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "course_session_progress",
+        "name": "id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "gen_random_uuid()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "course_session_progress",
+        "name": "shop_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "course_session_progress",
+        "name": "person_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "course_session_progress",
+        "name": "course_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "course_session_progress",
+        "name": "step_title",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "course_session_progress",
+        "name": "done_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "course_session_progress",
+        "name": "done_by_person_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "course_session_progress",
+        "name": "course_session_progress_step_unique",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "shop_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "person_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "course_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "step_title",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": true,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "course_session_progress",
+        "name": "course_session_progress_course_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "course_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "course_session_progress",
+        "name": "course_session_progress_shop_id_shops_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "shop_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "shops",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "NO ACTION",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "course_session_progress",
+        "name": "course_session_progress_person_id_people_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "person_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "people",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "course_session_progress",
+        "name": "course_session_progress_course_id_courses_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "course_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "courses",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "NO ACTION",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "course_session_progress",
+        "name": "course_session_progress_done_by_person_id_people_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "done_by_person_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "people",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "NO ACTION",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "course_session_progress",
+        "name": "course_session_progress_pkey",
+        "columns": [
+          "id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "course_session_progress",
+        "name": "course_session_progress_step_named",
+        "value": "length(btrim(\"step_title\")) > 0",
+        "entityType": "checks"
+      }
+    }
+  ]
+}

@@ -177,6 +177,8 @@ export const EXPORT_FILE_NOTES = {
     "Visit history carried in from the shop's previous system when its divers were imported — one row per booking that system held, never a DiveDay trip. status_label and amount_label are that system's own words and figures, kept verbatim and never normalized: a row can say canceled or no-show, so these are booking records, not evidence of a dive. amount_label is display text with no currency column and was never summed into any DiveDay total. Nothing here was ever read by boarding, capacity, or reporting.",
   "trip_credit_entries.csv":
     "Promotional trip credit grants, fare redemptions, and restorations. Amounts are native-currency value, not cash collected or refunded. Identity merges can repoint the beneficiary; economic entries remain unchanged.",
+  "course_session_progress.csv":
+    "Which sessions of a course each student has been ticked through, one row per student and outline step, with who ticked it and when. The shop's own word: never agency evidence, and nothing in admission, readiness, boarding, or Certify reads it.",
   "computer_import_batches.csv":
     "Confirmed personal computer imports: idempotency keys, selection hashes, and result counts. No raw source files are retained.",
   "computer_dives.csv":

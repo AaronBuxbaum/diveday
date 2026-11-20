@@ -235,6 +235,21 @@ const rows = [
     export: "own",
   },
   {
+    table: "course_session_progress",
+    column: "person_id",
+    kind: "subject",
+    merge: "move",
+    erase: "delete",
+    export: "own",
+  },
+  {
+    table: "course_session_progress",
+    column: "done_by_person_id",
+    kind: "actor",
+    merge: "leave",
+    why: "which staffer ticked the session done",
+  },
+  {
     table: "computer_import_batches",
     column: "person_id",
     kind: "subject",

@@ -271,6 +271,19 @@ describe("the registry's erase fates", () => {
         personId: seat.personId,
         description: "a blue mask in a red case",
       });
+      const [course] = await db
+        .select({ id: schema.courses.id })
+        .from(schema.courses)
+        .where(eq(schema.courses.shopId, shop.id))
+        .limit(1);
+      if (!course) throw new Error("course fixture missing");
+      await db.insert(schema.courseSessionProgress).values({
+        shopId: shop.id,
+        personId: seat.personId,
+        courseId: course.id,
+        stepTitle: "Pool session 1",
+        doneByPersonId: owner.id,
+      });
       await db.insert(schema.internalNotes).values({
         shopId: shop.id,
         personId: seat.personId,
