@@ -144,7 +144,7 @@ export function hiddenInputNamesIn(node: unknown, found: string[] = []): string[
 }
 
 /** Every href on the Orders page, imported-history rows included: that table is a component of its own, so it is in the page's tree only once called with the props the page gave it. */
-export function ordersHrefs(page: ReactElement): string[] {
+export function ordersHrefs(page: unknown): string[] {
   const table = findElements<Parameters<typeof ImportedHistoryTable>[0]>(
     page,
     ImportedHistoryTable,
