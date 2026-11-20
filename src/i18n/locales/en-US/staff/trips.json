@@ -61,7 +61,6 @@
     "price": "Price",
     "certificatePassengers": "Certificate: {count, plural, one {# passenger} other {# passengers}}",
     "seats": "Seats",
-    "certificateSeats": "Boat certificate: {count, plural, one {# passenger} other {# passengers}}",
     "nameAndDescription": "Name and description",
     "view": "View",
     "thisTrip": "This trip",

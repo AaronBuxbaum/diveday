@@ -61,7 +61,6 @@
     "price": "Precio",
     "certificatePassengers": "Certificado: {count, plural, one {# pasajero} other {# pasajeros}}",
     "seats": "Plazas",
-    "certificateSeats": "Certificado del barco: {count, plural, one {# pasajero} other {# pasajeros}}",
     "nameAndDescription": "Nombre y descripción",
     "view": "Ver",
     "thisTrip": "Esta salida",
