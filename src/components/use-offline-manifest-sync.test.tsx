@@ -55,6 +55,7 @@ const copy: OfflineManifestSyncCopy = {
   reconcilePendingOther: "{count} pending",
   reconcileCaughtUp: "caught up",
   reconcileErrorFallback: "could not reach",
+  reconcilePaused: "sync paused; use manual roll call",
   savingMessage: "saving",
   saveErrorFallback: "save failed",
   offlineWithSavedCopy: "offline with copy",
@@ -688,6 +689,12 @@ describe("useOfflineManifestSync on a network that stops answering", () => {
     vi.mocked(syncOfflineManifest).mockRejectedValue(new OfflineManifestError("sync_unreachable"));
     const { result } = renderHook(() => useOfflineManifestSync(payload, copy));
     await waitFor(() => expect(result.current.message).toBe("could not reach"));
+  });
+
+  it("tells staff to use manual roll call when offline sync is paused", async () => {
+    vi.mocked(syncOfflineManifest).mockRejectedValue(new OfflineManifestError("sync_paused"));
+    const { result } = renderHook(() => useOfflineManifestSync(payload, copy));
+    await waitFor(() => expect(result.current.message).toBe("sync paused; use manual roll call"));
   });
 });
 

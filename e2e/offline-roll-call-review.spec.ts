@@ -119,3 +119,38 @@ test("a conflict stays for review while an independent observation syncs", async
     await other.close();
   }
 });
+
+test("a paused sync keeps the original offline mark and directs staff to manual roll call", async ({
+  page,
+  context,
+}) => {
+  const url = `/shop/blue-mantis/trips/${DEMO_TODAY_TRIP_ID}/manifest?checkpoint=after_dive_1`;
+  await page.goto(url);
+  await offlineCopySaved(page);
+  await page.goto(`/offline-manifest?trip=${DEMO_TODAY_TRIP_ID}&checkpoint=after_dive_1`);
+  await openDeckDetails(page);
+  await context.setOffline(true);
+  await markAboard(page, "Diego Alvarez");
+  const postedIds: string[][] = [];
+  await page.route("**/api/offline-manifests/sync", async (route) => {
+    const body = route.request().postDataJSON() as { events: { clientEventId: string }[] };
+    postedIds.push(body.events.map((event) => event.clientEventId));
+    await route.fulfill({ status: 503, json: { error: "offline_sync_paused" } });
+  });
+  const refusal = page.waitForResponse(
+    (response) =>
+      new URL(response.url()).pathname === "/api/offline-manifests/sync" &&
+      response.status() === 503,
+  );
+  await context.setOffline(false);
+  await refusal;
+  const pauseStatus = page
+    .getByRole("status")
+    .filter({ hasText: staff("manifest.deck.copyCaveat") })
+    .getByText(staff("shared.offlineManifest.reconcile.syncPaused"));
+  await expect(pauseStatus).toBeVisible();
+  expect(postedIds[0]).toHaveLength(1);
+  await page.reload();
+  await expect(pauseStatus).toBeVisible();
+  expect(postedIds.at(-1)).toEqual(postedIds[0]);
+});

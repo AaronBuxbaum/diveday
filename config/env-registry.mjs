@@ -105,6 +105,21 @@ const NOWHERE = [];
 
 export const ENV_GROUPS = [
   {
+    seam: null,
+    doc: [
+      "Incident brake for offline sync on this serving revision only. It does not",
+      "drain old or in-flight writers or make a database restore safe.",
+    ],
+    keys: [
+      {
+        key: "DIVEDAY_OFFLINE_SYNC_PAUSED",
+        from: "manual",
+        targets: LOCAL_AND_VERCEL,
+        absent: "offline sync runs normally; the restore cutover stop still applies",
+      },
+    ],
+  },
+  {
     seam: "apple-wallet",
     doc: [
       "Native departure passes (ADR 20261110-native-wallet-passes). Human credentials tracked in #4208; incomplete credentials leave this platform off.",

@@ -470,6 +470,16 @@ describe("useSavedManifest on a trip", () => {
     await waitFor(() => expect(result.current.message).toBe(line("reachError")));
   });
 
+  it("tells staff to use manual roll call while sync is paused", async () => {
+    setOnline(true);
+    const saved = withEvents("trip-1", { pending: 1 });
+    load.mockResolvedValue(saved);
+    sync.mockRejectedValue(new OfflineManifestError("sync_paused"));
+    const { result } = at("trip=trip-1");
+    await waitFor(() => expect(result.current.message).toBe(line("syncPaused")));
+    expect(saved.events[0]?.syncStatus).toBe("pending");
+  });
+
   it("quarantines the saved roster on shop_changed and only restores it after fresh verification", async () => {
     setOnline(true);
     const saved = withEvents("trip-1", { pending: 1 });
@@ -676,6 +686,16 @@ describe("useSavedManifest on the list", () => {
     expect(result.current.tripId).toBe("");
     expect(result.current.list).toBe(saved);
     expect(result.current.message).toBe(`${line("savedCount")} {"count":2}`);
+  });
+
+  it("shows the maintenance pause when syncing from the saved-copy list", async () => {
+    setOnline(true);
+    const saved = withEvents("trip-1", { pending: 1 });
+    list.mockResolvedValue([saved]);
+    sync.mockRejectedValue(new OfflineManifestError("sync_paused"));
+    const { result } = at("");
+    await waitFor(() => expect(result.current.message).toBe(line("syncPaused")));
+    expect(result.current.list?.[0]?.events[0]?.syncStatus).toBe("pending");
   });
 
   it("leaves the status line empty when nothing is saved", async () => {

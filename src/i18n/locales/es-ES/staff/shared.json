@@ -374,8 +374,9 @@
     "reconcile": {
       "tenantChanged": "Ha cambiado el centro con sesión iniciada. El manifiesto guardado y sus controles están ocultos mientras este dispositivo verifica el centro actual. Los cambios pendientes siguen guardados aquí; vuelve a conectarte o recarga para intentarlo de nuevo.",
       "reachError": "No se pudo contactar con DiveDay en este momento. Tus cambios siguen guardados en este teléfono e intentarán enviarse de nuevo en el próximo cambio o al reconectar.",
+      "syncPaused": "Este envío está pausado. Conserva este teléfono y pasa lista manualmente hasta que el personal confirme la recuperación.",
       "pendingRejectedSingle": "{count, plural, one {# cambio necesita revisión. Abre el manifiesto en vivo para resolverlo.} other {# cambios necesitan revisión. Abre el manifiesto en vivo para resolverlo.}}",
-      "pendingWaiting": "{count, plural, one {# cambio todavía se está enviando.} other {# cambios todavía se están enviando.}}",
+      "pendingWaiting": "{count, plural, one {# cambio pendiente de envío.} other {# cambios pendientes de envío.}}",
       "pendingExpiryWarning": "Estos cambios del pase de lista podrían existir solo en este dispositivo y podrían eliminarse automáticamente si no se envían. Vuelve a conectarte, inicia sesión en el centro original y verifica que se hayan sincronizado. Si no puedes sincronizar, usa el procedimiento manual de pase de lista.",
       "allCaughtUp": "Todo enviado.",
       "noteDiscarded": "Cada línea corresponde a una marca cuya nota sin conexión anterior se eliminó tras borrar datos. Revisa todas las marcas en el manifiesto en vivo; este aviso permanece en el dispositivo después de sincronizar y recargar.",

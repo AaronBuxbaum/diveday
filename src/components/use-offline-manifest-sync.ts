@@ -75,6 +75,7 @@ export interface OfflineManifestSyncCopy {
   reconcilePendingOther: string;
   reconcileCaughtUp: string;
   reconcileErrorFallback: string;
+  reconcilePaused: string;
   savingMessage: string;
   saveErrorFallback: string;
   offlineWithSavedCopy: string;
@@ -247,14 +248,19 @@ export function useOfflineManifestSync(
           router.refresh();
         }
       }
-    } catch {
+    } catch (error) {
       // syncOfflineManifest throws a typed OfflineManifestError, not an
-      // English sentence (src/lib/offline-manifest-store.ts) — the only
-      // failure mode here is "couldn't reach the server," which the one
-      // fallback string already says. That includes a sync that gave up at
-      // its deadline (`SYNC_TIMEOUT_MS`): the events are still pending on the
-      // device, and the next pass sends them again under the same ids.
-      setMessage(copy.reconcileErrorFallback);
+      // English sentence. A maintenance refusal gets its own manual-roll-call
+      // instruction; other errors retain the ordinary reachability message.
+      // The same IDs remain pending after either kind of refusal.
+      setMessage(
+        typeof error === "object" &&
+          error !== null &&
+          "code" in error &&
+          error.code === "sync_paused"
+          ? copy.reconcilePaused
+          : copy.reconcileErrorFallback,
+      );
       // Same reasoning as the offline branch above: a failed flush is exactly
       // what Background Sync is for, and this page may not be here to retry.
       // Not awaited, for the same reason as above.

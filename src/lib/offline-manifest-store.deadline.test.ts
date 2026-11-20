@@ -84,6 +84,63 @@ function indexedDbReset() {
 
 afterEach(indexedDbReset);
 
+it("keeps a mixed batch intact during a maintenance pause and resends the same IDs", async () => {
+  const tripId = payload.manifests[0].trip.id;
+  const bookingId = payload.manifests[0].divers[0].bookingId;
+  const copy = { ...payload, checklist: { items: [{ id: "item-radio", label: "Radio check" }] } };
+  await saveOfflineManifest(copy);
+  await appendOfflineRollCall(tripId, {
+    bookingId,
+    checkpoint: "departure",
+    status: "not_boarded",
+  });
+  await appendOfflineChecklistCheck(tripId, {
+    checklistItemId: "item-radio",
+    status: "checked",
+    note: null,
+  });
+  await appendOfflineArrival(tripId, { bookingId, status: "arrived" });
+  const original = await loadOfflineManifest(tripId);
+  const sent: string[][] = [];
+  let paused = true;
+  server.use(
+    http.post("/api/offline-manifests/sync", async ({ request }) => {
+      const body = (await request.json()) as {
+        events: OfflineRollCallEvent[];
+        checklistEvents: OfflineChecklistEvent[];
+        arrivalEvents: OfflineArrivalEvent[];
+      };
+      const ids = [...body.events, ...body.checklistEvents, ...body.arrivalEvents].map(
+        (event) => event.clientEventId,
+      );
+      sent.push(ids);
+      if (paused) return HttpResponse.json({ error: "offline_sync_paused" }, { status: 503 });
+      return HttpResponse.json(
+        withRefreshedSyncFrame(
+          copy,
+          {
+            results: ids.map((clientEventId) => ({ clientEventId, status: "duplicate" })),
+          },
+          body,
+        ),
+      );
+    }),
+  );
+
+  await expect(syncOfflineManifest(tripId)).rejects.toMatchObject({ code: "sync_paused" });
+  const retained = await loadOfflineManifest(tripId);
+  expect(retained?.snapshot).toEqual(original?.snapshot);
+  expect(retained?.events).toEqual(original?.events);
+  expect(retained?.checklistEvents).toEqual(original?.checklistEvents);
+  expect(retained?.arrivalEvents).toEqual(original?.arrivalEvents);
+  paused = false;
+  const synced = await syncOfflineManifest(tripId);
+  expect(sent[1]).toEqual(sent[0]);
+  expect(synced?.events[0].syncStatus).toBe("applied");
+  expect(synced?.checklistEvents[0].syncStatus).toBe("applied");
+  expect(synced?.arrivalEvents?.[0].syncStatus).toBe("applied");
+});
+
 /**
  * Dock Wi-Fi with full bars that carries nothing: the POST neither answers
  * nor fails. Before the deadline this sync waited forever, and every later

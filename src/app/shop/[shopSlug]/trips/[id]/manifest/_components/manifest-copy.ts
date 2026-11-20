@@ -44,6 +44,7 @@ export function offlineManifestManagerCopy(t: StaffTranslator): OfflineManifestM
     reconcileCheckpointAfterDive: t.raw("shared.rollCallCheckpoint.afterDive"),
     reconcileChecklistLocation: t("shared.offlineManifest.reconcile.checklistLocation"),
     reconcileErrorFallback: t("trips.offlineManifestManager.reconcileErrorFallback"),
+    reconcilePaused: t("shared.offlineManifest.reconcile.syncPaused"),
     savingMessage: t("trips.offlineManifestManager.savingMessage"),
     saveErrorFallback: t("trips.offlineManifestManager.saveErrorFallback"),
     offlineWithSavedCopy: t("trips.offlineManifestManager.offlineWithSavedCopy"),
