@@ -181,7 +181,7 @@ describePostgres("offline meeting generation", () => {
     const writer = pg.connect().transaction(async (tx) => {
       await tx
         .update(trips)
-        .set({ offlineMeetingGeneration: sql`${trips.offlineMeetingGeneration} + 1` })
+        .set({ offlineMeetingGeneration: sql`${trips.offlineMeetingGeneration} + 1` }) // a fixed step so the test can name the value
         .where(eq(trips.id, trip.id));
       entered();
       await gate;
