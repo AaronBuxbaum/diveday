@@ -25,6 +25,7 @@ import {
 import { getBoatForHistory } from "@/features/boats";
 import { tripConservationFacts } from "@/features/conservation";
 import { crewThanksChoice } from "@/features/crew-thanks-choice";
+import { satOutDives } from "@/features/dive-participation";
 import { compareDiveRecord, type DiveRecordComparison } from "@/features/dive-record";
 import { tripsWithSomebodyMissing } from "@/features/roll-call-gaps";
 import { leftAtTheDock } from "@/features/seat-ladder";
@@ -837,8 +838,8 @@ async function loadRecapPageData(
   // row, where the trip used to be read first and the wave waited for it.
   const [
     trip,
-    dives,
-    livedDives,
+    plannedDives,
+    boatDives,
     divedRecentlyIds,
     boat,
     crewMap,
@@ -852,6 +853,7 @@ async function loadRecapPageData(
     tappedSightings,
     conservation,
     dockEvidence,
+    satOut,
   ] = await Promise.all([
     getTripWithBooked(db, row.shopId, row.tripId),
     listTripDives(db, row.shopId, row.tripId),
@@ -939,8 +941,14 @@ async function loadRecapPageData(
     listTripSightings(db, row.shopId, row.tripId),
     tripConservationFacts(db, row.shopId, row.tripId, now),
     dock,
+    // The dives the crew said this diver sat out (issue #4307): the record
+    // below stops naming their sites. Nothing else on the page reads it; the
+    // day, the dive-day count and fly-safe stay the whole boat's.
+    satOutDives(db, row.shopId, row.tripId, bookingId),
   ]);
   if (!trip) return null;
+  const dives = plannedDives.filter(({ dive }) => !satOut.has(dive.diveNumber));
+  const livedDives = boatDives.filter(({ executed }) => !satOut.has(executed.diveNumber));
 
   const sites: RecapSite[] = [];
   const seen = new Set<string>();
@@ -1021,7 +1029,7 @@ async function loadRecapPageData(
   // departure.
   const flySafe = isDiver(row.participantType)
     ? flySafeFrom({
-        executedDives: livedDives.map(({ executed }) => ({
+        executedDives: boatDives.map(({ executed }) => ({
           diveNumber: executed.diveNumber,
           exitedAt: executed.exitedAt,
         })),

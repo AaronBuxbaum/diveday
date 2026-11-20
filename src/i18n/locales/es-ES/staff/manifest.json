@@ -71,6 +71,12 @@
   "crewNotBackAboardActive": "Sin regresar a bordo",
   "crewRollCallRecordedBy": "{label} · {date} · {name}",
   "noCrew": "Todavía no hay tripulación en esta salida. Agrega a quien llevó el barco para completar este control.",
+  "participation": {
+    "label": "Inmersión {number}",
+    "dived": "Buceó",
+    "satOut": "No buceó",
+    "error": "No se guardó. Revisa tu conexión y vuelve a tocar."
+  },
   "executedDive": {
     "heading": "Lo que ocurrió bajo el agua",
     "dive": "Inmersión {number}",

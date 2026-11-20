@@ -71,6 +71,12 @@
   "crewNotBackAboardActive": "Not back aboard",
   "crewRollCallRecordedBy": "{label} · {date} · {name}",
   "noCrew": "Nobody is on this trip’s crew yet. Add whoever ran the boat to complete this checkpoint.",
+  "participation": {
+    "label": "Dive {number}",
+    "dived": "Dived",
+    "satOut": "Sat out",
+    "error": "That didn’t save. Check your connection and tap again."
+  },
   "executedDive": {
     "heading": "What happened underwater",
     "dive": "Dive {number}",

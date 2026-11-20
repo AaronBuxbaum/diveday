@@ -354,7 +354,9 @@ const READY_AFTER_PHASE_CEILING = 12;
 // the next-dive pick, then the chosen course's next session. No new phase.
 // 36 → 37 (this recap's dive chart): one read of the diver's and the crew's computer dives for
 // the trip day, in the after-state's one wave. No new phase.
-const RECAP_CEILING = 37;
+// 37 → 38 (issue #4307): the dives the crew said this diver sat out, one read in the
+// after-state's one wave. No new phase.
+const RECAP_CEILING = 38;
 const RECAP_PHASE_CEILING = 5;
 // The shop, `readSchedulePage`'s batch with its chained reads, then the
 // board's-end read. 16 → 14 statements and 7 → 5 phases (item 29): the

@@ -49,6 +49,7 @@ import {
   diveNotMadeEvents,
   divePackageEntitlements,
   divePackages,
+  diveParticipationNotes,
   diveSiteCreatures,
   diveSites,
   executedDives,
@@ -247,6 +248,7 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db.delete(boatSnags).where(eq(boatSnags.shopId, shopId));
   await db.delete(preDepartureCheckEvents).where(eq(preDepartureCheckEvents.shopId, shopId));
   await db.delete(rollCallDeckCounts).where(eq(rollCallDeckCounts.shopId, shopId));
+  await db.delete(diveParticipationNotes).where(eq(diveParticipationNotes.shopId, shopId));
   await db
     .delete(departureBoatSafetySnapshots)
     .where(eq(departureBoatSafetySnapshots.shopId, shopId));

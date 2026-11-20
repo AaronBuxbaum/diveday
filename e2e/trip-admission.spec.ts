@@ -543,7 +543,9 @@ test.describe("what the public schedule card says a departure requires", () => {
     // marker is already worded to stand on its own, and the row's one meta line
     // sets them between separators.
     await expect(
-      row("Wreck Trip — Spiegel Grove").getByText(/Advanced Open Water or higher\s+·\s+Deep\s+·\s+Nitrox/),
+      row("Wreck Trip — Spiegel Grove").getByText(
+        /Advanced Open Water or higher\s+·\s+Deep\s+·\s+Nitrox/,
+      ),
     ).toBeVisible();
 
     await expect(

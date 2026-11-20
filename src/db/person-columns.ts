@@ -1316,6 +1316,13 @@ const rows = [
     why: "who entered the count on deck",
   },
   {
+    table: "dive_participation_notes",
+    column: "recorded_by_person_id",
+    kind: "actor",
+    merge: "leave",
+    why: "who said a diver dived or sat out a dive",
+  },
+  {
     table: "pre_departure_checklist_items",
     column: "deleted_by_person_id",
     kind: "actor",

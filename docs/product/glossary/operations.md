@@ -1345,6 +1345,13 @@
   **informs and never gates**: no checkpoint opens, closes or waits on it, and the per-person roll
   call stays the head count. Not the retired crew attestation, which was a typed number that closed
   the crew half (ADR 20260804-crew-roll-call-is-per-person, amendment 2026-11-16).
+- **Dive participation note** — the crew saying one diver **dived** or **sat out** one dive of the
+  day, tapped on the person sheet at that dive's after-dive count (`dive_participation_notes`,
+  issue #4307). No note is **unknown**, and unknown is never "did not dive"; tapping the pressed
+  answer takes it back to unknown, and every correction is a new row. Never inferred from boarded,
+  not boarded or not back aboard: roll call says where a person is, this says whether they went
+  in. It **informs only**: the head count, roll call, readiness, medical holds and fly-safe never
+  read it. The recap reads it to stop naming a site or a sighting from a dive the diver sat out.
 - **Buddy team** — two or more people staff group together on one departure, so roll call can say
   the thing a deck actually watches for: **someone is back aboard and someone on their team is
   not**. Planning lives in Edit trip behind the shop's default-on `buddyTeamsEnabled` feature switch;

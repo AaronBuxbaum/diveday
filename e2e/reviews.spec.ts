@@ -442,7 +442,7 @@ test("the public review count opens all reviews without trip names", async ({ pa
   // The archive joins the display scale, and keeps the aggregate to the count;
   // the hero owns the average-plus-count line (ADR
   // 20260827-clearwater-surface-language, decision 8).
-  await expect(heading).toHaveClass(/text-\[2\.5rem\]/);
+  await expect(heading).toHaveClass(/text-\[min\(2\.5rem,12vw\)\]/);
   // Every star given, then the written ones (UX review 2026-10-10, item 17).
   await expect(page.getByText(/^\d+ ratings · \d+ reviews$/)).toHaveCount(1);
   await expect(page.getByText(diver("reviews.allDescription"))).toHaveCount(0);

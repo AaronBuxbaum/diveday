@@ -47,6 +47,7 @@ import {
   disruptionRecoveryEvents,
   divePackageEntitlements,
   divePackages,
+  diveParticipationNotes,
   diveSiteCreatures,
   diveSites,
   executedDives,
@@ -632,6 +633,11 @@ export const EXPORT_TABLES = {
       asc(preDepartureCheckEvents.seq),
     ],
     scope: { shopColumn: preDepartureCheckEvents.shopId },
+  },
+  diveParticipationNotes: {
+    table: diveParticipationNotes,
+    order: [asc(diveParticipationNotes.recordedAt), asc(diveParticipationNotes.seq)],
+    scope: { shopColumn: diveParticipationNotes.shopId },
   },
   rollCallDeckCounts: {
     table: rollCallDeckCounts,

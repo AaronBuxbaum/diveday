@@ -230,7 +230,7 @@ test.describe("staff", () => {
     await firstSelect.waitFor();
     const firstUnit = firstSelect.locator("option:not([disabled])").first();
     const suggested = (await firstUnit.textContent()) ?? "";
-    const suggestedTag = suggested.split(" · ")[0]?.trim() ?? "";
+    const suggestedTag = suggested.split(/\s·\s/)[0]?.trim() ?? "";
     expect(suggestedTag.length).toBeGreaterThan(0);
     await firstSelect.selectOption({ label: suggested });
 
@@ -277,7 +277,7 @@ test.describe("staff", () => {
     const select = page.locator("select[id^='assign-']").first();
     await select.waitFor();
     const option = (await select.locator("option:not([disabled])").first().textContent()) ?? "";
-    const tag = option.split(" · ")[0]?.trim() ?? "";
+    const tag = option.split(/\s·\s/)[0]?.trim() ?? "";
     expect(tag.length).toBeGreaterThan(0);
     await select.selectOption({ label: option });
     await expect(assignments.getByText(tag, { exact: true })).toBeVisible();

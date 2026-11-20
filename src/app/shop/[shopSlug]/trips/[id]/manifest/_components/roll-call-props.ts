@@ -1,4 +1,6 @@
+import type { DiveParticipation } from "@/lib/dive-participation";
 import type { RollCallCheckpoint, TripManifest } from "@/lib/manifests";
+import { rollCallCheckpointOrdinal } from "@/lib/roll-call";
 import type { bindManifestActions } from "./bound-actions";
 import type { CrewRollCall } from "./CrewRollCall";
 import type { DiverRollCallContext } from "./diver-roll-call-context";
@@ -39,6 +41,8 @@ export function manifestRollCallProps({
   buddyTeamLabel: DiverRollCallContext["buddyTeamLabel"];
   /** The shop's name, for the drafted emergency text (issue #4256). */
   shopName: string;
+  /** The newest participation note per seat and dive (issue #4307). */
+  diveParticipation: ReadonlyMap<string, ReadonlyMap<number, DiveParticipation>>;
   t: DiverRollCallContext["t"];
 }): { divers: DiverRollCallContext; crew: CrewRollCallProps } {
   const { idPrefix, shopSlug, tripId, locale, timezone, buddyTeamLabel, t } = shared;
@@ -68,6 +72,16 @@ export function manifestRollCallProps({
       rollCallAction: actions.rollCall,
       rollCallClosed,
       addPrivateNoteAction: actions.addPrivateNote,
+      // After a dive only: the note is about that dive, and the dock has none.
+      diveParticipation: isDeparture
+        ? undefined
+        : {
+            diveNumber: rollCallCheckpointOrdinal(checkpoint),
+            bySeat: (bookingId: string) =>
+              shared.diveParticipation.get(bookingId)?.get(rollCallCheckpointOrdinal(checkpoint)) ??
+              "unknown",
+            action: actions.recordDiveParticipation,
+          },
       missingDiver: actions.missingDiver,
       rollCallButtonCopy: copies.rollCallButtonCopy,
       buddyTeamLabel,

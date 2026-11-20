@@ -280,6 +280,7 @@ word in a message bundle fails `pnpm check:repo`. The Spanish reasoning is
 - Dive briefing
 - Dive day
 - Dive day (north star)
+- Dive participation note
 - Dive record
 - Dive site
 - Diver seats

@@ -180,12 +180,14 @@ describe("getTripGuests", () => {
         status: "requested",
       });
       const guests = await guestsFor(ctx);
-      expect(guests.helpRequestByBooking.get(first.booking.id)?.kind).toBe("find_group");
+      expect(guests.fixListFacts.helpRequestByBooking.get(first.booking.id)?.kind).toBe(
+        "find_group",
+      );
       const rosterIds = new Set(guests.roster.map((row) => row.booking.id));
       for (const key of [
-        ...guests.helpRequestByBooking.keys(),
-        ...guests.openOrderByBooking.keys(),
-        ...guests.nextReminderAtByBooking.keys(),
+        ...guests.fixListFacts.helpRequestByBooking.keys(),
+        ...guests.fixListFacts.openOrderByBooking.keys(),
+        ...guests.fixListFacts.nextReminderAtByBooking.keys(),
       ]) {
         expect(rosterIds.has(key)).toBe(true);
       }

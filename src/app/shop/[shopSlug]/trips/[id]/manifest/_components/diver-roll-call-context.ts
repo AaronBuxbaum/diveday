@@ -6,7 +6,9 @@ import type { MedicalAlertResult } from "@/components/MedicalAlertReveal";
 import type { PrivateNoteAction } from "@/components/PrivateNoteForm";
 import type { PrintedMedicalAlerts } from "@/db/medical-alerts";
 import type { StaffTranslator } from "@/i18n/staff-messages";
+import type { DiveParticipation } from "@/lib/dive-participation";
 import type { ManifestBuddyTeam, RollCallCheckpoint, TripManifest } from "@/lib/manifests";
+import type { DiveParticipationAction } from "./DiveParticipationControl";
 import type { EmergencyTextFacts } from "./emergency-text";
 import type { MissingDiverRowActions } from "./missing-diver-controls";
 import type { PersonTrailEntry } from "./PersonSheet";
@@ -44,6 +46,15 @@ export type DiverRollCallContext = {
    */
   rollCallClosed?: boolean;
   addPrivateNoteAction: PrivateNoteAction;
+  /**
+   * The dive this checkpoint follows, each seat's participation note on it and
+   * the write (issue #4307). Absent at the dock and on paper's caller side.
+   */
+  diveParticipation?: {
+    diveNumber: number;
+    bySeat: (bookingId: string) => DiveParticipation;
+    action: DiveParticipationAction;
+  };
   /**
    * The row's missing-diver controls (`MissingDiverControls`), bound to the
    * departure; absent, or each null, for a reader who may not start an
