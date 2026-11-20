@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { type CSSProperties, Fragment, type ReactNode } from "react";
 import { StoredPhoto } from "@/components/StoredPhoto";
-import { FACT_SEPARATOR } from "@/components/ui/FactLine";
 import { DoorChevron } from "@/components/ui/ledger";
 import { FIGURE_LARGE_CLASS } from "@/components/ui/typography";
 
@@ -358,23 +357,15 @@ function Row({
             </h3>
             {meta.length > 0 ? (
               <p className="mt-1 text-sm text-muted">
-                {meta.map((part, index) =>
-                  // The dot is glued to the fact before it, so no wrapped line
-                  // opens with "·" (phone polish, 2026-11-20): a box and a dot
-                  // after a plain space broke before the dot.
-                  index < meta.length - 1 ? (
-                    // biome-ignore lint/suspicious/noArrayIndexKey: the separator's only identity is its position
-                    <Fragment key={index}>
-                      <span className="whitespace-nowrap">
-                        {part}
-                        {FACT_SEPARATOR.trimEnd()}
-                      </span>{" "}
-                    </Fragment>
-                  ) : (
-                    // biome-ignore lint/suspicious/noArrayIndexKey: the separator's only identity is its position
-                    <Fragment key={index}>{part}</Fragment>
-                  ),
-                )}
+                {meta.map((part, index) => (
+                  // The dot rides on the fact before it (no-break space), so no
+                  // wrapped line opens with "·".
+                  // biome-ignore lint/suspicious/noArrayIndexKey: the separator's only identity is its position
+                  <Fragment key={index}>
+                    {index > 0 ? "\u00a0· " : null}
+                    {part}
+                  </Fragment>
+                ))}
               </p>
             ) : null}
             {row.fact ? (

@@ -768,54 +768,53 @@ export async function pagedUpcomingTripsWithCounts(
   );
 
   // On the public schedule and its embeds, with no seat filter, the page's rows
-  // do not depend on the counts, so pick the page's ids first and count seats for
-  // those rows only: a shop with a recurring series materialises months of
-  // departures, and counting every one of them to show fifteen was the cost
-  // (issue #4394). A seat filter needs the count to decide which rows qualify,
-  // and a staff read of a small window is cheaper as one statement, so both keep
-  // the one-step read.
+  // do not depend on the counts, so the same statement picks the page's ids in
+  // a subquery and counts seats for those rows only: a shop with a recurring
+  // series materialises months of departures, and counting every one of them to
+  // show fifteen was the cost (issue #4394). A subquery, not a read of its own,
+  // so the page waits for no extra round trip. A seat filter needs the count to
+  // decide which rows qualify, and a staff read of a small window is cheaper
+  // without it, so both keep the plain scope.
   const countsDecidePage = Boolean(options.minSeats || options.hasSpace || !options.publicOnly);
-  const pageIds = countsDecidePage
-    ? null
-    : (
-        await db
+  const pageRows = countsDecidePage
+    ? pageScope
+    : inArray(
+        trips.id,
+        db
           .select({ id: trips.id })
           .from(trips)
           .where(and(liveTrip(), pageScope))
           .orderBy(...order)
-          .limit(limit + 1)
-      ).map((row) => row.id);
+          .limit(limit + 1),
+      );
 
-  const rows =
-    pageIds?.length === 0
-      ? []
-      : await db
-          .select({
-            trip: trips,
-            course: boardCourseColumns,
-            diveSite: boardDiveSiteColumns,
-            booked: count(bookings.id),
-            bookedDivers: bookedDiversCount(),
-            certifiedPassengers: tripBoatCertifiedPassengers(),
-            boatCapacity: tripBoatCapacity(),
-            assignedCrewCount: tripAssignedCrewCount(),
-          })
-          .from(trips)
-          .leftJoin(courses, eq(courses.id, trips.courseId))
-          .leftJoin(diveSites, eq(diveSites.id, tripPrimarySiteId))
-          .leftJoin(bookings, liveBookingJoin)
-          .where(and(liveTrip(), pageIds ? inArray(trips.id, pageIds) : pageScope))
-          .groupBy(trips.id, courses.id, diveSites.id)
-          .having(
-            options.minSeats
-              ? sql`count(${bookings.id}) + ${options.minSeats} <= ${tripSellableSeatsSql()}
+  const rows = await db
+    .select({
+      trip: trips,
+      course: boardCourseColumns,
+      diveSite: boardDiveSiteColumns,
+      booked: count(bookings.id),
+      bookedDivers: bookedDiversCount(),
+      certifiedPassengers: tripBoatCertifiedPassengers(),
+      boatCapacity: tripBoatCapacity(),
+      assignedCrewCount: tripAssignedCrewCount(),
+    })
+    .from(trips)
+    .leftJoin(courses, eq(courses.id, trips.courseId))
+    .leftJoin(diveSites, eq(diveSites.id, tripPrimarySiteId))
+    .leftJoin(bookings, liveBookingJoin)
+    .where(and(liveTrip(), pageRows))
+    .groupBy(trips.id, courses.id, diveSites.id)
+    .having(
+      options.minSeats
+        ? sql`count(${bookings.id}) + ${options.minSeats} <= ${tripSellableSeatsSql()}
             and (${trips.snorkelerPriceCents} is not null or ${trips.riderPriceCents} is not null
               or ${trips.diverCapacity} is null
               or ${bookedDiversCount()} + ${options.minSeats} <= ${trips.diverCapacity})`
-              : hasSpaceHaving(options.hasSpace),
-          )
-          .orderBy(...order)
-          .limit(limit + 1);
+        : hasSpaceHaving(options.hasSpace),
+    )
+    .orderBy(...order)
+    .limit(limit + 1);
 
   const hasMore = rows.length > limit;
   const kept = rows.slice(0, limit);
