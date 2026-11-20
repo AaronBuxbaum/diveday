@@ -937,11 +937,13 @@ body {
  * only left the tab). A bare `:has(… div.boat-mode)` still found that hidden
  * manifest, so every page reached without a reload after the Boat tab had no
  * tab bar, no header and a navy ground. Each selector follows the identity
- * wrapper and excludes every boundary Activity can hide. */
+ * wrapper and excludes every boundary Activity can hide. A page that has
+ * risen in sits one `data-page-enter` wrapper (`PageEnter`) below the content
+ * area, so each selector reads through it. */
 @media (max-width: 1023px) {
   /* Deck owns the phone viewport, including the shell's inset. Keep full
      scrolling for exceptions and enlarged text; never clip a safety detail. */
-  #shop-main-content
+  :is(#shop-main-content, #shop-main-content > [data-page-enter])
     > main:not([style*="display: none"]):has(
       > [data-departure-paper]:not([style*="display: none"])
         > div.boat-mode:not([style*="display: none"])
@@ -949,7 +951,7 @@ body {
     padding-block: 0.5rem;
   }
   body:has(
-      #shop-main-content
+      :is(#shop-main-content, #shop-main-content > [data-page-enter])
         > main:not([style*="display: none"])
         > [data-departure-paper]:not([style*="display: none"])
         > div.boat-mode:not([style*="display: none"])
@@ -959,7 +961,7 @@ body {
   }
 
   html:has(
-    #shop-main-content
+    :is(#shop-main-content, #shop-main-content > [data-page-enter])
       > main:not([style*="display: none"])
       > [data-departure-paper]:not([style*="display: none"])
       > div.boat-mode:not([style*="display: none"])
@@ -981,6 +983,10 @@ body {
 @media screen {
   #shop-main-content:has(
     > main:not([style*="display: none"])
+      > [data-departure-paper]:not([style*="display: none"])
+      > div.boat-mode:not([style*="display: none"]),
+    > [data-page-enter]
+      > main:not([style*="display: none"])
       > [data-departure-paper]:not([style*="display: none"])
       > div.boat-mode:not([style*="display: none"])
   ) {
