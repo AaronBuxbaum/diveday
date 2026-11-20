@@ -17,6 +17,7 @@ import { courseSeatRefusal } from "./bookings";
 import type { AppDb, DbExecutor } from "./client";
 import { boundLockWaits, isLockWaitRefusal } from "./lock-bounds";
 import { publishManifestEvent } from "./manifest-events";
+import { nextOfflineGeneration } from "./offline-generation";
 import {
   activityEvents,
   type BoardingObservation,
@@ -382,7 +383,7 @@ async function settleOne(
       status: "booked",
       turnedAwayReason: null,
       turnedAwayAt: null,
-      offlineAssignmentGeneration: sql`${bookings.offlineAssignmentGeneration} + 1`,
+      offlineAssignmentGeneration: sql`${nextOfflineGeneration(bookings.offlineAssignmentGeneration)}`,
     })
     .where(and(eq(bookings.id, seat.id), eq(bookings.status, "no_show")))
     .returning({ id: bookings.id });

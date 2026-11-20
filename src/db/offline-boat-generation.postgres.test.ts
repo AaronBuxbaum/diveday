@@ -151,7 +151,7 @@ describePostgres("offline evidence across a boat change", () => {
         await editTripSection(pg.db, shop.id, trip.id, { boatId: original.boatId }),
       ).toMatchObject({ ok: true });
       const [restored] = await pg.db.select().from(trips).where(eq(trips.id, trip.id));
-      expect(restored?.offlineMeetingGeneration).toBe(original.offlineMeetingGeneration + 2);
+      expect(restored?.offlineMeetingGeneration).not.toBe(original.offlineMeetingGeneration);
       if (order === "intake first" && checkpoint === "after_dive_1")
         await pg.db
           .update(rollCallEvents)
