@@ -226,5 +226,20 @@ describePostgres("recount across meeting days", () => {
         liveRecountProof: ambiguousProof,
       }),
     ).toMatchObject({ ok: false, reason: "review_required" });
+    const ambiguousCrewProof = ambiguousPage?.manifests
+      .find((item) => item.checkpoint === "after_dive_1")
+      ?.crew.find((item) => item.id === crew.id)?.rollCallContext?.liveRecountProof;
+    expect(
+      await recordCrewRollCall(pg.db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        personId: crew.id,
+        recordedByPersonId: owner.person.id,
+        checkpoint: "after_dive_1",
+        status: "boarded",
+        source: "live",
+        liveRecountProof: ambiguousCrewProof,
+      }),
+    ).toMatchObject({ ok: false, reason: "review_required" });
   });
 });
