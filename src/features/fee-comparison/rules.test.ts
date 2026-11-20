@@ -11,6 +11,8 @@ describe("compareMonth", () => {
     const rows = byName(compareMonth(3_000_000, OFFER));
     expect(rows.diveday?.bookingFeeCents).toBe(30_000); // 1% of $30,000
     expect(rows.fareharbor?.bookingFeeCents).toBe(180_000); // 6% of $30,000
+    expect(rows.fareharbor?.otaFeeCents).toBe(22_200); // 2% on top, of the $11,100 through agencies
+    expect(rows.diveday?.otaFeeCents).toBe(0);
   });
 
   it("counts the same card processing in both columns", () => {
@@ -19,12 +21,14 @@ describe("compareMonth", () => {
     expect(rows.fareharbor).toMatchObject({
       subscriptionCents: 0,
       bookingFeeCents: 360_000,
+      otaFeeCents: 44_400,
       processingCents: processing,
-      totalCents: 360_000 + processing,
+      totalCents: 360_000 + 44_400 + processing,
     });
     expect(rows.diveday).toMatchObject({
       subscriptionCents: 0,
       bookingFeeCents: 60_000,
+      otaFeeCents: 0,
       processingCents: processing,
       totalCents: 60_000 + processing,
     });

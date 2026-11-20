@@ -1064,13 +1064,16 @@
         "subscription": "Suscripción",
         "free": "Gratis",
         "bookingFee": "Cuota por reserva",
+        "otaFee": "Cuota por reserva de terceros",
         "processing": "Comisión por transacción con tarjeta",
         "total": "Cada mes"
       },
       "totalNote": "{percent} del dinero del mes",
       "assumptionsTitle": "Cómo lo contamos",
-      "assumptions": "Son estimaciones, no presupuestos. La comisión por transacción con tarjeta se cuenta en las dos columnas, con cada venta como un pago con tarjeta de {sale} de media, a la tarifa publicada de Stripe de 2,9 % más 30 ¢. FareHarbor no publica sus tarifas y no cobra suscripción. Su 6 % de una reserva, con la comisión por transacción con tarjeta cobrada aparte, es lo que informan tres artículos del sector (CaptainBook, 9 de abril de 2026; TrekkSoft, 30 de junio de 2026; Levy, 2026), y un cuarto (hamzaliaqat.com, 29 de abril de 2026) dice que el procesamiento está incluido, así que usamos la lectura más común. Su contrato se negocia centro por centro. Las dos columnas toman el mismo mes, y cada porcentaje se calcula sobre el importe completo, nunca sobre lo que queda después de otra cuota. Consultado el 18 de noviembre de 2026.",
-      "guideLink": "Cómo es dejar {competitor}"
+      "assumptions": "Son estimaciones, no presupuestos. La comisión por transacción con tarjeta se cuenta en las dos columnas, con cada venta como un pago con tarjeta de {sale} de media, a la tarifa publicada de Stripe de 2,9 % más 30 ¢. FareHarbor no publica sus tarifas y no cobra suscripción. Su 6 % de una reserva, con la comisión por transacción con tarjeta cobrada aparte, es lo que informan tres artículos del sector (CaptainBook, 9 de abril de 2026; TrekkSoft, 30 de junio de 2026; Levy, 2026), y un cuarto (hamzaliaqat.com, 29 de abril de 2026) dice que el procesamiento está incluido, así que usamos la lectura más común. Agrega una cuota del 2 % por las reservas que llegan por agencias de viaje en línea (OTA), además del precio de la reserva, y su contrato se negocia centro por centro. DiveDay no agrega ninguna cuota a esas reservas. Las dos columnas toman el mismo mes, y cada porcentaje se calcula sobre el importe completo, nunca sobre lo que queda después de otra cuota. Consultado el 18 de noviembre de 2026.",
+      "guideLink": "Cómo es dejar {competitor}",
+      "otaFootnote": "Supone que el {share} de las reservas llega por agencias de viaje en línea (OTA).",
+      "otaSource": "Fuente: Arival"
     }
   },
   "privacy": {

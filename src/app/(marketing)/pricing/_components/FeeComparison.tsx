@@ -14,15 +14,18 @@ import { formatMoneyScanned } from "@/lib/format";
 import { cachedFormatter } from "@/lib/intl-cache";
 import { MoneySlider } from "./MoneySlider";
 
-/** Words resolved on the server; `totalNote` holds a percent. */
+/** Words resolved on the server; `totalNote` holds a percent, `otaFootnote` the share of bookings. */
 export type FeeComparisonLabels = {
   sliderLabel: string;
   subscription: string;
   free: string;
   bookingFee: string;
+  otaFee: string;
   processing: string;
   total: string;
   totalNote: string;
+  otaFootnote: string;
+  otaSource: string;
   systems: { fareharbor: { name: string; estimated: string }; diveday: { name: string } };
 };
 
@@ -32,7 +35,8 @@ const START_CENTS = 3_000_000;
 
 /**
  * **The same month on two systems.** One slider for the money received and one table with a
- * row per fee and a column per system, every percent taken off the whole amount. The arithmetic is `compareMonth`, tested in
+ * row per fee and a column per system, every percent taken off the whole amount, and FareHarbor's OTA fee on the 37% of it
+ * counted as through online travel agencies (footnoted, with its source). The arithmetic is `compareMonth`, tested in
  * `src/features/fee-comparison/rules.test.ts`; the sources and assumptions are written on the
  * page beside it. DiveDay's column is highlighted and its terms are the offer's.
  */
@@ -76,6 +80,14 @@ export function FeeComparison({
       cells: {
         fareharbor: fee(FEE_ASSUMPTIONS.fareHarborBasisPoints, byName.fareharbor.bookingFeeCents),
         diveday: fee(diveDay.basisPoints, byName.diveday.bookingFeeCents),
+      },
+    },
+    {
+      // Footnoted: the share of bookings that come through the agencies is an assumption.
+      label: `${labels.otaFee}*`,
+      cells: {
+        fareharbor: fee(FEE_ASSUMPTIONS.fareHarborOtaBasisPoints, byName.fareharbor.otaFeeCents),
+        diveday: labels.free,
       },
     },
     {
@@ -167,6 +179,22 @@ export function FeeComparison({
           </tr>
         </tfoot>
       </table>
+
+      <p className="mt-3 text-xs leading-5 text-muted">
+        *{" "}
+        {labels.otaFootnote.replace(
+          "{share}",
+          percent(FEE_ASSUMPTIONS.otaShareBasisPoints / 10_000),
+        )}{" "}
+        <a
+          href={FEE_ASSUMPTIONS.otaSourceUrl}
+          target="_blank"
+          rel="noopener"
+          className="underline underline-offset-2"
+        >
+          {labels.otaSource}
+        </a>
+      </p>
     </div>
   );
 }
