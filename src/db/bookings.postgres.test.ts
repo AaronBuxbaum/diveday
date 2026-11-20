@@ -381,6 +381,53 @@ describePostgres("createBookingParty under real concurrency", () => {
  * safe with. The numbers print to the job log; the assertions here are the
  * ones that can be made honestly: every seat lands, atomically, at each size.
  */
+describePostgres("createBookingParty — capacity under contention (issue #4396)", () => {
+  const party = (shopId: string, tripId: string, tag: string, size: number) =>
+    Array.from({ length: size }, (_, seat) => ({
+      actor: "public" as const,
+      shopId,
+      tripId,
+      fullName: `Race ${tag} ${seat + 1}`,
+      email: `race-${tag}-${seat + 1}@example.invalid`,
+    }));
+
+  it("seats exactly one of two parties of two racing for three places, whole", async () => {
+    const pg = await postgresTestDb();
+    const { shopId, tripId } = await tripWithSeats(pg.db, 3);
+    const gate = await holdRowLock(pg, tripRowLock(tripId));
+    const first = createBookingParty(pg.connect(), party(shopId, tripId, "a", 2));
+    const second = createBookingParty(pg.connect(), party(shopId, tripId, "b", 2));
+    await waitForLockWaiters(pg.db, 2);
+    await gate.release();
+
+    const outcomes = await Promise.all([first, second]);
+    expect(outcomes.filter((outcome) => outcome.ok)).toHaveLength(1);
+    expect(outcomes.filter((outcome) => !outcome.ok)).toEqual([
+      { ok: false, reason: "trip_full", failedIndex: 1 },
+    ]);
+    // The loser's first seat was rolled back with it: no half party.
+    expect(await seatsTaken(pg.db, tripId)).toBe(2);
+  });
+
+  it("never sells past capacity when parties and single seats race for the last places", async () => {
+    const pg = await postgresTestDb();
+    const { shopId, tripId } = await tripWithSeats(pg.db, 4);
+    const gate = await holdRowLock(pg, tripRowLock(tripId));
+    const contenders = [
+      createBookingParty(pg.connect(), party(shopId, tripId, "c", 3)),
+      createBookingParty(pg.connect(), party(shopId, tripId, "d", 3)),
+      createBooking(pg.connect(), party(shopId, tripId, "e", 1)[0]),
+      createBooking(pg.connect(), party(shopId, tripId, "f", 1)[0]),
+    ];
+    await waitForLockWaiters(pg.db, 4);
+    await gate.release();
+    await Promise.all(contenders);
+    expect(await seatsTaken(pg.db, tripId)).toBeLessThanOrEqual(4);
+    // A party is all or nothing, so what was sold is whole parties and singles.
+    expect(await seatsTaken(pg.db, tripId)).not.toBe(0);
+  });
+});
+
 describePostgres("createBookingParty — cost of an atomic party", () => {
   it("holds the trip row for a time that scales flat per seat", async () => {
     const pg = await postgresTestDb();
