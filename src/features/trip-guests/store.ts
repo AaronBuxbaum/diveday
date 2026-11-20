@@ -283,8 +283,6 @@ export async function getTripGuests(
   // these takes only the roster, the trip, the wait list or the last-minute
   // list, all in hand, so none waits on another. They used to be five reads
   // one after another, most of the trip page's serial phases.
-  // Started with the wave below, so a course session's ticks cost no round trip of their own.
-  const courseProgress = courseProgressFor(db, shop.id, trip.courseId, roster);
   const [
     recentInvites,
     sameNameHeldSeats,
@@ -293,6 +291,7 @@ export async function getTripGuests(
     packageDivesByPerson,
     certificationSummaries,
     courseMaterialsDone,
+    courseProgress,
     agencyCheckCardsByPerson,
     issuedCardByPerson,
     dependentCharters,
@@ -345,9 +344,7 @@ export async function getTripGuests(
       db,
       shop.id,
       [...new Set(roster.map(({ booking }) => booking.personId))],
-      {
-        courseId: trip.courseId,
-      },
+      { courseId: trip.courseId },
     ),
     listCertificationSummaries(db, shop.id, [
       ...new Set([
@@ -367,6 +364,7 @@ export async function getTripGuests(
           around: trip.startsAt,
         })
       : new Map<string, CourseMaterialsDone>(),
+    courseProgressFor(db, shop.id, trip.courseId, roster),
     // The cards the DiveDay browser extension could check from this tab
     // (H-20261008-cert-check-extension), and the N of its "Check all N". Never a held seat's: until a
     // staffer confirms who is standing there, the matched diver's name, birth
@@ -551,7 +549,7 @@ export async function getTripGuests(
      * The tick itself is on the booking row the roster already read.
      */
     courseHasMaterials: readLearningMaterials(trip.course?.learningMaterials).length > 0,
-    ...(await courseProgress),
+    ...courseProgress,
     /**
      * What the DiveDay browser extension would search the agency's eLearning
      * page for, per seat, where it can (H-20261008-padi-elearning-check): a PADI course with materials.
