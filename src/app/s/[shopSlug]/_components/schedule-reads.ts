@@ -66,6 +66,7 @@ export async function readSchedulePage(
     hasSpaceFilter,
     partySize,
     tripTypeFilter,
+    limit,
   }: {
     /** The framed schedule's reader (`embed/calendar/page.tsx`): no lenses, shelf, fleet or rating. */
     isEmbed?: boolean;
@@ -79,6 +80,8 @@ export async function readSchedulePage(
     hasSpaceFilter: boolean;
     partySize?: number;
     tripTypeFilter: "fun_dive" | "course" | undefined;
+    /** More than a page: the month view lists the whole month it draws. */
+    limit?: number;
   },
 ) {
   /**
@@ -119,6 +122,7 @@ export async function readSchedulePage(
       now,
       from: shopDayBounds(now, shop.timezone).from,
       minSeats: partySize,
+      limit,
       ...listMonthBounds,
       hasSpace: hasSpaceFilter ? true : undefined,
       tripType: tripTypeFilter,

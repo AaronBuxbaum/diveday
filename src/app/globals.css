@@ -1917,32 +1917,24 @@ select:not([multiple]):not([size]):dir(rtl) {
 }
 
 /* Text she types (`data-walk-type`): in the first part of a beat the characters
-   arrive one at a time, left to right, `--type-chars` of them from `--type-delay`.
-   Every other phase draws the finished text, so the tap and the screen after
-   it never replay it. */
-@keyframes walk-type {
+   arrive one at a time, in reading order, from `--type-delay` on. Each
+   character (`data-walk-char`, `--i` its place) shows on its own turn, so a line that wraps fills
+   its first line before its second. Every other phase draws the finished text, so the tap and the
+   screen after it never replay it. */
+@keyframes walk-char {
   from {
-    clip-path: inset(0 100% 0 0);
+    opacity: 0;
   }
   to {
-    clip-path: inset(0 0 0 0);
+    opacity: 1;
   }
 }
 
-/* The last step of a short word (a 3-digit security code) was left a character short until the
-   phase moved on, so a second, instant animation lands the finished text the moment the typing ends. */
-@keyframes walk-typed {
-  to {
-    clip-path: inset(0 0 0 0);
-  }
-}
-
-[data-walk-phase="before"] [data-walk-before] [data-walk-type] {
-  animation:
-    walk-type calc(var(--type-chars, 10) * var(--type-ms, 40ms)) steps(var(--type-chars, 10)) both
-    var(--type-delay, 0ms),
-    walk-typed 1ms linear forwards
-    calc(var(--type-delay, 0ms) + var(--type-chars, 10) * var(--type-ms, 40ms));
+[data-walk-phase="before"] [data-walk-before] [data-walk-char] {
+  animation-name: walk-char;
+  animation-duration: 1ms;
+  animation-fill-mode: both;
+  animation-delay: calc(var(--type-delay, 0ms) + var(--i, 0) * var(--type-ms, 40ms));
 }
 
 /* Something that happens to the first screen in the first phase (`data-walk-late`, such as her tap
@@ -1984,7 +1976,9 @@ select:not([multiple]):not([size]):dir(rtl) {
 /* A walk that is not running holds still: a slide it opens waits on its first frame, and one
    stopped mid-play stays on the frame it reached, every animation paused where it is. */
 [data-walk-still] *:not([data-walk-frame-current]),
-[data-walk-still] *::after {
+[data-walk-still] *::after,
+[data-walk-idle] *:not([data-walk-frame-current]),
+[data-walk-idle] *::after {
   animation-play-state: paused;
 }
 
@@ -3220,6 +3214,13 @@ details[open]::details-content {
   .sub-surface-ripple-message {
     /* must beat the kill-switch's duration override, which would leave the panel at its final opacity 0 */
     animation-name: none !important;
+  }
+}
+
+/* A walk that does not play (reduced motion) never types: its fields hold the finished text. */
+@media (prefers-reduced-motion: reduce) {
+  [data-walk-phase="before"] [data-walk-before] [data-walk-char] {
+    animation: none;
   }
 }
 

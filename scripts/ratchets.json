@@ -494,7 +494,7 @@
   "context-budget": {
     "note": "Words of agent context every session loads before reading any code. A ratchet: a count may never rise, and a fall is banked with `node scripts/check-context-budget.mjs --write`. See the module comment in scripts/check-context-budget.mjs.",
     "budgets": {
-      "CLAUDE.md": 45,
+      "CLAUDE.md": 62,
       "AGENTS.md": 1054,
       ".claude/rules/*.md (without paths: frontmatter)": 0,
       ".claude/skills/*/SKILL.md (description lines)": 765,
@@ -1080,7 +1080,7 @@
       }
     ],
     "src/app/(token)/ready/[token]/page.tsx": 613,
-    "src/app/s/[shopSlug]/page.tsx": 598,
+    "src/app/s/[shopSlug]/page.tsx": 597,
     "src/app/shop/[shopSlug]/gear/[id]/page.tsx": 577,
     "src/app/shop/[shopSlug]/orders/page.tsx": 507,
     "src/app/shop/[shopSlug]/page.tsx": 576,

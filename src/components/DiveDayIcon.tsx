@@ -24,6 +24,7 @@ export type DiveDaySharedIconName =
   | "plus"
   | "warning"
   | "boat"
+  | "month"
   | "badge"
   | "drill-oxygen"
   | "drill-missing-diver"
@@ -71,6 +72,15 @@ const SHARED_ICON_PATHS: Record<Exclude<DiveDaySharedIconName, "caret">, ReactNo
       <path d="M12 3.4 21.6 20H2.4L12 3.4Z" />
       <path d="M12 10v3.6" />
       <path d="M12 16.8h.01" />
+    </>
+  ),
+  // A month on a page: the button that swaps the day strip for the calendar.
+  month: (
+    <>
+      <rect x="3" y="4" width="18" height="17" rx="2" />
+      <path d="M8 2v4" />
+      <path d="M16 2v4" />
+      <path d="M3 9.5h18" />
     </>
   ),
   boat: (

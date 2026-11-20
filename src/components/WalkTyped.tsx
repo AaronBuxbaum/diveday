@@ -1,4 +1,4 @@
-import type { CSSProperties } from "react";
+import { type CSSProperties, Fragment } from "react";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 
 /** One typing rate for every field in the walk: 40 ms a character is about 300 words a minute. */
@@ -10,19 +10,42 @@ export const WALK_TYPE_CHAR_MS = 40;
  * every other phase, and for a reader without the player, it is the finished text.
  */
 export function WalkTyped({ text, delay = 0 }: { text: string; delay?: number }) {
+  // Words with the spaces that follow them, so the spaces still wrap.
+  const words = [...text.matchAll(/(\S+)(\s*)/g)].map((m) => [m[1] ?? "", m[2] ?? ""] as const);
+  let place = 0;
   return (
     <span
       data-walk-type=""
       className="inline-block align-bottom"
       style={
         {
-          "--type-chars": text.length,
           "--type-delay": `${delay}ms`,
           "--type-ms": `${WALK_TYPE_CHAR_MS}ms`,
         } as CSSProperties
       }
     >
-      {text}
+      {words.map(([word, space]) => {
+        const start = place;
+        place += word.length + space.length;
+        return (
+          // A word is never split across lines, so a wrapped line fills before the next begins.
+          <Fragment key={start}>
+            <span className="whitespace-nowrap">
+              {[...word].map((char, i) => (
+                <span
+                  // biome-ignore lint/suspicious/noArrayIndexKey: a character's place is its identity
+                  key={i}
+                  data-walk-char=""
+                  style={{ "--i": start + i } as CSSProperties}
+                >
+                  {char}
+                </span>
+              ))}
+            </span>
+            {space}
+          </Fragment>
+        );
+      })}
     </span>
   );
 }
