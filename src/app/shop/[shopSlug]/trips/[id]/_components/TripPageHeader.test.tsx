@@ -13,7 +13,7 @@ vi.mock("next/navigation", () => ({
 
 afterEach(cleanup);
 
-function renderHeader(actions?: ReactNode) {
+function renderHeader(actions?: ReactNode, stackActionsOnPhone = false) {
   return render(
     <TripPageHeader
       trip={{
@@ -25,6 +25,7 @@ function renderHeader(actions?: ReactNode) {
       locale="en-US"
       timeZone="America/New_York"
       actions={actions}
+      stackActionsOnPhone={stackActionsOnPhone}
     />,
   );
 }
@@ -36,20 +37,32 @@ function renderHeader(actions?: ReactNode) {
 describe("TripPageHeader", () => {
   /**
    * K-196 and K-357: the manifest's 48px ••• sat in a grid cell beside the
-   * 16px eyebrow on a phone, 16px under the eyebrow's centre and pushing the
-   * title 49px down; from `sm` it moved to the title's row and top-aligned
-   * there, 4px above the title's line. The title and the actions are one row
-   * now, centred on each other, and the eyebrow keeps a line of its own.
+   * 16px eyebrow on a phone. Phone polish 2026-11-20: sharing the title's row
+   * on a phone, "Roll call" and "More" squeezed the title into three lines.
+   * Below `sm` the actions follow the facts; from it they end the title's row.
    */
-  it("centers the actions on the title's line, and leaves the eyebrow a line of its own", () => {
+  it("ends the title's row with one small door at every width", () => {
     renderHeader(<button type="button">More</button>);
 
+    const header = screen.getByRole("heading", { level: 1 }).parentElement;
+    expect(header).toHaveClass("grid-cols-[minmax(0,1fr)_auto]", "items-center");
+    const slot = screen.getByRole("button", { name: "More" }).parentElement;
+    expect(slot).toHaveClass("col-start-2", "row-start-2");
+    expect(slot).not.toHaveClass("order-last");
+  });
+
+  it("puts two doors after the facts on a phone and at the end of the title's row from sm", () => {
+    renderHeader(<button type="button">More</button>, true);
+
     const title = screen.getByRole("heading", { level: 1 });
-    const row = title.parentElement;
-    expect(row).toHaveClass("flex", "items-center");
-    expect(row).toContainElement(screen.getByRole("button", { name: "More" }));
-    expect(row).not.toContainElement(screen.getByRole("link", { name: "Trip" }));
-    expect(title).toHaveClass("min-w-0", "flex-1");
+    const header = title.parentElement;
+    expect(header?.tagName).toBe("HEADER");
+    expect(header).toHaveClass("grid", "sm:grid-cols-[minmax(0,1fr)_auto]");
+    const slot = screen.getByRole("button", { name: "More" }).parentElement;
+    expect(slot?.parentElement).toBe(header);
+    expect(slot).toHaveClass("order-last", "sm:order-none", "sm:col-start-2", "sm:row-start-2");
+    expect(slot).not.toContainElement(screen.getByRole("link", { name: "Trip" }));
+    expect(title).toHaveClass("min-w-0");
   });
 
   /**
@@ -93,43 +106,22 @@ describe("TripPageHeader", () => {
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Two-Tank Reef");
   });
 
-  it("gives the title its row alone when the surface has no actions", () => {
+  it("gives the title the row alone when the surface has no actions", () => {
     renderHeader();
 
-    const title = screen.getByRole("heading", { level: 1 });
-    expect(title.parentElement?.children).toHaveLength(1);
+    const header = screen.getByRole("heading", { level: 1 }).parentElement;
+    // The way up, the title, the facts: no action slot holds a column.
+    expect(header?.children).toHaveLength(3);
   });
 
-  it("keeps a surface-only action in one slot beside the title", () => {
+  it("keeps a surface-only action in one slot", () => {
     renderHeader(<button type="button">More</button>);
 
-    const titleRow = screen.getByRole("heading", { level: 1 }).parentElement;
+    const header = screen.getByRole("heading", { level: 1 }).parentElement;
     const actionSlot = screen.getByRole("button", { name: "More" }).parentElement;
     // The slot is the responsive hiding boundary; a second wrapper would
-    // reserve a title-row gap after the surface hides its action.
-    expect(actionSlot?.parentElement).toBe(titleRow);
-  });
-
-  it("keeps an aside fact separate from the surface's action slot", () => {
-    render(
-      <TripPageHeader
-        trip={{
-          title: "Two-Tank Reef",
-          startsAt: new Date("2026-07-21T18:30:00Z"),
-          endsAt: new Date("2026-07-21T22:00:00Z"),
-        }}
-        backLabel="Schedule"
-        locale="en-US"
-        timeZone="America/New_York"
-        headerAside={<span>12 seats left</span>}
-        actionsClassName="lg:hidden"
-        actions={<button type="button">More</button>}
-      />,
-    );
-    const fact = screen.getByText("12 seats left");
-    const actionSlot = screen.getByRole("button", { name: "More" }).parentElement;
-    expect(actionSlot?.parentElement).toBe(fact.parentElement);
-    expect(actionSlot).not.toContainElement(fact);
+    // reserve a gap after the surface hides its action.
+    expect(actionSlot?.parentElement).toBe(header);
   });
 });
 
@@ -188,7 +180,7 @@ describe("TripPageHeaderSkeleton", () => {
     const h1 = screen.getByRole("heading", { level: 1 });
     const skeleton = render(<TripPageHeaderSkeleton titleLines={{ base: 2, sm: 1 }} />).container;
     const title = skeleton.firstElementChild?.children[1];
-    expect(spacing(title)).toEqual(spacing(h1.parentElement));
+    expect(spacing(title)).toEqual(spacing(h1));
     expect(lineType(h1).length).toBeGreaterThanOrEqual(2);
     // Two lines below `sm`, one from it: each is the h1's own line box.
     expect(title?.children).toHaveLength(2);
@@ -200,9 +192,8 @@ describe("TripPageHeaderSkeleton", () => {
 
   it("draws the badge row where the h1's meta row sits, and no description", () => {
     loadedHeader();
-    // The h1 shares its row with the surface's actions (K-196, K-357); the
-    // meta row is that row's next sibling.
-    const meta = screen.getByRole("heading", { level: 1 }).parentElement?.nextElementSibling;
+    // With no actions, the meta row is the title's next sibling.
+    const meta = screen.getByRole("heading", { level: 1 }).nextElementSibling;
     expect(meta?.textContent).toContain("3 seats left");
     const skeleton = render(<TripPageHeaderSkeleton />).container.firstElementChild;
     const row = skeleton?.children[2];

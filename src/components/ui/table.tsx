@@ -27,7 +27,12 @@ import { tapTargetLinkClass } from "./button";
  *   index is the worked example). For lists a staffer reads on the move.
  * - **Scroll**: desk- and print-first documents (departure log, import
  *   preview) keep every column and set `minWidth`; the shell scrolls
- *   sideways on a narrow screen. On a sheet the floor goes (`.paper-sheet
+ *   sideways on a narrow screen.
+ * - **Stack**: a document whose every column matters on a phone too (the
+ *   departure log's divers and crew) says `stack`; below `sm`, on a screen
+ *   only, each row becomes a block and each cell a labelled line, the label
+ *   being its `Td`'s `label` (globals.css `.table-stack`). Paper keeps the
+ *   table. On a sheet the floor goes (`.paper-sheet
  *   .table-scroll-shell` in globals.css), so paper is never subject to the
  *   scroll rule — a clipped column on a printed packing list is a silent one.
  *
@@ -127,6 +132,7 @@ const CELL_ALIGN = {
  */
 export function Table({
   minWidth,
+  stack = false,
   flush = false,
   shellClassName = "",
   className = "",
@@ -134,6 +140,8 @@ export function Table({
 }: {
   /** Below this the shell scrolls sideways instead of crushing columns. */
   minWidth?: TableMinWidth;
+  /** Below `sm` on a screen, each row is a block of labelled lines (`Td`'s `label`). */
+  stack?: boolean;
   /** Chrome-less shell for a table nested inside an existing card. */
   flush?: boolean;
   /** Margins and visibility for the shell (e.g. `mt-6`, `hidden sm:block`). */
@@ -145,7 +153,7 @@ export function Table({
     <div
       className={`overflow-hidden ${
         flush ? "" : "rounded-panel border border-border bg-surface shadow-bed"
-      } ${shellClassName}`
+      } ${stack ? "table-stack" : ""} ${shellClassName}`
         .replace(/\s+/g, " ")
         .trim()}
     >
@@ -332,9 +340,12 @@ export function Td({
   align = "top",
   pad = true,
   clip = true,
+  label,
   className = "",
   children,
 }: {
+  /** The column's name, said above the cell's value when a `stack` table stacks. */
+  label?: string;
   /** A figure: right-aligned, `tabular-nums`, never wrapped mid-number. */
   numeric?: boolean;
   /** Secondary ink for a supporting cell. */
@@ -375,6 +386,7 @@ export function Td({
 }) {
   return (
     <td
+      data-label={label}
       className={`${clip ? "overflow-hidden has-[>[data-row-link]]:relative" : ""} bg-clip-padding ${CELL_ALIGN[align]} ${pad ? CELL_PAD : ""} ${
         numeric ? "text-right whitespace-nowrap tabular-nums" : ""
       } ${muted ? "text-muted" : ""} ${hideBelow ? HIDE_BELOW[hideBelow] : ""} ${className}`

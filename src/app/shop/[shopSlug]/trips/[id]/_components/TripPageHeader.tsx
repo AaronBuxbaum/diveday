@@ -43,15 +43,13 @@ export function TripPageHeader({
   extraMeta,
   actions,
   actionsClassName,
-  headerAside,
   price,
   daySpan,
   facts,
   className,
-  stackActionsOnMobile = false,
+  stackActionsOnPhone = false,
 }: {
   trip: { title: string; startsAt: Date; endsAt: Date };
-  stackActionsOnMobile?: boolean;
   /** The manifest retains a way out when boat mode hides global navigation. */
   backLabel?: string;
   locale: string;
@@ -70,8 +68,13 @@ export function TripPageHeader({
   actions?: ReactNode;
   /** Surface-owned visibility, such as the manifest's phone-only emergency door. */
   actionsClassName?: string;
-  /** Primary work on the Trip masthead, such as capacity and Add diver. */
-  headerAside?: ReactNode;
+  /**
+   * Below `sm`, the actions take a row of their own after the facts. For a
+   * header with two doors ("Roll call" and "More"), which beside the title
+   * took half a phone's width and broke the name into three lines; one
+   * small "More" keeps the title's row.
+   */
+  stackActionsOnPhone?: boolean;
   /** Optional fare shown with the departure's date and time. */
   price?: ReactNode;
   /**
@@ -88,50 +91,50 @@ export function TripPageHeader({
   /** Allows a surface to tighten the space after its masthead when needed. */
   className?: string;
 }) {
-  // A surface-only door owns one slot. Keeping a second wrapper around a
-  // responsive action reserves a title-row gap after the action is hidden.
+  // **Two doors on a phone follow the facts** (`stackActionsOnPhone`).
+  // Sharing the title's row, "Roll call" and "More" took half of a 390px
+  // screen, and "Two-Tank Reef — Molasses & French" broke into three lines
+  // with "— Molasses" leading one. From `sm` they end the title's row,
+  // centred on it. Static strings: Tailwind cannot see an interpolated class.
+  const row = backLabel ? "row-start-2" : "row-start-1";
+  const smRow = backLabel ? "sm:row-start-2" : "sm:row-start-1";
   const actionSlot = actions ? (
     <div
-      className={`flex shrink-0 flex-wrap items-center gap-x-1 gap-y-2 ${actionsClassName ?? ""}`}
+      className={`flex flex-wrap items-center gap-x-1 gap-y-2 ${
+        stackActionsOnPhone
+          ? `order-last mt-3 sm:order-none sm:col-start-2 sm:mt-0 ${smRow}`
+          : `col-start-2 ${row}`
+      } ${actionsClassName ?? ""}`}
     >
       {actions}
     </div>
   ) : null;
 
   return (
-    <header className={className ?? "mb-8"}>
+    <header
+      className={`grid ${
+        stackActionsOnPhone
+          ? "grid-cols-1 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:gap-x-8"
+          : "grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 sm:gap-x-8"
+      } ${className ?? "mb-8"}`}
+    >
       {/* Boat mode hides global navigation, so its header keeps a way back. */}
-      {backLabel ? <EyebrowWayUp>{backLabel}</EyebrowWayUp> : null}
-      {/* **The title and its actions are one row, centred on each other.**
-          The 48px ••• used to sit in a grid cell beside the 16px eyebrow on a
-          phone — 16px under the eyebrow's centre, and holding the title 49px
-          below it — and from `sm` to top-align beside the title, 4px above
-          its line (K-196, K-357). When present, the eyebrow keeps a line of
-          its own, and the actions end the title's. */}
-      <div
-        className={`${backLabel ? TRIP_TITLE_GAP : ""} flex gap-4 sm:gap-8 ${stackActionsOnMobile ? "flex-col items-stretch sm:flex-row sm:items-center" : "items-center"}`}
+      {backLabel ? (
+        <div className="col-span-full">
+          <EyebrowWayUp>{backLabel}</EyebrowWayUp>
+        </div>
+      ) : null}
+      <h1
+        className={`${backLabel ? TRIP_TITLE_GAP : ""} min-w-0 ${TRIP_TITLE_TYPE} font-semibold tracking-tight text-balance`}
       >
-        <h1
-          className={`min-w-0 flex-1 ${TRIP_TITLE_TYPE} font-semibold tracking-tight text-balance`}
-        >
-          {trip.title}
-        </h1>
-        {headerAside ? (
-          <div
-            className={`flex shrink-0 flex-wrap items-center gap-2 sm:gap-3 ${stackActionsOnMobile ? "justify-between sm:justify-end" : "justify-end"}`}
-          >
-            {headerAside}
-            {actionSlot}
-          </div>
-        ) : (
-          actionSlot
-        )}
-      </div>
+        {trip.title}
+      </h1>
+      {actionSlot}
       {/* One geometry for every trip, whatever the length of its name: the
           name owns its line; beneath it, the trip's own facts — when it
           sails, what this surface is for, and any per-surface metadata. */}
       <div
-        className={`${TRIP_META_GAP} flex flex-wrap items-center gap-x-3 gap-y-2 ${TRIP_META_TYPE} text-muted`}
+        className={`${TRIP_META_GAP} flex flex-wrap items-center gap-x-3 gap-y-2 col-span-full ${TRIP_META_TYPE} text-muted`}
       >
         {badge}
         {facts ? (
@@ -148,8 +151,12 @@ export function TripPageHeader({
           </span>
         )}
       </div>
-      {description ? <p className="mt-2 max-w-2xl text-muted">{description}</p> : null}
-      {extraMeta ? <div className="mt-2 flex flex-col gap-1.5">{extraMeta}</div> : null}
+      {description ? (
+        <p className="mt-2 max-w-2xl text-muted col-span-full">{description}</p>
+      ) : null}
+      {extraMeta ? (
+        <div className="mt-2 flex flex-col gap-1.5 col-span-full">{extraMeta}</div>
+      ) : null}
     </header>
   );
 }

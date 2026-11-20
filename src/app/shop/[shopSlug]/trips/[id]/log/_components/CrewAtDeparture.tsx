@@ -91,7 +91,7 @@ function CrewTable({
   checkpoints: IncidentExportDocument["meta"]["checkpoints"];
 }) {
   return (
-    <Table shellClassName="mt-3" minWidth="56rem">
+    <Table shellClassName="mt-3" minWidth="56rem" stack>
       <THead>
         <Th>{t("incidentExport.colCrewMember")}</Th>
         <Th>{t("incidentExport.colRoles")}</Th>
@@ -123,11 +123,13 @@ function CrewTable({
               ) : null}
               {member.fullName}
             </Td>
-            <Td muted>{staffJobWithRatings(t, member.roles, member.currentRatings)}</Td>
+            <Td muted label={t("incidentExport.colRoles")}>
+              {staffJobWithRatings(t, member.roles, member.currentRatings)}
+            </Td>
             {/* Plural on purpose: one divemaster commonly leads
                     several groups on one boat, and this document must
                     print all of them (ADR 20260804-buddy-teams). */}
-            <Td muted>
+            <Td muted label={t("incidentExport.colCrewTeams")}>
               {member.buddyTeamNumbers.length === 0
                 ? t("incidentExport.crewNoTeams")
                 : member.buddyTeamNumbers
@@ -137,7 +139,13 @@ function CrewTable({
             {member.rollCall
               .filter((result) => checkpoints.includes(result.checkpoint))
               .map((result) => (
-                <RollCallCell key={result.checkpoint} t={t} result={result} dateTime={dateTime} />
+                <RollCallCell
+                  key={result.checkpoint}
+                  t={t}
+                  result={result}
+                  dateTime={dateTime}
+                  label={checkpointText(result.checkpoint)}
+                />
               ))}
           </tr>
         ))}
@@ -151,13 +159,16 @@ export function RollCallCell({
   t,
   result,
   dateTime,
+  label,
 }: {
   t: StaffTranslator;
+  /** The checkpoint's name, said above the result when the table stacks on a phone. */
+  label?: string;
   result: IncidentRollCallResult;
   dateTime: (isoString: string) => string;
 }) {
   return (
-    <Td>
+    <Td label={label}>
       <span
         className={
           result.label === "not_back_aboard"

@@ -3076,6 +3076,54 @@ details[open]::details-content {
   }
 }
 
+/*
+ * **A stacked table on a phone** (`Table`'s `stack`). The departure log's
+ * divers table is nine columns; at 390px its emergency contacts were cut at
+ * the card edge and every row stood 110px tall for cells nobody could see.
+ * Below `sm`, on a screen only, each row is a block: the first cell leads,
+ * and each other cell is a line under its column's name (`Td`'s `label`).
+ * Paper keeps the table: `screen` keeps a print preview at any width out.
+ */
+@media screen and (width < 40rem) {
+  .table-stack .table-scroll-shell {
+    overflow: visible;
+    mask-image: none;
+    animation: none;
+  }
+  .table-stack :is(table, tbody, tr, td) {
+    display: block;
+    min-width: 0;
+  }
+  .table-stack thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .table-stack tr {
+    padding: 0.875rem 1rem;
+  }
+  .table-stack td {
+    padding: 0;
+    overflow: visible;
+  }
+  .table-stack td + td {
+    margin-top: 0.5rem;
+  }
+  .table-stack td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 0.125rem;
+    color: var(--color-muted);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+}
+
 @media print {
   /* A paper reader cannot scroll to trigger an entrance or open a feature list. */
   .marketing-reveal,

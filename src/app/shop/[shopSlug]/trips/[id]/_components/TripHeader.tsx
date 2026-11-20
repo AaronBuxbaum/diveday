@@ -80,13 +80,15 @@ export function TripHeader({
       facts={facts}
       // The page's own `space-y` spaces it; a margin here would override that gap.
       className=""
+      stackActionsOnPhone={rollCall === "header"}
       actions={
         <>
           {rollCall === "header" ? (
             <Link
               href={`${root}/manifest`}
               data-roll-call-door=""
-              className={buttonClass({ variant: "ghost", size: "sm" })}
+              // Flush: on a phone it leads its own row, under the title's edge.
+              className={buttonClass({ variant: "ghost", size: "sm", flush: true })}
             >
               {t("trips.clock.rollCall")}
             </Link>
