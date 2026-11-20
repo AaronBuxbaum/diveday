@@ -1,0 +1,111 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "88c230dd-38cb-42b9-8016-28643db7d186",
+  "prevIds": [
+    "1f175c0b-fcc0-4752-90c6-96a468ce162f"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "shops",
+        "pick_trip_id"
+      ],
+      "writes": [
+        "s|col|public.shops.pick_trip_id",
+        "n|col|public.shops.pick_trip_id",
+        "e|col|public.shops.pick_trip_id"
+      ],
+      "reads": [
+        "n|tbl|public.shops",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "shops",
+        "pick_course_id"
+      ],
+      "writes": [
+        "s|col|public.shops.pick_course_id",
+        "n|col|public.shops.pick_course_id",
+        "e|col|public.shops.pick_course_id"
+      ],
+      "reads": [
+        "n|tbl|public.shops",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_check",
+      "statementTarget": [
+        "table",
+        "public",
+        "shops"
+      ],
+      "writes": [
+        "s|ck|public.shops.shops_one_pick",
+        "n|ck|public.shops.shops_one_pick",
+        "e|ck|public.shops.shops_one_pick",
+        "n|con|public.shops.shops_one_pick"
+      ],
+      "reads": [
+        "n|tbl|public.shops",
+        "n|sch|public",
+        "n|col|public.shops.pick_trip_id",
+        "n|col|public.shops.pick_course_id"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "shops",
+        "name": "pick_trip_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "shops",
+        "name": "pick_course_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "shops",
+        "name": "shops_one_pick",
+        "value": "\"pick_trip_id\" is null or \"pick_course_id\" is null",
+        "entityType": "checks"
+      }
+    }
+  ]
+}

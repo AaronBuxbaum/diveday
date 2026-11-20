@@ -36,6 +36,7 @@ import { ScheduleFilterBar } from "./_components/ScheduleFilterBar";
 import { SchedulePagerRow } from "./_components/SchedulePagerRow";
 import { SchedulePaperSheet, scheduleSheetEmpty } from "./_components/SchedulePaperSheet";
 import { ScheduleShelves } from "./_components/ScheduleShelves";
+import { ShopPick } from "./_components/ShopPick";
 import { ShopWelcome } from "./_components/ShopWelcome";
 import { readSchedulePage } from "./_components/schedule-reads";
 import { seatPriceLabel, shelfCourseCards, weekLedgerRows } from "./_components/schedule-rows";
@@ -304,6 +305,7 @@ export default async function SchedulePage({
         t={t}
         className="mb-10"
       />
+      <ShopPick {...{ db, shop, shopSlug, partySize, locale, t }} className="mb-10" />
       {leadsCourses ? <ScheduleShelves {...shelfProps} only="courses" /> : null}
       <header>
         <h1 className={`font-brand-display ${PAGE_TITLE_CLASS}`}>{t("schedule.title")}</h1>
@@ -496,11 +498,9 @@ export default async function SchedulePage({
         </section>
       ) : null}
       {/* "Our year": the shop's own year in counts, last, and only with its yes. */}
-      {shop.publicYearEnabled ? (
-        <Suspense fallback={null}>
-          <OurYearSection shop={shop} locale={locale} t={t} className={SECTION_GAP} />
-        </Suspense>
-      ) : null}
+      <Suspense fallback={null}>
+        <OurYearSection shop={shop} locale={locale} t={t} className={SECTION_GAP} />
+      </Suspense>
     </main>
   );
 }

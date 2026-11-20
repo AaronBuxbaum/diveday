@@ -774,3 +774,48 @@ describe("the demo shop's Stripe connection", () => {
     expect(row).toMatchObject({ disconnectedAt: null, chargesEnabled: true });
   });
 });
+
+/**
+ * **The shop's pick** (#4823) rides the profile form as one `pick` field. A saved pick lands on
+ * the shop row; one that is not on the public board any more (here: another shop's departure, an
+ * id nothing holds) is refused with its own notice, and what the form saved beside it stays.
+ */
+describe("saveProfileAction's pick", () => {
+  const profile = (pick: string) => {
+    const form = new FormData();
+    form.set("storefrontLeads", "schedule");
+    form.set("tagline", "Pick test tagline");
+    form.set("pick", pick);
+    return form;
+  };
+
+  it("saves a departure, and refuses one that is gone while keeping the rest of the form", async () => {
+    const { db, shop, owner } = await context();
+    signIn(shop, owner);
+    const { pickChoices } = await import("@/features/shop-pick");
+    const [trip] = (await pickChoices(db, shop, nowDate())).trips;
+    if (!trip) throw new Error("the seeded shop has an upcoming trip");
+
+    await redirectedTo(() => saveProfileAction(profile(`trip:${trip.id}`)));
+    expect((await getShopById(db, shop.id))?.pickTripId).toBe(trip.id);
+
+    const refused = await redirectedTo(() =>
+      saveProfileAction(profile(`trip:${crypto.randomUUID()}`)),
+    );
+    expect(refused).toContain("notice=pick-gone");
+    const after = await getShopById(db, shop.id);
+    expect(after?.pickTripId).toBe(trip.id);
+    expect(after?.tagline).toBe("Pick test tagline");
+
+    await redirectedTo(() => saveProfileAction(profile("")));
+    expect((await getShopById(db, shop.id))?.pickTripId).toBeNull();
+  });
+
+  it("refuses a pick that is not a trip or a course", async () => {
+    const { shop, owner } = await context();
+    signIn(shop, owner);
+    expect(await redirectedTo(() => saveProfileAction(profile("boat:nope")))).toContain(
+      "notice=profile-invalid",
+    );
+  });
+});

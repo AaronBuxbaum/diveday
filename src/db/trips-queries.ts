@@ -325,10 +325,13 @@ function upcomingTripScope(
      * the board, which list a departure by when it leaves.
      */
     byMeetingDay?: boolean;
+    /** Just this departure, if it is still on the board: how the shop's pick is read back. */
+    tripId?: string;
   },
 ) {
   return and(
     eq(trips.shopId, shopId),
+    bounds.tripId ? eq(trips.id, bounds.tripId) : undefined,
     eq(trips.status, "scheduled"),
     bounds.publicOnly ? eq(trips.isPrivate, false) : undefined,
     bounds.byMeetingDay
@@ -713,6 +716,8 @@ export async function pagedUpcomingTripsWithCounts(
     lensId?: string;
     /** Upcoming by meeting day, not by first departure (see `upcomingTripScope`). */
     byMeetingDay?: boolean;
+    /** Just this departure, if it is still on the board (see `upcomingTripScope`). */
+    tripId?: string;
   } = {},
 ): Promise<{
   trips: TripWithBookedCount[];
@@ -755,6 +760,7 @@ export async function pagedUpcomingTripsWithCounts(
           publicOnly: options.publicOnly,
           lensId: options.lensId,
           byMeetingDay: options.byMeetingDay,
+          tripId: options.tripId,
         }),
         afterDate && after && !Number.isNaN(afterDate.getTime())
           ? or(

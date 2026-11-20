@@ -17,7 +17,9 @@ function positionOf(marker: string): number {
  */
 describe("the public schedule's Our year panel", () => {
   it("is gated on the shop's switch and kept out of the embed", () => {
-    expect(SOURCE).toContain("{shop.publicYearEnabled ? (");
+    expect(routeSource(import.meta.dirname, "_components/OurYear.tsx")).toContain(
+      "if (!shop.publicYearEnabled) return null;",
+    );
     expect(SOURCE).not.toContain("isEmbed");
     expect(routeSource(import.meta.dirname, "embed/calendar/page.tsx")).not.toContain(
       "OurYearSection",
@@ -64,11 +66,19 @@ describe("the public pages with sightings switched off", () => {
  * first, the board one scroll later, the full story where it was.
  */
 describe("the public schedule's welcome band", () => {
+  it("puts the shop's pick between the welcome and the timetable", () => {
+    expect(positionOf("<ShopPick")).toBeGreaterThan(positionOf("<ShopWelcome"));
+    expect(positionOf("<ShopPick")).toBeLessThan(positionOf("<WeekLedger"));
+  });
+
   it("stands above the timetable, and the full story stays below it", () => {
     expect(positionOf("<ShopWelcome")).toBeGreaterThan(-1);
     expect(positionOf("<ShopWelcome")).toBeLessThan(positionOf("<WeekLedger"));
-    // The story renders inside the shelves, which follow the ledger.
-    expect(positionOf("<ScheduleShelves")).toBeGreaterThan(positionOf("<WeekLedger"));
+    // The story renders inside the shelves, which follow the ledger. A shop that leads with its
+    // courses draws that one shelf above the timetable, so the marker is the later, rest-of-page one.
+    expect(positionOf("<ScheduleShelves {...shelfProps} only={leadsCourses")).toBeGreaterThan(
+      positionOf("<WeekLedger"),
+    );
   });
 
   it("jumps to the board only when there is one and to courses only when the shop teaches", () => {

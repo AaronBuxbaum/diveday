@@ -760,6 +760,15 @@ export const shops = pgTable(
     noticeText: text("notice_text"),
     /** Which section opens the storefront under the welcome: the schedule or the courses. */
     storefrontLeads: text("storefront_leads").notNull().default("schedule"),
+    /**
+     * **The shop's pick** (#4823): one departure or one course it features above the schedule,
+     * chosen on the profile page and changed whenever the shop likes. Plain ids, not foreign
+     * keys: the page reads the pick back through the live, public, still-ahead scope, so a
+     * deleted, hidden or finished one simply stops showing and the shop is asked again, rather
+     * than the pick pinning a row or cascading. At most one of the two is set.
+     */
+    pickTripId: uuid("pick_trip_id"),
+    pickCourseId: uuid("pick_course_id"),
     welcomeText: text("welcome_text"),
     welcomeSigner: text("welcome_signer"),
     tagline: text("tagline"),
@@ -808,6 +817,7 @@ export const shops = pgTable(
       "gin",
       sql`${table.addressLocality} gin_trgm_ops`,
     ),
+    check("shops_one_pick", sql`${table.pickTripId} is null or ${table.pickCourseId} is null`),
     check("shops_storefront_leads_known", sql`${table.storefrontLeads} in ('schedule', 'courses')`),
     check("shops_dock_call_minutes_nonnegative", sql`${table.dockCallMinutes} >= 0`),
     check("shops_offline_erasure_epoch_nonnegative", sql`${table.offlineErasureEpoch} >= 0`),

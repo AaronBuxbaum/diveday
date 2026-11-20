@@ -10,7 +10,9 @@ import {
 } from "@/db/shops";
 import { allValues, checkbox, formValue, text, trimmedText } from "@/features/form-parse";
 import { defineAction, land, type NoticeOf } from "@/features/server-action";
+import { type ShopPick, setShopPick } from "@/features/shop-pick";
 import { isBrandDisplayFontCode, parseBrandBadges, parseBrandColor } from "@/lib/brand";
+import { nowDate } from "@/lib/clock";
 import { publicSchedulePath } from "@/lib/public-routes";
 import { storeShopHeroImage, storeShopLogoImage } from "@/lib/storage";
 import { MAX_NEW_SHOPFRONT_PHOTOS_PER_SAVE, MAX_SHOPFRONT_PHOTOS } from "@/lib/storage/limits";
@@ -37,6 +39,7 @@ const profileSchema = z.object({
 const profileForm = z.object({
   noticeText: trimmedText(),
   storefrontLeads: text(),
+  pick: text(),
   welcomeText: trimmedText(),
   welcomeSigner: trimmedText(),
   tagline: trimmedText(),
@@ -51,6 +54,14 @@ const profileForm = z.object({
   removeHero: checkbox("true"),
   badge: allValues(),
 });
+/** "trip:<id>" or "course:<id>" as the profile's pick field posts it; blank is no pick. */
+function parsePick(value: string): ShopPick | null | undefined {
+  if (value === "") return null;
+  const [kind, id] = value.split(":");
+  const known = kind === "trip" || kind === "course";
+  return known && z.uuid().safeParse(id).success ? { kind, id: id as string } : undefined;
+}
+
 /** The photo strip as posted: what to take off, and the files picked. */
 const shopPhotosForm = z.object({
   removeShopPhotoUrls: allValues(),
@@ -81,6 +92,8 @@ export const saveProfileAction = defineAction({
       establishedYear: form.establishedYear,
     });
     if (!parsed.success) return land(page, "profile-invalid");
+    const pick = parsePick(form.pick);
+    if (pick === undefined) return land(page, "profile-invalid");
     const brandColor = parseBrandColor(form.brandColor);
     if (!brandColor.valid) return land(page, "profile-invalid");
     const fontInput = form.brandDisplayFont;
@@ -131,6 +144,9 @@ export const saveProfileAction = defineAction({
       brandBadges,
       ...(brandHeroImageUrl !== undefined ? { brandHeroImageUrl } : {}),
     });
+
+    // After the profile saved, so a pick that has since sailed refuses alone and the rest stays.
+    if (!(await setShopPick(db, shop, pick, nowDate()))) return land(page, "pick-gone");
 
     if (logoUrl !== undefined && shop.logoUrl && shop.logoUrl !== logoUrl) {
       await queueAndAttemptMediaDeletion(db, { shopId, kind: "shop_logo", url: shop.logoUrl });

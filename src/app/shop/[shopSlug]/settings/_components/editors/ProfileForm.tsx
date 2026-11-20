@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { ImageFileInput } from "@/components/ImageFileInput";
 import { RemovablePhoto, removablePhotoGridClass } from "@/components/RemovablePhoto";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -25,6 +26,7 @@ import { saveProfileAction } from "../../website-actions";
 import { BrandColorField } from "../BrandColorField";
 import { BrandPreview } from "../BrandPreview";
 import type { SettingsShop } from "../groups/kit";
+import { PickField } from "./PickField";
 
 /**
  * **The storefront's profile and branding** — the editor that was the Website
@@ -35,10 +37,12 @@ import type { SettingsShop } from "../groups/kit";
 export function ProfileForm({
   shop,
   t,
+  locale,
   className = "",
 }: {
   shop: SettingsShop;
   t: StaffTranslator;
+  locale: string;
   className?: string;
 }) {
   // A shop's colour is checked at render, never on save: the hint says when
@@ -91,6 +95,9 @@ export function ProfileForm({
           className={controlClass}
         />
       </Field>
+      <Suspense fallback={null}>
+        <PickField shop={shop} t={t} locale={locale} />
+      </Suspense>
       <Field label={t("settings.main.profile.storefrontLeads")}>
         <select name="storefrontLeads" defaultValue={shop.storefrontLeads} className={controlClass}>
           <option value="schedule">{t("settings.main.profile.leadsSchedule")}</option>
