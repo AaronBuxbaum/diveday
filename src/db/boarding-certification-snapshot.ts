@@ -75,10 +75,9 @@ export function boardingCertificationSnapshot(shopId: string, personId: string):
 export async function rewriteBoardingSnapshotReviewer(
   db: DbExecutor,
   shopId: string,
-  fromPersonIds: string[],
+  fromPersonIds: readonly [string, ...string[]],
   toPersonId: string | null,
 ): Promise<void> {
-  if (fromPersonIds.length === 0) return;
   const patch =
     toPersonId === null
       ? { reviewedByPersonId: null, reviewedByName: null }

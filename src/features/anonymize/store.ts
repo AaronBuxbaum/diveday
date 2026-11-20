@@ -1492,7 +1492,7 @@ async function scrubBookingRows(
   // A reviewer can be erased even when they held no seat on these departures.
   // Cards can still name a merged-away reviewer, including captures created
   // after the merge, so scrub the entire chain just as the person sweep does.
-  const personChain = [personId, ...ctx.mergedShellIds];
+  const personChain: [string, ...string[]] = [personId, ...ctx.mergedShellIds];
   await rewriteBoardingSnapshotReviewer(tx, shopId, personChain, null);
   // A duplicate cancelled seat can remain on a merged-away person. Lock every
   // seat first, so an in-flight boarding cannot insert a snapshot after this
