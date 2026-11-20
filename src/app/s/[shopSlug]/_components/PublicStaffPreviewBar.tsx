@@ -24,7 +24,7 @@ export function PublicStaffPreviewBar({
   const tripId = tail && !tail.includes("/") ? tail : null;
   return (
     <div role="status" className="border-b border-border bg-surface-sunken">
-      <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-x-4 gap-y-1.5 px-4 py-1.5 text-sm sm:px-6 [overflow-wrap:normal]">
+      <div className="mx-auto flex w-full max-w-6xl items-center sm:flex-wrap justify-between gap-x-4 gap-y-1.5 px-4 py-1.5 text-sm sm:px-6 [overflow-wrap:normal]">
         <p className="flex min-w-0 items-center text-muted sm:min-h-11">
           <span className="sm:hidden">{words.short}</span>
           <span className="max-sm:hidden">{words.long}</span>
