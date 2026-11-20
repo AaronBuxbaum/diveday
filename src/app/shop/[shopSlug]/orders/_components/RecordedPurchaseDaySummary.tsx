@@ -3,7 +3,8 @@ import { DateField, Field } from "@/components/ui/form";
 import type { RecordedPurchaseDay } from "@/features/recorded-purchases";
 import { ORDER_COLLECTION_KEYS } from "@/i18n/order-labels";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
-import { formatMoneyCents } from "@/lib/format";
+import { formatCalendarDate } from "@/lib/calendar-date";
+import { formatMoneyCents, formatTimeZoneGeneric } from "@/lib/format";
 import { shopPath } from "@/lib/staff-notices";
 import type { OrdersSearch } from "../_lib/orders-search";
 
@@ -26,7 +27,10 @@ export function RecordedPurchaseDaySummary({
   return (
     <details className="mt-6 rounded-lg border border-border p-4">
       <summary className="flex min-h-11 cursor-pointer items-center text-base font-medium">
-        {t("orders.purchaseDay.title")} · {data.day} · {data.timezone}
+        {/* The shop's own date and the zone's short name ("Jul 21, 2026 ·
+            ET"), never "2026-07-21 · America/New_York". */}
+        {t("orders.purchaseDay.title")} · {formatCalendarDate(data.day, locale)} ·{" "}
+        {formatTimeZoneGeneric(locale, data.timezone)}
       </summary>
       <p className="mt-2 text-sm text-muted">{t("orders.purchaseDay.scope")}</p>
       <form

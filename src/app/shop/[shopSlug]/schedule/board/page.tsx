@@ -152,7 +152,7 @@ export default async function ScheduleBoardPage({
         })
       : null;
   const gearNotice = builder === "moved" ? verifiedGearMoveNotice(query.result, shop.id, st) : null;
-  const builderCopy = scheduleBuilderCopy(st, shop.timezone);
+  const builderCopy = scheduleBuilderCopy(st, shop.timezone, locale);
 
   const builderMore = scheduleBuilderMore(st, locale);
 

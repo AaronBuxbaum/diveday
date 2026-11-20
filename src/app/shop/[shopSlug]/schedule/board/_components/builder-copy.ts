@@ -6,13 +6,17 @@
 // shell and its own reads are the only ones the reader waits on. See ADR
 // 20260804-instant-navigation.
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import { formatMoneyCents, weekdayNames } from "@/lib/format";
+import { formatMoneyCents, formatTimeZoneGeneric, weekdayNames } from "@/lib/format";
 import { currencyFractionDigits, maxPriceMajor, type ShopCurrency } from "@/lib/money";
 import { MAX_TRIP_DAYS, MIN_TRIP_DAYS } from "@/lib/trip-days";
 import type { BuilderCopy, BuilderMoreOptions, BuilderPriceInput } from "./ScheduleBuilder";
 
 /** Every word the departure builder says, resolved for the reader: a Client Component cannot translate itself. */
-export function scheduleBuilderCopy(st: StaffTranslator, timeZone: string): BuilderCopy {
+export function scheduleBuilderCopy(
+  st: StaffTranslator,
+  timeZone: string,
+  locale: string,
+): BuilderCopy {
   return {
     typedAs: st.raw("shared.forgiving.typedAs"),
     draftPickedUp: st.raw("shared.formDraft.pickedUp"),
@@ -86,7 +90,11 @@ export function scheduleBuilderCopy(st: StaffTranslator, timeZone: string): Buil
     putOnBoard: st("schedule.builder.putOnBoard"),
     newDate: st("schedule.builder.newDate"),
     multiDayNote: st.raw("schedule.builder.multiDayNote"),
-    newDepartureTime: st("schedule.builder.newDepartureTime", { timeZone }),
+    // The zone's short name ("ET"), not its id: "(America/New_York)" took a
+    // line of its own in the phone's narrow move panel.
+    newDepartureTime: st("schedule.builder.newDepartureTime", {
+      timeZone: formatTimeZoneGeneric(locale, timeZone),
+    }),
     moving: st("schedule.builder.moving"),
     moveIt: st("schedule.builder.moveIt"),
     impactTitle: st("schedule.builder.impactTitle"),

@@ -421,8 +421,13 @@ export default async function OrdersIndexPage({
                 <Th>{t("orders.index.table.diver")}</Th>
                 <Th hideBelow="sm">{t("orders.index.importedHistory.table.source")}</Th>
                 <Th hideBelow="sm">{t("orders.index.importedHistory.table.status")}</Th>
-                <Th>{t("orders.index.table.date")}</Th>
-                <Th numeric>{t("orders.index.table.amount")}</Th>
+                {/* Below `sm` the date folds under the name with the title, so
+                    the diver keeps the row's width instead of a third of it
+                    ("Hana / Kobayashi / Two-tank / morning", `orders-imported-history-open`). */}
+                <Th hideBelow="sm">{t("orders.index.table.date")}</Th>
+                <Th numeric width="8rem">
+                  {t("orders.index.table.amount")}
+                </Th>
               </THead>
               <TBody>
                 {importedHistoryPage.rows.map(({ history, person }) => {
@@ -438,6 +443,9 @@ export default async function OrdersIndexPage({
                         </RowLink>
                         <div className="mt-1 text-base text-muted sm:hidden">
                           {history.title ?? history.sourceReference ?? "—"}
+                        </div>
+                        <div className="mt-0.5 text-sm text-muted tabular-nums sm:hidden">
+                          {formatCalendarDate(history.occurredOn, locale)}
                         </div>
                       </Td>
                       {/* The section badge marks all rows as unverified; the receipt
@@ -483,7 +491,12 @@ export default async function OrdersIndexPage({
                           </div>
                         ) : null}
                       </Td>
-                      <Td muted align="middle" className="whitespace-nowrap tabular-nums">
+                      <Td
+                        muted
+                        hideBelow="sm"
+                        align="middle"
+                        className="whitespace-nowrap tabular-nums"
+                      >
                         {formatCalendarDate(history.occurredOn, locale)}
                       </Td>
                       <Td numeric align="middle" className="text-base sm:text-sm">
