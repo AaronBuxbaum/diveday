@@ -41,6 +41,9 @@ export const DEFAULT_LEAD_MS = 700;
 /** The tap itself, from a fingertip landing to the finished screen (ms). */
 const TAP_MS = 1800;
 
+/** Card 1 holds its first frame this long before its beat starts, so a reader lands on it before it moves (ms; Aaron, 2026-11-20). */
+export const FIRST_CARD_HOLD_MS = 2000;
+
 /** How long the finished screen stays for reading (ms), about a hundred seconds a walk (Aaron, 2026-11-18). */
 const HOLD_AFTER_MS = 4200;
 
@@ -89,6 +92,8 @@ export function HomeWalkthrough({
   // How full the current beat's segment is, 0 to 1. Written straight to the
   // segment so a frame of the fill is not a render of the page.
   const progress = useRef(0);
+  // What is left of the first card's hold on its first frame, in ms.
+  const intro = useRef(0);
   const fillRef = useRef<HTMLSpanElement>(null);
   const total = beats.length;
   const beat = beats[index] ?? beats[0];
@@ -105,6 +110,9 @@ export function HomeWalkthrough({
     const list = rootRef.current?.querySelector("[data-walk-list]");
     if (!list || !beat) return;
     const before = list.getBoundingClientRect().height;
+    // The new beat starts on its first screen: set that now, so the height measured below is the
+    // one the slide will have (the old phase's grown and shrunk rows would make it jump after).
+    list.setAttribute("data-walk-phase", "before");
     for (const item of list.querySelectorAll("[data-walk-step]")) {
       const current = item.getAttribute("data-walk-step") === beat.step;
       item.toggleAttribute("data-walk-current", current);
@@ -168,6 +176,8 @@ export function HomeWalkthrough({
   // biome-ignore lint/correctness/useExhaustiveDependencies: the index is the trigger
   useEffect(() => {
     progress.current = 0;
+    intro.current = index === 0 ? FIRST_CARD_HOLD_MS : 0;
+    listEl()?.toggleAttribute("data-walk-idle", intro.current > 0);
     if (fillRef.current) fillRef.current.style.transform = "scaleX(0)";
     setPhase("before");
   }, [index]);
@@ -191,6 +201,13 @@ export function HomeWalkthrough({
     let last = performance.now();
     let frame = 0;
     const tick = (now: number) => {
+      if (intro.current > 0) {
+        intro.current -= now - last;
+        last = now;
+        if (intro.current <= 0) listEl()?.removeAttribute("data-walk-idle");
+        frame = window.requestAnimationFrame(tick);
+        return;
+      }
       progress.current = Math.min(1, progress.current + (now - last) / beatMs);
       last = now;
       if (fillRef.current) fillRef.current.style.transform = `scaleX(${progress.current})`;

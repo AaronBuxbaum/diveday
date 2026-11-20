@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
+
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+import { WalkTyped } from "@/components/WalkTyped";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { STAGE_WORD_KEYS } from "@/lib/trip-stages";
 import {
@@ -438,4 +440,13 @@ describe("the walkthrough's taps are Priya's", () => {
     expect(after.container.querySelector("[data-tap-target]")).toBeNull();
     expect(screen.getByText("Nudge sent")).toBeInTheDocument();
   });
+});
+
+it("WalkTyped numbers every character in reading order, so a wrapped line fills before the next", () => {
+  const { container } = render(<WalkTyped text="one two three" delay={0} />);
+  const places = [...container.querySelectorAll<HTMLElement>("[data-walk-char]")].map((c) =>
+    c.style.getPropertyValue("--i"),
+  );
+  expect(places).toEqual(["0", "1", "2", "4", "5", "6", "8", "9", "10", "11", "12"]);
+  expect(container.textContent).toBe("one two three");
 });

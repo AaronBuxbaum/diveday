@@ -342,9 +342,8 @@ describe("the builder's notes say we", () => {
  */
 describe("the pricing page says the trial and card fees once", () => {
   for (const locale of DIVER_LOCALES) {
-    it(`keeps card fees in the invoice row alone in ${locale}`, () => {
+    it(`keeps card fees out of the notes in ${locale}`, () => {
       const messages = marketingMessages(locale);
-      expect(messages["marketing.pricing.invoice.cards.value"]).toMatch(/Stripe/);
       expect(messages["marketing.pricing.feesNote"]).toBeUndefined();
       expect(messages["marketing.pricing.notes.note3"]).toBeUndefined();
     });

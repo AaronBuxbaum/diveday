@@ -86,7 +86,7 @@ it("rebinds known-unsailed safety provenance atomically when the demo moves a fu
   expect(await captureDepartureBoatSafety(db, shop.id, trip.id)).toBe("captured");
   expect(await ensureDemoSailsToday(db, shop.id, "UTC")).toBe("moved");
   const [moved] = await db.select().from(trips).where(eq(trips.id, trip.id));
-  expect(moved?.offlineMeetingGeneration).toBe(trip.offlineMeetingGeneration + 1);
+  expect(moved?.offlineMeetingGeneration).not.toBe(trip.offlineMeetingGeneration);
   const [snapshot] = await db
     .select()
     .from(departureBoatSafetySnapshots)

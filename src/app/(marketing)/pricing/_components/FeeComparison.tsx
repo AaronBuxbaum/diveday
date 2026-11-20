@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { FIGURE_LARGE_CLASS, ITEM_TITLE_CLASS } from "@/components/ui/typography";
+import { ITEM_TITLE_CLASS } from "@/components/ui/typography";
 import {
   COMPARED_SYSTEMS,
   type ComparedSystem,
@@ -35,8 +35,8 @@ const START_CENTS = 3_000_000;
 
 /**
  * **The same month on two systems.** One slider for the money received and one table with a
- * row per fee and a column per system, 37% of the money counted as through online travel agencies
- * (footnoted, with its source). The arithmetic is `compareMonth`, tested in
+ * row per fee and a column per system, every percent taken off the whole amount, and FareHarbor's OTA fee on the 37% of it
+ * counted as through online travel agencies (footnoted, with its source). The arithmetic is `compareMonth`, tested in
  * `src/features/fee-comparison/rules.test.ts`; the sources and assumptions are written on the
  * page beside it. DiveDay's column is highlighted and its terms are the offer's.
  */
@@ -115,16 +115,16 @@ export function FeeComparison({
       <table className="mt-10 w-full table-fixed border-collapse text-start text-sm sm:text-base">
         <thead>
           <tr className="align-top">
-            <td className="w-[34%]" />
+            <td className="w-[28%] sm:w-[34%]" />
             {COMPARED_SYSTEMS.map((system) => (
               <th
                 key={system}
                 scope="col"
-                className={`px-3 pt-4 pb-4 text-start font-normal ${system === "diveday" ? "rounded-t-panel bg-surface" : ""}`}
+                className={`px-2 pt-4 pb-4 text-start font-normal sm:px-3 ${system === "diveday" ? "rounded-t-panel bg-surface" : ""}`}
               >
                 <span className={ITEM_TITLE_CLASS}>{labels.systems[system].name}</span>
                 {system === "fareharbor" ? (
-                  <span className="ms-2 text-sm font-normal text-muted">
+                  <span className="block text-sm font-normal text-muted">
                     {labels.systems.fareharbor.estimated}
                   </span>
                 ) : null}
@@ -141,7 +141,7 @@ export function FeeComparison({
               {COMPARED_SYSTEMS.map((system) => (
                 <td
                   key={system}
-                  className={`px-3 py-3 tabular-nums ${system === "diveday" ? "bg-surface" : ""}`}
+                  className={`px-2 py-3 tabular-nums sm:px-3 ${system === "diveday" ? "bg-surface" : ""}`}
                 >
                   {line.cells[system]}
                 </td>
@@ -159,9 +159,13 @@ export function FeeComparison({
               return (
                 <td
                   key={system}
-                  className={`px-3 py-4 ${system === "diveday" ? "rounded-b-panel bg-surface" : ""}`}
+                  className={`px-2 py-4 sm:px-3 ${system === "diveday" ? "rounded-b-panel bg-surface" : ""}`}
                 >
-                  <span className={`block ${FIGURE_LARGE_CLASS}`} aria-live="polite">
+                  <span
+                    // diveday:allow-type-ramp: smaller on a phone, where a third of the width holds "$1,941.90"
+                    className="block text-lg font-semibold tracking-tight tabular-nums sm:text-3xl"
+                    aria-live="polite"
+                  >
                     {money(row.totalCents)}
                   </span>
                   {received > 0 ? (
@@ -176,7 +180,7 @@ export function FeeComparison({
         </tfoot>
       </table>
 
-      <p className="mt-4 text-sm leading-6 text-muted">
+      <p className="mt-3 text-xs leading-5 text-muted">
         *{" "}
         {labels.otaFootnote.replace(
           "{share}",
