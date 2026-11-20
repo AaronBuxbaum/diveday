@@ -36,6 +36,7 @@ import {
   holdsRegisterKind,
   isDiver,
   type ParticipantType,
+  type SeatCounts,
   seatRefusal,
   typeChangeRefusal,
 } from "@/lib/participant-types";
@@ -495,38 +496,13 @@ export async function createBookingParty(
         admissionAdvisory?: BookingAdmissionAdvisory;
       }> = [];
       const pending: PendingDeclaration[] = [];
+      const gate = await openPartyTripGate(tx, requests);
       for (const [index, request] of requests.entries()) {
-        const outcome = await createBookingRecord(tx, request, pending);
+        const outcome = await createBookingRecord(tx, request, pending, gate ?? undefined);
         if (!outcome.ok) throw new PartyBookingError(outcome, index);
-        // Every seat past the organizer's own records which booking leads its
-        // party (docs ADR 20260804-seat-claim-links) — the fact the claim-link
-        // surfaces later read to answer "whose seats may this organizer hand
-        // out?". Written here rather than inside `createBookingRecord` so the
-        // single-booking path never carries party state, and written even for
-        // a reactivated row (whose stale linkage the reactivation path just
-        // cleared) so a re-booked party member is claimable again.
-        //
-        // A party **staff** seat is stamped claimed as it is made (security
-        // review N3): staff typed each name, so no claim link from the lead's readiness page may
-        // re-point the seat to whoever opens it. The public party form's seats
-        // stay claimable, which is what the claim link is for.
-        const leadBookingId = created[0]?.bookingId;
-        if (index > 0 && leadBookingId) {
-          await tx
-            .update(bookings)
-            .set({
-              partyLeadBookingId: leadBookingId,
-              // A seat the public form's lead declared Under 18 has a contact
-              // the lead typed, which cannot prove a guardian (issue #4003); an
-              // adult member's address gets the links any booker gets.
-              ...(request.actor === "staff"
-                ? { claimedAt: nowDate() }
-                : request.minorDeclared
-                  ? { contactTypedByLeadAt: nowDate() }
-                  : {}),
-            })
-            .where(eq(bookings.id, outcome.bookingId));
-        }
+        // The first seat leads the party; the seats after it are written with
+        // its id (`partySeatColumns`).
+        if (gate && index === 0) gate.leadBookingId = outcome.bookingId;
         created.push(outcome);
       }
       if (options.holdUntil) {
@@ -781,10 +757,12 @@ type CourseSessionTrip = {
  * that is no course session, or whose course row this shop cannot see, reads
  * as no rule at all, and the course gates stand down.
  */
+type CourseSessionRead = { course: CourseAdmissionRule | null; crew: CourseCrew };
+
 async function readCourseSession(
   tx: DbExecutor,
   trip: CourseSessionTrip,
-): Promise<{ course: CourseAdmissionRule | null; crew: CourseCrew }> {
+): Promise<CourseSessionRead> {
   if (!trip.courseId) return NO_COURSE_SESSION;
   const [course] = await tx
     .select({
@@ -801,6 +779,18 @@ async function readCourseSession(
     course: { ...course, poolSession: trip.diveMode === "pool" },
     crew: await tripCourseCrewCounts(tx, trip.id),
   };
+}
+
+type TripRequirementReads = [
+  Awaited<ReturnType<typeof getTripRequirements>>,
+  Awaited<ReturnType<typeof getTripSiteRequirement>>,
+];
+
+function readTripRequirements(tx: DbExecutor, shopId: string, tripId: string) {
+  return queryAll(tx, [
+    () => getTripRequirements(tx, shopId, tripId),
+    () => getTripSiteRequirement(tx, shopId, tripId),
+  ]);
 }
 
 /**
@@ -841,6 +831,8 @@ export async function tripAdmissionFor(
   declared?: SelfDeclaration,
   /** A seat that is not a diver's is asked for no card, so nothing is read for it. */
   participantType: ParticipantType = "diver",
+  /** A party's one read of the trip's own requirements, shared by every seat. */
+  tripRequirements?: () => Promise<TripRequirementReads>,
 ): Promise<TripAdmission> {
   if (!isDiver(participantType)) {
     return decideTripAdmission({
@@ -861,10 +853,8 @@ export async function tripAdmissionFor(
   // `queryAll`, not `Promise.all`: every caller of this gate reaches it inside
   // `createBookingRecord`'s transaction, which is one pinned client. See
   // `queryAll` in `src/db/query-helpers.ts`.
-  const [requirement, siteRequirement] = await queryAll(tx, [
-    () => getTripRequirements(tx, shopId, tripId),
-    () => getTripSiteRequirement(tx, shopId, tripId),
-  ]);
+  const [requirement, siteRequirement] = await (tripRequirements?.() ??
+    readTripRequirements(tx, shopId, tripId));
   const demandsSomething = !requirementDemandsNothing(
     unionRequirements(requirement, siteRequirement),
   );
@@ -1110,6 +1100,107 @@ function tripTakesSeatFrom(
 }
 
 /**
+ * **What a party books against, read once.** Every seat of a party is on the
+ * same departure, so the trip row is locked once, its group holds expired
+ * once, and the held seats, sellable capacity, the trip's own requirements and
+ * a course session's rule and crew are read once; the party then counts each
+ * seat it writes as it goes (`held`), so a seat that no longer fits refuses the
+ * whole party at that seat, as the per-seat read did. Per-diver checks (the
+ * person, their cards, the course's card and age gates) still run per seat.
+ * Issue #4396.
+ */
+type PartyTripGate = {
+  trip: typeof trips.$inferSelect;
+  capacity: number;
+  held: SeatCounts;
+  /** The first seat's booking, once written; every later seat names it as its lead. */
+  leadBookingId: string | null;
+  tripRequirements: () => Promise<TripRequirementReads>;
+  courseSession: () => Promise<CourseSessionRead>;
+};
+
+function once<T>(read: () => Promise<T>): () => Promise<T> {
+  let pending: Promise<T> | undefined;
+  return () => {
+    pending ??= read();
+    return pending;
+  };
+}
+
+/** The departure's row, locked so concurrent sales on it serialize. */
+async function lockTripForSeat(tx: DbExecutor, req: { shopId: string; tripId: string }) {
+  const [trip] = await tx
+    .select()
+    .from(trips)
+    .where(and(eq(trips.id, req.tripId), eq(trips.shopId, req.shopId), liveTrip()))
+    .limit(1)
+    .for("no key update", { of: trips });
+  return trip;
+}
+
+async function readTripOccupancy(tx: DbExecutor, trip: typeof trips.$inferSelect) {
+  await expireGroupHoldsOnTrip(tx, trip.shopId, trip.id, nowDate());
+  return heldSeatCounts(tx, trip.shopId, trip.id);
+}
+
+/**
+ * Lock the party's one departure and read what every seat is measured against.
+ * A party is one departure's seats, so seats naming different ones are refused;
+ * null when the departure is not there, and the first seat then says why.
+ */
+async function openPartyTripGate(
+  tx: DbExecutor,
+  requests: BookingRequest[],
+): Promise<PartyTripGate | null> {
+  const first = requests[0];
+  if (!first) return null;
+  // Not about one member, so no seat to point at (`failedIndex` -1).
+  if (
+    requests.some((request) => request.shopId !== first.shopId || request.tripId !== first.tripId)
+  )
+    throw new PartyBookingError({ ok: false, reason: "trip_unavailable" }, -1);
+  await boundLockWaits(tx);
+  const trip = await lockTripForSeat(tx, first);
+  if (!trip) return null;
+  const held = await readTripOccupancy(tx, trip);
+  const capacity = await sellableCapacity(tx, trip);
+  return {
+    trip,
+    capacity,
+    held,
+    leadBookingId: null,
+    tripRequirements: once(() => readTripRequirements(tx, trip.shopId, trip.id)),
+    courseSession: once(() => readCourseSession(tx, trip)),
+  };
+}
+
+/**
+ * The columns that make a seat a member of its party, written with the seat.
+ * Every seat past the organizer's own records which booking leads its party
+ * (docs ADR 20260804-seat-claim-links) — the fact the claim-link surfaces
+ * later read to answer "whose seats may this organizer hand out?". Written
+ * even for a reactivated row, so a re-booked party member is claimable again.
+ *
+ * A party **staff** seat is stamped claimed as it is made (security review
+ * N3): staff typed each name, so no claim link from the lead's readiness page
+ * may re-point the seat to whoever opens it. The public party form's seats stay
+ * claimable, which is what the claim link is for; a seat the lead declared
+ * Under 18 has a contact the lead typed, which cannot prove a guardian (issue
+ * #4003).
+ */
+function partySeatColumns(gate: PartyTripGate | undefined, req: BookingRequest) {
+  if (!gate?.leadBookingId) return {};
+  return {
+    partyLeadBookingId: gate.leadBookingId,
+    ...(req.actor === "staff"
+      ? { claimedAt: nowDate() }
+      : req.minorDeclared
+        ? { contactTypedByLeadAt: nowDate() }
+        : {}),
+  };
+}
+
+/**
  * **One lock order for a seat: the departure's trip row, then the booking
  * row** (#2324). Every writer that touches both takes them in this order —
  * `createBookingRecord` below, `restoreBooking`, `setBookingParticipantType`,
@@ -1131,8 +1222,10 @@ async function createBookingRecord(
    * see {@link flushDeclarations} for why the write cannot happen here.
    */
   pending: PendingDeclaration[],
+  /** A party's shared trip-level reads; absent for a seat booked alone. */
+  gate?: PartyTripGate,
 ): Promise<BookingOutcome> {
-  await boundLockWaits(tx);
+  if (!gate) await boundLockWaits(tx);
   // FOR NO KEY UPDATE (not FOR UPDATE, which also blocks every insert that
   // references the trip by foreign key) serializes concurrent bookings on the
   // same trip, as the roll-call and series paths do: under READ
@@ -1141,12 +1234,7 @@ async function createBookingRecord(
   // and therefore cannot exhibit the race — but this is no longer untested.
   // `src/db/bookings.postgres.test.ts` races two real connections for the last
   // seat against a genuine Postgres server in CI, and asserts exactly one wins.
-  const [trip] = await tx
-    .select()
-    .from(trips)
-    .where(and(eq(trips.id, req.tripId), eq(trips.shopId, req.shopId), liveTrip()))
-    .limit(1)
-    .for("no key update", { of: trips });
+  const trip = gate ? gate.trip : await lockTripForSeat(tx, req);
   if (!tripTakesSeatFrom(trip, req.actor)) return { ok: false, reason: "trip_unavailable" };
   const dateOffer = req.dateRequestInterestId
     ? await lockDateRequestOffer(tx, {
@@ -1185,11 +1273,13 @@ async function createBookingRecord(
   // crew member. Read under the trip lock, so crew edits and new grants
   // serialize; the boat row is shared-locked after it. A copied, rolled,
   // reinstated or otherwise over-limit departure still reaches this gate.
-  await expireGroupHoldsOnTrip(tx, trip.shopId, trip.id, nowDate());
-  const held = await heldSeatCounts(tx, trip.shopId, trip.id);
+  //
+  // A party reads all of this once, under the one lock it holds
+  // (`openPartyTripGate`), and counts each seat it writes as it goes.
+  const held = gate ? gate.held : await readTripOccupancy(tx, trip);
   const seatFull = seatRefusal(
     participantType,
-    { ...trip, capacity: await sellableCapacity(tx, trip) },
+    { ...trip, capacity: gate ? gate.capacity : await sellableCapacity(tx, trip) },
     held,
   );
   if (seatFull) {
@@ -1206,6 +1296,7 @@ async function createBookingRecord(
     personId: person?.id,
     student: isDiver(participantType),
     studentsHeld: held.divers,
+    session: gate?.courseSession,
   });
   if (courseRefusal) return { ok: false, reason: courseRefusal };
 
@@ -1254,6 +1345,7 @@ async function createBookingRecord(
     Boolean(trip.courseId),
     req.declared,
     participantType,
+    gate?.tripRequirements,
   );
   if (!admission.admitted && !advisable(req, admission.refusal)) {
     return { ok: false, reason: "trip_prerequisite", refusal: admission.refusal };
@@ -1285,7 +1377,14 @@ async function createBookingRecord(
     deliveryEmail,
     admissionAdvisory,
     pending,
+    gate,
   });
+  if (outcome.ok && gate) {
+    gate.held = {
+      aboard: gate.held.aboard + 1,
+      divers: gate.held.divers + (isDiver(participantType) ? 1 : 0),
+    };
+  }
   let dateRequestPartyComplete: boolean | undefined;
   if (outcome.ok && dateOffer) {
     const linked = await recordDateRequestOfferBooking(tx, {
@@ -1339,10 +1438,12 @@ async function writeSeat(
     deliveryEmail: string | null;
     admissionAdvisory: BookingAdmissionAdvisory | undefined;
     pending: PendingDeclaration[];
+    gate: PartyTripGate | undefined;
   },
 ): Promise<BookingOutcome> {
   const { req, trip, person, participantType, identityUnconfirmed, identityClaim } = input;
   const { admissionAdvisory, pending } = input;
+  const partyColumns = partySeatColumns(input.gate, req);
   const [existing] = await tx
     .select()
     .from(bookings)
@@ -1417,6 +1518,8 @@ async function writeSeat(
         groupHoldExpiredAt: null,
         claimedAt: null,
         contactTypedByLeadAt: null,
+        // A seat past the party's lead is re-stamped in this same write.
+        ...partyColumns,
         // "Running late" (J3) was said about the seat's earlier life.
         runningLateAt: null,
         // Same reasoning as the two lines above: a reactivated row is a *new* booking, so it
@@ -1465,6 +1568,7 @@ async function writeSeat(
       deliveryEmail: input.deliveryEmail,
       referralSource: partnerReferralSlug(req.referralSource),
       minorDeclaredAt: req.minorDeclared ? nowDate() : null,
+      ...partyColumns,
       // **Stamped by the application clock, not the column's `defaultNow()`.**
       //
       // `defaultNow()` is Postgres' clock, which `DIVEDAY_CLOCK` does not
@@ -1676,10 +1780,12 @@ export async function courseSeatRefusal(
     personId: string | undefined;
     student: boolean;
     studentsHeld: number;
+    /** A party's one read of the session's rule and crew, shared by every seat. */
+    session?: () => Promise<CourseSessionRead>;
   },
 ): Promise<CourseAdmissionRefusal | null> {
   const { trip, actor, student } = input;
-  const session = await readCourseSession(tx, trip);
+  const session = await (input.session?.() ?? readCourseSession(tx, trip));
   const enrollment =
     session.course && student
       ? await readCourseDiver(tx, trip.shopId, actor, session.course, input.personId, trip.startsAt)
