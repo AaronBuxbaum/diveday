@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, isNotNull, isNull, or } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNotNull, isNull, or, sql } from "drizzle-orm";
 import { isStaff } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import { rollCallDayOf, rollCallDayStarts } from "@/lib/trip-days";
@@ -34,10 +34,12 @@ import { liveTrip } from "./trips-live";
  *   roll-call day being counted then (`rollCallDayOf`). On a departure that
  *   meets on several days, day one's dive 2 is not day two's: readers, the
  *   second tap and the undo look at the day being counted only.
- * - **What it does**: closes only that dive's roll-call item on Wrapped up. It
- *   is never a count and never a completed dive, and it never hides an
- *   uncounted person, a missing-diver alert, or anybody not recorded back:
- *   nothing that decides those reads this table.
+ * - **What it does**: closes only that dive's roll-call item on Wrapped up and
+ *   that dive's after-dive count on Today (`listRollCallGaps` through
+ *   `divesStandingNotMade`, issue #4809). It is never a count and never a
+ *   completed dive, and it never hides an uncounted person, a missing-diver
+ *   alert, or anybody not recorded back: nothing that decides those reads
+ *   this table, and the after-dive count it closes is the dive-level one only.
  * - **Correction**: an undo appends an `undone` word; nothing is edited or
  *   deleted, and both words go on the departure's activity trail too.
  */
@@ -219,16 +221,23 @@ async function diveLogged(
         eq(executedDives.shopId, input.shopId),
         eq(executedDives.tripId, input.tripId),
         eq(executedDives.diveNumber, input.diveNumber),
-        isNull(executedDives.deletedAt),
-        or(
-          isNotNull(executedDives.enteredAt),
-          isNotNull(executedDives.exitedAt),
-          isNotNull(executedDives.maxDepthMeters),
-        ),
+        liveLog(),
       ),
     )
     .limit(1);
   return Boolean(row);
+}
+
+/** A live log with an entry or exit time, or a depth: the dive was made. */
+function liveLog() {
+  return and(
+    isNull(executedDives.deletedAt),
+    or(
+      isNotNull(executedDives.enteredAt),
+      isNotNull(executedDives.exitedAt),
+      isNotNull(executedDives.maxDepthMeters),
+    ),
+  );
 }
 
 type StandingWord = { word: "not_made" | "undone"; by: string; at: Date };
@@ -283,4 +292,36 @@ export async function diveNotMadeStanding(
     if (row.word === "not_made") out.set(dive, { by: row.by, at: row.at });
   }
   return out;
+}
+
+/**
+ * **The standing not-made dives of the departure in the enclosing query**
+ * (issue #4809), as a column for the open head counts (`listRollCallGaps`),
+ * so the detector pays no extra statement: each meeting day (0-based) and dive
+ * whose newest word that day is `not_made` and that nobody has logged, or
+ * null for none. A count of the dive is the reader's to weigh, since it holds
+ * the roll call; the log is weighed here, and either wins over the record.
+ */
+export function standingNotMadeDivesOf(trip: { id: typeof trips.id; shopId: typeof trips.shopId }) {
+  return sql<{ day: number; dive: number }[] | null>`(
+    select json_agg(json_build_object('day', newest.meeting_day, 'dive', newest.dive_number))
+    from (
+      select distinct on (${diveNotMadeEvents.meetingDay}, ${diveNotMadeEvents.diveNumber})
+        ${diveNotMadeEvents.meetingDay} as meeting_day,
+        ${diveNotMadeEvents.diveNumber} as dive_number,
+        ${diveNotMadeEvents.word} as word
+      from ${diveNotMadeEvents}
+      where ${diveNotMadeEvents.tripId} = ${trip.id} and ${diveNotMadeEvents.shopId} = ${trip.shopId}
+      order by ${diveNotMadeEvents.meetingDay}, ${diveNotMadeEvents.diveNumber},
+        ${diveNotMadeEvents.recordedAt} desc, ${diveNotMadeEvents.seq} desc
+    ) newest
+    where newest.word = 'not_made'
+      and not exists (
+        select 1 from ${executedDives}
+        where ${executedDives.tripId} = ${trip.id}
+          and ${executedDives.shopId} = ${trip.shopId}
+          and ${executedDives.diveNumber} = newest.dive_number
+          and ${liveLog()}
+      )
+  )`;
 }

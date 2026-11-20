@@ -303,11 +303,12 @@ export function WhatHappenedCard({
     ]
       .filter(Boolean)
       .join(" · ");
-    // Recorded not made (issue #4681): said with who and when, never as a count.
+    // Recorded not made (issue #4681): its own value, with who and when
+    // beneath (issue #4810), never as a count.
     const notMade = count ? null : (stop.notMade ?? null);
     const detail = [
       notMade
-        ? t("trips.clock.wrapped.notMade", {
+        ? t("trips.clock.wrapped.notMadeBy", {
             name: notMade.by,
             // A record from another day names it, so yesterday's never reads
             // as this morning's (a page read the day after, a liveaboard).
@@ -334,7 +335,9 @@ export function WhatHappenedCard({
       row: {
         key: `dive-${stop.dive}`,
         label: t("trips.clock.water.dive", { dive: stop.dive }),
-        value: value || (logged || notMade ? none : t("trips.clock.wrapped.notLogged")),
+        value: notMade
+          ? t("trips.clock.wrapped.notMade")
+          : value || (logged ? none : t("trips.clock.wrapped.notLogged")),
         detail: detail || null,
         action:
           notMade && mayUndoNotMade ? (

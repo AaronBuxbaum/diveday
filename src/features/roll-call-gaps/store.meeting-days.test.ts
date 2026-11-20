@@ -2,7 +2,14 @@ import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
 import { crewSubject } from "../../db/roll-call-subject";
-import { bookings, people, tripAssignments, tripScheduleDays, trips } from "../../db/schema/index";
+import {
+  bookings,
+  diveNotMadeEvents,
+  people,
+  tripAssignments,
+  tripScheduleDays,
+  trips,
+} from "../../db/schema/index";
 import { listStaff } from "../../db/trips";
 import { livePerson } from "../../db/trips-live";
 import { fileScopedShopContext } from "../../test/db";
@@ -119,8 +126,44 @@ async function course(divers = 2) {
   };
   const gaps = async (now: string) =>
     (await listRollCallGaps(db, shop.id, at(now))).filter((gap) => gap.tripId === trip.id);
-  return { trip, bookingIds: rows.map((row) => row.id), say, countDay, gaps };
+  /** A dive recorded not made on one meeting day (issue #4809), as the record writes it. */
+  const notMade = (diveNumber: number, meetingDay: number, recordedAt: string) =>
+    db.insert(diveNotMadeEvents).values({
+      shopId: shop.id,
+      tripId: trip.id,
+      diveNumber,
+      meetingDay,
+      word: "not_made",
+      recordedByPersonId: staff.person.id,
+      recordedAt: at(recordedAt),
+    });
+  return { trip, bookingIds: rows.map((row) => row.id), say, countDay, notMade, gaps };
 }
+
+describe("a dive recorded not made on a course that meets on two Saturdays", () => {
+  it("closes that day's count of the dive, and never the other Saturday's", async () => {
+    const c = await course();
+    for (const day of [SAT_ONE, SAT_TWO]) {
+      const base = at(day.start).getTime();
+      for (const id of c.bookingIds) {
+        await c.say(id, "departure", "boarded", new Date(base - 15 * 60_000).toISOString(), {
+          meetingDay: day.meetingDay,
+          observesPrevious: true,
+        });
+        await c.say(id, "after_dive_1", "boarded", new Date(base + 90 * 60_000).toISOString(), {
+          meetingDay: day.meetingDay,
+          observesPrevious: true,
+        });
+      }
+    }
+    await c.notMade(2, 0, "2026-08-01T16:00:00.000Z");
+
+    const found = await c.gaps("2026-08-15T19:00:00.000Z");
+    expect(found.map((gap) => [gap.reason, gap.diveNumber, gap.dayNumber])).toEqual([
+      ["after_dive_uncounted", 2, 2],
+    ]);
+  });
+});
 
 describe("roll call on a course that meets on two Saturdays", () => {
   it("opens no gap on any day between once Saturday's count is closed", async () => {

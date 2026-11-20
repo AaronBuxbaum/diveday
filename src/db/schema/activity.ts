@@ -363,10 +363,10 @@ export const diveNotMadeWord = pgEnum("dive_not_made_word", ["not_made", "undone
  * departure that meets on several days (a liveaboard, a course's weekends),
  * day one's dive 2 is not day two's, exactly as roll call keeps them apart.
  *
- * It closes only that dive's roll-call item on Wrapped up. It is never a
- * count: nothing here says who is aboard, it never reads as a finished count
- * or as everyone back, and no missing-diver alert or person not recorded back
- * reads it. A count of the dive outranks it at every reader.
+ * It closes only that dive's roll-call item on Wrapped up and that dive's
+ * after-dive count on Today (issue #4809). It is never a count: nothing here
+ * says who is aboard, it never reads as a finished count or as everyone back,
+ * and no missing-diver alert or person not recorded back reads it. A count of the dive outranks it at every reader.
  */
 export const diveNotMadeEvents = pgTable(
   "dive_not_made_events",

@@ -83,6 +83,32 @@ for (const scheme of ["light", "dark"] as const) {
         ).toBeVisible();
         await capture(page, "trip-wrapped-dive-not-made", scheme);
       });
+      // What was seen and what was left aboard, each a row in What happened
+      // that opens its record (#4683, #4811). One theme: rows of plain text.
+      if (scheme === "light") {
+        test(`What happened says what was seen and left aboard (${scheme})`, async ({
+          page,
+          request,
+          privateShop,
+        }) => {
+          const { boatOnTheWater } = (await seedFacts(
+            request,
+            [{ name: "boatOnTheWater", state: "recorded" }],
+            { slug: privateShop.slug },
+          )) as { boatOnTheWater: { tripId: string } };
+          await page.goto(`/shop/${privateShop.slug}/trips/${boatOnTheWater.tripId}?phase=wrapped`);
+          const what = page.getByRole("region", {
+            name: staffCopy("trips.clock.wrapped.whatHappened"),
+          });
+          await expect(
+            what.getByText(staffCopy("trips.clock.wrapped.species", { count: 2 })),
+          ).toBeVisible();
+          await expect(
+            what.getByText(staffCopy("trips.clock.wrapped.items", { count: 1 })),
+          ).toBeVisible();
+          await capture(page, "trip-wrapped-records", scheme);
+        });
+      }
     });
   });
 }
