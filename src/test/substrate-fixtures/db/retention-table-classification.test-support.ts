@@ -20,6 +20,8 @@ export const OUTSIDE_RETENTION: readonly string[] = [
   // Personal instrument history follows the person; requested erasure removes it.
   // A student's ticked sessions follow the person; requested erasure removes them.
   "course_session_progress",
+  // The shop's own ledger of codes it bought; it follows the course, and erasure releases nothing it holds.
+  "course_elearning_codes",
   "computer_import_batches",
   "computer_dives",
   "computer_dive_profiles",

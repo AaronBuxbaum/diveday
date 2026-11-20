@@ -17,5 +17,6 @@ export const COURSE_EDITOR_CLOSED_SECTIONS = [
   { id: "enroll", labelKey: "courses.edit.enrollLegend" },
   { id: "fee-covers", labelKey: "courses.edit.feeCoversLegend" },
   { id: "learningMaterialsJson", labelKey: "courses.edit.materialsLegend" },
+  { id: "elearning-codes", labelKey: "courses.edit.codesLegend" },
   { id: "faq", labelKey: "courses.edit.faqLegend" },
 ] as const satisfies readonly CourseEditorSectionDefinition[];

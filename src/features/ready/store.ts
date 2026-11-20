@@ -1,4 +1,5 @@
 import { and, eq, isNull, sql } from "drizzle-orm";
+import { courseCodesByBooking } from "@/db/course-codes";
 import { type CarriedPreparation, carriedPreparation } from "@/features/carried-preparation";
 import { courseMaterialsDoneByPerson } from "@/features/course-materials";
 import { firstActiveIntroCourse, hasActiveRefresherCourse } from "@/features/courses";
@@ -550,6 +551,8 @@ export type ReadyPageData = {
    * so only `https:` links reach the page. Empty on a fun dive.
    */
   learningMaterials: CourseLearningMaterial[];
+  /** The code the shop handed this student for the course's eLearning, or null. */
+  elearningCode: string | null;
   /**
    * Someone marked this student's materials done, on this departure or another
    * of the same course (`courseMaterialsDoneByPerson`).
@@ -844,6 +847,12 @@ export async function getReadyPageData(
     Boolean(publicAppUrl()) &&
     Boolean(row.personEmail);
 
+  // The eLearning code the shop handed this student, shown with the course materials (ADR
+  // 20261120-course-elearning-codes). Read for this one seat only.
+  const elearningCode =
+    (await courseCodesByBooking(db, { shopId: row.shopId, bookingIds: [bookingId] })).get(
+      bookingId,
+    ) ?? null;
   return {
     detail,
     shop: {
@@ -971,6 +980,7 @@ export async function getReadyPageData(
     welcomeShared: row.welcomeSharedAt !== null,
     welcomeHello: row.welcomeSharedAt !== null ? row.welcomeHello : null,
     learningMaterials: readLearningMaterials(trip.course?.learningMaterials),
+    elearningCode,
     courseMaterialsDone: row.courseMaterialsDoneAt !== null || materialsDoneElsewhere,
     courseSession: row.tripCourseId !== null,
     courseStarted: trip.startsAt.getTime() <= now.getTime(),

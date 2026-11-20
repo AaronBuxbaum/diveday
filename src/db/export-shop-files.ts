@@ -2110,6 +2110,29 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
     note: EXPORT_FILE_NOTES["boat_snags.csv"],
   },
   {
+    file: "course_elearning_codes.csv",
+    header: [
+      "id",
+      "course_id",
+      "code",
+      "booking_id",
+      "assigned_at",
+      "assigned_by_person_id",
+      "created_at",
+    ],
+    rows: ({ courseElearningCodeRows }) =>
+      courseElearningCodeRows.map((row) => [
+        row.id,
+        row.courseId,
+        row.code,
+        row.bookingId,
+        row.assignedAt,
+        row.assignedByPersonId,
+        row.createdAt,
+      ]),
+    note: EXPORT_FILE_NOTES["course_elearning_codes.csv"],
+  },
+  {
     file: "departure_boat_safety_snapshots.csv",
     header: [
       "id",

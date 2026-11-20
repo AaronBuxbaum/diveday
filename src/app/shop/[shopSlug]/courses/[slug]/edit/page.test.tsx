@@ -32,6 +32,9 @@ vi.mock("./actions", () => ({
   setCourseVisibilityAction: vi.fn(),
 }));
 vi.mock("@/db/client", () => ({ getDb: vi.fn(async () => ({})) }));
+vi.mock("@/db/course-codes", () => ({
+  courseCodeCounts: vi.fn(async () => ({ left: 0, handedOut: 0 })),
+}));
 vi.mock("@/db/course-forms", () => ({
   listCourseForms: vi.fn(async () => []),
   listCourseFormRequirements: vi.fn(async () => []),
