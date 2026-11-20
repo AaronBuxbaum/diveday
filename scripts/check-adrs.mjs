@@ -16,7 +16,6 @@ import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 
-
 /** Ids dated after this day are capped. */
 export const CAP_FROM = "20261010";
 export const WORD_CAP = 500;

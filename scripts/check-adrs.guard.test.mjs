@@ -19,12 +19,7 @@ const adr = (heading, { status = "Accepted", date = "2026-10-10", sections } = {
 const run = (records, dependencies = {}) =>
   runGuard("check-adrs.mjs", {
     "package.json": JSON.stringify({ dependencies }),
-    ...Object.fromEntries(
-      Object.entries(records).map(([name, body]) => [
-        `${DIR}/${name}`,
-        body,
-      ]),
-    ),
+    ...Object.fromEntries(Object.entries(records).map(([name, body]) => [`${DIR}/${name}`, body])),
   });
 
 describe("check-adrs", () => {
