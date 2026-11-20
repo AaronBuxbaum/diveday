@@ -44,6 +44,7 @@ import {
   customerGearItems,
   deals,
   departureBoatSafetySnapshots,
+  diveNotMadeEvents,
   divePackageEntitlements,
   divePackages,
   diveSiteCreatures,
@@ -248,6 +249,7 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
     .delete(departureBoatSafetySnapshots)
     .where(eq(departureBoatSafetySnapshots.shopId, shopId));
   await db.delete(tripStageEvents).where(eq(tripStageEvents.shopId, shopId));
+  await db.delete(diveNotMadeEvents).where(eq(diveNotMadeEvents.shopId, shopId));
   await db.delete(safetyDrillParticipants).where(eq(safetyDrillParticipants.shopId, shopId));
   await db.delete(safetyDrills).where(eq(safetyDrills.shopId, shopId));
   await db.delete(preDepartureChecklistItems).where(eq(preDepartureChecklistItems.shopId, shopId));
@@ -535,13 +537,21 @@ export async function reapExpiredDemoShops(
  * live demo" mints (age-based reaping is unreliable under the frozen e2e clock,
  * since `created_at` is a real wall-clock default).
  */
-export async function purgeMintedDemoShops(db: AppDb): Promise<number> {
+export async function purgeMintedDemoShops(
+  db: AppDb,
+  /**
+   * How one shop goes, inside its own transaction. The e2e reset passes one
+   * that runs this same cascade with its foreign-key triggers settled by set
+   * (`src/features/demo-reset-snapshot/store.ts`).
+   */
+  deleteShop: (tx: DbExecutor, shopId: string) => Promise<void> = deleteDemoShopCascade,
+): Promise<number> {
   const minted = await db
     .select({ id: shops.id })
     .from(shops)
     .where(and(eq(shops.isDemo, true), ne(shops.slug, DEMO_SHOP_SLUG)));
   for (const shop of minted) {
-    await db.transaction(async (tx) => deleteDemoShopCascade(tx, shop.id));
+    await db.transaction(async (tx) => deleteShop(tx, shop.id));
   }
   return minted.length;
 }

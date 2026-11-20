@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNull } from "drizzle-orm";
+import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import { fareCheckout } from "./checkout-purpose";
 import type { DbExecutor } from "./client";
 import { recordCheckoutCollection } from "./collection-ledger";
@@ -76,16 +76,19 @@ export async function seedBookingCollections(
       !checkoutSeats.has(payment.bookingId),
   );
   if (!manual.length) return;
-  for (const payment of manual) {
-    await db
-      .update(bookingPaymentEvents)
-      .set({
-        manualHeldCents: payment.amountCents ?? 0,
-        method: payment.method ?? "other",
-        recordedByPersonId: payment.recordedByPersonId ?? actorId,
-      })
-      .where(eq(bookingPaymentEvents.id, payment.id));
-  }
+  // One statement for every manual mark rather than one per seat (#4763).
+  const marks = sql.join(
+    manual.map(
+      (payment) =>
+        sql`(${payment.id}::uuid, ${payment.amountCents ?? 0}::integer, ${payment.method ?? "other"}::manual_payment_method, ${payment.recordedByPersonId ?? actorId}::uuid)`,
+    ),
+    sql`, `,
+  );
+  await db.execute(sql`
+    update ${bookingPaymentEvents}
+    set manual_held_cents = mark.held, method = mark.method, recorded_by_person_id = mark.recorded_by
+    from (values ${marks}) as mark(id, held, method, recorded_by)
+    where ${bookingPaymentEvents.id} = mark.id`);
   await db.insert(collectionEntries).values(
     manual.map((payment) => ({
       shopId,

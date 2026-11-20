@@ -122,6 +122,7 @@ word in a message bundle fails `pnpm check:repo`. The Spanish reasoning is
 - Day-of help request
 - Departure note
 - Departure sheet
+- Dive not made
 - Dock line
 - Dock rider
 - Last time line

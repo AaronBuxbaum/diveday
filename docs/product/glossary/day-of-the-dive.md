@@ -8,6 +8,15 @@
   shown for one person's checkpoint. It names the evidence being resolved; another unobserved
   statement can still reopen the count. An ordinary correction of an observed mark remains an
   ordinary correction.
+- **Dive not made** — one crew member's record that a planned dive did not happen, said from
+  Wrapped up once the boat has left the dock, only while nobody has begun that dive's count and
+  nobody has logged it (issue #4681). It belongs to the meeting day it was said on, as roll call
+  does: on a departure that meets on several days, day one's dive 2 is not day two's. It closes
+  that dive's roll-call item for that day and shows in What happened with who and when (and the
+  day, when that was another). A count or a log of the dive outranks it. It is never a count or a
+  completed dive, and nothing that decides an uncounted person, a missing diver, or someone not
+  recorded back reads it. An undo appends a second word; both stay on the departure's trail
+  (`src/db/dive-not-made.ts`).
 
 - **Blow-out** — the captain's call that weather or sea state makes a departure un-runnable: the
   trip is cancelled by the shop, not the diver. Distinct from a **conditions hold** (below), which

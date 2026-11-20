@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { ReactNode } from "react";
 import { AgencyCheckAll } from "@/app/shop/[shopSlug]/_components/agency-check/AgencyCheckAll";
 import { AgencyCheckHost } from "@/app/shop/[shopSlug]/_components/agency-check/AgencyCheckHost";
@@ -7,12 +8,14 @@ import {
 } from "@/app/shop/[shopSlug]/_components/agency-check/agency-check-copy";
 import { DecompressionReminder } from "@/components/DecompressionReminder";
 import { ScrollToHash } from "@/components/ScrollToHash";
+import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
-import { staffTranslator } from "@/i18n/staff-messages";
+import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { needsDecompressionCardReminder } from "@/lib/decompression-reminder";
 import { signingDate } from "@/lib/guardian";
 import { cachedListFormat } from "@/lib/intl-cache";
+import { paperPassPath } from "@/lib/print-sheets";
 import { issueCourseFormQrAction } from "../course-form-qr-action";
 import { CourseFormsQrProvider } from "./CourseFormsQr";
 import { GuestFixList } from "./GuestFixList";
@@ -119,6 +122,7 @@ export function RosterSection({
     record: Boolean(record),
     countedAboardBlocked: record?.countedAboardBlocked,
     recordBelow: record?.below,
+    readyBelow: !record && phase === "ready" ? passDoors(trip, rows, t) : undefined,
     sharedAdvisoryTexts: groups.sharedAdvisoryTexts,
     waiverControls: controls,
     paymentStatusCopy: rosterPaymentStatusCopy(t),
@@ -296,4 +300,30 @@ function crewNotCountedLines(
   }
   const list = cachedListFormat(locale, { style: "long", type: "conjunction" });
   return [...byDive].map(([dive, names]) => ({ dive, names: list.format(names) }));
+}
+
+/**
+ * **Paper passes, the day before** (issue #4683): each seat readiness clears,
+ * not released and not held for an identity check, carries the door to its
+ * pass, so the desk can print one for a diver without a phone ahead of the
+ * morning. Never a pass for a seat readiness refuses, as at the counter.
+ */
+type PassDoors = Map<string, ReactNode>;
+
+function passDoors(trip: RosterTrip, rows: RosterRows, t: StaffTranslator): PassDoors {
+  const doors: PassDoors = new Map();
+  for (const { booking } of rows.roster) {
+    if (booking.status === "no_show" || booking.identityUnconfirmedAt) continue;
+    if (rows.readinessByBooking.get(booking.id)?.readiness?.status !== "ready") continue;
+    doors.set(
+      booking.id,
+      <Link
+        href={paperPassPath(trip.shopSlug, trip.tripId, booking.id)}
+        className={buttonClass({ variant: "link", size: "sm", flush: true })}
+      >
+        {t("print.counter.passDoor")}
+      </Link>,
+    );
+  }
+  return doors;
 }

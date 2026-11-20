@@ -129,6 +129,7 @@ export const ERASURE_KEEPS: Record<string, string> = {
   boat_snags:
     "a crew member's note about a problem on a boat, and who later found it still there or fixed",
   trip_stage_events: "the crew moving a departure through its stages",
+  dive_not_made_events: "the crew recording a planned dive not made, and undoing it",
   safety_drills: "a drill the shop held, for its insurer",
   safety_drill_participants: "a crew member who took part in a drill",
   recovery_activities:

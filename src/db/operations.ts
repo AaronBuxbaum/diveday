@@ -918,7 +918,8 @@ type OtherTripActivityEntry =
         | "missing_diver_alert_raised"
         | "missing_diver_found"
         | "departure_note_sent";
-    };
+    }
+  | { code: "dive_not_made" | "dive_not_made_undone"; dive: string };
 
 type TripActivityInput = {
   shopId: string;

@@ -1,7 +1,13 @@
 import { getTableName, type SQL, sql } from "drizzle-orm";
 import type { AppDb, DbExecutor } from "../../db/client";
 import { DemoSightingCleanupBlocked } from "../../db/demo-sighting-guard";
-import { clearDemoSchedule, resetDemoSchedule } from "../../db/seed";
+import { DEMO_PRIVATE_PHOTO_CLEANUP_REQUIRED } from "../../db/private-photo-demo-guard";
+import {
+  clearDemoSchedule,
+  deleteDemoShopCascade,
+  purgeMintedDemoShops,
+  resetDemoSchedule,
+} from "../../db/seed";
 import { nowMs } from "../../lib/clock";
 import { log } from "../../lib/log";
 
@@ -139,6 +145,106 @@ export function capturedDemoResetPlan(db: AppDb): DemoResetPlan | null {
   return capture && "plan" in capture ? capture.plan : null;
 }
 
+const PURGE_SCHEMA = "e2e_purge";
+
+/**
+ * How many minted demos a purge deleted, and the tables it deleted rows from
+ * (null when it cannot say: one went with its triggers on).
+ */
+export type DemoPurge = { shops: number; deletedFrom: string[] | null };
+
+/** The keys and settle functions a trigger-less purge uses, per database. */
+type PurgePlan = { foreignKeys: ForeignKey[]; settles: Map<string, string> };
+
+const purgePlans = new WeakMap<object, PurgePlan>();
+
+/**
+ * `purgeMintedDemoShops` for the e2e reset: the same hand-ordered
+ * `deleteDemoShopCascade`, run the way {@link clearAndReplay} runs the clear
+ * half, with foreign-key triggers off and their work done by set afterwards
+ * (#4763). Each reset deletes the demo the previous test minted, ~150 people
+ * and ~650 bookings, and with the triggers on every deleted row was checked
+ * against each of the ~50 tables naming it, mostly through unindexed columns:
+ * 1.8s of an idle reset, 3.6s of a CI one.
+ *
+ * Nothing is weakened. The cascade's own guards run as before (an encountered
+ * sighting, a private photo still owed), a key the cascade leaves pointing at
+ * nothing refuses as its trigger would have with a 23503, and a table with a
+ * trigger of its own on delete refuses too, since replica mode would skip it.
+ * A refusal rolls that shop's attempt back to a savepoint and deletes it again
+ * with the triggers on, which raises the real error when there is one.
+ *
+ * E2e only, like everything in this file: real Postgres would refuse
+ * `session_replication_role` to an application role, and the reaper and the
+ * mint's cap keep `deleteDemoShopCascade` as it is.
+ */
+export async function purgeMintedDemoShopsWithoutTriggers(db: AppDb): Promise<DemoPurge> {
+  // Every table a shop's delete touched, cascades included, while each one ran
+  // without triggers; null once any ran with them, whose cascades are unseen.
+  let touched: Set<string> | null = new Set<string>();
+  const shops = await purgeMintedDemoShops(db, async (tx, shopId) => {
+    try {
+      await tx.transaction(async (savepoint) => {
+        const plan = await purgePlan(savepoint, db);
+        const deletedFrom = await deleteWithoutTriggers(
+          savepoint,
+          plan.foreignKeys,
+          plan.settles,
+          PURGE_SCHEMA,
+          (recorded) => deleteDemoShopCascade(recorded, shopId),
+          (deleted) => refuseOwnDeleteTriggers(savepoint, plan.foreignKeys, deleted),
+        );
+        for (const table of cascadeReach(plan.foreignKeys, deletedFrom)) touched?.add(table);
+      });
+    } catch (error) {
+      if (error instanceof DemoSightingCleanupBlocked) throw error;
+      if (error instanceof Error && error.message === DEMO_PRIVATE_PHOTO_CLEANUP_REQUIRED) {
+        throw error;
+      }
+      log("e2e_reset.purge_settle_refused", "warn", { message: errorMessage(error) });
+      purgePlans.delete(db);
+      touched = null;
+      await deleteDemoShopCascade(tx, shopId);
+    }
+  });
+  return { shops, deletedFrom: touched ? [...touched].sort() : null };
+}
+
+async function purgePlan(tx: DbExecutor, db: AppDb): Promise<PurgePlan> {
+  const known = purgePlans.get(db);
+  if (known) return known;
+  await tx.execute(sql.raw(`drop schema if exists ${PURGE_SCHEMA} cascade`));
+  await tx.execute(sql.raw(`create schema ${PURGE_SCHEMA}`));
+  const plan: PurgePlan = { foreignKeys: await readForeignKeys(tx), settles: new Map() };
+  purgePlans.set(db, plan);
+  return plan;
+}
+
+/**
+ * Refuse when a table the purge deleted from, or a cascade reaches, carries a
+ * delete trigger of its own: replica mode would have skipped it.
+ */
+async function refuseOwnDeleteTriggers(
+  tx: DbExecutor,
+  keys: ForeignKey[],
+  deletedFrom: Set<string>,
+): Promise<void> {
+  const reached = [...cascadeReach(keys, deletedFrom)].map(literal).join(", ");
+  if (reached === "") return;
+  const triggers = await rows<{ name: string; table: string }>(
+    tx,
+    sql.raw(`select t.tgname as name, c.relname as table from pg_trigger t
+        join pg_class c on c.oid = t.tgrelid join pg_namespace n on n.oid = c.relnamespace
+        where n.nspname = 'public' and not t.tgisinternal and t.tgenabled <> 'D'
+          and (t.tgtype & 8) <> 0 and c.relname in (${reached})`),
+  );
+  if (triggers.length > 0) {
+    throw new Error(
+      `delete triggers replica mode would skip: ${triggers.map((t) => `${t.table}.${t.name}`).join(", ")}`,
+    );
+  }
+}
+
 /** A shadow is only the right answer for the shop and the instant it was taken at. */
 function planFits(plan: DemoResetPlan, shopId: string): boolean {
   return plan.shopId === shopId && plan.clockMs === nowMs();
@@ -184,14 +290,33 @@ async function clearWithoutTriggers(
   keys: ForeignKey[],
   settles: Map<string, string>,
 ): Promise<void> {
+  await deleteWithoutTriggers(tx, keys, settles, SHADOW_SCHEMA, async (db) => {
+    await clearDemoSchedule(db, shopId);
+  });
+}
+
+/**
+ * Run `clear`'s deletes with foreign-key triggers off, then settle by set what
+ * those triggers would have done; see {@link clearAndReplay}. Returns the
+ * tables `clear` deleted from.
+ */
+async function deleteWithoutTriggers(
+  tx: DbExecutor,
+  keys: ForeignKey[],
+  settles: Map<string, string>,
+  schema: string,
+  clear: (db: DbExecutor) => Promise<void>,
+  beforeSettle?: (deletedFrom: Set<string>) => Promise<void>,
+): Promise<Set<string>> {
   await tx.execute(sql.raw("set local session_replication_role = replica"));
   const deletedFrom = new Set<string>();
-  await clearDemoSchedule(recordingDeletes(tx, deletedFrom), shopId);
+  await clear(recordingDeletes(tx, deletedFrom));
   const signature = [...deletedFrom].sort().join(",");
   let settle = settles.get(signature);
   if (settle === undefined) {
+    await beforeSettle?.(deletedFrom);
     const body = settleBody(keys, deletedFrom);
-    settle = `${SHADOW_SCHEMA}.settle_${settles.size}`;
+    settle = `${schema}.settle_${settles.size}`;
     await tx.execute(
       sql.raw(
         `create function ${settle}() returns void language plpgsql as $settle$ declare n bigint; changed boolean; begin ${body} end $settle$`,
@@ -201,6 +326,7 @@ async function clearWithoutTriggers(
   }
   await tx.execute(sql.raw(`select ${settle}()`));
   await tx.execute(sql.raw("set local session_replication_role = origin"));
+  return deletedFrom;
 }
 
 async function replayRows(tx: DbExecutor, plan: DemoResetPlan): Promise<void> {

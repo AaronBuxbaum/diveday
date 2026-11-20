@@ -5,6 +5,7 @@ import { formatCalendarDate, isValidCalendarDate } from "@/lib/calendar-date";
 import { type FormNotice, noticeFromParam } from "@/lib/staff-notices";
 import { tripGateBinding, verifyTripAdmissionGate } from "@/lib/trip-admission-gate";
 import { DETAILS_SAVE_NOTICES } from "./details-save-notices";
+import { DIVE_NOT_MADE_NOTICES } from "./dive-not-made-notices";
 import { MOVE_SEAT_NOTICES } from "./move-seat-notices";
 import { ROSTER_PAYMENT_NOTICES } from "./roster-payment-notices";
 import { ROSTER_REMOVAL_NOTICES } from "./roster-removal-notices";
@@ -721,6 +722,7 @@ const NOTICE_KEYS: Record<
   },
   "not-authorized": { form: "page", tone: "danger", key: "trips.notices.notAuthorized" },
   invalid: { form: "page", tone: "danger", key: "trips.notices.invalid" },
+  ...DIVE_NOT_MADE_NOTICES,
   ...DETAILS_SAVE_NOTICES,
   // Both doors onto the same trap: a departure that demands payment and has no
   // price asks nobody for money and blocks every diver who books it, forever

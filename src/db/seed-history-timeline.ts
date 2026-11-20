@@ -14,16 +14,21 @@ export async function seedHistoryTimeline(
     .select({ id: people.id, fullName: people.fullName })
     .from(people)
     .where(and(eq(people.shopId, shopId), inArray(people.fullName, [...HISTORY_DIVER_NAMES])));
-  for (const person of cohort) {
-    const index = HISTORY_DIVER_NAMES.indexOf(person.fullName);
-    // Keep their original cast ordering without consuming the shared seed tick.
-    const createdAt = new Date(at(-500, 10).getTime() + index * 1_000);
-    await db
-      .update(people)
-      .set({ createdAt })
-      .where(and(eq(people.shopId, shopId), eq(people.id, person.id)));
-  }
   if (cohort.length) {
+    // Keep their original cast ordering without consuming the shared seed tick,
+    // in one statement for the cohort (#4763).
+    const stamps = sql.join(
+      cohort.map((person) => {
+        const index = HISTORY_DIVER_NAMES.indexOf(person.fullName);
+        const createdAt = new Date(at(-500, 10).getTime() + index * 1_000);
+        return sql`(${person.id}::uuid, ${createdAt.toISOString()}::timestamptz)`;
+      }),
+      sql`, `,
+    );
+    await db.execute(sql`
+      update ${people} set created_at = stamp.created_at
+      from (values ${stamps}) as stamp(id, created_at)
+      where ${people.shopId} = ${shopId} and ${people.id} = stamp.id`);
     await db
       .update(cards)
       .set({ createdAt: at(-450, 15) })

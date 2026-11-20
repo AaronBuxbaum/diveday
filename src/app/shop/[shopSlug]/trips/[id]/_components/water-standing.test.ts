@@ -442,3 +442,70 @@ describe("seats the roll call never placed", () => {
     expect(run(c)).toEqual({ noRecord: [], blocked: [] });
   });
 });
+
+/**
+ * **A planned dive recorded not made** (issue #4681): the crew's record rides
+ * on its dive stop, and only while no count speaks for that dive. A count, any
+ * count, outranks it: a dive somebody began counting was made.
+ */
+describe("a dive recorded not made", () => {
+  const notMade = new Map([[2, { by: "Sal Reyes", at: at("11:40") }]]);
+  const dive = (standing: ReturnType<typeof read>["standing"], n: number) =>
+    standing.timeline.find((stop) => stop.kind === "dive" && stop.dive === n);
+
+  it("is said on that dive's stop, and on no other", () => {
+    const { standing } = read({
+      counts: counts({ ...dockDone, after_dive_1: { tom: said("boarded", "10:30") } }),
+      notMade,
+    });
+    expect(dive(standing, 2)).toMatchObject({ count: null, notMade: notMade.get(2) });
+    expect(dive(standing, 1)).toMatchObject({ notMade: null });
+  });
+
+  it("gives way to a count of that dive: a dive somebody counted was made", () => {
+    const { standing } = read({
+      counts: counts({ ...dockDone, after_dive_2: { lena: said("boarded", "11:50") } }),
+      notMade,
+    });
+    expect(dive(standing, 2)).toMatchObject({ notMade: null });
+    expect(dive(standing, 2)?.kind === "dive" && dive(standing, 2)).toMatchObject({
+      count: { dive: 2 },
+    });
+  });
+
+  it("gives way to a log of that dive: a dive with times or a depth was made", () => {
+    for (const log of [
+      { enteredAt: at("11:00"), exitedAt: null, maxDepthMeters: null },
+      { enteredAt: null, exitedAt: at("11:45"), maxDepthMeters: null },
+      { enteredAt: null, exitedAt: null, maxDepthMeters: 12 },
+    ]) {
+      const { standing } = read({
+        counts: counts({ ...dockDone, after_dive_1: { tom: said("boarded", "10:30") } }),
+        logged: new Map([[2, log]]),
+        notMade,
+      });
+      expect(dive(standing, 2)).toMatchObject({ notMade: null });
+    }
+  });
+
+  it("never takes anybody off the people not recorded back, or quiets an alert", () => {
+    const { standing, headline } = read({
+      counts: counts({
+        ...dockDone,
+        after_dive_1: {
+          tom: said("not_boarded", "10:30"),
+          lena: said("boarded", "10:31"),
+          sal: said("boarded", "10:31"),
+        },
+      }),
+      alerted: new Set(["b-tom"]),
+      notMade,
+    });
+    expect(standing.notYetBack.map((person) => [person.name, person.status])).toEqual([
+      ["Tom Okafor", "missingAlert"],
+    ]);
+    expect(standing.alerts).toBe(1);
+    expect(headline).not.toBeNull();
+    expect(dive(standing, 2)).toMatchObject({ notMade: notMade.get(2) });
+  });
+});

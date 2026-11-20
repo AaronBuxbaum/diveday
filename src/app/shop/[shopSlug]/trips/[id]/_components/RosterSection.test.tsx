@@ -597,6 +597,37 @@ describe("the guest folio workflow", () => {
 });
 
 /**
+ * **Paper passes the day before** (issue #4683): in Getting ready, a guest
+ * readiness clears carries the door to their pass when opened; a blocked guest
+ * never does, and Filling has none.
+ */
+describe("paper passes in Getting ready", () => {
+  const open = (name: string) => {
+    const toggle = screen.queryByRole("button", { name: "All guests" });
+    if (toggle) fireEvent.click(toggle);
+    fireEvent.click(screen.getByRole("button", { name }));
+  };
+
+  it("offers a cleared guest's pass, and not a blocked guest's", () => {
+    const { container } = renderRoster({ ...fixtures, selectedBookingId: null, phase: "ready" });
+    open(ready.person.fullName);
+    const folio = container.querySelector(`li#booking-${ready.booking.id}`) as HTMLElement;
+    expect(within(folio).getByRole("link", { name: "Print a pass" })).toHaveAttribute(
+      "href",
+      expect.stringContaining(`?pass=${ready.booking.id}`),
+    );
+    open(blocked.person.fullName);
+    const held = container.querySelector(`li#booking-${blocked.booking.id}`) as HTMLElement;
+    expect(within(held).queryByRole("link", { name: "Print a pass" })).toBeNull();
+  });
+
+  it("has no pass door while the boat is filling", () => {
+    renderRoster({ ...fixtures, selectedBookingId: null, phase: "filling" });
+    expect(screen.queryByRole("link", { name: "Print a pass" })).toBeNull();
+  });
+});
+
+/**
  * **A cancelled trip has nothing to make ready** (layer E): its guests are
  * listed as booked, with no "Can't board yet" and no remedy to chase.
  */

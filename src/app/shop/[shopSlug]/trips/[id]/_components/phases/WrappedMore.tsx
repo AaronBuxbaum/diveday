@@ -29,8 +29,8 @@ export async function WrappedMore({
   // `null` when the shop has conservation off, or the trip was cancelled.
   const conservation = await getTripConservationPanel(db, shop.id, tripId, personId);
   return (
-    // The header's Activity row links to `#trip-activity`, inside this card:
-    // the card opens for it.
+    // The header's Activity row links to `#trip-activity`, and What happened's
+    // Left aboard row to `#found-aboard`, inside this card: the card opens for them.
     <AutoOpenDetails
       openOnHash={["trip-activity", "conservation", "found-aboard"]}
       id="wrapped-more"

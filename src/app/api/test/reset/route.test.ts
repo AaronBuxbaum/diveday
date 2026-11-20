@@ -6,17 +6,16 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
 });
-vi.mock("@/db/seed", () => ({
-  purgeMintedDemoShops: vi.fn(),
-}));
 vi.mock("../../../../features/demo-reset-snapshot", () => ({
+  purgeMintedDemoShopsWithoutTriggers: vi.fn(),
   resetDemoFromSnapshot: vi.fn(),
 }));
 vi.mock("@/db/shops", () => ({ getShopBySlug: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
-const { purgeMintedDemoShops } = await import("@/db/seed");
-const { resetDemoFromSnapshot } = await import("../../../../features/demo-reset-snapshot");
+const { purgeMintedDemoShopsWithoutTriggers, resetDemoFromSnapshot } = await import(
+  "../../../../features/demo-reset-snapshot"
+);
 const { getShopBySlug } = await import("@/db/shops");
 const { POST } = await import("./route");
 const { moveServerClock } = await import("../../../../features/test-clock");
@@ -50,7 +49,9 @@ beforeEach(() => {
   vi.mocked(resetDemoFromSnapshot)
     .mockReset()
     .mockResolvedValue({ mode: "snapshot", wrote: ["bookings", "trips"] });
-  vi.mocked(purgeMintedDemoShops).mockReset().mockResolvedValue(0);
+  vi.mocked(purgeMintedDemoShopsWithoutTriggers)
+    .mockReset()
+    .mockResolvedValue({ shops: 0, deletedFrom: [] });
 });
 
 afterEach(() => {
@@ -90,7 +91,7 @@ describe("POST /api/test/reset — auth gate (specialist-optimization-audit-2026
     const response = await POST(resetRequest(`Bearer ${secret}`));
     expect(response.status).toBe(200);
     expect(resetDemoFromSnapshot).toHaveBeenCalledWith(FAKE_DB, "shop_1");
-    expect(purgeMintedDemoShops).toHaveBeenCalledWith(FAKE_DB);
+    expect(purgeMintedDemoShopsWithoutTriggers).toHaveBeenCalledWith(FAKE_DB);
     // And reclaims what it just deleted — see the route's own comment for why
     // a run of this endpoint that skips it degrades a whole local e2e suite.
     expect(FAKE_DB.execute).toHaveBeenCalledTimes(1);
@@ -116,14 +117,27 @@ describe("POST /api/test/reset — auth gate (specialist-optimization-audit-2026
     expect(vacuumed()).toBe('vacuum (analyze) public."bookings", public."trips"');
   });
 
-  it("vacuums and analyzes everything after a real reset or a purge of minted shops", async () => {
+  it("adds the tables a purge of minted shops deleted from", async () => {
+    vi.mocked(resetDemoFromSnapshot).mockResolvedValue({ mode: "snapshot", wrote: ["trips"] });
+    vi.mocked(purgeMintedDemoShopsWithoutTriggers).mockResolvedValue({
+      shops: 1,
+      deletedFrom: ["people", "trips"],
+    });
+    await POST(resetRequest(`Bearer ${secret}`));
+    expect(vacuumed()).toBe('vacuum (analyze) public."people", public."trips"');
+  });
+
+  it("vacuums and analyzes everything after a real reset or a purge that cannot name its tables", async () => {
     vi.mocked(resetDemoFromSnapshot).mockResolvedValue({ mode: "captured", wrote: null });
     await POST(resetRequest(`Bearer ${secret}`));
     expect(vacuumed()).toBe("vacuum (analyze)");
 
     FAKE_DB.execute.mockClear();
     vi.mocked(resetDemoFromSnapshot).mockResolvedValue({ mode: "snapshot", wrote: ["trips"] });
-    vi.mocked(purgeMintedDemoShops).mockResolvedValue(2);
+    vi.mocked(purgeMintedDemoShopsWithoutTriggers).mockResolvedValue({
+      shops: 2,
+      deletedFrom: null,
+    });
     await POST(resetRequest(`Bearer ${secret}`));
     expect(vacuumed()).toBe("vacuum (analyze)");
   });

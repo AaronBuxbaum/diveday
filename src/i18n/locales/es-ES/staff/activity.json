@@ -33,6 +33,8 @@
     "incident_legal_hold_released": "{actor} levantó la retención legal de un informe de incidente",
     "missing_diver_alert_raised": "{actor} avisó a los propietarios de un buceador desaparecido",
     "missing_diver_found": "{actor} marcó como encontrado a un buceador desaparecido",
+    "dive_not_made": "{actor} registró la inmersión {dive} como no realizada",
+    "dive_not_made_undone": "{actor} deshizo el registro de la inmersión {dive} como no realizada",
     "seat_added": "{actor} agregó a {diver} a la salida",
     "seat_added_from_trip_link": "{actor} agregó una plaza para {diver} desde su enlace de la salida",
     "departure_offered": "{actor} envió a {diver} una invitación por correo a esta salida",

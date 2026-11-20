@@ -159,6 +159,23 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "departure-details-panel", scheme);
       });
 
+      // A hull with a certificate says its passenger figure beside the seats
+      // on sale (#4685). The demo records no certificate, so the reef boat
+      // takes one through the `boatSafety` fact.
+      test(`Edit trip names the boat certificate beside the seats (${scheme})`, async ({
+        page,
+        request,
+      }) => {
+        const { boatSafety } = (await seedFacts(request, ["boatSafety"])) as {
+          boatSafety?: { tripId: string };
+        };
+        if (!boatSafety) throw new Error("the fact found no reef departure on a boat");
+        await page.goto(`/shop/blue-mantis/trips/${boatSafety.tripId}`);
+        await openTripAbout(page);
+        await page.getByText(/Certificate: \d+ passengers?/).waitFor();
+        await capture(page, "departure-certificate-seats", scheme);
+      });
+
       test(`the plan editor stays with the dive plan (${scheme})`, async ({ page }) => {
         await openReefTrip(page);
         const plan = await openTripAboutRow(page, "Plan");
@@ -287,6 +304,19 @@ for (const scheme of ["light", "dark"] as const) {
         await openTripTab(page, "Trip");
         await page.locator("#roster").waitFor();
         await capture(page, "trip-guests", scheme);
+      });
+
+      // Getting ready: each cleared guest's paper pass door, the day before
+      // (#4683), under the fix list that now carries open orders (#4685).
+      test(`Getting ready offers each cleared guest's paper pass (${scheme})`, async ({ page }) => {
+        await openReefTrip(page);
+        await openTripPhase(page, "ready");
+        const row = (await rosterRow(page, "Diego Alvarez")).filter({ visible: true }).first();
+        await openRosterDetails(row);
+        await row
+          .getByRole("link", { name: staffTranslator("en-US")("print.counter.passDoor") })
+          .waitFor();
+        await capture(page, "trip-ready-passes", scheme);
       });
 
       /**

@@ -3,16 +3,21 @@ import type { ReactNode } from "react";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
+import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import { StatusMark } from "@/components/ui/StatusMark";
 import type { TripMoney } from "@/features/trip-money";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import { formatMoneyCents, formatTime, formatTimeRange } from "@/lib/format";
+import { calendarDateInTimezone } from "@/lib/calendar-date";
+import { nowDate } from "@/lib/clock";
+import { formatMoneyCents, formatTime, formatTimeRange, formatWeekdayTime } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { shopPath } from "@/lib/staff-notices";
+import { recordDiveNotMadeAction, undoDiveNotMadeAction } from "../../dive-not-made-actions";
 import { startIncidentReportAction } from "../../incidents/actions";
 import { diveLogHash } from "../TripDiveRecord";
 import type { WaterStanding } from "../water-standing";
 import type { CloseOutItem } from "../wrapped-close-out";
+import type { WrappedRecords } from "../wrapped-records";
 
 const LINK = buttonClass({ variant: "link", size: "sm", flush: true });
 /** The first thing left carries the one primary; the rest are secondary (finding 5). */
@@ -25,14 +30,26 @@ function listOf(locale: string, items: readonly string[]): string {
   return cachedListFormat(locale, { style: "long", type: "conjunction" }).format(items);
 }
 
-/** **Close out**: each thing left, with the one door that closes it. Nothing when none is. */
+/**
+ * **Close out**: each thing left, with the one door that closes it. Nothing
+ * when none is. A roll-call row about a planned dive nobody began counting
+ * also offers, to the departure's crew, to record that dive not made
+ * (`notMadeOfferFor`, issue #4681), behind its own confirm.
+ */
 export function CloseOutCard({
   items,
+  notMadeDive = null,
   shopSlug,
   tripId,
   locale,
   t,
-}: { items: readonly CloseOutItem[]; shopSlug: string; tripId: string } & Omit<Words, "timeZone">) {
+}: {
+  items: readonly CloseOutItem[];
+  /** The dive this viewer may record not made, or null (`notMadeOfferFor`, crew only). */
+  notMadeDive?: number | null;
+  shopSlug: string;
+  tripId: string;
+} & Omit<Words, "timeZone">) {
   if (items.length === 0) return null;
   const trip = (...rest: string[]) => shopPath(shopSlug, "trips", tripId, ...rest);
   const row = (
@@ -111,9 +128,25 @@ export function CloseOutCard({
               <p className="font-semibold">{title}</p>
               {sub ? <p className="text-sm text-muted [overflow-wrap:anywhere]">{sub}</p> : null}
             </div>
-            <Link href={href} className={FIX(index === 0)}>
-              {fix}
-            </Link>
+            <div className="flex shrink-0 flex-col items-end gap-1">
+              <Link href={href} className={FIX(index === 0)}>
+                {fix}
+              </Link>
+              {item.kind === "rollCall" && notMadeDive !== null && item.dive === notMadeDive ? (
+                <form action={recordDiveNotMadeAction.bind(null, shopSlug, tripId)}>
+                  <input type="hidden" name="dive" value={notMadeDive} />
+                  <InlineConfirm
+                    triggerLabel={t("trips.clock.wrapped.notMadeAction", { dive: notMadeDive })}
+                    message={t("trips.clock.wrapped.notMadeConfirm", { dive: notMadeDive })}
+                    confirmLabel={t("trips.clock.wrapped.notMadeAction", { dive: notMadeDive })}
+                    cancelLabel={t("words.dismiss.neverMind")}
+                    pendingLabel={t("words.busy.saving")}
+                    triggerClassName={LINK}
+                    confirmClassName={buttonClass({ variant: "secondary", size: "sm" })}
+                  />
+                </form>
+              ) : null}
+            </div>
           </li>
         );
       })}
@@ -214,7 +247,9 @@ export function IncidentsLine({
  * 4): each dive as recorded (site, times, deepest, when its count closed),
  * opening in place to its log once its count has begun; then the incident
  * reports, no-shows and turn-aways. A dive nobody counted says "Not counted",
- * one nobody logged "Not logged"; neither is guessed.
+ * one nobody logged "Not logged"; neither is guessed. Last, a short row for
+ * what the crew saw and what was left aboard, each opening its record
+ * (issue #4683).
  */
 export function WhatHappenedCard({
   standing,
@@ -224,6 +259,8 @@ export function WhatHappenedCard({
   noShows,
   turnedAway,
   print,
+  records,
+  mayUndoNotMade = false,
   shopSlug,
   tripId,
   locale,
@@ -238,6 +275,10 @@ export function WhatHappenedCard({
   noShows: readonly string[];
   turnedAway: readonly string[];
   print: ReactNode;
+  /** What was seen and left aboard (`wrappedRecords`); absent, no rows. */
+  records?: WrappedRecords;
+  /** This viewer is on the departure's crew, so may undo a dive recorded not made. */
+  mayUndoNotMade?: boolean;
   shopSlug: string;
   tripId: string;
 } & Words) {
@@ -262,9 +303,23 @@ export function WhatHappenedCard({
     ]
       .filter(Boolean)
       .join(" · ");
+    // Recorded not made (issue #4681): said with who and when, never as a count.
+    const notMade = count ? null : (stop.notMade ?? null);
     const detail = [
-      count ? null : t("trips.clock.wrapped.notCounted"),
-      logged || !value ? null : t("trips.clock.wrapped.notLogged"),
+      notMade
+        ? t("trips.clock.wrapped.notMade", {
+            name: notMade.by,
+            // A record from another day names it, so yesterday's never reads
+            // as this morning's (a page read the day after, a liveaboard).
+            time:
+              calendarDateInTimezone(notMade.at, timeZone) ===
+              calendarDateInTimezone(nowDate(), timeZone)
+                ? formatTime(notMade.at, locale, timeZone)
+                : formatWeekdayTime(notMade.at, locale, timeZone),
+          })
+        : null,
+      count || notMade ? null : t("trips.clock.wrapped.notCounted"),
+      logged || !value || notMade ? null : t("trips.clock.wrapped.notLogged"),
       logged?.maxDepthMeters != null
         ? t("trips.clock.wrapped.deepest", { depth: depth(logged.maxDepthMeters) })
         : null,
@@ -279,8 +334,17 @@ export function WhatHappenedCard({
       row: {
         key: `dive-${stop.dive}`,
         label: t("trips.clock.water.dive", { dive: stop.dive }),
-        value: value || (logged ? none : t("trips.clock.wrapped.notLogged")),
+        value: value || (logged || notMade ? none : t("trips.clock.wrapped.notLogged")),
         detail: detail || null,
+        action:
+          notMade && mayUndoNotMade ? (
+            <form action={undoDiveNotMadeAction.bind(null, shopSlug, tripId)}>
+              <input type="hidden" name="dive" value={stop.dive} />
+              <SubmitButton pendingLabel={t("words.busy.saving")} className={LINK}>
+                {t("trips.clock.wrapped.notMadeUndo")}
+              </SubmitButton>
+            </form>
+          ) : null,
       },
     });
   }
@@ -303,6 +367,35 @@ export function WhatHappenedCard({
       key: "turned-away",
       label: t("trips.clock.wrapped.turnedAway"),
       value: listOf(locale, turnedAway),
+    });
+  }
+  if (records?.seen) {
+    const { dive } = records.seen;
+    rows.push({
+      key: "seen",
+      label: t("trips.clock.wrapped.seen"),
+      value: t("trips.clock.wrapped.species", { count: records.seen.species }),
+      action: (
+        <Link
+          href={`${shopPath(shopSlug, "trips", tripId, "manifest")}${dive ? `?checkpoint=after_dive_${dive}` : ""}`}
+          className={LINK}
+        >
+          {t("trips.clock.water.openRollCall")}
+        </Link>
+      ),
+    });
+  }
+  if (records?.leftAboard) {
+    rows.push({
+      key: "leftAboard",
+      label: t("desk.lostFound.heading"),
+      value: t("trips.clock.wrapped.items", { count: records.leftAboard.count }),
+      // Under More, which opens for it.
+      action: (
+        <a href="#found-aboard" className={LINK}>
+          {t("trips.about.view")}
+        </a>
+      ),
     });
   }
   const GRID =

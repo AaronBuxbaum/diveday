@@ -1,0 +1,505 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "be1942e5-8b10-4dcd-b1aa-9049812cb753",
+  "prevIds": [
+    "563c47ae-19db-4fa3-95a0-ae6f5acf934a"
+  ],
+  "footprints": [
+    {
+      "statementType": "create_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "dive_not_made_word"
+      ],
+      "writes": [
+        "s|enum|public.dive_not_made_word",
+        "n|enum|public.dive_not_made_word",
+        "e|enum|public.dive_not_made_word",
+        "n|type|public.dive_not_made_word"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "dive_not_made_events"
+      ],
+      "writes": [
+        "s|tbl|public.dive_not_made_events",
+        "n|tbl|public.dive_not_made_events",
+        "e|tbl|public.dive_not_made_events",
+        "n|rel|public.dive_not_made_events",
+        "n|type|public.dive_not_made_events",
+        "n|rel|public.dive_not_made_events_pkey"
+      ],
+      "reads": [
+        "n|sch|public",
+        "n|enum|public.dive_not_made_word"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "dive_not_made_events",
+        "dive_not_made_events_recorded_by_person_id_idx"
+      ],
+      "writes": [
+        "s|idx|public.dive_not_made_events_recorded_by_person_id_idx",
+        "n|idx|public.dive_not_made_events_recorded_by_person_id_idx",
+        "e|idx|public.dive_not_made_events_recorded_by_person_id_idx",
+        "n|rel|public.dive_not_made_events_recorded_by_person_id_idx"
+      ],
+      "reads": [
+        "n|tbl|public.dive_not_made_events",
+        "n|sch|public",
+        "n|col|public.dive_not_made_events.recorded_by_person_id"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "dive_not_made_events",
+        "dive_not_made_events_shop_trip_idx"
+      ],
+      "writes": [
+        "s|idx|public.dive_not_made_events_shop_trip_idx",
+        "n|idx|public.dive_not_made_events_shop_trip_idx",
+        "e|idx|public.dive_not_made_events_shop_trip_idx",
+        "n|rel|public.dive_not_made_events_shop_trip_idx"
+      ],
+      "reads": [
+        "n|tbl|public.dive_not_made_events",
+        "n|sch|public",
+        "n|col|public.dive_not_made_events.shop_id",
+        "n|col|public.dive_not_made_events.trip_id",
+        "n|col|public.dive_not_made_events.meeting_day",
+        "n|col|public.dive_not_made_events.dive_number",
+        "n|col|public.dive_not_made_events.recorded_at",
+        "n|col|public.dive_not_made_events.seq"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "dive_not_made_events"
+      ],
+      "writes": [
+        "s|fk|public.dive_not_made_events.dive_not_made_events_shop_id_shops_id_fkey",
+        "n|fk|public.dive_not_made_events.dive_not_made_events_shop_id_shops_id_fkey",
+        "e|fk|public.dive_not_made_events.dive_not_made_events_shop_id_shops_id_fkey",
+        "n|con|public.dive_not_made_events.dive_not_made_events_shop_id_shops_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.dive_not_made_events",
+        "n|sch|public",
+        "n|tbl|public.shops",
+        "n|sch|public",
+        "n|col|public.dive_not_made_events.shop_id",
+        "n|col|public.shops.id",
+        "e|uniqueness|public.shops.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "dive_not_made_events"
+      ],
+      "writes": [
+        "s|fk|public.dive_not_made_events.dive_not_made_events_trip_id_trips_id_fkey",
+        "n|fk|public.dive_not_made_events.dive_not_made_events_trip_id_trips_id_fkey",
+        "e|fk|public.dive_not_made_events.dive_not_made_events_trip_id_trips_id_fkey",
+        "n|con|public.dive_not_made_events.dive_not_made_events_trip_id_trips_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.dive_not_made_events",
+        "n|sch|public",
+        "n|tbl|public.trips",
+        "n|sch|public",
+        "n|col|public.dive_not_made_events.trip_id",
+        "n|col|public.trips.id",
+        "e|uniqueness|public.trips.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "dive_not_made_events"
+      ],
+      "writes": [
+        "s|fk|public.dive_not_made_events.dive_not_made_events_recorded_by_person_id_people_id_fkey",
+        "n|fk|public.dive_not_made_events.dive_not_made_events_recorded_by_person_id_people_id_fkey",
+        "e|fk|public.dive_not_made_events.dive_not_made_events_recorded_by_person_id_people_id_fkey",
+        "n|con|public.dive_not_made_events.dive_not_made_events_recorded_by_person_id_people_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.dive_not_made_events",
+        "n|sch|public",
+        "n|tbl|public.people",
+        "n|sch|public",
+        "n|col|public.dive_not_made_events.recorded_by_person_id",
+        "n|col|public.people.id",
+        "e|uniqueness|public.people.id"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "dive_not_made_events",
+        "isRlsEnabled": false,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "dive_not_made_word",
+        "values": [
+          "not_made",
+          "undone"
+        ],
+        "entityType": "enums"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "dive_not_made_events",
+        "name": "id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "gen_random_uuid()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "dive_not_made_events",
+        "name": "shop_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "dive_not_made_events",
+        "name": "trip_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "dive_not_made_events",
+        "name": "dive_number",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "dive_not_made_events",
+        "name": "meeting_day",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "dive_not_made_events",
+        "name": "word",
+        "type": "dive_not_made_word",
+        "typeSchema": "public",
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "dive_not_made_events",
+        "name": "recorded_by_person_id",
+        "type": "uuid",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "dive_not_made_events",
+        "name": "recorded_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "dive_not_made_events",
+        "name": "seq",
+        "type": "bigserial",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "dive_not_made_events",
+        "name": "dive_not_made_events_recorded_by_person_id_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "recorded_by_person_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "dive_not_made_events",
+        "name": "dive_not_made_events_shop_trip_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "shop_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "trip_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "meeting_day",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "dive_number",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "recorded_at",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "seq",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "dive_not_made_events",
+        "name": "dive_not_made_events_shop_id_shops_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "shop_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "shops",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "NO ACTION",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "dive_not_made_events",
+        "name": "dive_not_made_events_trip_id_trips_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "trip_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "trips",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "dive_not_made_events",
+        "name": "dive_not_made_events_recorded_by_person_id_people_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "recorded_by_person_id"
+        ],
+        "schemaTo": "public",
+        "tableTo": "people",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "NO ACTION",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "dive_not_made_events",
+        "name": "dive_not_made_events_pkey",
+        "columns": [
+          "id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "dive_not_made_events",
+        "name": "dive_not_made_events_dive_number_positive",
+        "value": "\"dive_number\" >= 1",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "dive_not_made_events",
+        "name": "dive_not_made_events_meeting_day_nonnegative",
+        "value": "\"meeting_day\" >= 0",
+        "entityType": "checks"
+      }
+    }
+  ]
+}

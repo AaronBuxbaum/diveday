@@ -100,6 +100,7 @@ export function rosterSeat(entry: RosterEntry, settled: boolean, context: Roster
     offersCreateOrder,
     record,
     recordBelow,
+    readyBelow,
   } = context;
   const {
     shopSlug,
@@ -321,7 +322,9 @@ export function rosterSeat(entry: RosterEntry, settled: boolean, context: Roster
   const arrivalControl = arrival?.controls.get(booking.id);
   // A finished departure has no desk; its record carries the rebooking line
   // (fifth-loop ideas, item 4).
-  const arrivalBelow = arrival?.below.get(booking.id) ?? recordBelow?.get(booking.id);
+  // The day before, a cleared seat's paper pass (issue #4683).
+  const arrivalBelow =
+    arrival?.below.get(booking.id) ?? recordBelow?.get(booking.id) ?? readyBelow?.get(booking.id);
   // The charter seats sold only on this course seat (issue #2058), said in
   // its Remove confirm and its move: those seats stay booked, and still need
   // the card to board.
