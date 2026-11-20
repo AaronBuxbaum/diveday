@@ -1,4 +1,4 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import type { DbExecutor } from "./client";
 import { courses, shops } from "./schema";
 import { SEED_COURSE_ILLUSTRATIONS } from "./seed-course-illustrations";
@@ -18,26 +18,28 @@ export const OPEN_WATER_GALLERY = [
   alt: `Illustration: ${alt}.`,
 }));
 
-/** Fictional course-specific illustrations for demo shops, never real operator photos. */
+/**
+ * Fictional course-specific illustrations for demo shops, never real operator photos.
+ * One statement for the catalog rather than one per course (#4763).
+ */
 export async function seedCoursePhotos(db: DbExecutor, shopId: string): Promise<void> {
   const [shop] = await db.select({ isDemo: shops.isDemo }).from(shops).where(eq(shops.id, shopId));
   if (!shop?.isDemo) return;
-  for (const [templateSlug, image] of Object.entries(SEED_COURSE_ILLUSTRATIONS)) {
-    const courseIdentity =
-      templateSlug === "ssi-nitrox-40"
-        ? and(
-            isNull(courses.sourceTemplateSlug),
-            eq(courses.agency, "ssi"),
-            eq(courses.title, "Nitrox 40"),
-          )
-        : eq(courses.sourceTemplateSlug, templateSlug);
-    await db
-      .update(courses)
-      .set({
-        heroImageUrl: image.url,
-        heroImageAlt: image.alt,
-        ...(templateSlug === "open-water-diver" ? { galleryPhotos: OPEN_WATER_GALLERY } : {}),
-      })
-      .where(and(eq(courses.shopId, shopId), courseIdentity));
-  }
+  const images = sql.join(
+    Object.entries(SEED_COURSE_ILLUSTRATIONS).map(
+      ([templateSlug, image]) => sql`(${templateSlug}, ${image.url}, ${image.alt})`,
+    ),
+    sql`, `,
+  );
+  // Nitrox 40 is SSI's own catalog row, named by agency and title: no template carries it.
+  await db.execute(sql`
+    update ${courses}
+    set hero_image_url = image.url, hero_image_alt = image.alt,
+      gallery_photos = case when image.template_slug = 'open-water-diver'
+        then ${JSON.stringify(OPEN_WATER_GALLERY)}::jsonb else ${courses.galleryPhotos} end
+    from (values ${images}) as image(template_slug, url, alt)
+    where ${courses.shopId} = ${shopId}
+      and case when image.template_slug = 'ssi-nitrox-40'
+        then ${courses.sourceTemplateSlug} is null and ${courses.agency} = 'ssi' and ${courses.title} = 'Nitrox 40'
+        else ${courses.sourceTemplateSlug} = image.template_slug end`);
 }

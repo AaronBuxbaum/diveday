@@ -1,4 +1,4 @@
-import { and, asc, eq, gt, isNull, lt, ne } from "drizzle-orm";
+import { and, asc, eq, gt, isNull, lt, ne, sql } from "drizzle-orm";
 import type { DbExecutor } from "./client";
 import { boats, trips } from "./schema";
 import { liveTrip } from "./trips-live";
@@ -44,6 +44,7 @@ export async function seedHulls(db: DbExecutor, shopId: string): Promise<void> {
   }
   const overlaps = (a: { startsAt: Date; endsAt: Date }, b: { startsAt: Date; endsAt: Date }) =>
     a.startsAt.getTime() < b.endsAt.getTime() && a.endsAt.getTime() > b.startsAt.getTime();
+  const assigned: { tripId: string; boatId: string }[] = [];
   for (const trip of board) {
     if (trip.boatId) continue;
     const hull = fleet.find(
@@ -51,12 +52,19 @@ export async function seedHulls(db: DbExecutor, shopId: string): Promise<void> {
     );
     if (!hull) continue;
     outOn.get(hull.id)?.push(trip);
-    await db
-      .update(trips)
-      .set({ boatId: hull.id })
-      // diveday:allow-deleted-trips: the seed's own departure, read live above.
-      .where(and(eq(trips.id, trip.id), isNull(trips.boatId)));
+    assigned.push({ tripId: trip.id, boatId: hull.id });
   }
+  if (assigned.length === 0) return;
+  // One statement for the board rather than one per departure (#4763).
+  const hulls = sql.join(
+    assigned.map((row) => sql`(${row.tripId}::uuid, ${row.boatId}::uuid)`),
+    sql`, `,
+  );
+  // diveday:allow-deleted-trips: the seed's own departures, read live above.
+  await db.execute(sql`
+    update ${trips} set boat_id = hull.boat_id
+    from (values ${hulls}) as hull(trip_id, boat_id)
+    where ${trips.id} = hull.trip_id and ${trips.boatId} is null`);
 }
 
 /** The shop's boats still in its fleet, by name: the order every seed hands them out in. */

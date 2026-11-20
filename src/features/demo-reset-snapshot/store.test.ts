@@ -8,6 +8,7 @@ import {
   internalNotes,
   people,
   personRoles,
+  shops,
   trips,
   userAccounts,
 } from "../../db/schema/index";
@@ -389,5 +390,85 @@ describe("the e2e demo reset's snapshot", () => {
       () => "a real reset that failed",
     );
     expect(outcome).not.toBe("snapshot");
+  }, 120_000);
+});
+
+/**
+ * The e2e reset deletes the demo the previous test minted with foreign-key
+ * triggers off and their checks run by set (#4763). The promise is the same as
+ * the replay's: the database it leaves is the one the triggered cascade leaves.
+ */
+describe("the e2e purge of minted demos", () => {
+  it("leaves the database exactly as it was before the mint", async () => {
+    const { db } = await seededShopContext({ history: true });
+    const { snapshot, seed } = await freshModules();
+    const before = await exportDatabase(db);
+    // The demo a visitor gets, the one the reset deletes after every demo spec.
+    await db.transaction((tx) => seed.createDemoShop(tx, { brand: true }));
+    const purged = await snapshot.purgeMintedDemoShopsWithoutTriggers(db);
+    expect(purged.shops).toBe(1);
+    expect(purged.deletedFrom).toEqual(expect.arrayContaining(["bookings", "people", "shops"]));
+    expect(differingTables(before, await exportDatabase(db))).toEqual([]);
+  }, 120_000);
+
+  it("applies cascades and refuses a key the cascade leaves dangling, as the triggers would", async () => {
+    const { db } = await seededShopContext();
+    const { snapshot, seed } = await freshModules();
+    await db.execute(sql`create table public.probe_cascade (
+      id serial primary key, trip_id uuid references trips(id) on delete cascade)`);
+    await db.execute(sql`create table public.probe_refuse (
+      id serial primary key, person_id uuid references people(id))`);
+    const minted = async () => {
+      const { slug } = await db.transaction((tx) => seed.createDemoShop(tx, { shape: "lean" }));
+      const [trip] = await db
+        .select({ id: trips.id, shopId: trips.shopId })
+        .from(trips)
+        .innerJoin(shops, eq(shops.id, trips.shopId))
+        .where(eq(shops.slug, slug));
+      if (!trip) throw new Error("test setup: the minted demo has no trip");
+      return trip;
+    };
+
+    const first = await minted();
+    await db.execute(sql`insert into probe_cascade (trip_id) values (${first.id})`);
+    expect((await snapshot.purgeMintedDemoShopsWithoutTriggers(db)).shops).toBe(1);
+    expect(await db.$count(shops, eq(shops.id, first.shopId))).toBe(0);
+    const cascaded = (await db.execute(
+      sql`select count(*)::int as n from probe_cascade`,
+    )) as unknown as { rows: { n: number }[] };
+    expect(cascaded.rows[0]?.n).toBe(0);
+
+    // A person row the cascade does not know to clear first: the set check
+    // refuses, the shop is deleted again with its triggers on, and that raises
+    // the 23503 a missing delete always raised. Nothing is half-done.
+    const second = await minted();
+    const [person] = await db
+      .select({ id: people.id })
+      .from(people)
+      .where(eq(people.shopId, second.shopId));
+    if (!person) throw new Error("test setup: the minted demo has no people");
+    await db.execute(sql`insert into probe_refuse (person_id) values (${person.id})`);
+    await expect(snapshot.purgeMintedDemoShopsWithoutTriggers(db)).rejects.toMatchObject({
+      cause: expect.objectContaining({ code: "23503" }),
+    });
+    expect(await db.$count(shops, eq(shops.id, second.shopId))).toBe(1);
+  }, 120_000);
+
+  it("deletes with triggers on when a table it deletes from has a delete trigger of its own", async () => {
+    const { db } = await seededShopContext();
+    const { snapshot, seed } = await freshModules();
+    // Replica mode would skip this trigger, so the purge must not use it here.
+    await db.execute(sql`create table public.probe_boat_log (boat_id uuid)`);
+    await db.execute(sql`create function public.probe_log_boat() returns trigger language plpgsql
+      as $f$ begin insert into public.probe_boat_log values (old.id); return old; end $f$`);
+    await db.execute(sql`create trigger probe_log_boat before delete on boats
+      for each row execute function public.probe_log_boat()`);
+    await db.transaction((tx) => seed.createDemoShop(tx, { shape: "lean" }));
+    const purged = await snapshot.purgeMintedDemoShopsWithoutTriggers(db);
+    expect(purged).toEqual({ shops: 1, deletedFrom: null });
+    const logged = (await db.execute(
+      sql`select count(*)::int as n from probe_boat_log`,
+    )) as unknown as { rows: { n: number }[] };
+    expect(logged.rows[0]?.n).toBeGreaterThan(0);
   }, 120_000);
 });
