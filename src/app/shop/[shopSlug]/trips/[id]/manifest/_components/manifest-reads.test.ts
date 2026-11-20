@@ -70,7 +70,8 @@ describe("readManifestPage (in-memory PGlite)", () => {
       readManifestPage(counted, shop, reef.id, staff.person.id),
     );
 
-    // 76 since the deck count's latest row per checkpoint is read beside the
+    // 77 since the person sheet reads who sat out which dive (issue #4307, one
+    // statement beside the roll call). 76 since the deck count's latest row per checkpoint is read beside the
     // roll call (issue #4248, one statement). Before that, 75 including the boat and two safety-kit statements now started beside the
     // roster-dependent reads (#4393); previously those ran after this reader
     // plus a redundant trip/boat lookup (76 combined, now 75). This reader
@@ -81,7 +82,7 @@ describe("readManifestPage (in-memory PGlite)", () => {
     // #4391), 115 in production before the page stopped reading the manifest
     // twice and the roll call stopped reading once per checkpoint (issue #3857).
     // A tripwire: a change that adds a statement should say so here.
-    expect(stats.queries).toBeLessThanOrEqual(76);
+    expect(stats.queries).toBeLessThanOrEqual(77);
   });
 
   it("renders without a write, a lock or a snapshot revision (issue #4391)", async () => {
