@@ -1,4 +1,6 @@
 import Image from "next/image";
+import { ImageFileInput } from "@/components/ImageFileInput";
+import { removablePhotoGridClass } from "@/components/RemovablePhoto";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { CompactDisclosureRow } from "@/components/ui/disclosure";
@@ -12,6 +14,7 @@ import {
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { CREW_PUBLIC_NAME_MAX, defaultCrewPublicName } from "@/lib/crew-public-name";
 import type { PublicStaffProfile } from "@/lib/public-staff-profile";
+import { MAX_IMAGE_MB } from "@/lib/storage/limits";
 import { saveCrewPublicConsentAction } from "../profile-actions";
 import { saveStaffProfileAction } from "../staff-profile-actions";
 export function PublicProfileSection({
@@ -147,14 +150,22 @@ export function PublicProfileSection({
               {t("staffing.publicProfile.removePhoto", { number: index + 1 })}
             </ChoiceRow>
           ))}
-          <Field label={t("staffing.publicProfile.photos")}>
-            <input
-              className={controlClass}
-              name="profilePhotos"
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              multiple
-            />
+          {/* The app's own photo tile, never the device's "Choose Files No
+              file chosen" box (`staff-public-profile-editor`). */}
+          <Field label={t("staffing.publicProfile.photos")} htmlFor="public-profile-photos">
+            <div className={removablePhotoGridClass}>
+              <ImageFileInput
+                id="public-profile-photos"
+                name="profilePhotos"
+                multiple
+                copy={{
+                  choose: t("shared.imageInput.choose"),
+                  chooseAnother: t("shared.imageInput.chooseAnother"),
+                  wrongTypeSuffix: t("shared.imageInput.wrongTypeSuffix"),
+                  tooBigSuffix: t("shared.imageInput.tooBigSuffix", { maxMb: MAX_IMAGE_MB }),
+                }}
+              />
+            </div>
           </Field>
           <FieldActions>
             <SubmitButton

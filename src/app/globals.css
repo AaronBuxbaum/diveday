@@ -2832,6 +2832,31 @@ details[open]::details-content {
 }
 
 /*
+ * **The phone's section bar says it scrolls sideways.** Below `lg` the same
+ * rail is one line, recentred on the current row, so it is usually cut at
+ * both edges. A hard cut read as a clipped word ("ip defaults ›"); the edge
+ * with more rows past it fades over 2rem instead, the way the tab bar's
+ * scroll cue does at the foot.
+ */
+@media (width < 64rem) {
+  [data-settings-rail-scroller][data-more-start] {
+    mask-image: linear-gradient(to right, transparent, black 2rem);
+  }
+  [data-settings-rail-scroller][data-more-end] {
+    mask-image: linear-gradient(to left, transparent, black 2rem);
+  }
+  [data-settings-rail-scroller][data-more-start][data-more-end] {
+    mask-image: linear-gradient(
+      to right,
+      transparent,
+      black 2rem,
+      black calc(100% - 2rem),
+      transparent
+    );
+  }
+}
+
+/*
  * **The title folds into the bar** — ADR 20260907-nothing-from-nowhere,
  * decision 5, slice 18e (issue #1422).
  *

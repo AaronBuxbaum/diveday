@@ -55,7 +55,7 @@ export function EmptySeats({
                 date: formatShortDate(departure.startsAt, locale, timeZone),
               })}
             </Link>
-            <span className="tabular-nums">
+            <span className="shrink-0 whitespace-nowrap tabular-nums">
               {t("reports.emptySeats.seats", { count: departure.openSeats })}
             </span>
           </li>

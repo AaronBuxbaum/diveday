@@ -34,7 +34,10 @@ export function AddUnitControl({
         {title}
       </button>
       <Dialog open={open} onClose={() => setOpen(false)} title={title} className="max-w-xl">
-        <div id="add-unit" className="max-h-[70vh] overflow-y-auto">
+        <div
+          id="add-unit"
+          className="-mx-1 max-h-[calc(100dvh-10rem)] overflow-y-auto overscroll-contain px-1 pb-1"
+        >
           {children}
         </div>
       </Dialog>
