@@ -136,7 +136,7 @@
       "noticeText": "Notice",
       "noticePlaceholder": "e.g. Lobster mini-season boats are open",
       "pick": "Our pick",
-      "pickHint": "One departure or course to put first on your page. It disappears once it has gone.",
+      "pickHint": "Shown first on your page until it has passed.",
       "pickNone": "None",
       "pickTrips": "Departures",
       "pickCourses": "Courses",

@@ -136,7 +136,7 @@
       "noticeText": "Aviso",
       "noticePlaceholder": "p. ej. Ya salen los barcos de la mini temporada de langosta",
       "pick": "Nuestra recomendación",
-      "pickHint": "Una salida o un curso para poner primero en tu página. Desaparece cuando ya pasó.",
+      "pickHint": "Se muestra primero en tu página hasta que pase.",
       "pickNone": "Ninguna",
       "pickTrips": "Salidas",
       "pickCourses": "Cursos",
