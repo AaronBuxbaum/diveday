@@ -528,7 +528,7 @@
     "materialsDoneLine": "Materials done · {date}",
     "materialsDoneLineBy": "Materials done · {date} · {name}",
     "certifyMaterialsNote": "Materials not marked done; check the agency’s record before certifying.",
-    "progressSummary": "Course progress · {done} of {total} sessions ticked",
+    "progressSummary": "Course progress · {done} of {total, plural, one {# session} other {# sessions}} ticked",
     "progressMark": "Mark done",
     "progressUndo": "Undo",
     "materialsMarkDone": "Mark materials done",

@@ -635,7 +635,13 @@ for (const scheme of ["light", "dark"] as const) {
           beforeShot: async () => {
             await expect(paperTrigger).toBeVisible();
             const triggerBounds = await paperTrigger.boundingBox();
-            expect(triggerBounds?.width).toBeLessThanOrEqual(176);
+            // From `sm` it keeps the compact action column; on a phone the
+            // doors go under the words and the label holds one line.
+            if ((page.viewportSize()?.width ?? 0) >= 640) {
+              expect(triggerBounds?.width).toBeLessThanOrEqual(176);
+            } else {
+              expect(triggerBounds?.height).toBeLessThanOrEqual(48);
+            }
           },
         });
         await openPaperWaiverForm(row);

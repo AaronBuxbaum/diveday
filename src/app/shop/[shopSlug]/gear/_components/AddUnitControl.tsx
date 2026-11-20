@@ -34,9 +34,10 @@ export function AddUnitControl({
         {title}
       </button>
       <Dialog open={open} onClose={() => setOpen(false)} title={title} className="max-w-xl">
-        <div id="add-unit" className="max-h-[70vh] overflow-y-auto">
-          {children}
-        </div>
+        {/* `Dialog` bounds itself to the screen and scrolls its body; a 70vh
+            scroll of its own here cut "Add to the register" in half on a
+            phone with a screen's worth of room left. */}
+        <div id="add-unit">{children}</div>
       </Dialog>
     </>
   );

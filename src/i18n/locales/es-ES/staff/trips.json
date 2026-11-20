@@ -528,7 +528,7 @@
     "materialsDoneLine": "Material terminado · {date}",
     "materialsDoneLineBy": "Material terminado · {date} · {name}",
     "certifyMaterialsNote": "Los materiales no están marcados como terminados; revisa el registro de la agencia antes de certificar.",
-    "progressSummary": "Avance del curso · {done} de {total} sesiones marcadas",
+    "progressSummary": "Avance del curso · {done} de {total, plural, one {# sesión} other {# sesiones}} marcadas",
     "progressMark": "Marcar hecho",
     "progressUndo": "Deshacer",
     "materialsMarkDone": "Marcar material terminado",

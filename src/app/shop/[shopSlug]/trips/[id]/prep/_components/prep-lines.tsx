@@ -52,7 +52,9 @@ export const unitLine = (
   forNitroxDiver = false,
 ) =>
   [
-    unit.size ? `${unit.label} · ${unit.size}` : unit.label,
+    // The tag and its size hold together: wrapped between them, "Proposed:
+    // Boots #10 · 10" left a lone "· 10" on a phone's second line.
+    unit.size ? `${unit.label}\u00a0·\u00a0${unit.size}` : unit.label,
     // A wetsuit's thickness, so a staffer picking by hand sees the 3 mm from
     // the 7 mm without reading it off a tag (issue #2206).
     unit.thicknessMm ? t("gear.prep.optionThickness", { mm: unit.thicknessMm }) : null,
@@ -249,7 +251,7 @@ export const sizeCell = (t: StaffTranslator, piece: PrepPiece) => {
  * "really ugly"), and three tiles a row put a diver's kit on two lines.
  */
 const kitLineClass =
-  "grid grid-cols-[minmax(0,min(5rem,30%))_minmax(0,1fr)] items-center break-words gap-x-2 gap-y-1 sm:flex sm:min-w-0 sm:flex-col sm:items-stretch sm:justify-between sm:gap-1.5 sm:rounded-inset sm:border sm:p-3";
+  "grid grid-cols-[minmax(0,min(6.5rem,34%))_minmax(0,1fr)] items-center break-words gap-x-2 gap-y-1 sm:flex sm:min-w-0 sm:flex-col sm:items-stretch sm:justify-between sm:gap-1.5 sm:rounded-inset sm:border sm:p-3";
 
 /** A piece with its unit on it: settled, so it sits back in a sunken tile. */
 export const kitLineSettledClass = `${kitLineClass} sm:border-transparent sm:bg-surface-sunken`;
