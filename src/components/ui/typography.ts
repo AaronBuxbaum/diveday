@@ -61,9 +61,13 @@
  * module exists so a rung has one name in one place (#1229), and the header
  * that owns the rung is not that place — `ShopfrontHero` reaches for it too.
  * `EYEBROW_CLASS` stays over there on purpose; an eyebrow is not a title.
+ *
+ * `min(…, 12vw)`: 40px at every ordinary size (12vw is 47px at 390), but
+ * enlarged text no longer doubles the title past a phone's width, where 200%
+ * broke "Regístrate" and "Register" mid-word (phone polish, 2026-11-20).
  */
 export const PAGE_TITLE_CLASS =
-  "text-[2.5rem] leading-[1.1] font-bold tracking-[-0.02em] text-balance";
+  "text-[min(2.5rem,12vw)] leading-[1.1] font-bold tracking-[-0.02em] text-balance";
 
 /**
  * One step up from the title, for the one page whose title is a greeting rather
