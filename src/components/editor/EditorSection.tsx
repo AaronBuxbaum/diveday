@@ -121,7 +121,10 @@ export function EditorSection({
       >
         <span className="flex min-w-0 flex-1 flex-col gap-1">
           {/* Keep the unsaved state in the button's accessible name (#2438). */}
-          <span className="flex items-center gap-2">
+          {/* The phone's header is the section's own title, not the desktop
+              rail's small-caps group label: inherited, "The site" read as
+              12px letter-spaced caption text (`site-editor-about-open`). */}
+          <span className="flex items-center gap-2 text-base font-semibold tracking-normal text-foreground normal-case">
             <span>{label}</span>
             {edited && unsavedTag ? (
               <Badge size="sm" className="tracking-normal normal-case">
@@ -133,7 +136,10 @@ export function EditorSection({
           <span
             data-section-preview=""
             data-preview-ready={preview === null ? undefined : ""}
-            className="block h-5 truncate text-sm font-normal tracking-normal text-muted normal-case"
+            // Only a closed section previews its fields; an open one's empty
+            // line pushed the caret below the name and added a blank row
+            // above the first field.
+            className={`h-5 truncate text-sm font-normal tracking-normal text-muted normal-case ${open ? "hidden" : "block"}`}
           >
             {open ? "" : (preview ?? "")}
           </span>

@@ -99,9 +99,13 @@ export function StageStrip({
           "Underway" again as often as it is "Heading in", so a single next
           word would be wrong half the time on exactly the boats that use it
           most. */}
-      <div className={`mt-2 ${BOAT_SEGMENT_TRACK_CLASS}`}>
+      {/* The order's arrows sit in the seams from `sm`, centred on the row.
+          They used to float as chips above it, out of line with every word
+          and under the pressed one's edge; a phone's five short words read
+          left to right without them. */}
+      <div className={`mt-2 sm:gap-4 ${BOAT_SEGMENT_TRACK_CLASS}`}>
         {copy.taps.map((tap, index) => (
-          <form action={formAction} key={tap.stage} className="group/stage relative flex pt-5">
+          <form action={formAction} key={tap.stage} className="relative flex">
             <input type="hidden" name="stage" value={tap.stage} />
             <button
               type={tap.stage === "home" && homeConfirm ? "button" : "submit"}
@@ -122,7 +126,7 @@ export function StageStrip({
             {index < copy.taps.length - 1 ? (
               <span
                 aria-hidden="true"
-                className="pointer-events-none absolute top-0 -end-2 z-10 rounded-sm bg-surface px-0.5 text-base font-bold text-foreground group-focus-within/stage:invisible"
+                className="pointer-events-none absolute top-1/2 -end-4 w-4 -translate-y-1/2 text-center text-sm font-bold text-muted max-sm:hidden"
               >
                 {tap.stage === "underway" ? "↔" : "→"}
               </span>

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { type CSSProperties, Fragment, type ReactNode } from "react";
 import { StoredPhoto } from "@/components/StoredPhoto";
+import { FACT_SEPARATOR } from "@/components/ui/FactLine";
 import { DoorChevron } from "@/components/ui/ledger";
 import { FIGURE_LARGE_CLASS } from "@/components/ui/typography";
 
@@ -231,7 +232,7 @@ function DayRule({ parts, stickyTop }: { parts: WeekLedgerRow["dayParts"]; stick
  * Only a fact longer than the whole line wraps inside itself — never
  * `whitespace-nowrap`, which would run a long site name past the column.
  */
-const FACT = "inline-block";
+const FACT = "inline-block whitespace-normal";
 
 /**
  * Where `DayJumpStrip` lands for one day: the day's first row, never its sticky
@@ -357,13 +358,23 @@ function Row({
             </h3>
             {meta.length > 0 ? (
               <p className="mt-1 text-sm text-muted">
-                {meta.map((part, index) => (
-                  // biome-ignore lint/suspicious/noArrayIndexKey: the separator's only identity is its position
-                  <Fragment key={index}>
-                    {index > 0 ? " · " : null}
-                    {part}
-                  </Fragment>
-                ))}
+                {meta.map((part, index) =>
+                  // The dot is glued to the fact before it, so no wrapped line
+                  // opens with "·" (phone polish, 2026-11-20): a box and a dot
+                  // after a plain space broke before the dot.
+                  index < meta.length - 1 ? (
+                    // biome-ignore lint/suspicious/noArrayIndexKey: the separator's only identity is its position
+                    <Fragment key={index}>
+                      <span className="whitespace-nowrap">
+                        {part}
+                        {FACT_SEPARATOR.trimEnd()}
+                      </span>{" "}
+                    </Fragment>
+                  ) : (
+                    // biome-ignore lint/suspicious/noArrayIndexKey: the separator's only identity is its position
+                    <Fragment key={index}>{part}</Fragment>
+                  ),
+                )}
               </p>
             ) : null}
             {row.fact ? (

@@ -21,8 +21,10 @@ import { dayAnchorId, type WeekLedgerRow } from "./WeekLedger";
  * On a phone the days share the row's width equally (visual review
  * 2026-10-24, B18): the strip clipped the list's last day at 390, so the strip
  * and the list below it named different weeks. Eight days fit at 44px each;
- * a longer run, after "Show later departures", still scrolls, under the
- * scrolling tables' edge fade (`table-scroll-shell` in globals.css).
+ * a longer run (twelve with a party size set) keeps 44px a day and scrolls,
+ * under the scrolling tables' edge fade (`table-scroll-shell` in globals.css):
+ * a `1fr` track alone shrank twelve days to 30px and ran the weekdays
+ * together (phone polish, 2026-11-20).
  */
 export function DayJumpStrip({
   rows,
@@ -41,9 +43,9 @@ export function DayJumpStrip({
       aria-label={label}
       className="table-scroll-shell -mx-4 mb-4 overflow-x-auto px-4 sm:mx-0 sm:px-0"
     >
-      <ol className="grid auto-cols-fr grid-flow-col sm:flex sm:gap-1">
+      <ol className="grid auto-cols-[minmax(2.75rem,1fr)] grid-flow-col sm:flex sm:gap-1">
         {days.map(({ dayKey, dayParts }) => (
-          <li key={dayKey} className="min-w-11">
+          <li key={dayKey}>
             <a
               href={`#${dayAnchorId(dayKey)}`}
               // Spoken whole: the month is drawn once on the rail above, but a

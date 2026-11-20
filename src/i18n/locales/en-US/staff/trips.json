@@ -1335,8 +1335,15 @@
       "fitNeeded": "Fit gear at check-in",
       "recency": "Hasn’t dived in a while",
       "paymentDueAmount": "{amount} not paid",
-      "reEntryAsk": "A request for the crew"
+      "reEntryAsk": "A request for the crew",
+      "helpRequested": "Asked for help"
     },
+    "help": {
+      "carryGear": "Wants a hand with gear",
+      "firstTimer": "First-timer, wants an orientation",
+      "findGroup": "Looking for their group"
+    },
+    "reminderAt": "Reminder goes out {when}",
     "remedy": {
       "takePayment": "Take payment",
       "reviewCards": "Check cards",
@@ -1346,6 +1353,7 @@
       "addContact": "Add contact",
       "fitGear": "Fit gear",
       "open": "Open",
+      "arrangeHelp": "Arrange help",
       "takeAmount": "Take {amount}",
       "call": "Call {name}"
     },

@@ -77,6 +77,7 @@ import { consumeEntitlementsForBooking, releaseEntitlementsForBooking } from "./
 import { releaseUnclaimedGearReservations } from "./gear";
 import { boundLockWaits } from "./lock-bounds";
 import { publishManifestEvent } from "./manifest-events";
+import { nextOfflineGeneration } from "./offline-generation";
 import {
   recordDeskLine,
   recordDiverActivity,
@@ -1480,7 +1481,7 @@ async function writeSeat(
       .update(bookings)
       .set({
         status: "booked",
-        offlineAssignmentGeneration: sql`${bookings.offlineAssignmentGeneration} + 1`,
+        offlineAssignmentGeneration: sql`${nextOfflineGeneration(bookings.offlineAssignmentGeneration)}`,
         // A new life for the seat: the desk's trail is read from here on
         // (ADR 20261104-arrival-is-a-trail, decision 5).
         arrivalTrailAfterSeq: arrivalTrailHighWater,
@@ -2208,7 +2209,7 @@ export async function restoreBooking(
       // the desk sees them again (ADR 20261104-arrival-is-a-trail, decision 5).
       .set({
         status: "booked",
-        offlineAssignmentGeneration: sql`${bookings.offlineAssignmentGeneration} + 1`,
+        offlineAssignmentGeneration: sql`${nextOfflineGeneration(bookings.offlineAssignmentGeneration)}`,
         arrivalTrailAfterSeq: arrivalTrailHighWater,
         seatReopenedAt: nowDate(),
         turnedAwayReason: null,
@@ -2536,7 +2537,7 @@ async function moveBookingIn(
     .update(bookings)
     .set({
       tripId: target.id,
-      offlineAssignmentGeneration: sql`${bookings.offlineAssignmentGeneration} + 1`,
+      offlineAssignmentGeneration: sql`${nextOfflineGeneration(bookings.offlineAssignmentGeneration)}`,
       // A plan belongs to the departure where staff made it.
       trainingPlanInstructorPersonId: null,
       trainingPlanByPersonId: null,
@@ -3406,7 +3407,7 @@ async function cancelBookingRow(
       .update(bookings)
       .set({
         status: "cancelled",
-        offlineAssignmentGeneration: sql`case when ${bookings.status} is distinct from 'cancelled' then ${bookings.offlineAssignmentGeneration} + 1 else ${bookings.offlineAssignmentGeneration} end`,
+        offlineAssignmentGeneration: sql`case when ${bookings.status} is distinct from 'cancelled' then ${nextOfflineGeneration(bookings.offlineAssignmentGeneration)} else ${bookings.offlineAssignmentGeneration} end`,
         groupHoldUntil: null,
         ...(expireHold ? { groupHoldExpiredAt: now } : {}),
       })
@@ -4392,7 +4393,7 @@ export async function splitBookingIdentity(
         .update(bookings)
         .set({
           personId: person.id,
-          offlineAssignmentGeneration: sql`case when ${bookings.personId} is distinct from ${person.id}::uuid then ${bookings.offlineAssignmentGeneration} + 1 else ${bookings.offlineAssignmentGeneration} end`,
+          offlineAssignmentGeneration: sql`case when ${bookings.personId} is distinct from ${person.id}::uuid then ${nextOfflineGeneration(bookings.offlineAssignmentGeneration)} else ${bookings.offlineAssignmentGeneration} end`,
           // A queued offline arrival saved before this was about another
           // person (issue #3830).
           seatReopenedAt: now,

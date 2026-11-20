@@ -89,7 +89,7 @@ export function RemovablePhoto({
       >
         <DiveDayIcon name="check" className="size-4" strokeWidth={2.2} />
       </span>
-      <span className="mt-1 block text-xs font-medium text-balance text-muted transition peer-checked:text-danger">
+      <span className="mt-1.5 block text-sm font-medium text-balance text-foreground transition peer-checked:text-danger">
         {label}
       </span>
     </label>

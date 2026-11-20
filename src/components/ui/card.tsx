@@ -238,7 +238,14 @@ export function SectionCard({
         // baseline, not its mark's (badge.tsx). Once the actions wrap under
         // the title on a phone they are a line of their own and nothing
         // aligns across.
-        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
+        // A `none` card is a shell whose rows pad themselves, so its header
+        // takes the `md` inset here: bare, "Rental history" sat on the card's
+        // corner (`gear-add-note-editor`).
+        <div
+          className={`flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2 ${
+            padding === "none" ? "px-4 pt-4 sm:px-5 sm:pt-5" : ""
+          }`.trim()}
+        >
           <div className="min-w-0">
             {title != null ? (
               // `text-balance`: a card title that wraps keeps more than one
@@ -260,7 +267,11 @@ export function SectionCard({
           opens its body with a `mt-4` that has to be remembered — and can
           never be typed as `mt-2`, `mt-3` or `mt-5` instead, which is how
           four spacings for one relationship got into the settings routes. */}
-      {hasHeader && children != null ? <div className="mt-4">{children}</div> : children}
+      {hasHeader && children != null ? (
+        <div className={padding === "none" ? "mt-2" : "mt-4"}>{children}</div>
+      ) : (
+        children
+      )}
     </Tag>
   );
 }

@@ -552,7 +552,7 @@ export function Field({
   // which is what an alert region announces. Same shape as `ImageFileInput`'s
   // client-side refusal, so both sound identical.
   const errorSpan = error ? (
-    <span id={errorId} role="alert" className="text-xs font-medium text-danger">
+    <span id={errorId} role="alert" className="mt-0.5 text-sm font-medium text-danger">
       {error}
     </span>
   ) : null;

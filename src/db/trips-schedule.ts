@@ -19,6 +19,7 @@ import { clearCrewAwayAcknowledgements } from "./crew-away-acknowledgements";
 import { flushUrgentCrewNotices, recordCrewTimeMoved } from "./crew-notices";
 import { rewindowTripGearReservations } from "./gear";
 import { publishManifestEvent } from "./manifest-events";
+import { nextOfflineGeneration } from "./offline-generation";
 import { queryAll } from "./query-helpers";
 import { rearmTripReminders } from "./reminder-rearm";
 import { crewMarks, seatMarks } from "./roll-call-subject";
@@ -269,7 +270,7 @@ export async function moveTrip(
         // time. Safe to write unconditionally here — the equal-instant case
         // returned above, so reaching this line means the boat really moved.
         revision: sql`${trips.revision} + 1`,
-        offlineMeetingGeneration: sql`${trips.offlineMeetingGeneration} + 1`,
+        offlineMeetingGeneration: sql`${nextOfflineGeneration(trips.offlineMeetingGeneration)}`,
       })
       .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)))
       .returning();

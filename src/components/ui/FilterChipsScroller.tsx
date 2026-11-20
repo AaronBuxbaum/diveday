@@ -37,6 +37,10 @@ export function FilterChipsScroller({
 }) {
   const row = useRef<HTMLDivElement>(null);
   const [more, setMore] = useState(false);
+  // Chips scrolled past the start: the current chip is brought on screen, so
+  // a late one ("Deleted") left the row opening on a sliced chip edge with
+  // nothing saying the row runs back (`divers-removed`, `gear-register-deleted`).
+  const [before, setBefore] = useState(false);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: `activeKey` is the trigger — the chip it names is found in the DOM, not read from the value.
   useLayoutEffect(() => {
@@ -47,6 +51,7 @@ export function FilterChipsScroller({
       const rtl = getComputedStyle(el).direction === "rtl";
       const remaining = el.scrollWidth - el.clientWidth - Math.abs(el.scrollLeft);
       setMore(remaining > 2 && !rtl);
+      setBefore(Math.abs(el.scrollLeft) > 2 && !rtl);
     };
     updateMore();
     el.addEventListener("scroll", updateMore, { passive: true });
@@ -75,6 +80,14 @@ export function FilterChipsScroller({
       <div ref={row} className={className}>
         {children}
       </div>
+      {before ? (
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute -start-4 inset-y-0 flex w-6 items-center justify-start bg-background ps-1 text-muted sm:hidden"
+        >
+          <DisclosureCaret className="rotate-180" />
+        </span>
+      ) : null}
       {more ? (
         <span
           aria-hidden="true"

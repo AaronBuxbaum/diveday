@@ -55,8 +55,8 @@ import {
   orderLastMinuteRecipients,
 } from "../../lib/interests";
 import { unionRequirements } from "../../lib/requirement";
-
 import { toDateInputValue, utcToWallTime } from "../../lib/zoned";
+import { fixListFacts } from "./fix-list-facts";
 
 /**
  * Everything the trip's Guests page is about, in one call — the last of the
@@ -169,6 +169,37 @@ function seatedPersonIdsOf(roster: readonly { booking: { personId: string; statu
       .filter(({ booking }) => booking.status !== "cancelled")
       .map(({ booking }) => booking.personId),
   );
+}
+
+/**
+ * Keep the three staff-note entry points one system: a diver-record note is
+ * visible on Guests for the same booking, just as it is on Manifest. It is
+ * edited on the diver record, the canonical scope, so this roster does not
+ * offer a delete action that would silently do nothing.
+ */
+function notesByBookingOf(
+  bookingNotes: Awaited<ReturnType<typeof listBookingNotes>>,
+  diverNotes: Awaited<ReturnType<typeof listDiverNotesForTrip>>,
+) {
+  const notesByBooking = new Map<
+    string,
+    Array<(typeof bookingNotes)[number] & { deletable?: boolean }>
+  >();
+  for (const row of bookingNotes) {
+    if (!row.note.bookingId) continue;
+    const rows = notesByBooking.get(row.note.bookingId) ?? [];
+    rows.push({ ...row, deletable: true });
+    notesByBooking.set(row.note.bookingId, rows);
+  }
+  for (const row of diverNotes) {
+    const rows = notesByBooking.get(row.bookingId) ?? [];
+    rows.push({ note: row.note, authorName: row.authorName, deletable: false });
+    notesByBooking.set(row.bookingId, rows);
+  }
+  for (const rows of notesByBooking.values()) {
+    rows.sort((left, right) => left.note.createdAt.getTime() - right.note.createdAt.getTime());
+  }
+  return notesByBooking;
 }
 
 export async function getTripGuests(
@@ -298,6 +329,7 @@ export async function getTripGuests(
     trainingMarks,
     specialtiesByPerson,
     textableBookings,
+    fixListFactsRead,
   ] = await Promise.all([
     inviteDatesForCandidates(db, shop.id, diverCandidates),
     // What "Different person" on a held seat can offer to move along with it:
@@ -422,6 +454,13 @@ export async function getTripGuests(
       dealRequirement,
     ),
     textableSeats(db, shop.id, roster.map(textReachOf)),
+    fixListFacts(
+      db,
+      shop.id,
+      tripId,
+      trip.startsAt,
+      roster.map(({ booking }) => booking.id),
+    ),
   ]);
 
   const heldSeatLastDiveDay = lastDiveDayBySeat(heldSeats, heldLastDiveDays);
@@ -432,28 +471,7 @@ export async function getTripGuests(
     if (dives) packageDivesByBooking.set(booking.id, dives);
   }
 
-  // Keep the three staff-note entry points one system: a diver-record note is
-  // visible on Guests for the same booking, just as it is on Manifest. It is
-  // edited on the diver record, the canonical scope, so this roster does not
-  // offer a delete action that would silently do nothing.
-  const notesByBooking = new Map<
-    string,
-    Array<(typeof bookingNotes)[number] & { deletable?: boolean }>
-  >();
-  for (const row of bookingNotes) {
-    if (!row.note.bookingId) continue;
-    const rows = notesByBooking.get(row.note.bookingId) ?? [];
-    rows.push({ ...row, deletable: true });
-    notesByBooking.set(row.note.bookingId, rows);
-  }
-  for (const row of diverNotes) {
-    const rows = notesByBooking.get(row.bookingId) ?? [];
-    rows.push({ note: row.note, authorName: row.authorName, deletable: false });
-    notesByBooking.set(row.bookingId, rows);
-  }
-  for (const rows of notesByBooking.values()) {
-    rows.sort((left, right) => left.note.createdAt.getTime() - right.note.createdAt.getTime());
-  }
+  const notesByBooking = notesByBookingOf(bookingNotes, diverNotes);
 
   const { courseTarget, recipients: lastMinuteRecipients } = lastMinuteRecipientsOf({
     trip,
@@ -527,6 +545,7 @@ export async function getTripGuests(
     /** Per seat, the Paid mark's money and what the seat still owes (`getTripRosterWithPaymentMarks`). */
     paymentMarksByBooking,
     textableBookings,
+    ...fixListFactsRead,
     /**
      * A split on this departure must take a date of birth: it is a course
      * with a minimum age, which reads the new record's date (issue #2081). A

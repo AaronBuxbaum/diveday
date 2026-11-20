@@ -35,12 +35,15 @@ export async function OwedLine({
   if (!owesAnything(owed)) return null;
   const money = (cents: number) => formatMoneyCents(cents, owed.currency, locale);
   return (
-    <p className="mb-6 text-sm">
-      <span className="font-medium">{t("orders.index.owed.label")}</span>{" "}
+    // One line from `sm`; on a phone the label and each sum take a line of
+    // their own. Run together, the link's 44px box broke the line after
+    // "Owed:" and left a "·" hanging at the end of it (`orders`).
+    <div className="mb-6 text-sm sm:flex sm:flex-wrap sm:items-center sm:gap-x-1">
+      <span className="font-medium">{t("orders.index.owed.label")}</span>
       {owed.orders.cents > 0 ? (
         <Link
           href={`/shop/${shop.slug}/orders?status=open&range=all`}
-          className="inline-flex min-h-11 items-center underline underline-offset-2"
+          className="flex min-h-11 items-center underline underline-offset-2 sm:inline-flex"
         >
           {t("orders.index.owed.orders", {
             amount: money(owed.orders.cents),
@@ -51,10 +54,19 @@ export async function OwedLine({
           })}
         </Link>
       ) : null}
-      {owed.orders.cents > 0 && owed.seats.cents > 0 ? FACT_SEPARATOR : null}
-      {owed.seats.cents > 0
-        ? t("orders.index.owed.seats", { amount: money(owed.seats.cents), count: owed.seats.count })
-        : null}
-    </p>
+      {owed.orders.cents > 0 && owed.seats.cents > 0 ? (
+        <span aria-hidden="true" className="max-sm:hidden">
+          {FACT_SEPARATOR}
+        </span>
+      ) : null}
+      {owed.seats.cents > 0 ? (
+        <span className="block sm:inline">
+          {t("orders.index.owed.seats", {
+            amount: money(owed.seats.cents),
+            count: owed.seats.count,
+          })}
+        </span>
+      ) : null}
+    </div>
   );
 }

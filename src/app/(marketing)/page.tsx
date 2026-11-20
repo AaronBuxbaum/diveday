@@ -230,11 +230,21 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
                     <div className="order-1 lg:order-none lg:col-span-6">
                       <div data-walk-frame={step.id} data-walk-primary="">
                         <MarketingMockup label={t(step.label)}>
+                          {/* Each screen fills the cell the taller one sets, so
+                              a short booking card under a tall storefront sits
+                              on the screen's own ground rather than above 350px
+                              of blank frame (phone polish, 2026-11-20). */}
                           <div className="grid">
-                            <div data-walk-before className="col-start-1 row-start-1">
+                            <div
+                              data-walk-before
+                              className="col-start-1 row-start-1 flex flex-col [&>*]:flex-1"
+                            >
                               {step.before(locale)}
                             </div>
-                            <div data-walk-after className="col-start-1 row-start-1">
+                            <div
+                              data-walk-after
+                              className="col-start-1 row-start-1 flex flex-col [&>*]:flex-1"
+                            >
                               {step.screen(locale)}
                             </div>
                           </div>
