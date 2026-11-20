@@ -1,11 +1,9 @@
 # One day, in minutes (pnpm 12): a version is not installable until it has been published this long.
 minimumReleaseAge: 1440
 
-# Patch the critical tar advisory in the Vercel CLI dependency.
+# @vercel/container pins the critical-advisory tar 7.5.11 exactly; drop this once a vercel release moves it.
 overrides:
   '@vercel/container>tar@7.5.11': '^7.5.21'
-  # Keep the stable peer already used by Vercel during lockfile regeneration.
-  '@napi-rs/wasm-runtime@1.2.7>@emnapi/core': '1.11.3'
 
 patchedDependencies:
   '@vercel/analytics@2.0.1': patches/@vercel__analytics@2.0.1.patch

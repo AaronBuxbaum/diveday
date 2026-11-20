@@ -104,7 +104,7 @@ describePostgres("offline meeting generation", () => {
       .select({ generation: trips.offlineMeetingGeneration })
       .from(trips)
       .where(eq(trips.id, trip.id));
-    expect(after?.generation).toBe(1);
+    expect(after?.generation).not.toBe(0);
     await pg.db.execute(
       sql`update ${trips} set starts_at = starts_at + interval '1 microsecond' where id = ${trip.id}`,
     );
@@ -113,7 +113,7 @@ describePostgres("offline meeting generation", () => {
       .select({ generation: trips.offlineMeetingGeneration })
       .from(trips)
       .where(eq(trips.id, trip.id));
-    expect(parentAfter?.generation).toBe(2);
+    expect(parentAfter?.generation).not.toBe(after?.generation);
   });
   it("keeps a no-op stable and advances through an end edit and revert", async () => {
     const pg = await postgresTestDb();
@@ -130,6 +130,15 @@ describePostgres("offline meeting generation", () => {
       return (row as typeof row & { offlineMeetingGeneration: number }).offlineMeetingGeneration;
     };
     const initial = await generation();
+    // A generation is a fingerprint: every material change draws a number never seen before, and
+    // reverting a change never returns to an earlier one.
+    const seen = new Set([initial]);
+    const expectFresh = async () => {
+      const value = await generation();
+      expect(seen.has(value)).toBe(false);
+      seen.add(value);
+      return value;
+    };
     expect((await editTripSection(pg.db, shop.id, trip.id, { endsAt: trip.endsAt })).ok).toBe(true);
     expect(await generation()).toBe(initial);
     expect(
@@ -139,17 +148,17 @@ describePostgres("offline meeting generation", () => {
         })
       ).ok,
     ).toBe(true);
-    expect(await generation()).toBe(initial + 1);
+    await expectFresh();
     expect((await editTripSection(pg.db, shop.id, trip.id, { endsAt: trip.endsAt })).ok).toBe(true);
-    expect(await generation()).toBe(initial + 2);
+    const reverted = await expectFresh();
     expect(await moveTrip(pg.db, shop.id, trip.id, trip.startsAt)).toMatchObject({ ok: true });
-    expect(await generation()).toBe(initial + 2);
+    expect(await generation()).toBe(reverted);
     expect(
       await moveTrip(pg.db, shop.id, trip.id, new Date(trip.startsAt.getTime() + 3600000)),
     ).toMatchObject({ ok: true });
-    expect(await generation()).toBe(initial + 3);
+    await expectFresh();
     expect(await moveTrip(pg.db, shop.id, trip.id, trip.startsAt)).toMatchObject({ ok: true });
-    expect(await generation()).toBe(initial + 4);
+    await expectFresh();
   });
 
   it("does not issue a capture while an earlier schedule writer is uncommitted", async () => {
@@ -172,7 +181,7 @@ describePostgres("offline meeting generation", () => {
     const writer = pg.connect().transaction(async (tx) => {
       await tx
         .update(trips)
-        .set({ offlineMeetingGeneration: sql`${trips.offlineMeetingGeneration} + 1` })
+        .set({ offlineMeetingGeneration: sql`${trips.offlineMeetingGeneration} + 1` }) // a fixed step so the test can name the value
         .where(eq(trips.id, trip.id));
       entered();
       await gate;
@@ -188,7 +197,12 @@ describePostgres("offline meeting generation", () => {
       await writer;
     }
     const snapshot = await capture;
-    expect(snapshot).toMatchObject({ meetingGeneration: 1 });
+    const [committed] = await pg.db
+      .select({ generation: trips.offlineMeetingGeneration })
+      .from(trips)
+      .where(eq(trips.id, trip.id));
+    expect(snapshot).toMatchObject({ meetingGeneration: committed?.generation });
+    expect(committed?.generation).toBe(1);
   });
 });
 
@@ -213,6 +227,12 @@ describePostgres("offline seat assignment generation", () => {
         .offlineAssignmentGeneration;
     };
     const initial = await generation();
+    const seen = new Set([initial]);
+    const expectFresh = async () => {
+      const value = await generation();
+      expect(seen.has(value)).toBe(false);
+      seen.add(value);
+    };
     expect(
       await moveBooking(pg.db, {
         shopId: shop.id,
@@ -221,7 +241,7 @@ describePostgres("offline seat assignment generation", () => {
         bookingId: subject.booking.id,
       }),
     ).toMatchObject({ ok: true });
-    expect(await generation()).toBe(initial + 1);
+    await expectFresh();
     expect(
       await moveBooking(pg.db, {
         shopId: shop.id,
@@ -230,7 +250,7 @@ describePostgres("offline seat assignment generation", () => {
         bookingId: subject.booking.id,
       }),
     ).toMatchObject({ ok: true });
-    expect(await generation()).toBe(initial + 2);
+    await expectFresh();
   });
 });
 

@@ -47,3 +47,8 @@ rationale in [docs/architecture/decisions/](docs/architecture/decisions/README.m
 1. [docs/product/vision.md](docs/product/vision.md) — why this exists
 2. [docs/design/principles.md](docs/design/principles.md) — what "delight-first" means concretely
 3. [docs/product/features/roadmap.md](docs/product/features/roadmap.md) — where it's headed
+
+## License
+
+Proprietary. Copyright © 2026 Pseudorandom LLC dba DiveDay. All rights reserved. The code is
+visible for our own convenience; seeing it is not permission to copy or use it. See [LICENSE](LICENSE).
