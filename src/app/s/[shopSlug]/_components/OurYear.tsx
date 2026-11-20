@@ -72,11 +72,14 @@ export async function OurYearSection({
     timezone: string;
     seasonStartMonth: number;
     seasonStartDay: number;
+    publicYearEnabled: boolean;
   };
   locale: string;
   t: DiverTranslator;
   className?: string;
 }) {
+  // The shop's yes: without it the section is nothing at all.
+  if (!shop.publicYearEnabled) return null;
   const shopDay = calendarDateInTimezone(nowDate(), shop.timezone);
   const cached = await publicShopYear(
     shop.id,

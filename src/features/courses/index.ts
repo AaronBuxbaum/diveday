@@ -22,6 +22,7 @@ export {
   firstActiveIntroCourse,
   getCourseBySlug,
   getCourseTemplateUpdate,
+  getShelfCourse,
   hasActiveCourses,
   hasActiveRefresherCourse,
   listActiveCourses,

@@ -175,21 +175,34 @@ export const SHELF_COURSE_COUNT = 3;
  */
 export async function listShelfCourses(db: DbExecutor, shopId: string) {
   return db
-    .select({
-      id: courses.id,
-      slug: courses.slug,
-      title: courses.title,
-      summary: courses.summary,
-      durationText: courses.durationText,
-      heroImageUrl: courses.heroImageUrl,
-      heroImageAlt: courses.heroImageAlt,
-      priceCents: courses.priceCents,
-      eLearningPriceCents: courses.eLearningPriceCents,
-    })
+    .select(shelfCourseColumns)
     .from(courses)
     .where(and(eq(courses.shopId, shopId), eq(courses.isActive, true)))
     .orderBy(...progressionOrder)
     .limit(SHELF_COURSE_COUNT);
+}
+
+/** Only the columns a shelf card draws. */
+const shelfCourseColumns = {
+  id: courses.id,
+  slug: courses.slug,
+  title: courses.title,
+  summary: courses.summary,
+  durationText: courses.durationText,
+  heroImageUrl: courses.heroImageUrl,
+  heroImageAlt: courses.heroImageAlt,
+  priceCents: courses.priceCents,
+  eLearningPriceCents: courses.eLearningPriceCents,
+};
+
+/** One active course of the shop as a shelf card draws it: the shop's pick (#4823). */
+export async function getShelfCourse(db: DbExecutor, shopId: string, courseId: string) {
+  const [course] = await db
+    .select(shelfCourseColumns)
+    .from(courses)
+    .where(and(eq(courses.shopId, shopId), eq(courses.id, courseId), eq(courses.isActive, true)))
+    .limit(1);
+  return course ?? null;
 }
 
 /**

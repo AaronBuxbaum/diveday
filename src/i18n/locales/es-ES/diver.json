@@ -69,6 +69,10 @@
   "schedule": {
     "eyebrow": "Salidas",
     "title": "Calendario",
+    "pick": {
+      "eyebrow": "Nuestra recomendación",
+      "seeCourse": "Ver el curso"
+    },
     "welcome": {
       "newToDiving": "¿Nuevo en el buceo?",
       "seeSchedule": "Ver el calendario"

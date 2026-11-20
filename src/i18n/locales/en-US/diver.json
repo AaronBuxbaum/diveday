@@ -69,6 +69,10 @@
   "schedule": {
     "eyebrow": "Trips",
     "title": "Schedule",
+    "pick": {
+      "eyebrow": "Our pick",
+      "seeCourse": "See the course"
+    },
     "welcome": {
       "newToDiving": "New to diving?",
       "seeSchedule": "See the schedule"
