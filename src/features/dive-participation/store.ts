@@ -2,8 +2,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { requireActiveStaffId } from "@/db/authz";
 import type { AppDb, DbExecutor } from "@/db/client";
 import { bookings, diveParticipationNotes, trips } from "@/db/schema";
-import { liveTrip } from "@/db/trips";
-import { seatNotCancelled } from "@/db/trips-queries";
+import { liveTrip, seatNotCancelled } from "@/db/trips";
 import { type DiveParticipation, isDiveParticipation } from "@/lib/dive-participation";
 
 /**
