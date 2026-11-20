@@ -546,7 +546,7 @@ export async function getTripGuests(
     /** Per seat, the Paid mark's money and what the seat still owes (`getTripRosterWithPaymentMarks`). */
     paymentMarksByBooking,
     textableBookings,
-    ...fixListFactsRead,
+    fixListFacts: fixListFactsRead,
     /**
      * A split on this departure must take a date of birth: it is a course
      * with a minimum age, which reads the new record's date (issue #2081). A

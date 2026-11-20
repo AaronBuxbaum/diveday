@@ -32,10 +32,10 @@ import { ariaLabelsIn, findElements, hiddenInputNamesIn, hrefsIn } from "@/test/
 import { nextHeadersStub } from "@/test/next-headers";
 import { demoteOwnerToManager } from "@/test/staff-session";
 import { listShopStaff } from "../../../../features/staff-accounts/store";
-import { ImportedHistoryTable } from "./_components/ImportedHistoryTable";
 import { type OrderLedgerDay, OrdersLedger } from "./_components/OrdersLedger";
 import { OrdersToolbar } from "./_components/OrdersToolbar";
 import { PayoutLines } from "./_components/PayoutLines";
+import { importedHrefs } from "./imported-tree.test-support";
 
 const ctx = fileScopedShopContext();
 
@@ -641,15 +641,6 @@ describe("imported payment history", () => {
     return { personId: person.id, historyId: history.id };
   }
 
-  /** The imported-history table is its own component now; render it from the props the page gave it. */
-  function importedRows(element: ReactElement) {
-    const table = findElements<Parameters<typeof ImportedHistoryTable>[0]>(
-      element,
-      ImportedHistoryTable,
-    )[0];
-    return table ? ImportedHistoryTable(table.props) : null;
-  }
-
   it("renders imported source records in their own clearly unverified Orders section", async () => {
     const { db, session } = await sessionFor("owner");
     const source = await addImportedHistory(db, session);
@@ -657,15 +648,11 @@ describe("imported payment history", () => {
     vi.mocked(auth).mockResolvedValue(session);
     const element = await renderWith();
 
-    const imported = importedRows(element);
     expect(ariaLabelsIn(element)).toContain(PANEL);
-    expect(hrefsIn(imported)).toContain(`/shop/${SHOP_SLUG}/divers/${source.personId}`);
-    expect(hrefsIn(imported)).toContain("/import-receipts/receipt_42.pdf");
-    // An imported row never receives an order detail link just because it is
-    // rendered under Orders — its uuid must not be confused for an order id.
-    expect(hrefsIn([element, imported])).not.toContain(
-      `/shop/${SHOP_SLUG}/orders/${source.historyId}`,
-    );
+    expect(importedHrefs(element)).toContain(`/shop/${SHOP_SLUG}/divers/${source.personId}`);
+    expect(importedHrefs(element)).toContain("/import-receipts/receipt_42.pdf");
+    // An imported row never gets an order detail link: its uuid is not an order id.
+    expect(importedHrefs(element)).not.toContain(`/shop/${SHOP_SLUG}/orders/${source.historyId}`);
     // The `Unverified` mark rides the disclosure's own summary line now, where
     // it says once about the whole folded section what it used to repeat on
     // every row of a permanently open table.
@@ -686,9 +673,7 @@ describe("imported payment history", () => {
         .set({ receiptDocumentUrl: "https://untrusted.example/receipt.pdf" })
         .where(eq(importedPaymentHistory.id, source.historyId));
     });
-    expect(hrefsIn([element, importedRows(element)])).not.toContain(
-      "https://untrusted.example/receipt.pdf",
-    );
+    expect(importedHrefs(element)).not.toContain("https://untrusted.example/receipt.pdf");
   });
 });
 
