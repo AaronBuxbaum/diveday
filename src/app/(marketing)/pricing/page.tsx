@@ -154,7 +154,7 @@ async function PricingBody({ locale, offer }: { locale: DiverLocale; offer: Plan
               {t("marketing.pricing.lockNote")}
             </p>
 
-            <FunnelCtas locale={locale} source="pricing" footnotes={{ offer }} className="mt-10" />
+            <FunnelCtas locale={locale} source="pricing" footnotes={{}} className="mt-10" />
           </div>
         </section>
 
