@@ -621,6 +621,7 @@ export async function setTripCrew(
     const existing = await tx
       .select({
         personId: tripAssignments.personId,
+        offlineIncarnation: tripAssignments.offlineIncarnation,
         tripRole: tripAssignments.tripRole,
         assignedByPersonId: tripAssignments.assignedByPersonId,
         trainingPlanInstructorPersonId: tripAssignments.trainingPlanInstructorPersonId,
@@ -769,6 +770,7 @@ export async function setTripCrew(
           return {
             tripId,
             personId,
+            ...(prior ? { offlineIncarnation: prior.offlineIncarnation } : {}),
             tripRole,
             trainingPlanInstructorPersonId: preservePlan
               ? prior.trainingPlanInstructorPersonId

@@ -66,6 +66,33 @@ describe("offlineTripView — certified total persons", () => {
     expect(offlineTripView(fullBoat(null), "departure")?.overTotalPersons).toBeNull();
   });
 
+  it("keeps the saved count open when a passenger or crew observation needs review", () => {
+    const copy = fullBoat();
+    const manifest = copy.snapshot.manifests[0];
+    if (!manifest) throw new Error("manifest missing");
+    const [passenger] = manifest.divers;
+    const [crew] = manifest.crew;
+    if (!passenger || !crew) throw new Error("subjects missing");
+    passenger.recountRequired = true;
+    crew.historicalReviewRequired = true;
+    const counted = offlineTripView(copy, "departure");
+    expect(counted?.rollCallComplete).toBe(false);
+    expect(counted?.allBoarded).toBe(false);
+    copy.events.push({
+      clientEventId: crypto.randomUUID(),
+      snapshotId: copy.snapshot.snapshotId,
+      snapshotSavedAt: copy.snapshot.savedAt,
+      tripId: "trip-1",
+      bookingId: passenger.bookingId,
+      checkpoint: "departure",
+      status: "boarded",
+      occurredAt: copy.snapshot.savedAt,
+      syncStatus: "pending",
+      meetingDay: 0,
+    });
+    expect(offlineTripView(copy, "departure")?.rollCallComplete).toBe(false);
+  });
+
   it("keeps an opaque opposing ashore tap in the aboard risk count", () => {
     const copy = fullBoat();
     copy.events = [

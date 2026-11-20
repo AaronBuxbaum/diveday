@@ -1,4 +1,4 @@
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { liveTrip, seatHeld, seatNotCancelled } from "@/db/trips";
 import { activeStaffRecorderId } from "@/features/no-show";
 import { standingArrivalStatus } from "../../db/arrival-provenance";
@@ -134,7 +134,12 @@ export async function turnBookingAway(
     // no-show landing first, update nothing.
     const [updated] = await tx
       .update(bookings)
-      .set({ status: "no_show", turnedAwayReason: input.reason, turnedAwayAt: now })
+      .set({
+        status: "no_show",
+        turnedAwayReason: input.reason,
+        turnedAwayAt: now,
+        offlineAssignmentGeneration: sql`${bookings.offlineAssignmentGeneration} + 1`,
+      })
       .where(and(eq(bookings.id, seat.id), seatHeld))
       .returning({ id: bookings.id });
     if (!updated) return { ok: false, reason: "already_marked" };

@@ -19,7 +19,7 @@ import {
   syncOfflineManifest,
 } from "@/lib/offline-manifest-store";
 import { clientRollCallEvidenceId } from "@/lib/roll-call-causality";
-import { ROLL_CALL_REVIEW_HEADERS } from "@/lib/roll-call-protocol";
+import { ROLL_CALL_WITNESS_HEADERS } from "@/lib/roll-call-protocol";
 import { fileScopedShopContext } from "@/test/db";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
 
@@ -88,7 +88,7 @@ it("keeps an unavailable observation for review and syncs the independent observ
   const collision = await POST(
     new Request("http://localhost/api/offline-manifests/sync", {
       method: "POST",
-      headers: { ...ROLL_CALL_REVIEW_HEADERS, "content-type": "application/json" },
+      headers: { ...ROLL_CALL_WITNESS_HEADERS, "content-type": "application/json" },
       body: JSON.stringify({
         events: [],
         reviewEvents: [firstEvent],
@@ -133,7 +133,7 @@ it("keeps an unavailable observation for review and syncs the independent observ
       const response = await POST(
         new Request("http://localhost/api/offline-manifests/sync", {
           method: "POST",
-          headers: { ...ROLL_CALL_REVIEW_HEADERS, "content-type": "application/json" },
+          headers: { ...ROLL_CALL_WITNESS_HEADERS, "content-type": "application/json" },
           body: JSON.stringify(body),
         }),
       );

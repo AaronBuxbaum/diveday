@@ -33,6 +33,13 @@ function manifest(options: { diversAboard: number; crewAboard: number; missing?:
 }
 
 describe("deckCountView", () => {
+  it("does not call a deck count a match while a person needs recounting", () => {
+    const view = manifest({ diversAboard: 1, crewAboard: 1 });
+    const person = view.divers[1];
+    if (!person) throw new Error("fixture missing diver");
+    view.divers[1] = { ...person, recountRequired: true };
+    expect(deckCountView(view, "departure", new Map([["departure", 2]])).comparison).toBeNull();
+  });
   it("says nothing until a count is entered at this checkpoint", () => {
     const view = deckCountView(
       manifest({ diversAboard: 3, crewAboard: 2 }),

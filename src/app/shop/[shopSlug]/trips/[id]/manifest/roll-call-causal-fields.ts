@@ -32,8 +32,27 @@ const causalRollCallFields = {
     .transform((value) => value === "true"),
 };
 
+const liveRecountProof = z.preprocess(
+  (value) => {
+    if (typeof value !== "string") return value;
+    try {
+      return JSON.parse(value);
+    } catch {
+      return null;
+    }
+  },
+  z
+    .object({
+      snapshotId: z.string().uuid(),
+      witness: z.string().max(16000),
+      meetingDay: z.number().int().min(0),
+    })
+    .optional(),
+);
+
 export const rollCallSchema = z.object({
   ...causalRollCallFields,
+  liveRecountProof,
   bookingId: z.string().uuid(),
   physicalPresenceOnly: z
     .enum(["true", "false"])
@@ -52,6 +71,7 @@ export const rollCallSchema = z.object({
 
 export const crewRollCallSchema = z.object({
   ...causalRollCallFields,
+  liveRecountProof,
   personId: z.string().uuid(),
   status: z.enum(ROLL_CALL_EVENT_STATUSES),
   /** The same, for the other half of the head count. */

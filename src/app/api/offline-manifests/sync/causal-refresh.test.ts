@@ -8,7 +8,7 @@ import type { DiveDaySession } from "@/lib/auth";
 import { nowDate } from "@/lib/clock";
 import { verifyOfflineErasureEpoch } from "@/lib/offline-erasure-epoch";
 import type { OfflineManifestUpcomingResponse } from "@/lib/offline-manifests";
-import { ROLL_CALL_REVIEW_HEADERS } from "@/lib/roll-call-protocol";
+import { ROLL_CALL_WITNESS_HEADERS } from "@/lib/roll-call-protocol";
 import { fileScopedShopContext } from "@/test/db";
 import { nextHeadersStub } from "@/test/next-headers";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
@@ -28,7 +28,7 @@ const { POST } = await import("./route");
 function postRequest(body: unknown) {
   return new Request("http://localhost/api/offline-manifests/sync", {
     method: "POST",
-    headers: { ...ROLL_CALL_REVIEW_HEADERS, "content-type": "application/json" },
+    headers: { ...ROLL_CALL_WITNESS_HEADERS, "content-type": "application/json" },
     body: JSON.stringify(body),
   });
 }

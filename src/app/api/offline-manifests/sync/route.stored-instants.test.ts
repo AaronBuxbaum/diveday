@@ -4,7 +4,7 @@ import { createChecklistItem } from "@/db/pre-departure-check";
 import { completeWaiver, issueWaiverRequest } from "@/db/waivers";
 import type { DiveDaySession } from "@/lib/auth";
 import { nowMs } from "@/lib/clock";
-import { ROLL_CALL_REVIEW_HEADERS } from "@/lib/roll-call-protocol";
+import { ROLL_CALL_WITNESS_HEADERS } from "@/lib/roll-call-protocol";
 import { advanceClock } from "@/test/clock";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
 import {
@@ -26,7 +26,7 @@ const iso = (ms: number) => new Date(ms).toISOString();
 function request(body: unknown) {
   return new Request("http://localhost/api/offline-manifests/sync", {
     method: "POST",
-    headers: { ...ROLL_CALL_REVIEW_HEADERS, "content-type": "application/json" },
+    headers: { ...ROLL_CALL_WITNESS_HEADERS, "content-type": "application/json" },
     body: JSON.stringify(body),
   });
 }

@@ -47,6 +47,42 @@ function setup(action: RollCallAction, copy: RollCallButtonCopy = DEFAULT_COPY) 
 }
 
 describe("RollCallButton", () => {
+  it("submits the signed context shown for a live recount", async () => {
+    const subjectId = "00000000-0000-4000-8000-000000000001";
+    const proof = {
+      snapshotId: "00000000-0000-4000-8000-000000000002",
+      witness: "signed",
+      meetingDay: 0,
+    };
+    const action = vi.fn<RollCallAction>(async () => ({ ok: true }));
+    render(
+      <RollCallCausalProvider
+        contexts={{
+          [`bookingId:${subjectId}`]: {
+            meetingDay: 0,
+            conflict: false,
+            orderingUnknown: false,
+            unknownMeetingDay: false,
+            observedEvidenceIds: [],
+            evidence: [],
+            liveRecountProof: proof,
+          },
+        }}
+      >
+        <RollCallButton
+          action={action}
+          subject={{ field: "bookingId", id: subjectId }}
+          status="boarded"
+          label="Record named person"
+          pendingLabel="Recording…"
+          className="btn"
+          copy={DEFAULT_COPY}
+        />
+      </RollCallCausalProvider>,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Record named person" }));
+    expect(JSON.parse(String(action.mock.calls[0]?.[1].get("liveRecountProof")))).toEqual(proof);
+  });
   it("includes the just-accepted receipt in an immediate Undo basis while the server projection is still stale", async () => {
     const eventId = "00000000-0000-4000-8000-0000000000e1";
     const subjectId = "00000000-0000-4000-8000-000000000001";

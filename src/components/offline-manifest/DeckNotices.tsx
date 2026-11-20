@@ -4,6 +4,7 @@ import { MixedTrainingDepthWarning } from "@/components/MixedTrainingDepthWarnin
 import { buttonClass } from "@/components/ui/button";
 import { crewDives, needsDecompressionCardReminder } from "@/lib/decompression-reminder";
 import { isHeldSeat } from "@/lib/held-seat";
+import { physicalPeople } from "@/lib/manifest-person-counts";
 import { rollCallCheckpointOrdinal } from "@/lib/manifests";
 import { countParticipants, hasNonDivers, joinPassengerSplit } from "@/lib/participant-types";
 import { mixedTrainingDepthAdvisory } from "@/lib/training-mark";
@@ -20,6 +21,14 @@ export function OfflineDeckSafety({
 }) {
   const { t } = controls;
   const { manifest } = view;
+  const recount = physicalPeople(
+    manifest.divers.filter((diver) => diver.recountRequired),
+    manifest.crew.filter((member) => member.recountRequired),
+  );
+  const history = physicalPeople(
+    manifest.divers.filter((diver) => diver.historicalReviewRequired),
+    manifest.crew.filter((member) => member.historicalReviewRequired),
+  );
   const gap = view.previousGaps.get(view.checkpoint);
   const missingGap = gap?.kind === "unmarked" && gap.missing > 0 ? gap : null;
   const decompression =
@@ -34,6 +43,17 @@ export function OfflineDeckSafety({
     });
   return (
     <>
+      {recount > 0 ? (
+        <p className="text-danger" role="status">
+          {t("manifest.recountRequired", { count: recount })}{" "}
+          {t("manifest.deck.recountOfflineGuidance")}
+        </p>
+      ) : null}
+      {history > 0 ? (
+        <p className="text-danger" role="status">
+          {t("manifest.historicalReviewRequired", { count: history })}
+        </p>
+      ) : null}
       {view.overTotalPersons ? (
         <p
           className="mt-3 rounded-inset border border-danger bg-danger-tint px-4 py-3 text-base font-bold text-danger"

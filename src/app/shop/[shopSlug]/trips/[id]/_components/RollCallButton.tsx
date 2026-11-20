@@ -277,6 +277,13 @@ export function RollCallButton({
               ])}
             />
             <input type="hidden" name="meetingDay" value={causal.meetingDay} />
+            {causal.liveRecountProof ? (
+              <input
+                type="hidden"
+                name="liveRecountProof"
+                value={JSON.stringify(causal.liveRecountProof)}
+              />
+            ) : null}
             <input type="hidden" name="reconcilesEvidence" value={String(reconcilesEvidence)} />
           </>
         ) : null}

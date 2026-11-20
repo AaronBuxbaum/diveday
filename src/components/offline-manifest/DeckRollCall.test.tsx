@@ -7,6 +7,17 @@ import { controls, view } from "./section-fixtures";
 afterEach(cleanup);
 
 describe("saved Deck receipts", () => {
+  it("names a saved passenger whose count needs review", () => {
+    const current = view();
+    const passenger = current.manifest.divers[0];
+    if (!passenger) throw new Error("passenger missing");
+    passenger.recountRequired = true;
+    render(<OfflineDeckRollCall view={current} controls={controls()} details={null} />);
+    expect(screen.getByText(/1 person needs a recount/)).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Find a person" }));
+    fireEvent.click(screen.getByRole("button", { name: "Priya Shah" }));
+    expect(screen.getByText(/Recount required · Recount online/)).toBeVisible();
+  });
   it("keeps a failed local append on the same person without offering Next", async () => {
     const ctx = controls();
     const record = vi.fn(async () => false);

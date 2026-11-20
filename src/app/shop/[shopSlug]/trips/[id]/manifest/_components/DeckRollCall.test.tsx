@@ -2,9 +2,68 @@
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, expect, it } from "vitest";
 import { DeckRollCall } from "./DeckRollCall";
-import { diver, diverContext, notBackAt } from "./diver-roll-call-test-fixtures";
+import { boardedAt, diver, diverContext, notBackAt } from "./diver-roll-call-test-fixtures";
 
 afterEach(cleanup);
+
+it("names the person with earlier unresolved evidence after a fresh count", () => {
+  const context = diverContext({
+    checkpoint: "departure",
+    isDeparture: true,
+    divers: [
+      diver({
+        bookingId: "bea",
+        fullName: "Bea Chen",
+        rollCall: boardedAt(),
+        historicalReviewRequired: true,
+      }),
+    ],
+  });
+  const crew = [
+    {
+      id: "crew-ari",
+      fullName: "Ari Chen",
+      roles: ["divemaster"],
+      standingRatings: [],
+      rollCall: boardedAt(),
+      historicalReviewRequired: true,
+    },
+  ];
+  const deck = DeckRollCall({
+    view: {
+      manifest: {
+        trip: { id: context.tripId },
+        divers: context.divers,
+        crew,
+        summary: { historicalReviewRequired: 2 },
+        completeness: { complete: false },
+      },
+      rollCall: {
+        divers: context,
+        crew: {
+          ...context,
+          crew,
+          crewRollCallAction: context.rollCallAction,
+          crewRollCallButtonCopy: context.rollCallButtonCopy("crew-ari"),
+        },
+      },
+      actions: { rollCall: context.rollCallAction, crewRollCall: context.rollCallAction },
+      checkpoint: "departure",
+      isDeparture: true,
+      reader: { alerted: new Set() },
+    } as never,
+    checkpoint: "Before departure",
+    details: null,
+    buddiesEnabled: true,
+  });
+  const people = deck.props.people as { name: string; status: string; requiresReview: boolean }[];
+  for (const name of ["Bea Chen", "Ari Chen"]) {
+    expect(people.find((person) => person.name === name)).toMatchObject({
+      requiresReview: true,
+      status: expect.stringContaining("Earlier observation needs review"),
+    });
+  }
+});
 
 function selectedDetails(buddiesEnabled = true, subject: "diver" | "crew" = "diver") {
   const context = diverContext({
@@ -47,6 +106,7 @@ function selectedDetails(buddiesEnabled = true, subject: "diver" | "crew" = "div
     view: {
       manifest: {
         trip: { id: context.tripId },
+        summary: {},
         divers: context.divers,
         crew,
         completeness: { complete: false },
@@ -125,6 +185,7 @@ function closedDeck() {
     view: {
       manifest: {
         trip: { id: context.tripId },
+        summary: {},
         divers: context.divers,
         crew,
         completeness: { complete: false },

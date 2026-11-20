@@ -19,6 +19,7 @@ export const EXCLUDED_COLUMNS: Record<string, string[]> = {
     "seq",
     "offline_meeting_generation",
     "offline_assignment_generation",
+    "offline_crew_assignment_id",
   ],
   // `shop_id` is the same value on every row of a single-shop bundle.
   shops: [
@@ -93,7 +94,7 @@ export const EXCLUDED_COLUMNS: Record<string, string[]> = {
   trip_series_skips: ["id", "shop_id"],
   ...Object.fromEntries(GLOBAL_SEQ_TABLES.map((table) => [table, ["seq"]])),
   trip_dives: [],
-  trip_assignments: [],
+  trip_assignments: ["offline_incarnation"], // restored assignments receive new local incarnations
   bookings: [
     "shop_id",
     "offline_assignment_generation", // local generation is not authority for a restored database

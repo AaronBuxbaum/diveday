@@ -34,7 +34,23 @@ test("a conflict stays for review while an independent observation syncs", async
   staffStorageState,
 }) => {
   const url = `/shop/blue-mantis/trips/${DEMO_TODAY_TRIP_ID}/manifest?checkpoint=after_dive_1`;
+  const snapshotResponse = page.waitForResponse(
+    (response) =>
+      new URL(response.url()).pathname === "/api/offline-manifests/upcoming" && response.ok(),
+  );
   await page.goto(url, { waitUntil: "domcontentloaded" });
+  const snapshot = await snapshotResponse;
+  expect(snapshot.request().headers()["x-diveday-roll-call-protocol"]).toBe("1");
+  const body = (await snapshot.json()) as {
+    payloads: {
+      manifests: { trip: { id: string } }[];
+      rollCallWitnesses?: Record<string, string>;
+    }[];
+  };
+  const savedTrip = body.payloads.find((payload) =>
+    payload.manifests.some((manifest) => manifest.trip.id === DEMO_TODAY_TRIP_ID),
+  );
+  expect(Object.keys(savedTrip?.rollCallWitnesses ?? {}).length).toBeGreaterThan(0);
   await offlineCopySaved(page);
   const other = await browser.newContext({ storageState: await staffStorageState("owner") });
   const live = makeActivitySafe(await other.newPage());
@@ -67,9 +83,9 @@ test("a conflict stays for review while an independent observation syncs", async
     await context.setOffline(false);
     const response = await sync;
     expect(response.ok()).toBe(true);
-    const body = (await response.json()) as { results: { status: string; reason?: string }[] };
-    expect(body.results.some((result) => result.status === "applied")).toBe(true);
-    expect(body.results.some((result) => result.reason === "review_required")).toBe(true);
+    const syncBody = (await response.json()) as { results: { status: string; reason?: string }[] };
+    expect(syncBody.results.some((result) => result.status === "applied")).toBe(true);
+    expect(syncBody.results.some((result) => result.reason === "review_required")).toBe(true);
     await page.getByRole("button", { name: staff("manifest.deck.attention"), exact: true }).click();
     const attention = page.locator('[data-deck-screen="attention"]');
     await expect(attention.getByText(/remains on this device/)).toBeVisible();

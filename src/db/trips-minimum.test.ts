@@ -5,7 +5,7 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import { MINIMUM_SEATS_DECISION_HOURS_DEFAULT, minimumSeatsDecisionAt } from "@/lib/minimum-seats";
 import { fileScopedShopContext, type seededShopContext } from "@/test/db";
 import { createBooking } from "./bookings";
-import { activityEvents, crewNotices } from "./schema";
+import { activityEvents, crewNotices, trips } from "./schema";
 import { pagedShopActivity } from "./shop-activity";
 import { getTripWithBooked, listStaff, setTripCrew } from "./trips";
 import { createTrip } from "./trips-create";
@@ -340,6 +340,8 @@ describe("cancelDeparturesBelowMinimum", () => {
 
     const second = await cancelDeparturesBelowMinimum(db, { now: NOW });
     expect(second.cancelled.map((row) => row.tripId)).not.toContain(trip.id);
+    const [stored] = await db.select().from(trips).where(eq(trips.id, trip.id));
+    expect(stored?.offlineMeetingGeneration).toBe(1);
   });
 
   /**

@@ -107,6 +107,7 @@ describe("departureCounts", () => {
       boarded: 3,
       back: 1,
       missing: 1,
+      recountRequired: 0,
       blocked: 2,
     });
   });
@@ -275,6 +276,7 @@ describe("departureCounts", () => {
       boarded: 1,
       back: 1,
       missing: 0,
+      recountRequired: 0,
       blocked: 0,
     });
   });
@@ -340,6 +342,7 @@ describe("departureCounts", () => {
       boarded: 0,
       back: 0,
       missing: 0,
+      recountRequired: 0,
       blocked: 0,
     });
     // Another shop's id reads nothing.

@@ -5,9 +5,19 @@ import { liveTrip } from "@/db/trips";
 import { lockBoardingCertificationEvidence } from "../../db/boarding-certification-snapshot";
 import type { AppDb, DbExecutor } from "../../db/client";
 import { getTripManifests } from "../../db/manifests";
-import { offlineManifestSnapshotRevisions, tripScheduleDays, trips } from "../../db/schema/index";
+import {
+  bookings,
+  offlineManifestSnapshotRevisions,
+  tripAssignments,
+  tripScheduleDays,
+  trips,
+} from "../../db/schema/index";
 import { getShopOfflineErasureEpoch } from "../../db/shops";
 import { signOfflineErasureEpoch } from "../../lib/offline-erasure-epoch";
+import {
+  offlineRollCallWitnessEnabled,
+  signRollCallWitness,
+} from "../../lib/offline-roll-call-witness";
 
 /**
  * Validate and lock the tenant-owned trip before touching its snapshot
@@ -203,6 +213,7 @@ export async function readOfflineManifestRosterWithWindows(
       const [state] = await tx
         .select({
           revision: revisions.revision,
+          meetingGeneration: trips.offlineMeetingGeneration,
           windows: sql<{ startsAt: string; endsAt: string }[]>`coalesce((
         select json_agg(json_build_object('startsAt', d.starts_at, 'endsAt', d.ends_at) order by d.starts_at)
         from ${tripScheduleDays} d where d.trip_id = ${tripId}
@@ -219,6 +230,83 @@ export async function readOfflineManifestRosterWithWindows(
       await options?.afterScheduleRead?.();
       const manifests = await getTripManifests(tx as unknown as AppDb, shopId, tripId);
       if (!manifests) return null;
+      if (
+        offlineRollCallWitnessEnabled() &&
+        manifests.some(
+          (manifest) =>
+            manifest.divers.some(
+              (diver) => diver.recountRequired || diver.historicalReviewRequired,
+            ) || manifest.crew.length > 0,
+        )
+      ) {
+        const seats = await tx
+          .select({ id: bookings.id, generation: bookings.offlineAssignmentGeneration })
+          .from(bookings)
+          .where(and(eq(bookings.shopId, shopId), eq(bookings.tripId, tripId)));
+        const generations = new Map(seats.map((seat) => [seat.id, seat.generation]));
+        const crewRows = await tx
+          .select({
+            personId: tripAssignments.personId,
+            incarnation: tripAssignments.offlineIncarnation,
+          })
+          .from(tripAssignments)
+          .where(eq(tripAssignments.tripId, tripId));
+        const crewIncarnations = new Map(crewRows.map((crew) => [crew.personId, crew.incarnation]));
+        const snapshotId = randomUUID();
+        for (const manifest of manifests)
+          for (const diver of manifest.divers) {
+            const context = diver.rollCallContext;
+            const generation = generations.get(diver.bookingId);
+            if (
+              (!diver.recountRequired && !diver.historicalReviewRequired) ||
+              !diver.personId ||
+              !context ||
+              context.unknownMeetingDay ||
+              generation === undefined
+            )
+              continue;
+            context.liveRecountProof = {
+              snapshotId,
+              meetingDay: context.meetingDay,
+              witness: signRollCallWitness({
+                shopId,
+                tripId,
+                snapshotId,
+                subjectKind: "seat",
+                subjectId: diver.bookingId,
+                checkpoint: manifest.checkpoint,
+                meetingDay: context.meetingDay,
+                meetingGeneration: state.meetingGeneration,
+                assignmentGeneration: generation,
+                originalPersonId: diver.personId,
+                frontier: context.observedEvidenceIds,
+              }),
+            };
+          }
+        for (const manifest of manifests)
+          for (const crew of manifest.crew) {
+            const context = crew.rollCallContext;
+            const incarnation = crewIncarnations.get(crew.id);
+            if (!context || context.unknownMeetingDay || !incarnation) continue;
+            context.liveRecountProof = {
+              snapshotId,
+              meetingDay: context.meetingDay,
+              witness: signRollCallWitness({
+                shopId,
+                tripId,
+                snapshotId,
+                subjectKind: "crew",
+                subjectId: crew.id,
+                checkpoint: manifest.checkpoint,
+                meetingDay: context.meetingDay,
+                meetingGeneration: state.meetingGeneration,
+                assignmentGeneration: 0,
+                originalPersonId: incarnation,
+                frontier: context.observedEvidenceIds,
+              }),
+            };
+          }
+      }
       const windows = state.windows.map((day) => ({
         startsAt: new Date(day.startsAt),
         endsAt: new Date(day.endsAt),

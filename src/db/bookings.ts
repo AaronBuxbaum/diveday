@@ -1379,6 +1379,7 @@ async function writeSeat(
       .update(bookings)
       .set({
         status: "booked",
+        offlineAssignmentGeneration: sql`${bookings.offlineAssignmentGeneration} + 1`,
         // A new life for the seat: the desk's trail is read from here on
         // (ADR 20261104-arrival-is-a-trail, decision 5).
         arrivalTrailAfterSeq: arrivalTrailHighWater,
@@ -2092,6 +2093,7 @@ export async function restoreBooking(
       // the desk sees them again (ADR 20261104-arrival-is-a-trail, decision 5).
       .set({
         status: "booked",
+        offlineAssignmentGeneration: sql`${bookings.offlineAssignmentGeneration} + 1`,
         arrivalTrailAfterSeq: arrivalTrailHighWater,
         seatReopenedAt: nowDate(),
         turnedAwayReason: null,
@@ -3289,6 +3291,7 @@ async function cancelBookingRow(
       .update(bookings)
       .set({
         status: "cancelled",
+        offlineAssignmentGeneration: sql`case when ${bookings.status} is distinct from 'cancelled' then ${bookings.offlineAssignmentGeneration} + 1 else ${bookings.offlineAssignmentGeneration} end`,
         groupHoldUntil: null,
         ...(expireHold ? { groupHoldExpiredAt: now } : {}),
       })
