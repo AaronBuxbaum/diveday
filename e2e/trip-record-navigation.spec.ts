@@ -35,9 +35,8 @@ for (const width of [390, 1280]) {
     const sightings = page.getByRole("link", {
       name: t("trips.clock.wrapped.diveSightings", { dive: 1 }),
     });
-    if (await sightings.count()) {
-      await sightings.click();
-      await expect(page.locator("#seen-heading")).toBeVisible();
-    }
+    await expect(sightings).toBeVisible();
+    await sightings.click();
+    await expect(page.locator("#seen-heading")).toBeVisible();
   });
 }

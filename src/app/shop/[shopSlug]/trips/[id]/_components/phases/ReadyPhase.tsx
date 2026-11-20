@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { buttonClass } from "@/components/ui/button";
 import { shopPath } from "@/lib/staff-notices";
 import type { PhaseRecordContext } from "./WaterPhase";
 
@@ -30,7 +31,7 @@ export function ReadyPhase({
       {guests}
       <p>
         <Link
-          className="font-medium text-link hover:underline"
+          className={buttonClass({ variant: "link", flush: true })}
           href={`${shopPath(shop.slug, "trips", tripId)}?phase=checkin`}
         >
           {t("trips.clock.ready.paperPasses")}
