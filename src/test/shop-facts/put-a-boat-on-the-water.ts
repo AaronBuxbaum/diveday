@@ -1,9 +1,11 @@
-import { and, asc, eq, sql } from "drizzle-orm";
+import { and, asc, eq, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { AppDb } from "../../db/client";
 import { upsertExecutedDive } from "../../db/executed-dives";
 import { recordCrewRollCall, recordRollCall } from "../../db/manifests";
-import { people, tripAssignments, trips } from "../../db/schema/index";
+import { diveSites, people, tripAssignments, tripDives, trips } from "../../db/schema/index";
+import { recordLostItem } from "../../features/lost-items/store";
+import { recordTripSighting } from "../../features/trip-sightings/store";
 import { MINUTE_MS } from "../../lib/clock";
 import { seedOperationalTrust } from "./operational-trust";
 import { sendADepartureOut } from "./send-a-departure-out";
@@ -11,13 +13,16 @@ import { sendADepartureOut } from "./send-a-departure-out";
 const FIXTURE = {
   outstanding: "boat",
   home: "historic",
+  recorded: "historic",
   unfinished: "intro",
   cancelled: "buddy",
   skipped: "intro",
 } as const;
 
 export const boatOnTheWaterArgs = z
-  .object({ state: z.enum(["outstanding", "home", "unfinished", "cancelled", "skipped"]) })
+  .object({
+    state: z.enum(["outstanding", "home", "recorded", "unfinished", "cancelled", "skipped"]),
+  })
   .strict();
 
 /**
@@ -26,7 +31,9 @@ export const boatOnTheWaterArgs = z
  * after dive 1. `outstanding` leaves it at sea two hours in, with one diver
  * recorded not back aboard (and the crew's note) and one person with no result
  * yet; `home` brings it back five hours in, both dives counted complete and
- * logged, for Wrapped up with nothing left to close; `unfinished` is home too,
+ * logged, for Wrapped up with nothing left to close; `recorded` is `home` with
+ * two species seen at dive 1's site and a mask found aboard, for What
+ * happened's Seen and Left aboard rows (issue #4811); `unfinished` is home too,
  * with dive 2's count missing one person and dive 2 not logged; `skipped` is home
  * with dive 1 counted and logged and dive 2 never begun, for "Dive 2 not made"
  * (issue #4681); `cancelled` is the same departure called off before anyone was
@@ -128,7 +135,8 @@ export async function putABoatOnTheWater(
       [1, 35, 14],
       [2, 130, 11],
     ] as const;
-    for (const [diveNumber, entered, depth] of state === "home" ? logs : logs.slice(0, 1)) {
+    const allLogged = state === "home" || state === "recorded";
+    for (const [diveNumber, entered, depth] of allLogged ? logs : logs.slice(0, 1)) {
       const saved = await upsertExecutedDive(db, {
         shopId: shop.id,
         tripId,
@@ -141,5 +149,45 @@ export async function putABoatOnTheWater(
       if (!saved.ok) throw new Error(`boat on the water log refused: ${saved.reason}`);
     }
   }
+  if (state === "recorded") await recordSeenAndLeftAboard(db, shop.id, tripId, recorder, at(140));
   return { tripId };
+}
+
+/**
+ * Dive 1 planned at the shop's first site, two species tapped there, and one
+ * item found aboard (issue #4811).
+ */
+async function recordSeenAndLeftAboard(
+  db: AppDb,
+  shopId: string,
+  tripId: string,
+  recorder: string,
+  now: Date,
+) {
+  const [site] = await db
+    .select({ id: diveSites.id })
+    .from(diveSites)
+    .where(and(eq(diveSites.shopId, shopId), isNull(diveSites.deletedAt)))
+    .orderBy(asc(diveSites.name))
+    .limit(1);
+  if (!site) throw new Error("boat on the water fixture needs a dive site");
+  await db.insert(tripDives).values({ tripId, diveNumber: 1, diveSiteId: site.id });
+  for (const speciesSlug of ["green-sea-turtle", "spotted-eagle-ray"]) {
+    const seen = await recordTripSighting(db, {
+      shopId,
+      tripId,
+      diveSiteId: site.id,
+      speciesSlug,
+      recordedByPersonId: recorder,
+      now,
+    });
+    if (!seen.ok) throw new Error(`boat on the water sighting refused: ${seen.reason}`);
+  }
+  const found = await recordLostItem(db, {
+    shopId,
+    tripId,
+    description: "Black mask in a blue case",
+    actorPersonId: recorder,
+  });
+  if (!found.ok) throw new Error(`boat on the water found item refused: ${found.reason}`);
 }

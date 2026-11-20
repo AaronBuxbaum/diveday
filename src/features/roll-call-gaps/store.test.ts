@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
+import { recordDiveNotMade, undoDiveNotMade } from "@/db/dive-not-made";
+import { upsertExecutedDive } from "@/db/executed-dives";
+import { crewSubject } from "@/db/roll-call-subject";
+import { tripAssignments } from "@/db/schema";
 import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
+import { advanceClock } from "@/test/clock";
 import { nowDate, nowMs } from "../../lib/clock";
 import { fileScopedShopContext } from "../../test/db";
 import {
@@ -128,6 +133,137 @@ describe("listRollCallGaps", () => {
   it("answers no trips with no gaps, without reading", async () => {
     const { db, shop } = ctx;
     expect(await listRollCallGaps(db, shop.id, nowDate(), [])).toEqual([]);
+  });
+});
+
+/**
+ * **A dive the crew recorded not made** (issue #4809) closes that dive's
+ * after-dive count on Today, the way it closes the dive's item on Wrapped up
+ * (#4681). Only that dive's count, only while nobody has counted or logged
+ * the dive since, and never a person: a missing diver, an earlier dive's
+ * open count, or another day's dive stays raised.
+ */
+describe("a dive recorded not made", () => {
+  async function notMadeBoat() {
+    const made = await boat({ endedHoursAgo: 3 });
+    await ctx.db.insert(tripAssignments).values({ tripId: made.trip.id, personId: made.staffId });
+    const word = { shopId: ctx.shop.id, tripId: made.trip.id, personId: made.staffId };
+    const notMade = async (diveNumber: number) => {
+      advanceClock(1000);
+      const outcome = await recordDiveNotMade(ctx.db, { ...word, diveNumber });
+      if (!outcome.ok) throw new Error(`test record refused: ${outcome.reason}`);
+    };
+    const undo = async (diveNumber: number) => {
+      advanceClock(1000);
+      const outcome = await undoDiveNotMade(ctx.db, { ...word, diveNumber });
+      if (!outcome.ok) throw new Error(`test undo refused: ${outcome.reason}`);
+    };
+    return { ...made, notMade, undo };
+  }
+
+  it("closes that dive's after-dive count once everyone is counted back after the dives made", async () => {
+    const { bookingIds, say, notMade, gaps } = await notMadeBoat();
+    for (const id of bookingIds) await say(id, "after_dive_1", "boarded");
+    expect(await gaps()).toMatchObject([{ reason: "after_dive_uncounted", diveNumber: 2 }]);
+
+    await notMade(2);
+
+    expect(await gaps()).toEqual([]);
+  });
+
+  it("keeps an earlier dive's open count raised", async () => {
+    const { bookingIds, say, notMade, gaps } = await notMadeBoat();
+    await say(bookingIds[0] as string, "after_dive_1", "boarded");
+    await notMade(2);
+
+    expect(await gaps()).toMatchObject([
+      { reason: "after_dive_uncounted", diveNumber: 1, uncounted: 2 },
+    ]);
+  });
+
+  it("moves to the next dive nobody counted when the first was not made", async () => {
+    const { notMade, gaps } = await notMadeBoat();
+    await notMade(1);
+
+    expect(await gaps()).toMatchObject([
+      { reason: "after_dive_uncounted", diveNumber: 2, uncounted: 3 },
+    ]);
+  });
+
+  it("never hides a diver recorded not back aboard", async () => {
+    const { bookingIds, say, notMade, gaps } = await notMadeBoat();
+    await say(bookingIds[0] as string, "after_dive_1", "not_boarded");
+    await say(bookingIds[1] as string, "after_dive_1", "boarded");
+    await say(bookingIds[2] as string, "after_dive_1", "boarded");
+    await notMade(2);
+
+    expect(await gaps()).toMatchObject([{ reason: "missing_diver", diveNumber: 1, uncounted: 1 }]);
+  });
+
+  it("raises the count again once the record is undone", async () => {
+    const { bookingIds, say, notMade, undo, gaps } = await notMadeBoat();
+    for (const id of bookingIds) await say(id, "after_dive_1", "boarded");
+    await notMade(2);
+    await undo(2);
+
+    expect(await gaps()).toMatchObject([{ reason: "after_dive_uncounted", diveNumber: 2 }]);
+  });
+
+  it("gives way to a count of the dive begun after the record", async () => {
+    const { bookingIds, say, notMade, gaps } = await notMadeBoat();
+    for (const id of bookingIds) await say(id, "after_dive_1", "boarded");
+    await notMade(2);
+    await say(bookingIds[0] as string, "after_dive_2", "boarded");
+
+    expect(await gaps()).toMatchObject([
+      { reason: "after_dive_uncounted", diveNumber: 2, uncounted: 2 },
+    ]);
+  });
+
+  it("gives way to a log of the dive written after the record", async () => {
+    const { bookingIds, say, notMade, gaps, trip, staffId } = await notMadeBoat();
+    for (const id of bookingIds) await say(id, "after_dive_1", "boarded");
+    await notMade(2);
+    const logged = await upsertExecutedDive(ctx.db, {
+      shopId: ctx.shop.id,
+      tripId: trip.id,
+      diveNumber: 2,
+      enteredAt: new Date(trip.endsAt.getTime() - HOUR),
+      exitedAt: new Date(trip.endsAt.getTime() - HOUR / 2),
+      maxDepthMeters: null,
+      recordedByPersonId: staffId,
+    });
+    if (!logged.ok) throw new Error(`test log refused: ${logged.reason}`);
+
+    expect(await gaps()).toMatchObject([{ reason: "after_dive_uncounted", diveNumber: 2 }]);
+  });
+
+  it("closes the crew's count of that dive too, and never a crew member recorded not back", async () => {
+    const { db, shop } = ctx;
+    const { bookingIds, say, notMade, gaps, trip, staffId } = await notMadeBoat();
+    for (const id of bookingIds) await say(id, "after_dive_1", "boarded");
+    const crewMark = (checkpoint: string, status: "boarded" | "not_boarded", minute: number) =>
+      seedRollCallEvidence(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        ...crewSubject(staffId),
+        recordedByPersonId: staffId,
+        status,
+        checkpoint,
+        source: "live",
+        occurredAt: new Date(trip.startsAt.getTime() + minute * 60_000),
+      });
+    await crewMark("departure", "boarded", 2);
+    await crewMark("after_dive_1", "boarded", 90);
+    expect((await gaps()).map((gap) => [gap.reason, gap.diveNumber])).toEqual([
+      ["after_dive_uncounted", 2],
+      ["crew_uncounted", 2],
+    ]);
+    await notMade(2);
+    expect(await gaps()).toEqual([]);
+
+    await crewMark("after_dive_1", "not_boarded", 95);
+    expect(await gaps()).toMatchObject([{ reason: "missing_crew", diveNumber: 1 }]);
   });
 });
 

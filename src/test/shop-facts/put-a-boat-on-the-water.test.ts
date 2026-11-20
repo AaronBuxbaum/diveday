@@ -1,6 +1,8 @@
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { expect, it } from "vitest";
-import { people, rollCallEvents, tripAssignments } from "../../db/schema/index";
+import { people, rollCallEvents, tripAssignments, tripDives } from "../../db/schema/index";
+import { listTripLostItems } from "../../features/lost-items/store";
+import { listTripSightings } from "../../features/trip-sightings/store";
 import { nowDate } from "../../lib/clock";
 import { fileScopedShopContext } from "../db";
 import { putABoatOnTheWater } from "./put-a-boat-on-the-water";
@@ -39,4 +41,22 @@ it("keeps the fixture captain as recorder under a different assignment read plan
     .where(and(eq(rollCallEvents.tripId, tripId), eq(rollCallEvents.checkpoint, "after_dive_1")));
   expect(marks.length).toBeGreaterThan(0);
   expect(new Set(marks.map((mark) => mark.recorderId))).toEqual(new Set([lastId.id]));
+});
+
+it("puts a sighting at dive 1's site and a found item on the recorded departure", async () => {
+  const { db, shop } = ctx;
+  const { tripId } = await putABoatOnTheWater(db, shop, { state: "recorded" }, nowDate());
+  const [sightings, found, [planned]] = await Promise.all([
+    listTripSightings(db, shop.id, tripId),
+    listTripLostItems(db, shop.id, tripId),
+    db
+      .select({ siteId: tripDives.diveSiteId })
+      .from(tripDives)
+      .where(and(eq(tripDives.tripId, tripId), eq(tripDives.diveNumber, 1))),
+  ]);
+  expect(new Set(sightings.map((row) => row.speciesSlug))).toEqual(
+    new Set(["green-sea-turtle", "spotted-eagle-ray"]),
+  );
+  expect(sightings.every((row) => row.diveSiteId === planned?.siteId)).toBe(true);
+  expect(found).toHaveLength(1);
 });

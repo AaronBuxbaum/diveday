@@ -1264,7 +1264,8 @@
       "items": "{count, plural, one {# item} other {# items}}",
       "notMadeAction": "Dive {dive} not made",
       "notMadeConfirm": "Record that dive {dive} was not made?",
-      "notMade": "Not made · {name}, {time}",
+      "notMade": "Not made",
+      "notMadeBy": "{name}, {time}",
       "notMadeUndo": "Undo"
     },
     "edit": {

@@ -10,6 +10,7 @@
  * need it, and nothing in `src/db` may import a feature.
  */
 import { and, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
+import { divesStandingNotMade } from "@/db/dive-not-made";
 import { liveTrip, seatNotCancelled } from "@/db/trips";
 import { hasReturned } from "@/lib/trips";
 import type { AppDb } from "../../db/client";
@@ -267,6 +268,15 @@ export type OpenRollCall = {
  * because a gap aged out of the queue. In this mode both windows are off,
  * `home` is each trip's own `endsAt` against `now`, and `onlyTripIds` is
  * required, so the scan stays bounded by the boats asked about.
+ *
+ * **A dive the crew recorded not made** (issue #4809, the contract in
+ * `src/db/dive-not-made.ts`) closes that dive's after-dive count, diver and
+ * crew, on the meeting day it was recorded for, the way it closes the dive's
+ * item on Wrapped up. Only while nobody has a result at that checkpoint that
+ * day (or one whose day is unknown) and nobody logged the dive: a count or a
+ * log says the dive was made, and wins. It is never a result for anybody, so
+ * a person recorded not back aboard is missing exactly as before, and
+ * another dive's open count is raised exactly as before.
  */
 type GapRawEvent = { event: typeof rollCallEvents.$inferSelect; day: number };
 
@@ -368,7 +378,7 @@ export async function listRollCallGaps(
   if (sailed.length === 0) return [];
   const tripIds = sailed.map((trip) => trip.id);
 
-  const [roster, rawEvents, rawCrewEvents] = await Promise.all([
+  const [roster, rawEvents, rawCrewEvents, notMadeByTrip] = await Promise.all([
     db
       .select({
         tripId: bookings.tripId,
@@ -426,7 +436,9 @@ export async function listRollCallGaps(
         ),
       )
       .orderBy(...oldestMarkFirst()),
+    divesStandingNotMade(db, shopId, tripIds),
   ]);
+  const notMade = notMadeStanding(notMadeByTrip, [...rawEvents, ...rawCrewEvents]);
   const projection = await rollCallProjectionForDb(db, rawEvents, { allSubjectEvents: true });
   const events = projection.rows.map(gapDiverEvent);
   const crewProjection = await rollCallProjectionForDb(db, rawCrewEvents, {
@@ -606,6 +618,7 @@ export async function listRollCallGaps(
         bookingIds,
         crewIds,
         turnedAwayIds,
+        notMade: (dive) => notMade(trip.id, day, dive),
         diverStates: (bookingId) =>
           diverStates(day, bookingId).map((state, index) =>
             recountApplies(
@@ -674,6 +687,23 @@ export async function listRollCallGaps(
 }
 
 /**
+ * **Whether a dive's not-made record stands for a head count** (issue #4809):
+ * recorded for that meeting day, and nobody has any result at that dive's
+ * checkpoint that day or on an unknown day. A count begun there outranks it.
+ */
+function notMadeStanding(
+  notMadeByTrip: ReadonlyMap<string, ReadonlyMap<number, ReadonlySet<number>>>,
+  events: readonly GapRawEvent[],
+) {
+  const countBegun = new Set(
+    events.map(({ event, day }) => `${event.tripId}\u0000${day}\u0000${event.checkpoint}`),
+  );
+  return (tripId: string, day: number, dive: number) =>
+    notMadeByTrip.get(tripId)?.get(day)?.has(dive) === true &&
+    ![day, -1].some((on) => countBegun.has(`${tripId}\u0000${on}\u0000after_dive_${dive}`));
+}
+
+/**
  * **One row per half per departure**, for a reader drawn per departure rather
  * than per meeting day (the day's close-out, which subtracts one gap per
  * station): a stated missing person on any day first, newest day first, then
@@ -731,6 +761,8 @@ function dayGaps(input: {
   bookingIds: readonly string[];
   crewIds: readonly string[];
   turnedAwayIds: ReadonlySet<string>;
+  /** That dive stands recorded not made, with no count or log since (issue #4809). */
+  notMade?: (dive: number) => boolean;
   diverStates: (bookingId: string) => ("boarded" | "not_boarded" | undefined)[];
   crewStates: (personId: string) => ("boarded" | "not_boarded" | undefined)[];
   diverRisk?: (bookingId: string) => boolean;
@@ -903,7 +935,9 @@ function dayGaps(input: {
       dive >= 1 &&
       (unaccounted[dive] ?? 0) > 0 &&
       // Underway: only a checkpoint someone started and abandoned.
-      (home || (recorded[dive] ?? 0) > 0),
+      (home || (recorded[dive] ?? 0) > 0) &&
+      // A dive recorded not made has no count to finish (issue #4809).
+      !input.notMade?.(dive),
   );
   if (missingDive >= 1) {
     found.diver = {
@@ -935,7 +969,10 @@ function dayGaps(input: {
   );
   const crewOpenDive = checkpoints.findIndex(
     (_, dive) =>
-      dive >= 1 && (crewUnaccounted[dive] ?? 0) > 0 && (home || (crewRecorded[dive] ?? 0) > 0),
+      dive >= 1 &&
+      (crewUnaccounted[dive] ?? 0) > 0 &&
+      (home || (crewRecorded[dive] ?? 0) > 0) &&
+      !input.notMade?.(dive),
   );
   if (crewMissingDive >= 1) {
     found.crew = {

@@ -56,8 +56,9 @@ describe("What happened's records (issue #4683)", () => {
 });
 
 /**
- * **A dive recorded not made says on which day** (issue #4681): on a page read
- * the day after, "Not made · Sal, 9:30 AM" would pass for this morning.
+ * **A dive recorded not made says so as its value** (issue #4810), with who
+ * and when beneath, and **on which day** (issue #4681): on a page read the day
+ * after, "Sal, 9:30 AM" would pass for this morning.
  */
 describe("a dive recorded not made", () => {
   const notMadeAt = (at: Date) =>
@@ -92,10 +93,15 @@ describe("a dive recorded not made", () => {
       />,
     );
 
-  it("says only the time when it was recorded today", () => {
+  it("shows Not made as the dive's value, never None, with who and when beneath", () => {
     shown(notMadeAt(nowDate()));
     const what = screen.getByRole("region", { name: t("trips.clock.wrapped.whatHappened") });
-    expect(what.textContent).toMatch(/Not made · Sal Moretti, \d/);
+    const row = within(what)
+      .getByText(t("trips.clock.water.dive", { dive: 2 }))
+      .closest("div") as HTMLElement;
+    expect(within(row).getByText(t("trips.clock.wrapped.notMade"))).toBeVisible();
+    expect(row).not.toHaveTextContent(t("trips.clock.wrapped.none"));
+    expect(row.textContent).toMatch(/Sal Moretti, \d/);
   });
 
   it("names the day when it was recorded on another", () => {

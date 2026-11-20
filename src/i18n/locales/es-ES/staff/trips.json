@@ -1264,7 +1264,8 @@
       "items": "{count, plural, one {# objeto} other {# objetos}}",
       "notMadeAction": "Inmersión {dive} no realizada",
       "notMadeConfirm": "¿Registrar que la inmersión {dive} no se realizó?",
-      "notMade": "No realizada · {name}, {time}",
+      "notMade": "No realizada",
+      "notMadeBy": "{name}, {time}",
       "notMadeUndo": "Deshacer"
     },
     "edit": {

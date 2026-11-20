@@ -6,6 +6,7 @@ import { boatHasLeft } from "./aboard-at-sea";
 import { loadActiveStaffRoles } from "./authz";
 import type { AppDb, DbExecutor } from "./client";
 import { recordTripActivity } from "./operations";
+import { queryAll } from "./query-helpers";
 import {
   diveNotMadeEvents,
   executedDives,
@@ -34,10 +35,12 @@ import { liveTrip } from "./trips-live";
  *   roll-call day being counted then (`rollCallDayOf`). On a departure that
  *   meets on several days, day one's dive 2 is not day two's: readers, the
  *   second tap and the undo look at the day being counted only.
- * - **What it does**: closes only that dive's roll-call item on Wrapped up. It
- *   is never a count and never a completed dive, and it never hides an
- *   uncounted person, a missing-diver alert, or anybody not recorded back:
- *   nothing that decides those reads this table.
+ * - **What it does**: closes only that dive's roll-call item on Wrapped up and
+ *   that dive's after-dive count on Today (`listRollCallGaps` through
+ *   `divesStandingNotMade`, issue #4809). It is never a count and never a
+ *   completed dive, and it never hides an uncounted person, a missing-diver
+ *   alert, or anybody not recorded back: nothing that decides those reads
+ *   this table, and the after-dive count it closes is the dive-level one only.
  * - **Correction**: an undo appends an `undone` word; nothing is edited or
  *   deleted, and both words go on the departure's activity trail too.
  */
@@ -219,16 +222,23 @@ async function diveLogged(
         eq(executedDives.shopId, input.shopId),
         eq(executedDives.tripId, input.tripId),
         eq(executedDives.diveNumber, input.diveNumber),
-        isNull(executedDives.deletedAt),
-        or(
-          isNotNull(executedDives.enteredAt),
-          isNotNull(executedDives.exitedAt),
-          isNotNull(executedDives.maxDepthMeters),
-        ),
+        liveLog(),
       ),
     )
     .limit(1);
   return Boolean(row);
+}
+
+/** A live log with an entry or exit time, or a depth: the dive was made. */
+function liveLog() {
+  return and(
+    isNull(executedDives.deletedAt),
+    or(
+      isNotNull(executedDives.enteredAt),
+      isNotNull(executedDives.exitedAt),
+      isNotNull(executedDives.maxDepthMeters),
+    ),
+  );
 }
 
 type StandingWord = { word: "not_made" | "undone"; by: string; at: Date };
@@ -281,6 +291,65 @@ export async function diveNotMadeStanding(
   const day = await meetingDayAt(db, tripId, now);
   for (const [dive, row] of await standingWords(db, shopId, tripId, day)) {
     if (row.word === "not_made") out.set(dive, { by: row.by, at: row.at });
+  }
+  return out;
+}
+
+/**
+ * **Every standing not-made dive on these departures** (issue #4809), for the
+ * open head counts (`listRollCallGaps`): by trip, then meeting day (0-based),
+ * the dive numbers whose newest word that day is `not_made` and that nobody
+ * has logged. A count of the dive is the reader's to weigh, since it holds
+ * the roll call; the log is weighed here, and either wins over the record.
+ */
+export async function divesStandingNotMade(
+  db: DbExecutor,
+  shopId: string,
+  tripIds: readonly string[],
+): Promise<Map<string, Map<number, Set<number>>>> {
+  const out = new Map<string, Map<number, Set<number>>>();
+  if (tripIds.length === 0) return out;
+  const [words, logs] = await queryAll(db, [
+    () =>
+      db
+        .select({
+          tripId: diveNotMadeEvents.tripId,
+          day: diveNotMadeEvents.meetingDay,
+          dive: diveNotMadeEvents.diveNumber,
+          word: diveNotMadeEvents.word,
+        })
+        .from(diveNotMadeEvents)
+        .where(
+          and(
+            eq(diveNotMadeEvents.shopId, shopId),
+            inArray(diveNotMadeEvents.tripId, [...tripIds]),
+          ),
+        )
+        .orderBy(desc(diveNotMadeEvents.recordedAt), desc(diveNotMadeEvents.seq)),
+    () =>
+      db
+        .select({ tripId: executedDives.tripId, dive: executedDives.diveNumber })
+        .from(executedDives)
+        .where(
+          and(
+            eq(executedDives.shopId, shopId),
+            inArray(executedDives.tripId, [...tripIds]),
+            liveLog(),
+          ),
+        ),
+  ]);
+  const logged = new Set(logs.map((log) => `${log.tripId}\u0000${log.dive}`));
+  const decided = new Set<string>();
+  for (const row of words) {
+    const key = `${row.tripId}\u0000${row.day}\u0000${row.dive}`;
+    if (decided.has(key)) continue;
+    decided.add(key);
+    if (row.word !== "not_made" || logged.has(`${row.tripId}\u0000${row.dive}`)) continue;
+    const days = out.get(row.tripId) ?? new Map<number, Set<number>>();
+    const dives = days.get(row.day) ?? new Set<number>();
+    dives.add(row.dive);
+    days.set(row.day, dives);
+    out.set(row.tripId, days);
   }
   return out;
 }
