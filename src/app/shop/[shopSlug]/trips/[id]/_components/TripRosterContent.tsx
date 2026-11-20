@@ -28,6 +28,7 @@ import { recordPaperCourseFormAction } from "../course-actions";
 import { AddDiverSection, type SeatRequestContext } from "./AddDiverSection";
 import { ADD_A_BOOKING_ID } from "./add-a-booking-id";
 import { carryTargetLabel } from "./carry-target-label";
+import { elearningCodesOffered } from "./course-roster-actions";
 import { DealLeadTime } from "./DealLeadTime";
 import { DepartureNoteSection } from "./DepartureNoteSection";
 import { FillSeatsCard } from "./FillSeatsCard";
@@ -74,6 +75,7 @@ export type TripRosterActions = {
   markCardProcessedAction?: FormAction;
   setCourseMaterialsDoneAction?: FormAction;
   setCourseStepDoneAction?: FormAction;
+  setElearningCodeAction?: FormAction;
   referralStudentAction?: FormAction;
   elearningCheckAction?: RosterActions["elearningCheckAction"];
   agencyCheckAction?: RosterActions["agencyCheckAction"];
@@ -263,6 +265,7 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
         certifyDefaultLevel: guests.certifyDefaultLevel,
         courseHasMaterials: guests.courseHasMaterials,
         courseSteps: guests.courseSteps,
+        elearningCodes: guests.elearningCodes,
         courseMaterialsOpen: guests.courseMaterialsOpen,
       }}
       rows={{
@@ -317,6 +320,9 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
           : undefined,
         setCourseStepDoneAction:
           guests.courseSteps.length > 0 ? actions.setCourseStepDoneAction : undefined,
+        setElearningCodeAction: elearningCodesOffered(guests)
+          ? actions.setElearningCodeAction
+          : undefined,
         elearningCheckAction: guests.courseHasMaterials ? actions.elearningCheckAction : undefined,
         referralStudentAction: actions.referralStudentAction,
         // A finished departure is its record: nothing on it is checked.

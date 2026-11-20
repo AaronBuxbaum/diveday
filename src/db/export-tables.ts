@@ -30,6 +30,7 @@ import {
   computerDiveProfiles,
   computerDives,
   computerImportBatches,
+  courseElearningCodes,
   courseFormRecords,
   courseFormRequirements,
   courseForms,
@@ -636,6 +637,11 @@ export const EXPORT_TABLES = {
     table: rollCallDeckCounts,
     order: [asc(rollCallDeckCounts.recordedAt), asc(rollCallDeckCounts.seq)],
     scope: { shopColumn: rollCallDeckCounts.shopId },
+  },
+  courseElearningCodes: {
+    table: courseElearningCodes,
+    order: [asc(courseElearningCodes.createdAt), asc(courseElearningCodes.id)],
+    scope: { shopColumn: courseElearningCodes.shopId },
   },
   boatSnags: {
     table: boatSnags,

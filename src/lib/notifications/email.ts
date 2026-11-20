@@ -50,6 +50,8 @@ type BookingConfirmationEmailInput = {
   packingLogbook?: boolean;
   /** A course session's learning materials, already read through `readLearningMaterials`. */
   learningMaterials?: CourseLearningMaterial[];
+  /** The eLearning code the shop handed this student, shown with the materials. */
+  elearningCode?: string;
   /** Where to go (`meetingPointOf`), drawn as its own panel. */
   meetingPoint?: MeetingPoint;
   /** The departure's public `.ics`, for "Add to calendar". */
@@ -731,10 +733,17 @@ function withDeskPayment(t: DiverTranslator, line: string, money: ConfirmationMo
  * inbox — anything not `https:` is printed as its name alone. Empty strings
  * when there is nothing to list.
  */
-function materialsSection(t: DiverTranslator, materials: CourseLearningMaterial[] | undefined) {
+function materialsSection(
+  t: DiverTranslator,
+  materials: CourseLearningMaterial[] | undefined,
+  elearningCode?: string,
+) {
   const items = (materials ?? []).filter((material) => material.name.trim());
-  if (items.length === 0) return { text: "", html: "" };
+  if (items.length === 0 && !elearningCode) return { text: "", html: "" };
   const heading = t("notifications.courseMaterials.heading");
+  const codeLine = elearningCode
+    ? t("notifications.courseMaterials.code", { code: elearningCode })
+    : null;
   const textLines = items.map((material) => {
     const link = material.url && isLearningMaterialLink(material.url) ? material.url : null;
     return [
@@ -753,11 +762,14 @@ function materialsSection(t: DiverTranslator, materials: CourseLearningMaterial[
       : "";
     return `<li style="margin-bottom: 6px;">${name}${note}</li>`;
   });
+  const codeHtml = codeLine
+    ? `<p style="margin: 8px 0 0;"><strong>${escapeHtml(codeLine)}</strong></p>`
+    : "";
   return {
-    text: `\n\n${heading}\n${textLines.join("\n")}\n`,
+    text: `\n\n${heading}\n${codeLine ? `${codeLine}\n` : ""}${textLines.join("\n")}\n`,
     html: emailPanel(
       escapeHtml(heading),
-      `<ul style="margin-top: 8px; padding-left: 20px; margin-bottom: 0;">${htmlItems.join("")}</ul>`,
+      `${codeHtml}<ul style="margin-top: 8px; padding-left: 20px; margin-bottom: 0;">${htmlItems.join("")}</ul>`,
     ),
   };
 }
@@ -842,7 +854,7 @@ export function bookingConfirmationEmail(input: BookingConfirmationEmailInput): 
   const dockNoteHtml = t("notifications.bookingConfirmation.dockNote", { dock, shopName: shop });
   // A course's learning materials, above the packing list: the eLearning is
   // the one thing on this page with a deadline weeks before the boat.
-  const materials = materialsSection(t, input.learningMaterials);
+  const materials = materialsSection(t, input.learningMaterials, input.elearningCode);
   const waiver = waiverStep(t, input);
   const where = meetingPointSection(t, input.meetingPoint);
   // The terms the diver agreed to, under the time (ux review 2026-10-11, item

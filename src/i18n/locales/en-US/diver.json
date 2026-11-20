@@ -986,6 +986,7 @@
       "wrongTypeSuffix": ": use a JPG, PNG, WebP, or HEIC photo.",
       "tooBigSuffix": ": that’s over {maxMb} MB. Try a smaller photo."
     },
+    "elearningCode": "Your eLearning code",
     "materialsAccess": "Ask the shop about access",
     "courseStartLine": "Your course starts at {time}.",
     "estimatedOwnRental": "Your estimated rental: {amount}.",
@@ -4512,6 +4513,7 @@
       "flySafeAskCrew": "Ask the crew how long to wait before flying."
     },
     "courseMaterials": {
+      "code": "Your eLearning code: {code}",
       "heading": "Before your first day"
     },
     "tripRecap": {

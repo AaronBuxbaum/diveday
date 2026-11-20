@@ -450,6 +450,10 @@ const NOTICE_KEYS: Record<
   // 20261008-course-learning-materials), and the same LMS boundary as above.
   "materials-saved": { form: "roster", tone: "success", key: "trips.notices.materialsSaved" },
   // One outline step of a student's course ticked or taken back (ADR 20261120-course-session-progress).
+  // An eLearning code handed to a student or taken back (ADR 20261120-course-elearning-codes).
+  "code-given": { form: "roster", tone: "success", key: "trips.notices.elearningCodeGiven" },
+  "code-released": { form: "roster", tone: "success", key: "trips.notices.elearningCodeReleased" },
+  "code-none-left": { form: "roster", tone: "warning", key: "trips.notices.elearningCodeNoneLeft" },
   "progress-saved": { form: "roster", tone: "success", key: "trips.notices.progressSaved" },
   // A referral student (loop 5, row 10).
   "referral-saved": { form: "roster", tone: "success", key: "trips.notices.referralSaved" },

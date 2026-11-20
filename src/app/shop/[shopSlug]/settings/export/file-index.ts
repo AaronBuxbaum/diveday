@@ -79,6 +79,7 @@ export const EXPORT_PURPOSE_KEYS = {
   "boat_snags.csv": "settings.export.filePurposes.boat_snags",
   "departure_boat_safety_snapshots.csv":
     "settings.export.filePurposes.departure_boat_safety_snapshots",
+  "course_elearning_codes.csv": "settings.export.filePurposes.course_elearning_codes",
   "course_session_progress.csv": "settings.export.filePurposes.course_session_progress",
   "computer_import_batches.csv": "settings.export.filePurposes.computer_import_batches",
   "computer_dives.csv": "settings.export.filePurposes.computer_dives",

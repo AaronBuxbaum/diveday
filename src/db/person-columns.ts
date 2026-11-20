@@ -235,6 +235,13 @@ const rows = [
     export: "own",
   },
   {
+    table: "course_elearning_codes",
+    column: "assigned_by_person_id",
+    kind: "actor",
+    merge: "leave",
+    why: "which staffer handed the code to a student",
+  },
+  {
     table: "course_session_progress",
     column: "person_id",
     kind: "subject",

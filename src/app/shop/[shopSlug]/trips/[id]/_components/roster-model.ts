@@ -113,6 +113,14 @@ export type RosterTrip = {
   courseHasMaterials?: boolean;
   /** The course outline's step titles, in order: what a student can be ticked through. */
   courseSteps?: readonly string[];
+  /** The course's eLearning codes (ADR 20261120-course-elearning-codes): each seat's, and how many are left. */
+  elearningCodes?: {
+    byBooking: ReadonlyMap<string, string>;
+    left: number;
+    handedOut: number;
+  } | null;
+  /** The course sells eLearning, so a seat is offered a code before any are stocked. */
+  courseSellsElearning?: boolean;
   /**
    * The session has not yet ended, so a student with materials still to do
    * wears the "Materials not done" capsule. After the last day it is history.
@@ -288,6 +296,8 @@ export type RosterActions = {
   setCourseMaterialsDoneAction?: (formData: FormData) => void;
   /** Tick one outline step of a student's course done, or take it back. Course sessions with an outline only. */
   setCourseStepDoneAction?: (formData: FormData) => void;
+  /** Hand a student an eLearning code, or take theirs back into stock. */
+  setElearningCodeAction?: (formData: FormData) => void;
   referralStudentAction?: (formData: FormData) => void; // loop 5, row 10: course rosters only
   /** Tick the materials from PADI's own eLearning page (H-20261008-padi-elearning-check); beside the tick above. */
   elearningCheckAction?: (
