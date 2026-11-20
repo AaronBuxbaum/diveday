@@ -523,7 +523,7 @@ for (const scheme of ["light", "dark"] as const) {
           .first()
           .click();
         await page.getByLabel("New date").fill(daysFromNow(7));
-        await page.getByLabel("New departure time (America/New_York)").fill("11:30");
+        await page.getByLabel(/^New departure time/).fill("11:30");
         // One alert per person, because two clashing crew are two facts — and
         // the muted list is still under them, which is the stack worth a
         // baseline.
