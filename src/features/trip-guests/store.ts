@@ -171,6 +171,37 @@ function seatedPersonIdsOf(roster: readonly { booking: { personId: string; statu
   );
 }
 
+/**
+ * Keep the three staff-note entry points one system: a diver-record note is
+ * visible on Guests for the same booking, just as it is on Manifest. It is
+ * edited on the diver record, the canonical scope, so this roster does not
+ * offer a delete action that would silently do nothing.
+ */
+function notesByBookingOf(
+  bookingNotes: Awaited<ReturnType<typeof listBookingNotes>>,
+  diverNotes: Awaited<ReturnType<typeof listDiverNotesForTrip>>,
+) {
+  const notesByBooking = new Map<
+    string,
+    Array<(typeof bookingNotes)[number] & { deletable?: boolean }>
+  >();
+  for (const row of bookingNotes) {
+    if (!row.note.bookingId) continue;
+    const rows = notesByBooking.get(row.note.bookingId) ?? [];
+    rows.push({ ...row, deletable: true });
+    notesByBooking.set(row.note.bookingId, rows);
+  }
+  for (const row of diverNotes) {
+    const rows = notesByBooking.get(row.bookingId) ?? [];
+    rows.push({ note: row.note, authorName: row.authorName, deletable: false });
+    notesByBooking.set(row.bookingId, rows);
+  }
+  for (const rows of notesByBooking.values()) {
+    rows.sort((left, right) => left.note.createdAt.getTime() - right.note.createdAt.getTime());
+  }
+  return notesByBooking;
+}
+
 export async function getTripGuests(
   db: AppDb,
   shop: TripGuestsShop,
@@ -440,28 +471,7 @@ export async function getTripGuests(
     if (dives) packageDivesByBooking.set(booking.id, dives);
   }
 
-  // Keep the three staff-note entry points one system: a diver-record note is
-  // visible on Guests for the same booking, just as it is on Manifest. It is
-  // edited on the diver record, the canonical scope, so this roster does not
-  // offer a delete action that would silently do nothing.
-  const notesByBooking = new Map<
-    string,
-    Array<(typeof bookingNotes)[number] & { deletable?: boolean }>
-  >();
-  for (const row of bookingNotes) {
-    if (!row.note.bookingId) continue;
-    const rows = notesByBooking.get(row.note.bookingId) ?? [];
-    rows.push({ ...row, deletable: true });
-    notesByBooking.set(row.note.bookingId, rows);
-  }
-  for (const row of diverNotes) {
-    const rows = notesByBooking.get(row.bookingId) ?? [];
-    rows.push({ note: row.note, authorName: row.authorName, deletable: false });
-    notesByBooking.set(row.bookingId, rows);
-  }
-  for (const rows of notesByBooking.values()) {
-    rows.sort((left, right) => left.note.createdAt.getTime() - right.note.createdAt.getTime());
-  }
+  const notesByBooking = notesByBookingOf(bookingNotes, diverNotes);
 
   const { courseTarget, recipients: lastMinuteRecipients } = lastMinuteRecipientsOf({
     trip,
