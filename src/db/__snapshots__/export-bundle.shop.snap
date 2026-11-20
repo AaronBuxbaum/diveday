@@ -71,6 +71,7 @@ pre_departure_checklist_items.csv 5 rows 9ebc19091895953a [id,label,sort_order,d
 pre_departure_check_events.csv 260 rows 7842830c0621368b [id,trip_id,checklist_item_id,checklist_item_label,status,source,client_event_id,note,recorded_by_person_id,recorded_by_name,occurred_at,created_at]
 roll_call_deck_counts.csv 0 rows 3f00c4b747eda4f3 [id,trip_id,checkpoint,counted,recorded_by_person_id,recorded_by_name,recorded_at]
 boat_snags.csv 0 rows 06ec9548988823e4 [id,boat_id,boat_name,checklist_item_id,checklist_item_label,note,noted_on_trip_id,noted_by_person_id,noted_by_name,noted_at,still_there_on_trip_id,still_there_by_person_id,still_there_by_name,still_there_at,fixed_on_trip_id,fixed_by_person_id,fixed_by_name,fixed_at,created_at,updated_at]
+course_elearning_codes.csv 0 rows 54dfd7d681d88c06 [id,course_id,code,booking_id,assigned_at,assigned_by_person_id,created_at]
 departure_boat_safety_snapshots.csv 1 rows 76851f8a7997211b [id,trip_id,boat_id,boat_name,judged_on,departure_starts_at,papers,radio,notices,captured_at]
 prior_visits.csv 3 rows 2b5449b25f88920f [id,person_id,person_name,visited_on,title,status_label,amount_label,source_label,source_reference,imported_at]
 trip_credit_entries.csv 0 rows 429265b9830358ca [id,person_id,kind,amount_cents,currency,reason,booking_id,restores_entry_id,actor_person_id,occurred_at]

@@ -128,6 +128,8 @@ export const ERASURE_KEEPS: Record<string, string> = {
   gear_service_events: "a technician's record of servicing a unit",
   boat_snags:
     "a crew member's note about a problem on a boat, and who later found it still there or fixed",
+  course_elearning_codes:
+    "the shop's own ledger of codes it bought, kept as spent when the student holding one is erased",
   trip_stage_events: "the crew moving a departure through its stages",
   dive_not_made_events: "the crew recording a planned dive not made, and undoing it",
   safety_drills: "a drill the shop held, for its insurer",

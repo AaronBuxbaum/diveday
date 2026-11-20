@@ -171,14 +171,14 @@ export const EXPORT_FILE_NOTES = {
     "Every head count a crew typed in from the deck at a roll-call checkpoint, crew included, oldest first, with who entered it and when. The newest row per departure and checkpoint is the count the manifest compared with the people marked aboard. Informs only: a count never closed, opened or gated a checkpoint.",
   "boat_snags.csv":
     "Problems a crew wrote against a checklist line on one boat (a snag), oldest first, each carried to that boat's next departures until somebody marked it fixed. still_there_* is the newest crew who looked and found it still there; fixed_* closes it for good. Informs only: an open snag never stopped a departure.",
+  "course_elearning_codes.csv":
+    "The eLearning codes the shop pasted in for each course, and the enrollment each was handed to, with when and by whom (blank when the confirmation did it). The shop's own ledger of what it bought from its agency: a handed-out code is never evidence the student finished the theory.",
   "departure_boat_safety_snapshots.csv":
     "The boat's papers and kit as they stood at each departure's roll call, one row per departure, for the departure log: papers is the certificate limits and paper dates verbatim (JSON), notices the codes DiveDay raised about them on the departure's own day (judged_on, JSON). departure_starts_at is the saved scheduled departure instant; an unsailed reschedule can rebind it. Known-unsailed records may refresh on a departure count or hull change. A kept sailed record or one with unknown departure-time provenance is never rewritten. Informs only: nothing here ever stopped a departure.",
   "prior_visits.csv":
     "Visit history carried in from the shop's previous system when its divers were imported — one row per booking that system held, never a DiveDay trip. status_label and amount_label are that system's own words and figures, kept verbatim and never normalized: a row can say canceled or no-show, so these are booking records, not evidence of a dive. amount_label is display text with no currency column and was never summed into any DiveDay total. Nothing here was ever read by boarding, capacity, or reporting.",
   "trip_credit_entries.csv":
     "Promotional trip credit grants, fare redemptions, and restorations. Amounts are native-currency value, not cash collected or refunded. Identity merges can repoint the beneficiary; economic entries remain unchanged.",
-  "course_elearning_codes.csv":
-    "The eLearning codes the shop pasted in for each course, and the enrollment each was handed to, with when and by whom (blank when the confirmation did it). The shop's own ledger of what it bought from its agency: a handed-out code is never evidence the student finished the theory.",
   "course_session_progress.csv":
     "Which sessions of a course each student has been ticked through, one row per student and outline step, with who ticked it and when. The shop's own word: never agency evidence, and nothing in admission, readiness, boarding, or Certify reads it.",
   "computer_import_batches.csv":

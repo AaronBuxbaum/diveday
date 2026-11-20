@@ -130,8 +130,7 @@ export async function issueCourseCode(
           isNull(courseElearningCodes.bookingId),
         ),
       )
-      // diveday:allow-time-id-order: the oldest code goes first; no one is shown this order.
-      .orderBy(asc(courseElearningCodes.createdAt), asc(courseElearningCodes.id))
+      .orderBy(asc(courseElearningCodes.createdAt), asc(courseElearningCodes.code))
       .limit(1);
     if (!next) return { ok: false, reason: "none_left" };
     const [taken] = await db
