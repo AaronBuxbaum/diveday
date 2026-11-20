@@ -197,6 +197,16 @@ describe("at Check-in", () => {
     expect(list.fine).toEqual(["b"]);
   });
 
+  it("keeps an open help request on a guest who is here, with the crew choice as its remedy", () => {
+    const list = fixListOf([guest("a", { checkedIn: true, advisories: ["help_requested"] })], {
+      mode: "checkin",
+    });
+    expect(list.worthAMinute).toEqual([
+      { guestId: "a", reasons: ["help_requested"], remedy: "arrange_help" },
+    ]);
+    expect(list.blocking).toEqual([]);
+  });
+
   it("sets released guests apart and never in a fix", () => {
     const list = fixListOf(
       [

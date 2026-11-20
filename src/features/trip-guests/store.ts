@@ -55,8 +55,8 @@ import {
   orderLastMinuteRecipients,
 } from "../../lib/interests";
 import { unionRequirements } from "../../lib/requirement";
-
 import { toDateInputValue, utcToWallTime } from "../../lib/zoned";
+import { fixListFacts } from "./fix-list-facts";
 
 /**
  * Everything the trip's Guests page is about, in one call — the last of the
@@ -298,6 +298,7 @@ export async function getTripGuests(
     trainingMarks,
     specialtiesByPerson,
     textableBookings,
+    fixListFactsRead,
   ] = await Promise.all([
     inviteDatesForCandidates(db, shop.id, diverCandidates),
     // What "Different person" on a held seat can offer to move along with it:
@@ -422,6 +423,13 @@ export async function getTripGuests(
       dealRequirement,
     ),
     textableSeats(db, shop.id, roster.map(textReachOf)),
+    fixListFacts(
+      db,
+      shop.id,
+      tripId,
+      trip.startsAt,
+      roster.map(({ booking }) => booking.id),
+    ),
   ]);
 
   const heldSeatLastDiveDay = lastDiveDayBySeat(heldSeats, heldLastDiveDays);
@@ -527,6 +535,7 @@ export async function getTripGuests(
     /** Per seat, the Paid mark's money and what the seat still owes (`getTripRosterWithPaymentMarks`). */
     paymentMarksByBooking,
     textableBookings,
+    ...fixListFactsRead,
     /**
      * A split on this departure must take a date of birth: it is a course
      * with a minimum age, which reads the new record's date (issue #2081). A

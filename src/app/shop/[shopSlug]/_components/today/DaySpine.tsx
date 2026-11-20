@@ -51,6 +51,7 @@ import { DayStation } from "./DayStation";
 import { HelpRequestSection, helpRequestControl } from "./help-request-row";
 import { NeedsYouQueue } from "./NeedsYouGroups";
 import { PaymentActionControl, type PaymentActionCopy } from "./PaymentActionControl";
+import { paymentActionCopy } from "./payment-action-copy";
 import { RentalFitKeepControl } from "./RentalFitKeepControl";
 import {
   ResendConfirmationControl,
@@ -557,24 +558,6 @@ function Stations({
  * inferred from a null, because the two halves come from two readers and the
  * compiler is the only thing that can promise they never render twice.
  */
-/** The words for the Today queue's payment control (copy link, resend invoice). */
-function paymentActionCopy(t: StaffTranslator): PaymentActionCopy {
-  return {
-    copyLink: t("today.paymentAction.copyLink"),
-    linkCopied: t("today.paymentAction.linkCopied"),
-    copyFailed: t("today.paymentAction.copyFailed"),
-    resendInvoice: t("today.paymentAction.resendInvoice"),
-    resending: t("today.paymentAction.resending"),
-    invoiceResent: t("today.paymentAction.invoiceResent"),
-    errors: {
-      notFound: t("today.paymentAction.errors.notFound"),
-      notOpen: t("today.paymentAction.errors.notOpen"),
-      notConfigured: t("today.paymentAction.errors.notConfigured"),
-      failed: t("today.paymentAction.errors.failed"),
-      rateLimited: t("shared.limits.sendLimit", { thing: "invoices" }),
-    },
-  };
-}
 
 /**
  * Everything the evening reading needs, read once by the page and handed down
