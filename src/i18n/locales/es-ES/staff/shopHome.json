@@ -192,6 +192,14 @@
   },
   "quietAddDeparture": "Agregar una salida",
   "quietNextDepartureLabel": "Próxima salida",
+  "quietTip": {
+    "0": "Pregunta a cada buzo qué fue lo mejor que vio hoy. Las respuestas te dicen qué señalar en la siguiente inmersión.",
+    "1": "Dile a un buzo algo que notaste de su inmersión, como su flotabilidad o lo tranquilo que estuvo. La gente recuerda que la hayan notado.",
+    "2": "En el intervalo de superficie, pregunta quién vuelve a bucear mañana. Es la forma más fácil de llenar un barco.",
+    "3": "Explica el plan de la siguiente inmersión una vez y pide a un buzo que lo repita.",
+    "4": "Pregunta quién tiene un viaje próximo. A los buzos les gusta contar adónde van después.",
+    "5": "Aprende un nombre que no sabías esta mañana."
+  },
   "arrivals": {
     "label": "Buscar a un buceador que llega",
     "placeholder": "Nombre, teléfono, correo o ID de reserva",

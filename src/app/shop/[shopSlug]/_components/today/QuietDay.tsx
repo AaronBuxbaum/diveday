@@ -2,11 +2,23 @@ import Link from "next/link";
 import { buttonClass } from "@/components/ui/button";
 import { LedgerRow } from "@/components/ui/ledger";
 import type { StaffTranslator } from "@/i18n/staff-messages";
+import { calendarDateInTimezone } from "@/lib/calendar-date";
+import { nowDate } from "@/lib/clock";
 import type { DayLoadOut } from "@/lib/closeout-kinds";
 import { formatShortDate, formatTime } from "@/lib/format";
+import { quietDayTipIndex } from "@/lib/quiet-day-tip";
 import { QuietDaySuggestions } from "./QuietDaySuggestions";
 import { QuietDayThinBoats } from "./QuietDayThinBoats";
 import { TomorrowFromTonight } from "./TomorrowFromTonight";
+
+const QUIET_TIPS = [
+  "shopHome.quietTip.0",
+  "shopHome.quietTip.1",
+  "shopHome.quietTip.2",
+  "shopHome.quietTip.3",
+  "shopHome.quietTip.4",
+  "shopHome.quietTip.5",
+] as const;
 
 /**
  * **The quiet day** (`spineIsQuiet`): the home collapsed to the boats that
@@ -83,6 +95,13 @@ export function QuietDay({
         </ul>
       ) : null}
       {loadOut ? <TomorrowFromTonight loadOut={loadOut} shopSlug={shopSlug} t={t} /> : null}
+      {/* After the work, never before it: one line for the dock, by the shop's own day (issue #4263). */}
+      <p className="text-sm text-muted">
+        {t(
+          QUIET_TIPS[quietDayTipIndex(calendarDateInTimezone(nowDate(), timeZone))] ??
+            QUIET_TIPS[0],
+        )}
+      </p>
     </div>
   );
 }
