@@ -60,6 +60,7 @@
     "crew": "Crew",
     "price": "Price",
     "seats": "Seats",
+    "certificateSeats": "Boat certificate: {count, plural, one {# passenger} other {# passengers}}",
     "nameAndDescription": "Name and description",
     "view": "View",
     "thisTrip": "This trip",
@@ -1347,6 +1348,7 @@
     "setRequirements": "Set requirements",
     "openTrip": "Open trip",
     "openGear": "Gear",
+    "openOrders": "Orders",
     "facts": {
       "card": "Card",
       "waiver": "Waiver",

@@ -60,6 +60,7 @@
     "crew": "Tripulación",
     "price": "Precio",
     "seats": "Plazas",
+    "certificateSeats": "Certificado del barco: {count, plural, one {# pasajero} other {# pasajeros}}",
     "nameAndDescription": "Nombre y descripción",
     "view": "Ver",
     "thisTrip": "Esta salida",
@@ -1347,6 +1348,7 @@
     "setRequirements": "Fijar requisitos",
     "openTrip": "Abrir salida",
     "openGear": "Equipo",
+    "openOrders": "Pedidos",
     "facts": {
       "card": "Tarjeta",
       "waiver": "Exención",

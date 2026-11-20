@@ -75,4 +75,26 @@ describe("tripFixes", () => {
     expect(fixes[0]).toMatchObject({ tone: "warning" });
     expect(fixes[0]?.action.href).toContain("/prep#");
   });
+
+  it("lists this departure's open orders in Filling and Getting ready, opening them (#4685)", () => {
+    const owing = overview({
+      pulse: { blocked: 0, boarded: 0, work: { ...noWork, openOrders: 2 } } as never,
+    });
+    for (const phase of ["filling", "ready"] as const) {
+      const fixes = tripFixes(owing, { ...page, phase });
+      expect(fixes).toEqual([
+        {
+          key: "orders",
+          text: t("shared.boatWork.openOrders", { count: 2 }),
+          tone: "warning",
+          action: {
+            href: "/shop/blue-mantis/orders?tripId=trip-1&status=open&range=all",
+            label: t("trips.fixList.openOrders"),
+          },
+        },
+      ]);
+    }
+    expect(tripFixes(owing, { ...page, phase: "checkin" })).toEqual([]);
+    expect(tripFixes(owing, { ...page, phase: "listed" })).toEqual([]);
+  });
 });
