@@ -42,6 +42,10 @@ vi.mock("@/db/shop-text-translations", () => ({
   readTranslations: vi.fn(async () => new Map()),
   recordTranslation: vi.fn(async () => "saved"),
 }));
+vi.mock("@/db/course-codes", () => ({
+  recordCourseCodes: vi.fn(async () => ({ ok: true })),
+  cancelUnusedCourseCodes: vi.fn(async () => ({ removed: 0 })),
+}));
 vi.mock("@/db/course-forms", () => ({
   courseFormListRefusal: vi.fn(async () => null),
   listCourseFormRequirements: vi.fn(async () => []),
@@ -63,6 +67,7 @@ const { canPersonEditCourseTemplates } = await import("@/db/authz");
 const { queueAndAttemptMediaDeletion } = await import("@/db/media-deletions");
 const { storeCourseImage } = await import("@/lib/storage");
 const { courseFormListRefusal, setCourseFormRequirements } = await import("@/db/course-forms");
+const { recordCourseCodes, cancelUnusedCourseCodes } = await import("@/db/course-codes");
 const { pullCourseTemplateUpdatesAction, saveCourseContentAction, setCourseVisibilityAction } =
   await import("./actions");
 
@@ -374,6 +379,42 @@ describe("saveCourseContentAction, with the gear the fee includes", () => {
   it("saves none when gear included is unticked, whatever its hidden boxes still hold", async () => {
     await savedTo(coursePage([["includedRentalKind", "bcd"]]));
     expect(includedSaved()).toEqual([]);
+  });
+});
+
+/** **The eLearning codes pasted with a save** (ADR 20261120-course-elearning-codes). */
+describe("saveCourseContentAction, with eLearning codes pasted", () => {
+  it("adds the pasted codes to the course's stock once the page saves", async () => {
+    await savedTo(coursePage([["newElearningCodes", "AAA1\nBBB2"]]));
+    expect(vi.mocked(recordCourseCodes).mock.calls[0]?.[1]).toMatchObject({
+      courseId: COURSE_ID,
+      text: "AAA1\nBBB2",
+    });
+  });
+
+  it("removes the unused codes first when asked, then adds the paste", async () => {
+    await savedTo(
+      coursePage([
+        ["removeUnusedElearningCodes", "true"],
+        ["newElearningCodes", "CCC3"],
+      ]),
+    );
+    expect(cancelUnusedCourseCodes).toHaveBeenCalledOnce();
+    expect(recordCourseCodes).toHaveBeenCalledOnce();
+  });
+
+  it("adds nothing when the box is empty or the page did not draw it", async () => {
+    await savedTo(coursePage([["newElearningCodes", "  \n "]]));
+    await savedTo(coursePage());
+    expect(recordCourseCodes).not.toHaveBeenCalled();
+  });
+
+  it("refuses a paste with a code no agency issues, and writes nothing", async () => {
+    const target = await savedTo(coursePage([["newElearningCodes", "x".repeat(65)]]));
+    expect(target).toContain("error=codes-too-long");
+    expect(target).toContain("field=newElearningCodes");
+    expect(editCourseContent).not.toHaveBeenCalled();
+    expect(recordCourseCodes).not.toHaveBeenCalled();
   });
 });
 

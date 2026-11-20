@@ -6,6 +6,7 @@ import {
   setCourseStepDoneAction,
 } from "../course-actions";
 import { elearningCheckAction } from "../elearning-actions";
+import { setElearningCodeAction } from "../elearning-code-actions";
 import { referralStudentAction } from "../referral-actions";
 import { clearTrainingDiveAction, markTrainingDiveAction } from "../training-mark-actions";
 
@@ -27,6 +28,7 @@ export function courseRosterActions(isCourseSession: boolean, shopSlug: string, 
     markCardProcessedAction: markCardProcessedAction.bind(null, shopSlug, tripId),
     setCourseMaterialsDoneAction: setCourseMaterialsDoneAction.bind(null, shopSlug, tripId),
     setCourseStepDoneAction: setCourseStepDoneAction.bind(null, shopSlug, tripId),
+    setElearningCodeAction: setElearningCodeAction.bind(null, shopSlug, tripId),
     elearningCheckAction: elearningCheckAction.bind(null, shopSlug, tripId),
     // A referral student and the papers the desk collects (loop 5, row 10).
     referralStudentAction: referralStudentAction.bind(null, shopSlug, tripId),
@@ -51,4 +53,22 @@ export function trainingMarkRosterActions(
     markTrainingDiveAction: markTrainingDiveAction.bind(null, shopSlug, tripId),
     clearTrainingDiveAction: clearTrainingDiveAction.bind(null, shopSlug, tripId),
   };
+}
+
+/**
+ * The eLearning code action, once the course sells eLearning or the shop has pasted codes in (ADR
+ * 20261120-course-elearning-codes); a course with neither has nothing to hand out.
+ */
+export function elearningCodesOffered<Action>(
+  guests: {
+    elearningCodes: { left: number; handedOut: number } | null;
+    courseSellsElearning: boolean;
+  },
+  actions: { setElearningCodeAction?: Action },
+): Action | undefined {
+  const stock = guests.elearningCodes;
+  if (!stock) return undefined;
+  return guests.courseSellsElearning || stock.left + stock.handedOut > 0
+    ? actions.setElearningCodeAction
+    : undefined;
 }

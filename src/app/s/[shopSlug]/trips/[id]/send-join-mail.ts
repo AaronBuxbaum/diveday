@@ -1,6 +1,7 @@
 import { issueBookingCapability } from "@/db/booking-capabilities";
 import { getBookingForTrip } from "@/db/bookings";
 import type { AppDb } from "@/db/client";
+import { codeForConfirmation } from "@/db/course-codes";
 import { withErasureCoordinatedBookingSend } from "@/db/erasure-coordinated-send";
 import { sendAndRecordNotification } from "@/db/notifications";
 import { getTripWithBooked } from "@/db/trips";
@@ -79,9 +80,19 @@ export async function sendJoinMail(
           if (publicAppUrl() && !readiness) return null;
           // No readiness link, no Sign step: it is that link's own page.
           const waiver = readiness ? await openJoinSignStep(tx, shop.id, primaryBookingId) : null;
+          // The eLearning code goes out with the confirmation (ADR
+          // 20261120-course-elearning-codes): the lead's seat, once.
+          const elearningCode = freshTrip.course
+            ? await codeForConfirmation(tx, {
+                shopId: shop.id,
+                bookingId: primaryBookingId,
+                sellsElearning: (freshTrip.course.eLearningPriceCents ?? 0) > 0,
+              })
+            : null;
           const delivery = await sendAndRecordNotification(
             tx,
             bookSpotConfirmation({
+              elearningCode,
               shop,
               trip: freshTrip,
               confirmed: freshLead,
@@ -171,6 +182,8 @@ function bookSpotConfirmation(input: {
   waiverUrl: string | undefined;
   chargesOnline: boolean;
   otherSeatTypes: readonly ParticipantType[];
+  /** The code the shop handed this seat, when the course has one to give. */
+  elearningCode: string | null;
 }): Notification {
   const { shop, trip, confirmed } = input;
   return {
@@ -197,6 +210,7 @@ function bookSpotConfirmation(input: {
     learningMaterials: trip.course
       ? readLearningMaterials(trip.course.learningMaterials)
       : undefined,
+    ...(input.elearningCode ? { elearningCode: input.elearningCode } : {}),
     ...confirmationExtras({
       shop,
       trip,

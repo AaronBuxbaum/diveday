@@ -60,6 +60,7 @@ import { issueBookingCapability } from "./booking-capabilities";
 import { fareCheckout } from "./checkout-purpose";
 import { settledPartyPayment } from "./checkouts";
 import type { AppDb, DbExecutor } from "./client";
+import { codeForConfirmation } from "./course-codes";
 import { findCourtesyEmailRecipientByAddress } from "./courtesy-email";
 import {
   withErasureCoordinatedBookingSend,
@@ -2211,7 +2212,16 @@ async function sendStoredBookingConfirmation(
       const [row] = await loadRows(tx);
       if (!row?.person.email) return null;
       const learningMaterials = readLearningMaterials(row.course?.learningMaterials);
-      if (options.onlyWithMaterials && learningMaterials.length === 0) return null;
+      const elearningCode = row.course
+        ? await codeForConfirmation(tx, {
+            shopId,
+            bookingId: row.booking.id,
+            sellsElearning: (row.course.eLearningPriceCents ?? 0) > 0,
+          })
+        : null;
+      if (options.onlyWithMaterials && learningMaterials.length === 0 && !elearningCode) {
+        return null;
+      }
       const origin = publicAppUrl();
       // A Sign step opened for someone else's seat, or another departure, is
       // never this mail's: the readiness link below opens only this seat.
@@ -2262,6 +2272,7 @@ async function sendStoredBookingConfirmation(
             }
           : {}),
         ...(learningMaterials.length > 0 ? { learningMaterials } : {}),
+        ...(elearningCode ? { elearningCode } : {}),
         // The same where, calendar, money and window the booking-time send
         // carried (ux review 2026-10-11, items 4 and 5). Online when a card
         // checkout took this seat's money; otherwise it is owed at the shop.

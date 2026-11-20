@@ -3,6 +3,7 @@ import { DIVER_LOCALES, type DiverLocale, isDiverLocale, toDiverLocale } from "@
 import { isValidCalendarDate } from "@/lib/calendar-date";
 import { CERTIFICATION_AGENCIES } from "@/lib/certification-options";
 import { ALERTING_LEVELS, CEILING_UNITS, COST_PROVIDERS } from "@/lib/cost-guardrails";
+import { MAX_ELEARNING_CODE_LENGTH } from "@/lib/course-codes";
 import { COURSE_INQUIRY_EXPERIENCE } from "@/lib/course-inquiry";
 import {
   isLearningMaterialLink,
@@ -209,6 +210,11 @@ const bookingConfirmationSchema = z.object({
   packingList: z.array(z.string().trim().min(1).max(100)).max(12).optional(),
   packingLogbook: z.boolean().optional(),
   learningMaterials: learningMaterialsSchema,
+  /**
+   * The eLearning code the shop handed this student (ADR 20261120-course-elearning-codes). A secret
+   * of the shop: it rides this one message to its one student and is never logged.
+   */
+  elearningCode: z.string().trim().min(1).max(MAX_ELEARNING_CODE_LENGTH).optional(),
   meetingPoint: meetingPointSchema.optional(),
   /**
    * The departure's public `.ics` (`publicTripCalendarPath`): a page anybody

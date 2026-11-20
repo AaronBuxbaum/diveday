@@ -1,4 +1,5 @@
 import type { StaffTranslator } from "@/i18n/staff-messages";
+import { MAX_ELEARNING_CODE_LENGTH, MAX_ELEARNING_CODES_PER_PASTE } from "@/lib/course-codes";
 import { MAX_NEW_GALLERY_IMAGES_PER_SUBMISSION } from "@/lib/storage/limits";
 
 /**
@@ -31,6 +32,8 @@ export function courseEditNotices(t: StaffTranslator) {
     // is not https (ADR 20261008-course-learning-materials).
     "materials-incomplete": t("courses.edit.errorMaterialsIncomplete"),
     "materials-link": t("courses.edit.errorMaterialsLink"),
+    "codes-too-many": t("courses.edit.errorCodesTooMany", { max: MAX_ELEARNING_CODES_PER_PASTE }),
+    "codes-too-long": t("courses.edit.errorCodesTooLong", { max: MAX_ELEARNING_CODE_LENGTH }),
     images: t("courses.edit.errorImages"),
     upload: t("courses.edit.errorUpload"),
     "too-many-photos": t("courses.edit.errorTooManyPhotos", {
@@ -58,6 +61,7 @@ const FIELD_SECTION: Readonly<Record<string, string>> = {
   faqsJson: "faq",
   includes: "fee-covers",
   excludes: "fee-covers",
+  newElearningCodes: "elearning-codes",
 };
 
 export function refusedSectionId(error?: string, field?: string): string | undefined {

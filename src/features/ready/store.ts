@@ -1,4 +1,5 @@
 import { and, eq, isNull, sql } from "drizzle-orm";
+import { courseCodesByBooking } from "@/db/course-codes";
 import { type CarriedPreparation, carriedPreparation } from "@/features/carried-preparation";
 import { courseMaterialsDoneByPerson } from "@/features/course-materials";
 import { firstActiveIntroCourse, hasActiveRefresherCourse } from "@/features/courses";
@@ -550,6 +551,8 @@ export type ReadyPageData = {
    * so only `https:` links reach the page. Empty on a fun dive.
    */
   learningMaterials: CourseLearningMaterial[];
+  /** The code the shop handed this student for the course's eLearning, or null. */
+  elearningCode: string | null;
   /**
    * Someone marked this student's materials done, on this departure or another
    * of the same course (`courseMaterialsDoneByPerson`).
@@ -664,6 +667,7 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
     welcomeInputs,
     fitConfirmation,
     pendingMoveAsk,
+    elearningCode,
   ] = await Promise.all([
     getTripWithBookedOnce(db, row.shopId, row.tripId),
     reEntryOffersOpen ? hasActiveRefresherCourse(db, row.shopId) : false,
@@ -704,6 +708,13 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
     row.identityUnconfirmedAt === null
       ? getPendingMoveAsk(db, row.shopId, bookingId, row.tripId)
       : null,
+    // The eLearning code the shop handed this student, shown with the course
+    // materials (ADR 20261120-course-elearning-codes): this one seat, in the same wave.
+    row.tripCourseId !== null
+      ? courseCodesByBooking(db, { shopId: row.shopId, bookingIds: [bookingId] }).then(
+          (codes) => codes.get(bookingId) ?? null,
+        )
+      : null,
   ]);
   if (!trip) return null;
   // How many days a course session meets on, for its own day plan
@@ -729,6 +740,7 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
     fitConfirmation,
     materialsDoneElsewhere,
     pendingMoveAsk,
+    elearningCode,
     // Nothing is read off a held seat's matched person, so a held seat holds none.
     holdsCertification: row.identityUnconfirmedAt === null && row.holdsAnyCertification,
     meetingDayCount: row.tripCourseId !== null ? meetingDays.length : 0,
@@ -768,6 +780,7 @@ export async function getReadyPageData(
     fitConfirmation,
     materialsDoneElsewhere,
     pendingMoveAsk,
+    elearningCode,
     holdsCertification,
     meetingDayCount,
     meetingDays,
@@ -971,6 +984,7 @@ export async function getReadyPageData(
     welcomeShared: row.welcomeSharedAt !== null,
     welcomeHello: row.welcomeSharedAt !== null ? row.welcomeHello : null,
     learningMaterials: readLearningMaterials(trip.course?.learningMaterials),
+    elearningCode,
     courseMaterialsDone: row.courseMaterialsDoneAt !== null || materialsDoneElsewhere,
     courseSession: row.tripCourseId !== null,
     courseStarted: trip.startsAt.getTime() <= now.getTime(),

@@ -221,6 +221,7 @@ async function readDepartureCheckRows(tx: AppTransaction, scope: ShopExportScope
     deckCountRows: await readScoped(tx, "rollCallDeckCounts", scope),
     boatSafetySnapshotRows: await readScoped(tx, "departureBoatSafetySnapshots", scope),
     boatSnagRows: await readScoped(tx, "boatSnags", scope),
+    courseElearningCodeRows: await readScoped(tx, "courseElearningCodes", scope),
   };
 }
 
@@ -1482,6 +1483,8 @@ export async function loadShopExportCounts(
     "roll_call_deck_counts.csv": async () =>
       scoped("roll_call_deck_counts.csv", "rollCallDeckCounts"),
     "boat_snags.csv": async () => scoped("boat_snags.csv", "boatSnags"),
+    "course_elearning_codes.csv": async () =>
+      scoped("course_elearning_codes.csv", "courseElearningCodes"),
     "departure_boat_safety_snapshots.csv": async () =>
       scoped("departure_boat_safety_snapshots.csv", "departureBoatSafetySnapshots"),
     "prior_visits.csv": async () => scoped("prior_visits.csv", "priorVisits"),

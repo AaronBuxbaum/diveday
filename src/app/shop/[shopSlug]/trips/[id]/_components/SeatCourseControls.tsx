@@ -5,6 +5,7 @@ import type { ReferralPaper } from "@/features/referral-student";
 import { CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { CertificationLevel } from "@/lib/certification-levels";
+import { ElearningCodeControl } from "./ElearningCodeControl";
 
 /** A referral student's line and its two papers, worded by the row (loop 5, row 10). */
 export type ReferralControls = {
@@ -29,6 +30,8 @@ export function SeatCourseControls({
   setCourseMaterialsDoneAction,
   setCourseStepDoneAction,
   progress = [],
+  setElearningCodeAction,
+  elearningCode = null,
   materialsDoneLine,
   certifyMaterialsNote = null,
   markCardProcessedAction,
@@ -48,6 +51,10 @@ export function SeatCourseControls({
   setCourseStepDoneAction?: (formData: FormData) => void;
   /** The course outline's steps for this student, each with "Nov 5 · Ana" once ticked. */
   progress?: readonly { title: string; doneLine: string | null }[];
+  /** Hand a student an eLearning code, or take it back (ADR 20261120-course-elearning-codes). */
+  setElearningCodeAction?: (formData: FormData) => void;
+  /** The code this seat holds, and how many the course has left. */
+  elearningCode?: { code: string | null; left: number } | null;
   /** "Materials done · Oct 7" once ticked; null while they are not. */
   materialsDoneLine: string | null;
   /**
@@ -141,6 +148,15 @@ export function SeatCourseControls({
             ))}
           </ul>
         </details>
+      ) : null}
+
+      {setElearningCodeAction && elearningCode ? (
+        <ElearningCodeControl
+          action={setElearningCodeAction}
+          bookingId={bookingId}
+          elearningCode={elearningCode}
+          t={t}
+        />
       ) : null}
 
       {/* **A referral student** (loop 5, row 10): theory and pool done with

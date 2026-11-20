@@ -1,3 +1,4 @@
+import { courseCodeCounts, courseCodesByBooking } from "@/db/course-codes";
 import { getTripWithBooked } from "@/db/trips";
 import { listAgencyCheckableCards } from "@/features/agency-check";
 import { type IssuedCard, issuedCardsForTrip } from "@/features/agency-processing";
@@ -396,7 +397,7 @@ export async function getTripGuests(
           around: trip.startsAt,
         })
       : new Map<string, CourseMaterialsDone>(),
-    courseProgressFor(db, shop.id, trip.courseId, roster),
+    courseProgressAndCodes(db, shop.id, trip.course, roster),
     // The cards the DiveDay browser extension could check from this tab
     // (H-20261008-cert-check-extension), and the N of its "Check all N". Never a held seat's: until a
     // staffer confirms who is standing there, the matched diver's name, birth
@@ -654,4 +655,39 @@ function elearningQueries(
     if (query) queries.set(booking.id, query);
   }
   return queries;
+}
+
+/**
+ * A course departure's eLearning codes in one read: the code each seat holds and how many remain
+ * in stock (ADR 20261120-course-elearning-codes). No codes off a course session.
+ */
+async function courseProgressAndCodes(
+  db: AppDb,
+  shopId: string,
+  course: { id: string; eLearningPriceCents: number | null } | null,
+  roster: readonly { booking: { id: string }; person: { id: string } }[],
+) {
+  const [progress, codes] = await Promise.all([
+    courseProgressFor(db, shopId, course?.id ?? null, roster),
+    elearningCodesFor(db, shopId, course, roster),
+  ]);
+  return { ...progress, ...codes };
+}
+
+async function elearningCodesFor(
+  db: AppDb,
+  shopId: string,
+  course: { id: string; eLearningPriceCents: number | null } | null,
+  roster: readonly { booking: { id: string } }[],
+) {
+  if (!course) return { elearningCodes: null, courseSellsElearning: false };
+  const [byBooking, counts] = await Promise.all([
+    courseCodesByBooking(db, { shopId, bookingIds: roster.map(({ booking }) => booking.id) }),
+    courseCodeCounts(db, { shopId, courseId: course.id }),
+  ]);
+  return {
+    elearningCodes: { byBooking, ...counts },
+    /** The course sells eLearning, so each seat is offered a code even before any are pasted in. */
+    courseSellsElearning: (course.eLearningPriceCents ?? 0) > 0,
+  };
 }

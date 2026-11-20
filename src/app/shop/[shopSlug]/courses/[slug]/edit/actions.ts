@@ -5,6 +5,7 @@ import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
 import { canPersonEditCourseTemplates } from "@/db/authz";
 import { getDb } from "@/db/client";
+import { cancelUnusedCourseCodes, recordCourseCodes } from "@/db/course-codes";
 import { queueAndAttemptMediaDeletion } from "@/db/media-deletions";
 import { getShopById } from "@/db/shops";
 import {
@@ -17,6 +18,7 @@ import {
 import { checkbox, formValue, readForm, text, trimmedText } from "@/features/form-parse";
 import { revalidateAndRedirect } from "@/features/navigation";
 import { requireShopSurface, requireStaffSession } from "@/features/session";
+import { parseElearningCodes } from "@/lib/course-codes";
 import { toCoursePersonalGear } from "@/lib/course-personal-gear";
 import {
   COURSE_CONTENT_LIMITS,
@@ -80,6 +82,10 @@ const contentSchemaFor = (currency: string) =>
     // a refusal (AGENTS.md's expand/contract rule). Its absence keeps what the
     // row already holds rather than clearing it — see below.
     learningMaterialsJson: z.string().max(COURSE_CONTENT_LIMITS.learningMaterialsJson).optional(),
+    // The eLearning codes pasted this time (ADR 20261120-course-elearning-codes); absent or blank adds none.
+    newElearningCodes: z.string().max(20_000).optional(),
+    // Remove the unused codes first (a mistaken paste); handed-out codes stay.
+    removeUnusedElearningCodes: z.string().optional(),
     price: moneyFor(currency),
     eLearningPrice: moneyFor(currency),
     privatePrice: moneyFor(currency),
@@ -274,6 +280,15 @@ async function persistCourseContent(input: {
     learningMaterials = materials.materials;
   }
 
+  // The pasted eLearning codes, read before anything is written: a paste with a code no agency
+  // issues, or far more than one order holds, is refused whole and the form keeps what was typed.
+  const pastedCodes = parseElearningCodes(value.newElearningCodes ?? "");
+  if (!pastedCodes.ok) {
+    redirect(
+      `${base}?error=${pastedCodes.reason === "too_many" ? "codes-too-many" : "codes-too-long"}&field=newElearningCodes`,
+    );
+  }
+
   // Depth markers, checked before anything is written.
   //
   // This is the one place shop-editable prose is also a small message format,
@@ -371,6 +386,16 @@ async function persistCourseContent(input: {
   // when the row disappears out from under it.
   if (!saved.ok) notFound();
   progress.landed = true;
+  if (value.removeUnusedElearningCodes === "true") {
+    await cancelUnusedCourseCodes(db, { shopId: staff.user.shopId, courseId: course.id });
+  }
+  if (pastedCodes.codes.length > 0) {
+    await recordCourseCodes(db, {
+      shopId: staff.user.shopId,
+      courseId: course.id,
+      text: pastedCodes.codes.join("\n"),
+    });
+  }
   // Pricing, the nitrox answer and the included gear are the shop's own decisions rather than
   // marketing copy, but the editor saves everything in one submit, so they land
   // together with the page.

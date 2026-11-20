@@ -7,6 +7,7 @@ import {
   jsonb,
   pgTable,
   text,
+  timestamp,
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
@@ -19,6 +20,7 @@ import type {
   CourseScheduleDay,
 } from "@/lib/courses";
 import type { RentableItemKind } from "@/lib/rentals";
+import { bookings } from "./bookings";
 import { appNowTimestamp } from "./columns";
 import { certificationLevel, people, shops } from "./core";
 
@@ -332,6 +334,51 @@ export const courseSessionProgress = pgTable(
     ),
     index("course_session_progress_course_idx").on(t.courseId),
     check("course_session_progress_step_named", sql`length(btrim(${t.stepTitle})) > 0`),
+  ],
+);
+
+/**
+ * **The eLearning codes a shop bought from its agency, and which student holds which** (ADR
+ * 20261120-course-elearning-codes). The shop pastes them in; one is handed to an enrollment by a
+ * staffer or when the confirmation goes out. The shop's own ledger, never agency evidence: no agency
+ * issues codes through an API. A code is a secret of the shop: on the staff roster, the student's
+ * own prep page and confirmation, and in the shop export, and nowhere public or in a log.
+ */
+export const courseElearningCodes = pgTable(
+  "course_elearning_codes",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    courseId: uuid("course_id")
+      .notNull()
+      .references(() => courses.id),
+    code: text("code").notNull(),
+    createdAt: appNowTimestamp("created_at").notNull(),
+    /** The enrollment holding this code; null while it is still in stock. */
+    bookingId: uuid("booking_id").references(() => bookings.id),
+    assignedAt: timestamp("assigned_at", { withTimezone: true }),
+    /** The staffer who handed it out; null when the confirmation did it. */
+    assignedByPersonId: uuid("assigned_by_person_id").references(() => people.id),
+    /** Set when the shop removes an unused code; a handed-out code is never removed. */
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+  },
+  (t) => [
+    uniqueIndex("course_elearning_codes_code_unique")
+      .on(t.shopId, t.courseId, t.code)
+      .where(sql`${t.deletedAt} is null`),
+    uniqueIndex("course_elearning_codes_booking_unique")
+      .on(t.bookingId)
+      .where(sql`${t.bookingId} is not null`),
+    index("course_elearning_codes_stock_idx")
+      .on(t.shopId, t.courseId, t.createdAt)
+      .where(sql`${t.bookingId} is null and ${t.deletedAt} is null`),
+    check("course_elearning_codes_named", sql`length(btrim(${t.code})) > 0`),
+    check(
+      "course_elearning_codes_assigned_pair",
+      sql`(${t.bookingId} is null) = (${t.assignedAt} is null)`,
+    ),
   ],
 );
 
