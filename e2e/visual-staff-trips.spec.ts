@@ -172,7 +172,7 @@ for (const scheme of ["light", "dark"] as const) {
         if (!boatSafety) throw new Error("the fact found no reef departure on a boat");
         await page.goto(`/shop/blue-mantis/trips/${boatSafety.tripId}`);
         await openTripAbout(page);
-        await page.getByText(/^Boat certificate: /).waitFor();
+        await page.getByText(/Certificate: \d+ passengers?/).waitFor();
         await capture(page, "departure-certificate-seats", scheme);
       });
 
