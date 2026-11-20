@@ -658,6 +658,7 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
     refresherCourseOffered,
     introCourse,
     materialsDoneElsewhere,
+    heldElearningCodes,
     rentalFit,
     helpRequest,
     payment,
@@ -683,6 +684,11 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
           around: row.tripStartsAt,
         }).then((done) => done.has(row.personId))
       : false,
+    // The eLearning code the shop handed this student (ADR 20261120-course-elearning-codes);
+    // asked beside the rest so the page waits no extra phase, and only for a course session.
+    row.tripCourseId !== null
+      ? courseCodesByBooking(db, { shopId: row.shopId, bookingIds: [bookingId] })
+      : new Map<string, string>(),
     getRentalFit(db, row.shopId, row.personId),
     getHelpRequestForBooking(db, row.shopId, bookingId, now),
     getBookingPayment(db, row.shopId, bookingId),
@@ -731,6 +737,7 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
     welcomeInputs,
     fitConfirmation,
     materialsDoneElsewhere,
+    heldElearningCodes,
     pendingMoveAsk,
     // Nothing is read off a held seat's matched person, so a held seat holds none.
     holdsCertification: row.identityUnconfirmedAt === null && row.holdsAnyCertification,
@@ -770,6 +777,7 @@ export async function getReadyPageData(
     welcomeInputs,
     fitConfirmation,
     materialsDoneElsewhere,
+    heldElearningCodes,
     pendingMoveAsk,
     holdsCertification,
     meetingDayCount,
@@ -847,12 +855,7 @@ export async function getReadyPageData(
     Boolean(publicAppUrl()) &&
     Boolean(row.personEmail);
 
-  // The eLearning code the shop handed this student, shown with the course materials (ADR
-  // 20261120-course-elearning-codes). Read for this one seat only.
-  const elearningCode =
-    (await courseCodesByBooking(db, { shopId: row.shopId, bookingIds: [bookingId] })).get(
-      bookingId,
-    ) ?? null;
+  const elearningCode = heldElearningCodes.get(bookingId) ?? null;
   return {
     detail,
     shop: {
