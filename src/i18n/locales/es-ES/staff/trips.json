@@ -78,6 +78,11 @@
     "comparableOtherPrice": "{title} del {date} se llenó a otro precio"
   },
   "notices": {
+    "diveNotMade": "Registrada como no realizada.",
+    "diveNotMadeUndone": "Deshecho. La inmersión vuelve a estar abierta en el pase de lista.",
+    "diveNotMadeNotCrew": "Solo la tripulación de esta salida puede registrar una inmersión como no realizada.",
+    "diveNotMadeCounted": "Esa inmersión tiene un recuento en el pase de lista, así que se realizó. Termina su recuento en el pase de lista.",
+    "diveNotMadeStale": "Eso cambió mientras tanto. Así está ahora.",
     "nextStepSaved": "Siguiente paso guardado",
     "nextStepTooLong": "Mantén el siguiente paso por debajo de 280 caracteres.",
     "nextStepNotACourse": "Esta salida no es una sesión de curso, así que no hay un siguiente paso que registrar.",
@@ -1249,7 +1254,11 @@
       "followUp": "Hacer seguimiento",
       "seen": "Visto",
       "species": "{count, plural, one {# especie} other {# especies}}",
-      "items": "{count, plural, one {# objeto} other {# objetos}}"
+      "items": "{count, plural, one {# objeto} other {# objetos}}",
+      "notMadeAction": "Inmersión {dive} no realizada",
+      "notMadeConfirm": "¿Registrar que la inmersión {dive} no se realizó? Quien no esté registrado de vuelta sigue en la lista.",
+      "notMade": "No realizada · {name}, {time}",
+      "notMadeUndo": "Deshacer"
     },
     "edit": {
       "schedule": "Agenda",

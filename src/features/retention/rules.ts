@@ -37,6 +37,11 @@
  * window would erase that evidence. Chosen over 30 days (issue #1397,
  * 2026-09-10).
  *
+ * **`dive_not_made_events` is deliberately unbounded.** The crew's record
+ * that a planned dive was not made, and its undo, is roll-call evidence an
+ * incident review reads beside the counts (issue #4681, Aaron's safety
+ * contract of 2026-11-19: the record and the undo both stay on the trail).
+ *
  * **`buddy_team_events`, `roll_call_events`, and
  * `booking_arrival_events` are deliberately unbounded.** Desk arrivals,
  * roll-call marks and buddy pairings are evidence for reconstructing a departure.
@@ -178,6 +183,7 @@ export const UNBOUNDED_BY_DECISION: readonly string[] = [
   "certification_junior_reviews",
   "gear_service_events",
   "trip_stage_events",
+  "dive_not_made_events",
   "buddy_team_events",
   "roll_call_events",
   "safety_drills",

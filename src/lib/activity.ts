@@ -226,6 +226,9 @@ type ActivityParamShapes = {
    */
   missing_diver_alert_raised: { actor: string };
   missing_diver_found: { actor: string };
+  /** A planned dive the crew recorded not made, and its undo (issue #4681). */
+  dive_not_made: { actor: string; dive: string };
+  dive_not_made_undone: { actor: string; dive: string };
   /** A staffer seated a diver. */
   seat_added: { actor: string; diver: string };
   /** …by a diver, for a friend, from their own trip link (the actor is the lead). */
@@ -621,6 +624,8 @@ export const ACTIVITY_CODES = [
   "incident_legal_hold_released",
   "missing_diver_alert_raised",
   "missing_diver_found",
+  "dive_not_made",
+  "dive_not_made_undone",
   "seat_added",
   "seat_added_from_trip_link",
   "departure_offered",

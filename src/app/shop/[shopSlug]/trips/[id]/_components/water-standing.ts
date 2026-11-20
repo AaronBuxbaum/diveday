@@ -86,6 +86,12 @@ export type WaterStop =
       site: string | null;
       count: CountResult | null;
       logged: LoggedDive | null;
+      /**
+       * The crew's standing record that this planned dive was not made (issue
+       * #4681), who and when; null once any count speaks for the dive, since a
+       * dive somebody counted was made. Optional for a stop drawn by hand.
+       */
+      notMade?: DiveNotMade | null;
     }
   | { kind: "home"; state: StopState; saidAt: Date | null; scheduled: Date };
 
@@ -96,6 +102,9 @@ export type LoggedDive = {
 };
 
 export type BoatChecks = { checked: number; total: number };
+
+/** Who recorded a planned dive as not made, and when (`dive_not_made_events`). */
+export type DiveNotMade = { by: string; at: Date };
 
 export type WaterStandingInput = {
   counts: readonly WaterCount[];
@@ -113,6 +122,8 @@ export type WaterStandingInput = {
   homeSaidAt: Date | null;
   endsAt: Date;
   boatChecks: BoatChecks | null;
+  /** Planned dives the crew recorded not made, by dive number (`diveNotMadeStanding`). */
+  notMade?: ReadonlyMap<number, DiveNotMade>;
 };
 
 export type WaterStanding = {
@@ -418,13 +429,16 @@ function timeline(
   ]);
   for (const dive of [...dives].sort((a, b) => a - b)) {
     const result = results.get(`after_dive_${dive}`);
+    const count = result && result.by !== null ? result : null;
     stops.push({
       kind: "dive",
       state: stateOf(result),
       dive,
       site: input.plannedDives.find((planned) => planned.diveNumber === dive)?.site ?? null,
-      count: result && result.by !== null ? result : null,
+      count,
       logged: input.logged.get(dive) ?? null,
+      // A count outranks the record: whoever began counting the dive saw it made.
+      notMade: count ? null : (input.notMade?.get(dive) ?? null),
     });
   }
   stops.push({

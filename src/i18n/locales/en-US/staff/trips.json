@@ -78,6 +78,11 @@
     "comparableOtherPrice": "{title} on {date} filled at a different price"
   },
   "notices": {
+    "diveNotMade": "Recorded as not made.",
+    "diveNotMadeUndone": "Undone. The dive is open on the roll call again.",
+    "diveNotMadeNotCrew": "Only crew on this trip can record a dive not made.",
+    "diveNotMadeCounted": "That dive has a roll call count, so it was made. Finish its count on Roll call.",
+    "diveNotMadeStale": "That changed meanwhile. This is where it stands now.",
     "nextStepSaved": "Next step saved",
     "nextStepTooLong": "Keep the next step under 280 characters.",
     "nextStepNotACourse": "This departure isn’t a course session, so there is no next step to record.",
@@ -1249,7 +1254,11 @@
       "followUp": "Follow up",
       "seen": "Seen",
       "species": "{count, plural, one {# species} other {# species}}",
-      "items": "{count, plural, one {# item} other {# items}}"
+      "items": "{count, plural, one {# item} other {# items}}",
+      "notMadeAction": "Dive {dive} not made",
+      "notMadeConfirm": "Record that dive {dive} was not made? Anyone not recorded back stays on the list.",
+      "notMade": "Not made · {name}, {time}",
+      "notMadeUndo": "Undo"
     },
     "edit": {
       "schedule": "Schedule",

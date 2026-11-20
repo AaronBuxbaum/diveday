@@ -721,6 +721,28 @@ const NOTICE_KEYS: Record<
   },
   "not-authorized": { form: "page", tone: "danger", key: "trips.notices.notAuthorized" },
   invalid: { form: "page", tone: "danger", key: "trips.notices.invalid" },
+  // A planned dive recorded not made, or undone, from Wrapped up (issue #4681).
+  "dive-not-made": { form: "close-out", tone: "success", key: "trips.notices.diveNotMade" },
+  "dive-not-made-undone": {
+    form: "close-out",
+    tone: "success",
+    key: "trips.notices.diveNotMadeUndone",
+  },
+  "dive-not-made-not-crew": {
+    form: "close-out",
+    tone: "danger",
+    key: "trips.notices.diveNotMadeNotCrew",
+  },
+  "dive-not-made-counted": {
+    form: "close-out",
+    tone: "danger",
+    key: "trips.notices.diveNotMadeCounted",
+  },
+  "dive-not-made-stale": {
+    form: "close-out",
+    tone: "danger",
+    key: "trips.notices.diveNotMadeStale",
+  },
   ...DETAILS_SAVE_NOTICES,
   // Both doors onto the same trap: a departure that demands payment and has no
   // price asks nobody for money and blocks every diver who books it, forever

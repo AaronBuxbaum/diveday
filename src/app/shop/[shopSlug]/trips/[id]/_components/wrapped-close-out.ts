@@ -13,7 +13,8 @@ import type { WaterStanding } from "./water-standing";
  * out and are not back, a dive whose count was taken but has no log, and an
  * incident report left in draft. Each from a record, never from the clock: a
  * dive with no count is not said to have happened, and it is never read as
- * everyone back either (glossary, "Unaccounted for").
+ * everyone back either (glossary, "Unaccounted for"). A planned dive the crew
+ * recorded not made closes its own roll-call item only (issue #4681).
  */
 export type CloseOutItem =
   | { kind: "rollCall"; names: string[]; dive: number }
@@ -96,14 +97,38 @@ function rollCallItems(standing: WaterStanding, cancelled: boolean): CloseOutIte
   }
   if (latest.dive === 0 && !latest.complete) return [{ kind: "rollCall", names, dive: 0 }];
   if (latest.aboard === 0) return [];
+  // A dive the crew recorded not made, with no count begun, has nobody to
+  // count back (issue #4681): it closes that dive's item and no other.
   const open = standing.timeline.find(
-    (stop) => stop.kind === "dive" && stop.dive >= latest.dive && !stop.count?.complete,
+    (stop) =>
+      stop.kind === "dive" &&
+      stop.dive >= latest.dive &&
+      !stop.count?.complete &&
+      !(stop.notMade && !stop.count),
   );
   if (open?.kind === "dive") return [{ kind: "rollCall", names, dive: open.dive }];
   // No dive follows the dock count (a snorkel or pool day, or dives never
   // planned): never an after-dive checkpoint for a dive that was not planned;
   // the dock count is where each is put ashore by name.
   return latest.dive === 0 && names.length > 0 ? [{ kind: "rollCall", names, dive: 0 }] : [];
+}
+
+/**
+ * **Where "Not made" is offered** (issue #4681): the dive a close-out
+ * roll-call row is about, when that dive is planned, no count of it has begun,
+ * and nobody is outstanding: no open missing-diver alert and nobody not
+ * recorded back, whose row is never closed this way. Null otherwise. The dock
+ * count is never a dive.
+ */
+export function notMadeOfferFor(
+  standing: WaterStanding,
+  items: readonly CloseOutItem[],
+): number | null {
+  if (standing.alerts > 0 || standing.notYetBack.length > 0) return null;
+  const row = items.find((item) => item.kind === "rollCall");
+  if (row?.kind !== "rollCall" || row.dive < 1) return null;
+  const stop = standing.timeline.find((entry) => entry.kind === "dive" && entry.dive === row.dive);
+  return stop?.kind === "dive" && stop.count === null ? row.dive : null;
 }
 
 /**

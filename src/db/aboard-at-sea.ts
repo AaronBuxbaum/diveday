@@ -103,9 +103,11 @@ export async function aboardAtSeaBookingIds(
 /**
  * **The boat has left the dock**: its scheduled time has come
  * (`departureUnderway`, the blow-out's clock), or the crew took it out
- * ({@link crewTookTheBoatOut}).
+ * ({@link crewTookTheBoatOut}). Also what a planned dive may be recorded not
+ * made after (`recordDiveNotMade`, issue #4681): a boat still tied up has
+ * made no dive and missed none.
  */
-async function boatHasLeft(
+export async function boatHasLeft(
   db: DbExecutor,
   input: { shopId: string; tripId: string; startsAt: Date; now: Date },
 ): Promise<boolean> {

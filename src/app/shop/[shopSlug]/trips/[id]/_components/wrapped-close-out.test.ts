@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
 import type { TripSentence } from "./trip-sentence";
 import type { WaterStanding, WaterStop } from "./water-standing";
-import { closeOutItems, wrappedSentence } from "./wrapped-close-out";
+import { closeOutItems, notMadeOfferFor, wrappedSentence } from "./wrapped-close-out";
 
 /**
  * **Wrapped up says what is left, from records** (ADR 20261117-trip-page-clock).
@@ -264,5 +264,126 @@ describe("the close-out list", () => {
         t,
       ).headline,
     ).toBe("This trip is canceled.");
+  });
+});
+
+/**
+ * **A planned dive the crew recorded not made** (issue #4681, the safety
+ * contract Aaron accepted 2026-11-19). It closes that dive's roll-call item and
+ * nothing else: it is never a finished count, never says everyone is back, and
+ * never hides somebody not recorded back or an open missing-diver alert.
+ */
+describe("a dive recorded not made", () => {
+  const sal = { by: "Sal Reyes", at: at("11:40") };
+  const dive1 = (): WaterStop => ({
+    kind: "dive",
+    state: "done",
+    dive: 1,
+    site: null,
+    count: count(1, true),
+    logged,
+  });
+  const unmade = (dive: number): WaterStop => ({
+    kind: "dive",
+    state: "ahead",
+    dive,
+    site: null,
+    count: null,
+    logged: null,
+    notMade: sal,
+  });
+  const open = (dive: number): WaterStop => ({
+    kind: "dive",
+    state: "ahead",
+    dive,
+    site: null,
+    count: null,
+    logged: null,
+  });
+  const items = (s: WaterStanding, cancelled = false) =>
+    closeOutItems({ standing: s, rentalsOut: [], reports: [], cancelled });
+
+  it("closes that dive's roll-call item, and is never read as everyone back", () => {
+    const s = standing({ latest: count(1, true) }, [dive1(), unmade(2)]);
+    expect(items(s)).toEqual([]);
+    // Dive 1's count stays dive 1's: the sentence never claims a finished last count.
+    expect(say(s).headline).toBe("Scheduled back at 12:30 PM. Nothing left to close out.");
+    expect(notMadeOfferFor(s, items(s))).toBeNull();
+  });
+
+  it("closes only its own dive: a later dive nobody counted is still named", () => {
+    const s = standing({ latest: count(1, true) }, [dive1(), unmade(2), open(3)]);
+    expect(items(s)).toEqual([
+      { kind: "rollCall", names: ["Tom Okafor", "Lena Fischer", "Sal Reyes"], dive: 3 },
+    ]);
+  });
+
+  it("never hides a person not recorded back", () => {
+    const s = standing(
+      {
+        latest: count(1, false),
+        notYetBack: [
+          {
+            key: "p:tom",
+            name: "Tom Okafor",
+            crew: false,
+            status: "notBack",
+            afterDive: 1,
+            buddies: [],
+            note: null,
+          },
+        ],
+      },
+      [dive1(), unmade(2)],
+    );
+    expect(items(s)).toEqual([{ kind: "rollCall", names: ["Tom Okafor"], dive: 1 }]);
+    expect(say(s).headline).toBe("1 person is recorded not back aboard after dive 1.");
+  });
+
+  it("never quiets an open missing-diver alert", () => {
+    const s = standing({ latest: count(1, true), alerts: 1 }, [dive1(), unmade(2)]);
+    expect(say(s).headline).not.toContain("Nothing left");
+  });
+
+  it("leaves the dock count to put people ashore when no dive was made at all", () => {
+    const s = standing({ latest: count(0, true) }, [unmade(1), unmade(2)]);
+    expect(items(s)).toEqual([
+      { kind: "rollCall", names: ["Tom Okafor", "Lena Fischer", "Sal Reyes"], dive: 0 },
+    ]);
+  });
+
+  it("is offered only for an open dive with no count begun, when nobody is outstanding", () => {
+    const s = standing({ latest: count(1, true) }, [dive1(), open(2)]);
+    expect(notMadeOfferFor(s, items(s))).toBe(2);
+    // A count begun on the dive says it was made.
+    const begun = standing({ latest: count(2, false) }, [
+      dive1(),
+      { kind: "dive", state: "now", dive: 2, site: null, count: count(2, false), logged: null },
+    ]);
+    expect(notMadeOfferFor(begun, items(begun))).toBeNull();
+    // Somebody not recorded back comes first, and is never closed this way.
+    const outstanding = standing(
+      {
+        latest: count(1, true),
+        notYetBack: [
+          {
+            key: "p:tom",
+            name: "Tom Okafor",
+            crew: false,
+            status: "unrecorded",
+            afterDive: null,
+            buddies: [],
+            note: null,
+          },
+        ],
+      },
+      [dive1(), open(2)],
+    );
+    expect(notMadeOfferFor(outstanding, items(outstanding))).toBeNull();
+    const alerted = standing({ latest: count(1, true), alerts: 1 }, [dive1(), open(2)]);
+    expect(notMadeOfferFor(alerted, items(alerted))).toBeNull();
+    // The dock count is never a dive.
+    const dock = standing({ latest: count(0, false) }, [open(1)]);
+    expect(notMadeOfferFor(dock, items(dock))).toBeNull();
   });
 });

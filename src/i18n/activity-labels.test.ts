@@ -81,6 +81,7 @@ describe("activity lines", () => {
           course: "Advanced Open Water",
           formsOwed: "yes",
           cardType: "nitrox",
+          dive: "2",
         },
       });
       expect(line.trim(), code).not.toBe("");

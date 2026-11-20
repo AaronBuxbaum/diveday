@@ -42,6 +42,9 @@ const FOLDED_TABLES = [
   "booking_referrals", // bookings.csv `referred_by_booking_id`
   "review_replies", // trip_reviews.csv `shop_reply`, the one live reply per review
   "package_gifts", // dive_package_entitlements.csv: recipient `person_id` beside `order_id`
+  // activity_events.csv: each word is a `dive_not_made` or `dive_not_made_undone`
+  // line with who and when, the dive number in its params (issue #4681).
+  "dive_not_made_events",
 ];
 
 // One seeded database for the file and a rolled-back transaction per test (src/test/db.ts), never committed.

@@ -3,12 +3,14 @@ import type { ReactNode } from "react";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
+import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import { StatusMark } from "@/components/ui/StatusMark";
 import type { TripMoney } from "@/features/trip-money";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatMoneyCents, formatTime, formatTimeRange } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { shopPath } from "@/lib/staff-notices";
+import { recordDiveNotMadeAction, undoDiveNotMadeAction } from "../../dive-not-made-actions";
 import { startIncidentReportAction } from "../../incidents/actions";
 import { diveLogHash } from "../TripDiveRecord";
 import type { WaterStanding } from "../water-standing";
@@ -26,14 +28,26 @@ function listOf(locale: string, items: readonly string[]): string {
   return cachedListFormat(locale, { style: "long", type: "conjunction" }).format(items);
 }
 
-/** **Close out**: each thing left, with the one door that closes it. Nothing when none is. */
+/**
+ * **Close out**: each thing left, with the one door that closes it. Nothing
+ * when none is. A roll-call row about a planned dive nobody began counting
+ * also offers, to the departure's crew, to record that dive not made
+ * (`notMadeOfferFor`, issue #4681), behind its own confirm.
+ */
 export function CloseOutCard({
   items,
+  notMadeDive = null,
   shopSlug,
   tripId,
   locale,
   t,
-}: { items: readonly CloseOutItem[]; shopSlug: string; tripId: string } & Omit<Words, "timeZone">) {
+}: {
+  items: readonly CloseOutItem[];
+  /** The dive this viewer may record not made, or null (`notMadeOfferFor`, crew only). */
+  notMadeDive?: number | null;
+  shopSlug: string;
+  tripId: string;
+} & Omit<Words, "timeZone">) {
   if (items.length === 0) return null;
   const trip = (...rest: string[]) => shopPath(shopSlug, "trips", tripId, ...rest);
   const row = (
@@ -112,9 +126,25 @@ export function CloseOutCard({
               <p className="font-semibold">{title}</p>
               {sub ? <p className="text-sm text-muted [overflow-wrap:anywhere]">{sub}</p> : null}
             </div>
-            <Link href={href} className={FIX(index === 0)}>
-              {fix}
-            </Link>
+            <div className="flex shrink-0 flex-col items-end gap-1">
+              <Link href={href} className={FIX(index === 0)}>
+                {fix}
+              </Link>
+              {item.kind === "rollCall" && notMadeDive !== null && item.dive === notMadeDive ? (
+                <form action={recordDiveNotMadeAction.bind(null, shopSlug, tripId)}>
+                  <input type="hidden" name="dive" value={notMadeDive} />
+                  <InlineConfirm
+                    triggerLabel={t("trips.clock.wrapped.notMadeAction", { dive: notMadeDive })}
+                    message={t("trips.clock.wrapped.notMadeConfirm", { dive: notMadeDive })}
+                    confirmLabel={t("trips.clock.wrapped.notMadeAction", { dive: notMadeDive })}
+                    cancelLabel={t("words.dismiss.neverMind")}
+                    pendingLabel={t("words.busy.saving")}
+                    triggerClassName={LINK}
+                    confirmClassName={buttonClass({ variant: "secondary", size: "sm" })}
+                  />
+                </form>
+              ) : null}
+            </div>
           </li>
         );
       })}
@@ -228,6 +258,7 @@ export function WhatHappenedCard({
   turnedAway,
   print,
   records,
+  mayUndoNotMade = false,
   shopSlug,
   tripId,
   locale,
@@ -244,6 +275,8 @@ export function WhatHappenedCard({
   print: ReactNode;
   /** What was seen and left aboard (`wrappedRecords`); absent, no rows. */
   records?: WrappedRecords;
+  /** This viewer is on the departure's crew, so may undo a dive recorded not made. */
+  mayUndoNotMade?: boolean;
   shopSlug: string;
   tripId: string;
 } & Words) {
@@ -268,9 +301,17 @@ export function WhatHappenedCard({
     ]
       .filter(Boolean)
       .join(" · ");
+    // Recorded not made (issue #4681): said with who and when, never as a count.
+    const notMade = count ? null : (stop.notMade ?? null);
     const detail = [
-      count ? null : t("trips.clock.wrapped.notCounted"),
-      logged || !value ? null : t("trips.clock.wrapped.notLogged"),
+      notMade
+        ? t("trips.clock.wrapped.notMade", {
+            name: notMade.by,
+            time: formatTime(notMade.at, locale, timeZone),
+          })
+        : null,
+      count || notMade ? null : t("trips.clock.wrapped.notCounted"),
+      logged || !value || notMade ? null : t("trips.clock.wrapped.notLogged"),
       logged?.maxDepthMeters != null
         ? t("trips.clock.wrapped.deepest", { depth: depth(logged.maxDepthMeters) })
         : null,
@@ -285,8 +326,17 @@ export function WhatHappenedCard({
       row: {
         key: `dive-${stop.dive}`,
         label: t("trips.clock.water.dive", { dive: stop.dive }),
-        value: value || (logged ? none : t("trips.clock.wrapped.notLogged")),
+        value: value || (logged || notMade ? none : t("trips.clock.wrapped.notLogged")),
         detail: detail || null,
+        action:
+          notMade && mayUndoNotMade ? (
+            <form action={undoDiveNotMadeAction.bind(null, shopSlug, tripId)}>
+              <input type="hidden" name="dive" value={stop.dive} />
+              <SubmitButton pendingLabel={t("words.busy.saving")} className={LINK}>
+                {t("trips.clock.wrapped.notMadeUndo")}
+              </SubmitButton>
+            </form>
+          ) : null,
       },
     });
   }
