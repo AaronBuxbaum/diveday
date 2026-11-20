@@ -115,6 +115,7 @@ export function useSavedManifestList({
   getTenantRound,
   initialListMessage,
   reconciledListMessage,
+  syncPausedMessage,
   setList,
   setMessage,
   handleTenantChanged,
@@ -123,6 +124,7 @@ export function useSavedManifestList({
   getTenantRound: () => number | null;
   initialListMessage: (saved: OfflineManifestEnvelope[], shopSlug: string) => string;
   reconciledListMessage: (saved: OfflineManifestEnvelope[], shopSlug: string) => string;
+  syncPausedMessage: string;
   setList: (saved: OfflineManifestEnvelope[]) => void;
   setMessage: (message: string) => void;
   handleTenantChanged: () => void;
@@ -144,12 +146,21 @@ export function useSavedManifestList({
       if (reconcilable.length === 0) return;
 
       let shopChanged = false;
+      let syncPaused = false;
       const results = await Promise.all(
         reconcilable.map((envelope) => {
           const id = envelope.snapshot.manifests[0]?.trip.id;
           return id
             ? syncOfflineManifest(id, currentShopSlug, getTenantRound() ?? undefined).catch(
                 (error) => {
+                  if (
+                    typeof error === "object" &&
+                    error !== null &&
+                    "code" in error &&
+                    error.code === "sync_paused"
+                  ) {
+                    syncPaused = true;
+                  }
                   if (isShopChanged(error) && !shopChanged) {
                     shopChanged = true;
                     // Quarantine on the first explicit mismatch. Another
@@ -175,13 +186,14 @@ export function useSavedManifestList({
         return id && byId.has(id) ? (byId.get(id) as OfflineManifestEnvelope) : envelope;
       });
       setList(merged);
-      setMessage(reconciledListMessage(merged, currentShopSlug));
+      setMessage(syncPaused ? syncPausedMessage : reconciledListMessage(merged, currentShopSlug));
     },
     [
       tenantSlugRef,
       getTenantRound,
       initialListMessage,
       reconciledListMessage,
+      syncPausedMessage,
       setList,
       setMessage,
       handleTenantChanged,

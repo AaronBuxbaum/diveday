@@ -174,6 +174,15 @@ function isShopChangedError(error: unknown): boolean {
   );
 }
 
+function offlineSyncErrorMessage(error: unknown, t: OfflineManifestTranslator): string {
+  return typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    error.code === "sync_paused"
+    ? t("shared.offlineManifest.reconcile.syncPaused")
+    : t("shared.offlineManifest.reconcile.reachError");
+}
+
 function initialListMessage(
   envelopes: readonly OfflineManifestEnvelope[],
   t: OfflineManifestTranslator,
@@ -652,7 +661,7 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
         return;
       }
       if (tenantSlugRef.current !== slug) return;
-      setMessage(t("shared.offlineManifest.reconcile.reachError"));
+      setMessage(offlineSyncErrorMessage(error, t));
     }
   }, [
     tripId,
@@ -698,6 +707,7 @@ export function useSavedManifest(t: OfflineManifestTranslator) {
     getTenantRound,
     initialListMessage: initialMessageForShop,
     reconciledListMessage: reconciledMessageForShop,
+    syncPausedMessage: t("shared.offlineManifest.reconcile.syncPaused"),
     setList,
     setMessage,
     handleTenantChanged,

@@ -374,8 +374,9 @@
     "reconcile": {
       "tenantChanged": "The signed-in shop changed. This saved manifest and its controls are hidden while this device checks the current shop. Pending changes remain saved here; reconnect or reload to try again.",
       "reachError": "Couldn’t reach DiveDay just now. Your changes are still saved on this phone and will try to send again on the next change or reconnect.",
+      "syncPaused": "This sync is paused. Keep this phone and use manual roll call until staff confirm recovery.",
       "pendingRejectedSingle": "{count, plural, one {# change needs a look. Open the live manifest to sort it out.} other {# changes need a look. Open the live manifest to sort it out.}}",
-      "pendingWaiting": "{count, plural, one {# change is still sending.} other {# changes are still sending.}}",
+      "pendingWaiting": "{count, plural, one {# change waiting to send.} other {# changes waiting to send.}}",
       "pendingExpiryWarning": "These roll-call changes may exist only on this device and may be removed automatically if they remain unsent. Reconnect, sign in to the original shop, and check that they have synced. If you can’t sync, use your manual roll-call process.",
       "allCaughtUp": "Everything’s sent.",
       "noteDiscarded": "Each line is a separate mark whose older offline note was removed after a data erasure. Review every listed mark in the live manifest; this notice remains on this device after syncs and reloads.",

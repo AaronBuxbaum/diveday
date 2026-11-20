@@ -17,8 +17,8 @@ const copy: OfflineManifestManagerCopy = {
   checkingDevice: "Checking this device…",
   reconcileRejectedOne: "1 change needs a look.",
   reconcileRejectedOther: "{count} changes need a look.",
-  reconcilePendingOne: "1 change is still sending.",
-  reconcilePendingOther: "{count} changes are still sending.",
+  reconcilePendingOne: "1 change waiting to send.",
+  reconcilePendingOther: "{count} changes waiting to send.",
   reconcileCaughtUp: "Everything’s sent.",
   reconcileNoteDiscarded:
     "Older offline note text was removed after a data erasure. Check each entry in the live manifest when you have signal.",
@@ -35,6 +35,8 @@ const copy: OfflineManifestManagerCopy = {
   reconcileChecklistLocation: "Pre-departure checklist",
   reconcileErrorFallback:
     "Couldn’t reach DiveDay just now. Your offline changes are still saved here and will try to send again on reconnect.",
+  reconcilePaused:
+    "This sync is paused. Keep this phone and use manual roll call until staff confirm recovery.",
   savingMessage: "Saving the latest manifest to this device…",
   saveErrorFallback:
     "This device couldn’t save the manifest. It’ll try again once you have signal.",

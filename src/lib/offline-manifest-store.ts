@@ -291,6 +291,7 @@ export type OfflineManifestErrorCode =
   | "expired"
   | "not_allowed"
   | "shop_changed"
+  | "sync_paused"
   | "sync_unreachable";
 
 export class OfflineManifestError extends Error {
@@ -1449,8 +1450,8 @@ export const SYNC_TIMEOUT_MS = 10_000;
  * The one round trip, under a deadline that covers the reply's body as well
  * as its headers. Every way it can fail — no answer, an error status, a body
  * that stops halfway, a body that is not JSON — is the same
- * `sync_unreachable`, and every one of them leaves the device's events
- * exactly as they were: still `pending`, same `clientEventId`.
+ * `sync_unreachable`, except an explicit maintenance refusal returns
+ * `sync_paused`. Both leave events pending with their original IDs.
  *
  * Giving up does not mean the server never got it. A request abandoned here
  * may still have landed, or still be running, which is safe only because the
@@ -1485,9 +1486,12 @@ async function postPendingEvents(batch: {
       signal: controller.signal,
     });
     if (!response.ok) {
-      if (response.status === 409) {
+      if (response.status === 409 || response.status === 503) {
         const body = (await response.json().catch(() => null)) as { error?: string } | null;
-        if (body?.error === "shop_changed") throw new OfflineManifestError("shop_changed");
+        if (response.status === 409 && body?.error === "shop_changed")
+          throw new OfflineManifestError("shop_changed");
+        if (response.status === 503 && body?.error === "offline_sync_paused")
+          throw new OfflineManifestError("sync_paused");
       }
       throw new OfflineManifestError("sync_unreachable");
     }
@@ -1498,7 +1502,11 @@ async function postPendingEvents(batch: {
     // signal still cannot hold this past the deadline.
     return await Promise.race([roundTrip, deadline]);
   } catch (error) {
-    if (error instanceof OfflineManifestError && error.code === "shop_changed") throw error;
+    if (
+      error instanceof OfflineManifestError &&
+      (error.code === "shop_changed" || error.code === "sync_paused")
+    )
+      throw error;
     throw new OfflineManifestError("sync_unreachable");
   } finally {
     clearTimeout(timer);

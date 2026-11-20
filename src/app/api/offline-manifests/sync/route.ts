@@ -214,6 +214,15 @@ const bodySchema = z
  * roles, re-read on every request, before the body is so much as read.
  */
 export async function POST(request: Request) {
+  // An operator can stop new batches on this revision without depending on the
+  // database that is being recovered. This does not drain requests already in
+  // progress or fence older revisions; the restore runbook's stop still applies.
+  if (process.env.DIVEDAY_OFFLINE_SYNC_PAUSED === "1") {
+    return Response.json(
+      { error: "offline_sync_paused" },
+      { status: 503, headers: { "Cache-Control": "no-store" } },
+    );
+  }
   const session = await auth();
   // A pre-filter, not the gate. Deliberately ahead of any database work so a
   // caller with no session — or a token that never claimed a staff role — is

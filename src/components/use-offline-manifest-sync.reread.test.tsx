@@ -54,6 +54,7 @@ const copy: OfflineManifestSyncCopy = {
   reconcilePendingOther: "{count} pending",
   reconcileCaughtUp: "caught up",
   reconcileErrorFallback: "could not reach",
+  reconcilePaused: "sync paused",
   savingMessage: "saving",
   saveErrorFallback: "save failed",
   offlineWithSavedCopy: "offline with copy",
