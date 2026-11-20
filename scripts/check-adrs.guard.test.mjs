@@ -1,23 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import { adrSummary, END, indexTable, START, withIndex } from "./adr-index.mjs";
 import { runGuard } from "./guard-fixture.mjs";
 
 const DIR = "docs/architecture/decisions";
-
-/**
- * The README the guard expects beside `records`: its index block generated from the records
- * the same way `node scripts/adr-index.mjs --write` would, so these tests judge the record
- * rules and `check-adrs.test.mjs` judges the index.
- */
-const readmeFor = (records) => {
-  const names = Object.keys(records)
-    .filter((name) => name.endsWith(".md") && name !== "README.md" && name !== "0000-template.md")
-    .sort();
-  const known = new Set(names.map((name) => name.replace(/\.md$/, "")));
-  const summaries = names.map((name) => adrSummary(name, records[name], known));
-  return withIndex(`# Index\n\n${START}\n${END}\n`, indexTable(summaries));
-};
 
 const adr = (heading, { status = "Accepted", date = "2026-10-10", sections } = {}) =>
   [
@@ -35,7 +20,7 @@ const run = (records, dependencies = {}) =>
   runGuard("check-adrs.mjs", {
     "package.json": JSON.stringify({ dependencies }),
     ...Object.fromEntries(
-      Object.entries({ ...records, "README.md": readmeFor(records) }).map(([name, body]) => [
+      Object.entries(records).map(([name, body]) => [
         `${DIR}/${name}`,
         body,
       ]),
