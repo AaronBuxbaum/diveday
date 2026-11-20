@@ -239,6 +239,51 @@ type DraftSection = Omit<FixListSection, "rows" | "summary"> & {
 };
 
 /**
+ * The two fixes a guest's row can make in place: the crew choice for a help
+ * request, and the pay link (copy or resend) for a guest invoiced through Stripe.
+ */
+function seatRemedyControl(
+  remedy: FixRemedy,
+  seat: Seat,
+  t: RosterRowContext["t"],
+  shopSlug: string,
+): { control: DraftRow["control"]; openLabel?: string } | null {
+  const { helpRequest: request, order } = seat;
+  if (remedy === "arrange_help" && request) {
+    return {
+      control: () =>
+        helpRequestControl(
+          {
+            requestId: request.id,
+            revision: request.revision,
+            status: request.status,
+            helperPersonId: request.helperPersonId,
+            helperPersonName: request.helperPersonName,
+            crew: request.crew,
+            meetingInstructions: request.meetingInstructions,
+          },
+          helpRequestActionText(t, request.helperPersonName),
+          t,
+        ),
+    };
+  }
+  if (remedy === "take_payment" && seat.owed && order) {
+    return {
+      control: () => (
+        <PaymentActionControl
+          shopSlug={shopSlug}
+          orderId={order.id}
+          hostedInvoiceUrl={order.hostedInvoiceUrl}
+          copy={paymentActionCopy(t)}
+        />
+      ),
+      openLabel: t("trips.fixList.remedy.takeAmount", { amount: seat.owed }),
+    };
+  }
+  return null;
+}
+
+/**
  * **The guest list's sections and rows** for `GuestFixList`, by phase. Each
  * guest is on one row, carrying all of their reasons ("Check the depth · Fit
  * gear"), so every count is a count of people:
@@ -340,38 +385,8 @@ export function guestFixRows(
           </Link>
         ),
       };
-    if (remedy === "arrange_help" && seat?.helpRequest) {
-      const request = seat.helpRequest;
-      return {
-        control: () =>
-          helpRequestControl(
-            {
-              requestId: request.id,
-              revision: request.revision,
-              status: request.status,
-              helperPersonId: request.helperPersonId,
-              helperPersonName: request.helperPersonName,
-              crew: request.crew,
-              meetingInstructions: request.meetingInstructions,
-            },
-            helpRequestActionText(t, request.helperPersonName),
-            t,
-          ),
-      };
-    }
-    // A booking invoiced through Stripe: the pay link is one tap, no need to open the guest.
-    if (remedy === "take_payment" && seat?.owed && seat.order)
-      return {
-        control: () => (
-          <PaymentActionControl
-            shopSlug={trip.shopSlug}
-            orderId={seat.order?.id ?? ""}
-            hostedInvoiceUrl={seat.order?.hostedInvoiceUrl ?? null}
-            copy={paymentActionCopy(t)}
-          />
-        ),
-        openLabel: t("trips.fixList.remedy.takeAmount", { amount: seat.owed }),
-      };
+    const remote = seat ? seatRemedyControl(remedy, seat, t, trip.shopSlug) : null;
+    if (remote) return remote;
     if (remedy === "take_payment" && seat?.owed)
       return { openLabel: t("trips.fixList.remedy.takeAmount", { amount: seat.owed }) };
     // The day before, what nobody can do from the desk is a call away.
