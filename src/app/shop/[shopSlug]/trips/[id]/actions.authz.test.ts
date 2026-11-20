@@ -611,6 +611,9 @@ describe("who may run each action on the trip page", () => {
     // The learning-materials tick (ADR 20261008-course-learning-materials) and the sent-to-the-agency
     // tick (item 46), open on the same terms as the next step: course-roster bookkeeping that gates nothing.
     "setCourseMaterialsDoneAction",
+    // The session tick beside a student's name: the same course-roster bookkeeping, on the
+    // same terms as the two ticks above it, and it appears only beside a name on that roster.
+    "setCourseStepDoneAction",
     "markCardProcessedAction",
     "updateBookingPickupAction",
     "updateBookingDietaryNoteAction",

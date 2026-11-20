@@ -297,6 +297,7 @@ export async function getTripGuests(
     trainingMarks,
     specialtiesByPerson,
     textableBookings,
+    courseProgress,
   ] = await Promise.all([
     inviteDatesForCandidates(db, shop.id, diverCandidates),
     // What "Different person" on a held seat can offer to move along with it:
@@ -422,6 +423,8 @@ export async function getTripGuests(
       dealRequirement,
     ),
     textableSeats(db, shop.id, roster.map(textReachOf)),
+    // A course session's outline and each student's ticks: one wave with the rest, not a round trip after it.
+    courseProgressFor(db, shop.id, trip.courseId, roster),
   ]);
 
   const heldSeatLastDiveDay = lastDiveDayBySeat(heldSeats, heldLastDiveDays);
@@ -549,7 +552,7 @@ export async function getTripGuests(
      * The tick itself is on the booking row the roster already read.
      */
     courseHasMaterials: readLearningMaterials(trip.course?.learningMaterials).length > 0,
-    ...(await courseProgressFor(db, shop.id, trip.courseId, roster)),
+    ...courseProgress,
     /**
      * What the DiveDay browser extension would search the agency's eLearning
      * page for, per seat, where it can (H-20261008-padi-elearning-check): a PADI course with materials.
