@@ -167,7 +167,7 @@ describe("/pricing with default percentage pricing", () => {
 
   it("shows the percentage offer in es-ES", async () => {
     const { text } = await pricingBody("percent_of_volume", "es-ES");
-    expect(text).toMatch(/2\s?%/);
+    expect(text).toMatch(/1\s?%/);
     expect(text).toContain("del dinero registrado como recibido en DiveDay, sin cuota mensual");
     expect(text).not.toContain("Comisión por reserva");
   });

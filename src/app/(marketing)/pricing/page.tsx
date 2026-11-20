@@ -88,11 +88,8 @@ async function PricingBody({ locale, offer }: { locale: DiverLocale; offer: Plan
     subscription: t("marketing.pricing.compare.lines.subscription"),
     free: t("marketing.pricing.compare.lines.free"),
     bookingFee: t("marketing.pricing.compare.lines.bookingFee"),
-    otaFee: t("marketing.pricing.compare.lines.otaFee"),
     processing: t("marketing.pricing.compare.lines.processing"),
     total: t("marketing.pricing.compare.lines.total"),
-    otaFootnote: t("marketing.pricing.compare.otaFootnote", { share: "{share}" }),
-    otaSource: t("marketing.pricing.compare.otaSource"),
     totalNote: t("marketing.pricing.compare.totalNote", { percent: "{percent}" }),
     systems: {
       fareharbor: {
@@ -154,7 +151,7 @@ async function PricingBody({ locale, offer }: { locale: DiverLocale; offer: Plan
               {t("marketing.pricing.lockNote")}
             </p>
 
-            <FunnelCtas locale={locale} source="pricing" footnotes={{ offer }} className="mt-10" />
+            <FunnelCtas locale={locale} source="pricing" footnotes={{}} className="mt-10" />
           </div>
         </section>
 

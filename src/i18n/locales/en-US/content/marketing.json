@@ -1053,8 +1053,8 @@
     },
     "compare": {
       "title": "What a month could cost",
-      "lede": "Move the slider to the money your shop takes in. Each column adds the software’s fee to the card transaction fee, so you see what leaves your account.",
-      "sliderLabel": "Money received in a month",
+      "lede": "Move the slider to what your trips and courses bring in. Each column adds the software’s fee to the card transaction fee, so you see what leaves your account.",
+      "sliderLabel": "Trip and course money in a month",
       "systems": {
         "fareharbor": {
           "estimated": "(estimated)"
@@ -1064,16 +1064,13 @@
         "subscription": "Subscription fee",
         "free": "Free",
         "bookingFee": "Booking fee",
-        "otaFee": "OTA booking fee",
         "processing": "Card transaction fee",
         "total": "Each month"
       },
       "totalNote": "{percent} of the month’s money",
       "assumptionsTitle": "How we counted",
-      "assumptions": "These are estimates, not quotes. The card transaction fee is counted in both columns, with every sale a card payment averaging {sale}, at Stripe’s published rate of 2.9% plus 30¢. FareHarbor publishes no rates and charges no subscription. Its 6% of a booking, with the card transaction fee charged on top, is what three industry write-ups report (CaptainBook, April 9, 2026; TrekkSoft, June 30, 2026; Levy, 2026), and a fourth (hamzaliaqat.com, April 29, 2026) says processing is included, so we use the reading that is more common. It adds a 2% OTA booking fee on bookings that come through online travel agencies, and its contract is negotiated shop by shop. DiveDay adds no fee on those bookings. Every percent is taken off the full sale, never off what is left after another fee. Checked November 18, 2026.",
-      "guideLink": "What moving off {competitor} looks like",
-      "otaFootnote": "Assumes {share} of bookings come through online travel agencies (OTAs).",
-      "otaSource": "Source: Arival"
+      "assumptions": "These are estimates, not quotes. The card transaction fee is counted in both columns, with every sale a card payment averaging {sale}, at Stripe’s published rate of 2.9% plus 30¢. FareHarbor publishes no rates and charges no subscription. Its 6% of a booking, with the card transaction fee charged on top, is what three industry write-ups report (CaptainBook, April 9, 2026; TrekkSoft, June 30, 2026; Levy, 2026), and a fourth (hamzaliaqat.com, April 29, 2026) says processing is included, so we use the reading that is more common. Its contract is negotiated shop by shop. Both columns take the same month, and every percent is taken off the full amount, never off what is left after another fee. Checked November 18, 2026.",
+      "guideLink": "What moving off {competitor} looks like"
     }
   },
   "privacy": {
