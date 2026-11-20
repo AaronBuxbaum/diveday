@@ -66,10 +66,7 @@ async function PricingBody({ locale, offer }: { locale: DiverLocale; offer: Plan
   "use cache";
   cacheLife("max");
   const t = diverTranslator(locale);
-  // The percentage offer’s own lines replace every flat-only one: the figure, its
-  // cadence, the invoice's "cut" row, the anchor's answer and the closing line.
-  const percentArm = offer.plan === "percent_of_volume";
-  const { params, figure, cadence } = offerFigure(t, offer, locale);
+  const { figure, cadence } = offerFigure(t, offer, locale);
   // Generated from the migration-guides registry, never hand-listed, so a new
   // guide can't be silently omitted from this answer.
   const competitors = cachedListFormat(locale, { type: "conjunction" }).format(
@@ -157,82 +154,7 @@ async function PricingBody({ locale, offer }: { locale: DiverLocale; offer: Plan
               {t("marketing.pricing.lockNote")}
             </p>
 
-            {/* **The annotated invoice** (docs/design/brand.md: `/pricing` is
-                the one page whose screen is a bill). Every row is a word, never
-                a figure: the price is the display figure above, H-20260724-public-founding-shop-price's single
-                source. The leaving row points down to the export band
-                (`#export`), the one place on the page the promise is written
-                in full, beside the screen it describes (B10, and its review:
-                the sentence was here too, 900 px above itself). `#export` is
-                where every other page's "Taking your records with you" lands. */}
-            <div className="mt-12 grid gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:gap-14">
-              <dl
-                aria-label={t("marketing.pricing.invoice.title")}
-                className="divide-y divide-border border-y border-border"
-              >
-                {(["setup", "logins", "tiers", "cut", "cards", "contract", "leaving"] as const).map(
-                  (row) => (
-                    <div
-                      key={row}
-                      className="flex flex-wrap items-baseline justify-between gap-x-6 py-3 text-sm leading-6"
-                    >
-                      <dt className="text-muted">
-                        {percentArm && row === "cut"
-                          ? t("marketing.pricing.percentArm.invoiceFeeLabel")
-                          : t(`marketing.pricing.invoice.${row}.label`)}
-                      </dt>
-                      <dd className="text-end font-medium">
-                        {percentArm && row === "cut"
-                          ? t("marketing.pricing.percentArm.invoiceFeeValue", params)
-                          : t(`marketing.pricing.invoice.${row}.value`)}
-                      </dd>
-                      {row === "leaving" ? (
-                        <dd className="mt-1 basis-full">
-                          <a
-                            href="#export"
-                            className={buttonClass({ variant: "link", size: "sm", flush: true })}
-                          >
-                            {t("marketing.pricing.invoice.leaving.pointer")}
-                          </a>
-                        </dd>
-                      ) : null}
-                    </div>
-                  ),
-                )}
-              </dl>
-              {/* One "Notes" list, at most five one-line facts: what the
-                  invoice cannot say on a row. "Notes on the invoice" and "What
-                  the price covers" were two lists restating the table and
-                  `/product` (B11). */}
-              <div>
-                <Eyebrow as="h2">{t("marketing.pricing.notes.title")}</Eyebrow>
-                <MarginNotes
-                  className="mt-4"
-                  notes={[
-                    t("marketing.pricing.notes.note1"),
-                    t("marketing.pricing.notes.note2"),
-                    ...earlyAccessPrice.includedKeys.map((key) => t(key)),
-                    // The upgrade address, not the support one: marketing.md
-                    // routes "how do I move a trial shop to paid" through its
-                    // own inbox, and this is its one public line.
-                    t("marketing.pricing.trialNote", { email: ONBOARDING_EMAIL }),
-                  ]}
-                />
-                <Link
-                  href="/product"
-                  className={buttonClass({
-                    variant: "link",
-                    arrow: true,
-                    flush: true,
-                    className: "mt-4",
-                  })}
-                >
-                  {t("marketing.pricing.seeFullList")}
-                </Link>
-              </div>
-            </div>
-
-            <FunnelCtas locale={locale} source="pricing" footnotes={{ offer }} className="mt-12" />
+            <FunnelCtas locale={locale} source="pricing" footnotes={{ offer }} className="mt-10" />
           </div>
         </section>
 
@@ -248,11 +170,11 @@ async function PricingBody({ locale, offer }: { locale: DiverLocale; offer: Plan
               {t("marketing.pricing.compare.lede")}
             </p>
             <FeeComparison locale={locale} diveDay={offer} labels={comparison} />
-            <details className="mt-8 max-w-3xl">
+            <details className="mt-5 max-w-3xl text-sm">
               <summary className="cursor-pointer font-medium">
                 {t("marketing.pricing.compare.assumptionsTitle")}
               </summary>
-              <p className="mt-3 text-sm leading-6 text-muted">
+              <p className="mt-2 text-xs leading-5 text-muted">
                 {t("marketing.pricing.compare.assumptions", {
                   sale: formatMoneyScanned(FEE_ASSUMPTIONS.averageSaleCents, "usd", locale),
                 })}
@@ -265,7 +187,7 @@ async function PricingBody({ locale, offer }: { locale: DiverLocale; offer: Plan
                   variant: "link",
                   arrow: true,
                   flush: true,
-                  className: "mt-6 text-start",
+                  className: "mt-4 text-start",
                 })}
               >
                 {t("marketing.pricing.compare.guideLink", {
@@ -273,6 +195,39 @@ async function PricingBody({ locale, offer }: { locale: DiverLocale; offer: Plan
                 })}
               </Link>
             ) : null}
+          </div>
+        </section>
+
+        {/* The notes: what the comparison cannot say, one short list, below the
+            numbers it qualifies. */}
+        <section className="border-b border-border" aria-label={t("marketing.pricing.notes.title")}>
+          <div className={`${CONTAINER} py-12 lg:py-16`}>
+            <div className="max-w-2xl">
+              <Eyebrow as="h2">{t("marketing.pricing.notes.title")}</Eyebrow>
+              <MarginNotes
+                className="mt-4"
+                notes={[
+                  t("marketing.pricing.notes.note1"),
+                  t("marketing.pricing.notes.note2"),
+                  ...earlyAccessPrice.includedKeys.map((key) => t(key)),
+                  // The upgrade address, not the support one: marketing.md
+                  // routes "how do I move a trial shop to paid" through its
+                  // own inbox, and this is its one public line.
+                  t("marketing.pricing.trialNote", { email: ONBOARDING_EMAIL }),
+                ]}
+              />
+              <Link
+                href="/product"
+                className={buttonClass({
+                  variant: "link",
+                  arrow: true,
+                  flush: true,
+                  className: "mt-4",
+                })}
+              >
+                {t("marketing.pricing.seeFullList")}
+              </Link>
+            </div>
           </div>
         </section>
 
