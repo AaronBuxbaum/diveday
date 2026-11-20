@@ -542,9 +542,9 @@ test.describe("what the public schedule card says a departure requires", () => {
     // recomposed (ADR 20260827-clearwater-surface-language, decision 8): each
     // marker is already worded to stand on its own, and the row's one meta line
     // sets them between separators.
-    await expect(
-      row("Wreck Trip — Spiegel Grove").locator("h3 + p"),
-    ).toContainText(/Advanced Open Water or higher\s·\sDeep\s·\sNitrox/);
+    await expect(row("Wreck Trip — Spiegel Grove").locator("h3 + p")).toContainText(
+      /Advanced Open Water or higher\s·\sDeep\s·\sNitrox/,
+    );
 
     await expect(
       row("Two-Tank Reef — Molasses & French").getByText(/Open Water or higher/),

@@ -1092,7 +1092,9 @@ test.describe("courses on the shopfront", () => {
     );
 
     await page.goto("/s/blue-mantis/courses/open-water-diver");
-    await expect(page.getByRole("heading", { level: 1 })).toHaveClass(/text-\[min\(2\.5rem,12vw\)\]/);
+    await expect(page.getByRole("heading", { level: 1 })).toHaveClass(
+      /text-\[min\(2\.5rem,12vw\)\]/,
+    );
   });
 });
 
