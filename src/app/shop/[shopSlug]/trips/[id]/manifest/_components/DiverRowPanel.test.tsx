@@ -316,3 +316,68 @@ describe("the missing diver report starts from the row that raised it", () => {
     expect(start()).toBeNull();
   });
 });
+
+/** Issue #4307: dived or sat out, a note beside the count and never part of it. */
+describe("the person sheet notes whether a diver went in on the dive just counted", () => {
+  const group = () =>
+    screen.queryByRole("group", { name: t("manifest.participation.label", { number: 2 }) });
+  const panel = (
+    seat: ReturnType<typeof diver>,
+    overrides: Parameters<typeof diverContext>[0] = {},
+    participation: "dived" | "sat_out" | "unknown" = "unknown",
+  ) => {
+    const action = vi.fn(async () => ({ ok: true }));
+    render(
+      <DiverRowPanel
+        context={diverContext({
+          checkpoint: "after_dive_2",
+          divers: [seat],
+          diveParticipation: { diveNumber: 2, bySeat: () => participation, action },
+          ...overrides,
+        })}
+        diver={seat}
+        state={diverRowState(seat, "after_dive_2", false, "America/New_York")}
+        sharedAdvisoryTexts={new Set()}
+        bookingNotes={[]}
+      />,
+    );
+    return action;
+  };
+  const answer = (label: "manifest.participation.dived" | "manifest.participation.satOut") =>
+    within(group() as HTMLElement).getByRole("button", { name: t(label) });
+
+  it("starts unknown, and one tap says sat out", async () => {
+    const seat = diver({ bookingId: "b-1" });
+    const action = panel(seat);
+    expect(answer("manifest.participation.satOut")).toHaveAttribute("aria-pressed", "false");
+    expect(answer("manifest.participation.dived")).toHaveAttribute("aria-pressed", "false");
+    fireEvent.click(answer("manifest.participation.satOut"));
+    expect(action).toHaveBeenCalledWith("b-1", "sat_out");
+  });
+
+  it("takes a pressed answer back to unknown, never to the other answer", () => {
+    const seat = diver({ bookingId: "b-1" });
+    const action = panel(seat, {}, "sat_out");
+    expect(answer("manifest.participation.satOut")).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(answer("manifest.participation.satOut"));
+    expect(action).toHaveBeenCalledWith("b-1", "unknown");
+  });
+
+  it("is not offered at the dock, to a rider, on paper, or on a closed cancelled departure", () => {
+    const seat = diver({ bookingId: "b-1" });
+    panel(seat, { diveParticipation: undefined, checkpoint: "departure", isDeparture: true });
+    expect(group()).toBeNull();
+    cleanup();
+    panel(diver({ bookingId: "b-2", participantType: "rider" }));
+    expect(group()).toBeNull();
+    cleanup();
+    panel(seat, { paper: true });
+    expect(group()).toBeNull();
+    cleanup();
+    panel(seat, { rollCallClosed: true });
+    expect(group()).toBeNull();
+    cleanup();
+    panel(seat);
+    expect(group()).not.toBeNull();
+  });
+});

@@ -19,6 +19,7 @@ import {
 import type { BoatPaperRecord, BoatRadioRecord, BoatSafetyNotice } from "@/lib/boat-safety";
 import type { CrewCredentialSnapshot } from "@/lib/crew-credential-snapshot";
 import type { RecoveryOutcome } from "@/lib/disruption-recovery";
+import { DIVE_PARTICIPATIONS } from "@/lib/dive-participation";
 import type { IncidentCertificationEvidence } from "@/lib/incident-export";
 import { SNAG_NOTE_MAX } from "@/lib/pre-departure-check";
 import type { ReadinessBlocker } from "@/lib/readiness";
@@ -484,6 +485,61 @@ export const rollCallDeckCounts = pgTable(
       table.seq,
     ),
     check("roll_call_deck_counts_counted_range", sql`${table.counted} between 0 and 999`),
+  ],
+);
+
+export const diveParticipation = pgEnum("dive_participation", DIVE_PARTICIPATIONS);
+
+/**
+ * **A dive participation note** (issue #4307; glossary "Dive participation
+ * note"): the crew saying one diver dived, sat out, or is unknown for one dive
+ * of the day, from the person sheet at that dive's roll-call checkpoint.
+ *
+ * Kept apart from `roll_call_events` on purpose. Roll call says where a person
+ * is; this says whether they went in. Nothing here is inferred from a roll-call
+ * mark and nothing reads it to count heads, clear a seat, hold anyone, or say
+ * when anyone may fly. The recap and the log entry file read it only to stop
+ * naming a site this diver sat out.
+ *
+ * Append-only; the newest row per (booking, dive) is the note, and no row at
+ * all is `unknown`. A correction is a new row, `unknown` included, so the trail
+ * keeps every word somebody said.
+ */
+export const diveParticipationNotes = pgTable(
+  "dive_participation_notes",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    tripId: uuid("trip_id")
+      .notNull()
+      .references(() => trips.id),
+    bookingId: uuid("booking_id")
+      .notNull()
+      .references(() => bookings.id),
+    /** Validated against the trip's planned dives at write. */
+    diveNumber: integer("dive_number").notNull(),
+    participation: diveParticipation("participation").notNull(),
+    recordedByPersonId: uuid("recorded_by_person_id")
+      .notNull()
+      .references(() => people.id),
+    recordedAt: appNowTimestamp("recorded_at").notNull(),
+    /** Final tiebreak for "the newest", since `recorded_at` ties under a frozen clock. */
+    seq: bigserial("seq", { mode: "number" }).notNull(),
+  },
+  (table) => [
+    index("dive_participation_notes_shop_trip_idx").on(
+      table.shopId,
+      table.tripId,
+      table.bookingId,
+      table.diveNumber,
+      table.seq,
+    ),
+    // A booking's erasure or merge probes this foreign key by index.
+    index("dive_participation_notes_booking_idx").on(table.bookingId),
+    index("dive_participation_notes_recorded_by_person_id_idx").on(table.recordedByPersonId),
+    check("dive_participation_notes_dive_number_positive", sql`${table.diveNumber} >= 1`),
   ],
 );
 

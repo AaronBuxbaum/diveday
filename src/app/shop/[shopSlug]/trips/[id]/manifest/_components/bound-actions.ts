@@ -21,6 +21,7 @@ import {
   teamUpPartiesAction,
 } from "../actions";
 import { recordDeckCountAction } from "../deck-count-action";
+import { recordDiveParticipationAction } from "../dive-participation-action";
 import {
   emergencyShowSeatMedicalAlertAction,
   showSeatMedicalAlertAction,
@@ -62,6 +63,8 @@ export function bindManifestActions(
     crewRollCall: crewRollCallAction.bind(null, actionContext),
     // The count on deck belongs to the checkpoint that is open (issue #4248).
     recordDeckCount: recordDeckCountAction.bind(null, actionContext),
+    // A participation note is about the dive this checkpoint follows (issue #4307).
+    recordDiveParticipation: recordDiveParticipationAction.bind(null, actionContext),
     // The note carries its own checkpoint and the action re-proves it, so this
     // one takes the narrower context that has none.
     addPrivateNote: addManifestPrivateNoteAction.bind(null, { shopSlug, tripId }),

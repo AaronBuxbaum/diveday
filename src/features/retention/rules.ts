@@ -76,6 +76,11 @@
  * checkpoint, beside the per-person roll call it was compared with, and an
  * incident review reads the two together (issue #4248, 2026-11-16).
  *
+ * **`dive_participation_notes` is deliberately unbounded.** The newest note per
+ * seat and dive is what stops a diver's recap and log entry file naming a dive
+ * they sat out; pruning the trail would put that dive back on an old record
+ * (issue #4307, 2026-11-20). Its person reference is the staffer who said it.
+ *
  * **`trip_change_events` and `review_moderation_events` are deliberately
  * unbounded.** The shop activity log reads these as the record of changes and
  * moderation; a note on the diver's own review is redacted on erasure, a mention is not, and staff
@@ -193,6 +198,7 @@ export const UNBOUNDED_BY_DECISION: readonly string[] = [
   "pre_departure_check_events",
   "offline_review_refusals",
   "roll_call_deck_counts",
+  "dive_participation_notes",
   "trip_change_events",
   "review_moderation_events",
 ];

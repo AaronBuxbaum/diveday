@@ -169,6 +169,8 @@ export const EXPORT_FILE_NOTES = {
     "Append-only history of every tap against a checklist item, oldest first: status 'checked' or 'cleared' (an explicit undo of a mis-tap), who recorded it and when, and whether it was recorded live or synced from an offline device. The newest event per item is that item's current answer for the departure. Informs only — nothing here ever gated a departure from sailing.",
   "roll_call_deck_counts.csv":
     "Every head count a crew typed in from the deck at a roll-call checkpoint, crew included, oldest first, with who entered it and when. The newest row per departure and checkpoint is the count the manifest compared with the people marked aboard. Informs only: a count never closed, opened or gated a checkpoint.",
+  "dive_participation_notes.csv":
+    "Every note a crew made about whether one diver went in on one dive, oldest first: participation 'dived', 'sat_out' or 'unknown' (a note taken back), with who said it and when. The newest row per booking and dive is the note; no row means unknown, never 'did not dive'. Informs only: never inferred from roll call, and never read by the head count, readiness, a medical hold, or fly-safe.",
   "boat_snags.csv":
     "Problems a crew wrote against a checklist line on one boat (a snag), oldest first, each carried to that boat's next departures until somebody marked it fixed. still_there_* is the newest crew who looked and found it still there; fixed_* closes it for good. Informs only: an open snag never stopped a departure.",
   "departure_boat_safety_snapshots.csv":

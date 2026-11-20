@@ -7,7 +7,9 @@ import { depthWarningText } from "@/i18n/depth-labels";
 import { presenceText } from "@/i18n/presence-labels";
 import { depthAdvisoryIn } from "@/lib/findings";
 import type { TripManifest } from "@/lib/manifests";
+import { isDiver } from "@/lib/participant-types";
 import { shopPath } from "@/lib/staff-notices";
+import { DiveParticipationControl } from "./DiveParticipationControl";
 import { DiverFacts, diverBlockerText } from "./DiverFacts";
 import type { DiverRollCallContext } from "./diver-roll-call-context";
 import type { DiverRowState } from "./diver-row-state";
@@ -202,6 +204,28 @@ export function DiverRowPanel({
           </li>
         ) : null}
       </ul>
+      {/* **Dived or sat out** (issue #4307), for the dive this count follows:
+        a note beside the count, never part of it. Not at the dock, not on
+        paper, not for a rider or snorkeler, and not on a closed cancelled
+        departure. */}
+      {context.diveParticipation &&
+      !context.paper &&
+      !rollCallClosed &&
+      isDiver(diver.participantType) ? (
+        <DiveParticipationControl
+          bookingId={diver.bookingId}
+          participation={context.diveParticipation.bySeat(diver.bookingId)}
+          action={context.diveParticipation.action}
+          copy={{
+            label: t("manifest.participation.label", {
+              number: context.diveParticipation.diveNumber,
+            }),
+            dived: t("manifest.participation.dived"),
+            satOut: t("manifest.participation.satOut"),
+            error: t("manifest.participation.error"),
+          }}
+        />
+      ) : null}
       <StaffNotes notes={bookingNotes} locale={locale} timezone={timezone} t={t} />
       {/* Never on paper, like the notes above it: this panel is the
         screen's, and the Boat tab prints its sheet instead (security

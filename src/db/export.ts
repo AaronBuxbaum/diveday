@@ -219,6 +219,7 @@ async function readDepartureCheckRows(tx: AppTransaction, scope: ShopExportScope
     checklistItemLabel: new Map(checklistItemRows.map((row) => [row.id, row.label])),
     checklistEventRows: await readScoped(tx, "preDepartureCheckEvents", scope),
     deckCountRows: await readScoped(tx, "rollCallDeckCounts", scope),
+    diveParticipationRows: await readScoped(tx, "diveParticipationNotes", scope),
     boatSafetySnapshotRows: await readScoped(tx, "departureBoatSafetySnapshots", scope),
     boatSnagRows: await readScoped(tx, "boatSnags", scope),
   };
@@ -1481,6 +1482,8 @@ export async function loadShopExportCounts(
       scoped("pre_departure_check_events.csv", "preDepartureCheckEvents"),
     "roll_call_deck_counts.csv": async () =>
       scoped("roll_call_deck_counts.csv", "rollCallDeckCounts"),
+    "dive_participation_notes.csv": async () =>
+      scoped("dive_participation_notes.csv", "diveParticipationNotes"),
     "boat_snags.csv": async () => scoped("boat_snags.csv", "boatSnags"),
     "departure_boat_safety_snapshots.csv": async () =>
       scoped("departure_boat_safety_snapshots.csv", "departureBoatSafetySnapshots"),

@@ -112,6 +112,7 @@ export async function readManifestView({
     copies: rollCallCopies(t, shopSlug, tripId),
     buddyTeamLabel: buddy.buddyTeamLabel,
     shopName: shop.name,
+    diveParticipation: read.diveParticipation,
     t,
   });
   const boatPaper = {
