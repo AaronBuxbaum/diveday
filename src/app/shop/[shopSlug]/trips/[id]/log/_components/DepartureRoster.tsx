@@ -48,7 +48,7 @@ function RosterTable({
   checkpoints: RollCallCheckpoint[];
 }) {
   return (
-    <Table shellClassName="mt-3" minWidth="56rem">
+    <Table shellClassName="mt-3" minWidth="56rem" stack>
       <THead>
         <Th>{t("incidentExport.colDiver")}</Th>
         <Th>{t("incidentExport.colEmergencyContact")}</Th>
@@ -74,7 +74,7 @@ function RosterTable({
                     figure — so the rule goes on the number itself. The dot
                     before it is glued to the name by a no-break space, so a
                     narrow cell never starts a line with "·". */}
-            <Td muted>
+            <Td muted label={t("incidentExport.colEmergencyContact")}>
               {/* A held seat's contact would be the matched person's next
                       of kin (issue #2128): said, never "Not on file". */}
               {diver.identityWithheld ? (
@@ -89,7 +89,7 @@ function RosterTable({
                 t("incidentExport.notOnFile")
               )}
             </Td>
-            <Td muted>
+            <Td muted label={t("incidentExport.colBuddy")}>
               {diver.buddy ? (
                 <>
                   <span className="font-medium text-foreground">
@@ -122,7 +122,13 @@ function RosterTable({
             {diver.rollCall
               .filter((result) => checkpoints.includes(result.checkpoint))
               .map((result) => (
-                <RollCallCell key={result.checkpoint} t={t} result={result} dateTime={dateTime} />
+                <RollCallCell
+                  key={result.checkpoint}
+                  t={t}
+                  result={result}
+                  dateTime={dateTime}
+                  label={checkpointText(result.checkpoint)}
+                />
               ))}
           </tr>
         ))}

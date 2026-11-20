@@ -1,4 +1,5 @@
 import { and, eq, isNull, sql } from "drizzle-orm";
+import { nextOfflineGeneration } from "@/db/offline-generation";
 import { liveTrip, pagedUpcomingTripsWithCounts, seatHeld } from "@/db/trips";
 import { loadActiveStaffRoles } from "../../db/authz";
 import {
@@ -203,7 +204,7 @@ export async function markBookingNoShow(
       .update(bookings)
       .set({
         status: "no_show",
-        offlineAssignmentGeneration: sql`${bookings.offlineAssignmentGeneration} + 1`,
+        offlineAssignmentGeneration: sql`${nextOfflineGeneration(bookings.offlineAssignmentGeneration)}`,
       })
       .where(and(eq(bookings.id, seat.id), seatHeld))
       .returning({ id: bookings.id });

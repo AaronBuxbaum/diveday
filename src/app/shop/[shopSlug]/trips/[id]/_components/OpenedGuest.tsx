@@ -117,27 +117,31 @@ export function OpenedGuest({
     facts.push({
       key: "gear",
       label: t("trips.fixList.facts.gear"),
+      // The door on a line of its own: inline, its 44px target stood one
+      // wrapped line of sizes apart from the next like a blank line.
       value: (
         <>
-          {rentalFitLineText(
-            t,
-            locale,
-            rentalFitLine(
-              rows.rentalFitByBooking.get(booking.id) ?? null,
-              trip.shopRentalItems,
-              booking.participantType,
-            ),
-          )}
-          {seat.nitrox ? (
-            <>
-              {" · "}
-              {t(
-                seat.nitrox.approved
-                  ? "trips.roster.nitroxApproved"
-                  : "trips.roster.nitroxUnverified",
-              )}
-            </>
-          ) : null}{" "}
+          <span className="block">
+            {rentalFitLineText(
+              t,
+              locale,
+              rentalFitLine(
+                rows.rentalFitByBooking.get(booking.id) ?? null,
+                trip.shopRentalItems,
+                booking.participantType,
+              ),
+            )}
+            {seat.nitrox ? (
+              <>
+                {" · "}
+                {t(
+                  seat.nitrox.approved
+                    ? "trips.roster.nitroxApproved"
+                    : "trips.roster.nitroxUnverified",
+                )}
+              </>
+            ) : null}
+          </span>
           <Link href={`/shop/${trip.shopSlug}/divers/${person.id}#gear`} className={LINK}>
             {t("trips.fixList.facts.setFit")}
           </Link>

@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { cards, interests, people, tripRequirements } from "../../db/schema/index";
+import {
+  cards,
+  interests,
+  people,
+  tripHelpRequests,
+  tripRequirements,
+} from "../../db/schema/index";
 import { upcomingTripsWithCounts } from "../../db/trips-queries.test-support";
 import { fileScopedShopContext } from "../../test/db";
 import { getTripGuests } from "./store";
@@ -158,6 +164,31 @@ describe("getTripGuests", () => {
       expect(guests.lastMinute.showPromote).toBe(
         guests.lastMinute.matched.length > 0 || guests.lastMinute.promos.length > 0,
       );
+    });
+  });
+
+  describe("what the fix list reads beyond the roster", () => {
+    it("carries a seat's open help request, keyed by its booking", async () => {
+      const ctx = await context();
+      const first = (await guestsFor(ctx)).roster[0];
+      if (!first) throw new Error("demo reef trip has no roster");
+      await ctx.db.insert(tripHelpRequests).values({
+        shopId: ctx.shop.id,
+        tripId: ctx.tripId,
+        bookingId: first.booking.id,
+        kind: "find_group",
+        status: "requested",
+      });
+      const guests = await guestsFor(ctx);
+      expect(guests.helpRequestByBooking.get(first.booking.id)?.kind).toBe("find_group");
+      const rosterIds = new Set(guests.roster.map((row) => row.booking.id));
+      for (const key of [
+        ...guests.helpRequestByBooking.keys(),
+        ...guests.openOrderByBooking.keys(),
+        ...guests.nextReminderAtByBooking.keys(),
+      ]) {
+        expect(rosterIds.has(key)).toBe(true);
+      }
     });
   });
 

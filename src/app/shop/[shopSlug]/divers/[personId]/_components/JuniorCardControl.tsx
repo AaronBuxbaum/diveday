@@ -48,10 +48,20 @@ export function JuniorCardControl({
   t: StaffTranslator;
 }) {
   return (
-    <details>
-      <summary>{t("divers.certifications.juniorCardChange")}</summary>
+    // The app's own small door, like "Sight the card" beside it, never the
+    // browser's own disclosure triangle in body type (`diver-card-type-check`).
+    <details className="min-w-0">
+      <summary
+        className={buttonClass({
+          variant: "secondary",
+          size: "sm",
+          className: "cursor-pointer list-none",
+        })}
+      >
+        {t("divers.certifications.juniorCardChange")}
+      </summary>
       {card.juniorStatusVerifiedAt ? (
-        <p>
+        <p className="mt-2">
           {t("divers.certifications.juniorCardVerifiedBy", {
             name: card.juniorStatusVerifiedByName ?? t("divers.certifications.juniorCardStaff"),
             date: formatShortDate(card.juniorStatusVerifiedAt, locale, timezone),

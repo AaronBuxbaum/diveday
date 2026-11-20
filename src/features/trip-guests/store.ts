@@ -55,8 +55,8 @@ import {
   orderLastMinuteRecipients,
 } from "../../lib/interests";
 import { unionRequirements } from "../../lib/requirement";
-
 import { toDateInputValue, utcToWallTime } from "../../lib/zoned";
+import { fixListFacts } from "./fix-list-facts";
 
 /**
  * Everything the trip's Guests page is about, in one call — the last of the
@@ -291,12 +291,14 @@ export async function getTripGuests(
     packageDivesByPerson,
     certificationSummaries,
     courseMaterialsDone,
+    courseProgress,
     agencyCheckCardsByPerson,
     issuedCardByPerson,
     dependentCharters,
     trainingMarks,
     specialtiesByPerson,
     textableBookings,
+    fixListFactsRead,
   ] = await Promise.all([
     inviteDatesForCandidates(db, shop.id, diverCandidates),
     // What "Different person" on a held seat can offer to move along with it:
@@ -343,9 +345,7 @@ export async function getTripGuests(
       db,
       shop.id,
       [...new Set(roster.map(({ booking }) => booking.personId))],
-      {
-        courseId: trip.courseId,
-      },
+      { courseId: trip.courseId },
     ),
     listCertificationSummaries(db, shop.id, [
       ...new Set([
@@ -365,6 +365,7 @@ export async function getTripGuests(
           around: trip.startsAt,
         })
       : new Map<string, CourseMaterialsDone>(),
+    courseProgressFor(db, shop.id, trip.courseId, roster),
     // The cards the DiveDay browser extension could check from this tab
     // (H-20261008-cert-check-extension), and the N of its "Check all N". Never a held seat's: until a
     // staffer confirms who is standing there, the matched diver's name, birth
@@ -422,6 +423,13 @@ export async function getTripGuests(
       dealRequirement,
     ),
     textableSeats(db, shop.id, roster.map(textReachOf)),
+    fixListFacts(
+      db,
+      shop.id,
+      tripId,
+      trip.startsAt,
+      roster.map(({ booking }) => booking.id),
+    ),
   ]);
 
   const heldSeatLastDiveDay = lastDiveDayBySeat(heldSeats, heldLastDiveDays);
@@ -527,6 +535,7 @@ export async function getTripGuests(
     /** Per seat, the Paid mark's money and what the seat still owes (`getTripRosterWithPaymentMarks`). */
     paymentMarksByBooking,
     textableBookings,
+    ...fixListFactsRead,
     /**
      * A split on this departure must take a date of birth: it is a course
      * with a minimum age, which reads the new record's date (issue #2081). A
@@ -549,7 +558,7 @@ export async function getTripGuests(
      * The tick itself is on the booking row the roster already read.
      */
     courseHasMaterials: readLearningMaterials(trip.course?.learningMaterials).length > 0,
-    ...(await courseProgressFor(db, shop.id, trip.courseId, roster)),
+    ...courseProgress,
     /**
      * What the DiveDay browser extension would search the agency's eLearning
      * page for, per seat, where it can (H-20261008-padi-elearning-check): a PADI course with materials.

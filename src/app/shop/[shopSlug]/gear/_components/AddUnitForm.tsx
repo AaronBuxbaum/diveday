@@ -43,7 +43,10 @@ export function AddUnitForm({
   focusKey?: string;
 }) {
   return (
-    <div className="border-t border-border p-5 sm:p-6">
+    // The dialog pads it already; a second inset and rule here shrank every
+    // field by 40px and pushed "Add to the register" past the dialog's foot
+    // on a phone (`gear-duplicate-tag-refusal`).
+    <div>
       <FieldGrid as="form" action={createGearItemAction} columns={2}>
         {/* A refused tag or date comes back with the serial, brand and
             size still typed. */}

@@ -528,7 +528,7 @@
     "materialsDoneLine": "Material terminado · {date}",
     "materialsDoneLineBy": "Material terminado · {date} · {name}",
     "certifyMaterialsNote": "Los materiales no están marcados como terminados; revisa el registro de la agencia antes de certificar.",
-    "progressSummary": "Avance del curso · {done} de {total} sesiones marcadas",
+    "progressSummary": "Avance del curso · {done} de {total, plural, one {# sesión} other {# sesiones}} marcadas",
     "progressMark": "Marcar hecho",
     "progressUndo": "Deshacer",
     "materialsMarkDone": "Marcar material terminado",
@@ -1335,8 +1335,15 @@
       "fitNeeded": "Ajustar el equipo en el check-in",
       "recency": "Hace tiempo que no bucea",
       "paymentDueAmount": "{amount} sin pagar",
-      "reEntryAsk": "Un pedido para la tripulación"
+      "reEntryAsk": "Un pedido para la tripulación",
+      "helpRequested": "Pidió ayuda"
     },
+    "help": {
+      "carryGear": "Quiere ayuda con el equipo",
+      "firstTimer": "Principiante, quiere una orientación",
+      "findGroup": "Busca a su grupo"
+    },
+    "reminderAt": "El recordatorio sale el {when}",
     "remedy": {
       "takePayment": "Cobrar",
       "reviewCards": "Revisar certificaciones",
@@ -1346,6 +1353,7 @@
       "addContact": "Agregar contacto",
       "fitGear": "Ajustar equipo",
       "open": "Abrir",
+      "arrangeHelp": "Organizar ayuda",
       "takeAmount": "Cobrar {amount}",
       "call": "Llamar a {name}"
     },

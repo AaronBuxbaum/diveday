@@ -35,7 +35,9 @@ export async function ReleaseStillSample({
   if (shop.isDemo || firstRun || !canManageWaiverTemplates(roles)) return null;
   if (!(await liveReleaseIsSample(db, shop.id))) return null;
   return (
-    <ul className="mt-6">
+    // `mb-10`, the gap between the spine's own sections: "Needs you" below
+    // sat on this row's hairline with no air (`today-first-bookable`).
+    <ul className="mt-6 mb-10">
       <LedgerRow
         href={`${shopPath(shop.slug, "settings", "waivers")}#release`}
         linkLabel={t("shopHome.firstRun.releaseAction")}

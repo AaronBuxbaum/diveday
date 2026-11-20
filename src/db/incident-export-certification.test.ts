@@ -198,6 +198,74 @@ describe("departure-log certification captures", () => {
         ?.certificationsAtCapture?.find((row) => row.identifier === "BOARD-CARD"),
     ).toMatchObject({ status: "pending" });
   });
+  it("erases a reviewer and the record merged into them from a snapshot together, and leaves another reviewer's name", async () => {
+    const { db, shop, reef, staff } = await exportContext();
+    const [first] = await getTripRoster(db, shop.id, reef.id);
+    if (!first) throw new Error("demo booking missing");
+    const [reviewer, shell, bystander] = await db
+      .insert(people)
+      .values([
+        { shopId: shop.id, fullName: "Chain reviewer" },
+        { shopId: shop.id, fullName: "Chain reviewer, merged away" },
+        { shopId: shop.id, fullName: "Bystander reviewer" },
+      ])
+      .returning();
+    if (!reviewer || !shell || !bystander) throw new Error("reviewers missing");
+    await db
+      .update(people)
+      .set({
+        mergedIntoPersonId: reviewer.id,
+        mergedAt: nowDate(),
+        mergedByPersonId: staff.id,
+        deletedAt: nowDate(),
+      })
+      .where(eq(people.id, shell.id));
+    const card = (identifier: string, by: { id: string; fullName: string }) => ({
+      kind: "level" as const,
+      agency: "padi" as const,
+      level: "rescue" as const,
+      specialty: null,
+      identifier,
+      status: "verified" as const,
+      reviewedAt: nowDate().toISOString(),
+      reviewedByName: by.fullName,
+      reviewedByPersonId: by.id,
+      imported: false,
+      selfDeclared: false,
+    });
+    const [event] = await seedRollCallEvidence(db, {
+      shopId: shop.id,
+      tripId: reef.id,
+      bookingId: first.booking.id,
+      recordedByPersonId: staff.id,
+      status: "boarded",
+      checkpoint: "departure",
+      source: "live",
+      occurredAt: nowDate(),
+      certificationSnapshotStartedAt: nowDate(),
+      certificationSnapshotCapturedAt: nowDate(),
+      certificationSnapshot: [
+        card("BY-REVIEWER", reviewer),
+        card("BY-SHELL", shell),
+        card("BY-BYSTANDER", bystander),
+      ],
+    });
+    if (!event) throw new Error("event missing");
+    expect(
+      await anonymizeDiver(db, { shopId: shop.id, personId: reviewer.id, actorPersonId: staff.id }),
+    ).toMatchObject({ ok: true });
+    const [after] = await db.select().from(rollCallEvents).where(eq(rollCallEvents.id, event.id));
+    const byId = new Map(after?.certificationSnapshot?.map((c) => [c.identifier, c]));
+    expect(byId.get("BY-REVIEWER")).toMatchObject({
+      reviewedByName: null,
+      reviewedByPersonId: null,
+    });
+    expect(byId.get("BY-SHELL")).toMatchObject({ reviewedByName: null, reviewedByPersonId: null });
+    expect(byId.get("BY-BYSTANDER")).toMatchObject({
+      reviewedByName: "Bystander reviewer",
+      reviewedByPersonId: bystander.id,
+    });
+  });
   it("erases a reviewer from another seat's snapshot and keeps the subject's sighting without its number", async () => {
     const { db, shop, reef, staff } = await exportContext();
     const [first] = await getTripRoster(db, shop.id, reef.id);

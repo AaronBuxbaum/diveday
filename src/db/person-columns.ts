@@ -1254,6 +1254,9 @@ const rows = [
     merge: "leave",
     erase: "scrub",
     eraseIn: "scrubPersonRecord",
+    // The sweep finds the shells through the pointer (`mergedIntoChain`, read once for the
+    // whole erasure) and scrubs them by id; the pointer itself stays.
+    eraseBy: "id",
     why: "the merge pointer itself \u2014 structural, and what makes the shell resolve",
   },
   {

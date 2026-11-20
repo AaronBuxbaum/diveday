@@ -91,7 +91,6 @@ html[data-device-text-size] :is(a, button, summary) {
    Inheriting wrap-anywhere made "Find my booking" a one-letter flex column. */
 html[data-device-text-size] .device-text-public-identity {
   width: 100%;
-  flex-wrap: wrap;
 }
 /* Formatted time units keep their nonbreaking spaces at ordinary sizes.
    Applied scaling may break between their parts, never inside the zone word. */
@@ -105,9 +104,7 @@ html[data-device-text-size] .device-text-word-break {
   display: inline;
 }
 html[data-device-text-size] .device-text-recovery {
-  flex-grow: 1;
-  flex-basis: min-content;
-  max-inline-size: max-content;
+  max-inline-size: 100%;
   overflow-wrap: normal;
 }
 html[data-device-text-size] [data-device-text-catch-up] form {
@@ -1781,6 +1778,17 @@ select:not([multiple]):not([size]):dir(rtl) {
 }
 
 /*
+ * A move between pages (`PageEnter`, issue #4263): the same `rise-in`, in the
+ * quick beat, and `backwards` rather than `both` so nothing is held once it has
+ * landed — a transform left on the wrapper would make it the containing block
+ * of every fixed bar and toast on the page. The reduced-motion kill-switch
+ * below covers it.
+ */
+.page-enter {
+  animation: rise-in var(--motion-quick) var(--ease-out-soft) backwards;
+}
+
+/*
  * The settled mark landing — `SettledCheck` (ADR
  * 20260827-clearwater-surface-language).
  *
@@ -1917,32 +1925,24 @@ select:not([multiple]):not([size]):dir(rtl) {
 }
 
 /* Text she types (`data-walk-type`): in the first part of a beat the characters
-   arrive one at a time, left to right, `--type-chars` of them from `--type-delay`.
-   Every other phase draws the finished text, so the tap and the screen after
-   it never replay it. */
-@keyframes walk-type {
+   arrive one at a time, in reading order, from `--type-delay` on. Each
+   character (`data-walk-char`, `--i` its place) shows on its own turn, so a line that wraps fills
+   its first line before its second. Every other phase draws the finished text, so the tap and the
+   screen after it never replay it. */
+@keyframes walk-char {
   from {
-    clip-path: inset(0 100% 0 0);
+    opacity: 0;
   }
   to {
-    clip-path: inset(0 0 0 0);
+    opacity: 1;
   }
 }
 
-/* The last step of a short word (a 3-digit security code) was left a character short until the
-   phase moved on, so a second, instant animation lands the finished text the moment the typing ends. */
-@keyframes walk-typed {
-  to {
-    clip-path: inset(0 0 0 0);
-  }
-}
-
-[data-walk-phase="before"] [data-walk-before] [data-walk-type] {
-  animation:
-    walk-type calc(var(--type-chars, 10) * var(--type-ms, 40ms)) steps(var(--type-chars, 10)) both
-    var(--type-delay, 0ms),
-    walk-typed 1ms linear forwards
-    calc(var(--type-delay, 0ms) + var(--type-chars, 10) * var(--type-ms, 40ms));
+[data-walk-phase="before"] [data-walk-before] [data-walk-char] {
+  animation-name: walk-char;
+  animation-duration: 1ms;
+  animation-fill-mode: both;
+  animation-delay: calc(var(--type-delay, 0ms) + var(--i, 0) * var(--type-ms, 40ms));
 }
 
 /* Something that happens to the first screen in the first phase (`data-walk-late`, such as her tap
@@ -1984,7 +1984,9 @@ select:not([multiple]):not([size]):dir(rtl) {
 /* A walk that is not running holds still: a slide it opens waits on its first frame, and one
    stopped mid-play stays on the frame it reached, every animation paused where it is. */
 [data-walk-still] *:not([data-walk-frame-current]),
-[data-walk-still] *::after {
+[data-walk-still] *::after,
+[data-walk-idle] *:not([data-walk-frame-current]),
+[data-walk-idle] *::after {
   animation-play-state: paused;
 }
 
@@ -2832,6 +2834,31 @@ details[open]::details-content {
 }
 
 /*
+ * **The phone's section bar says it scrolls sideways.** Below `lg` the same
+ * rail is one line, recentred on the current row, so it is usually cut at
+ * both edges. A hard cut read as a clipped word ("ip defaults ›"); the edge
+ * with more rows past it fades over 2rem instead, the way the tab bar's
+ * scroll cue does at the foot.
+ */
+@media (width < 64rem) {
+  [data-settings-rail-scroller][data-more-start] {
+    mask-image: linear-gradient(to right, transparent, black 2rem);
+  }
+  [data-settings-rail-scroller][data-more-end] {
+    mask-image: linear-gradient(to left, transparent, black 2rem);
+  }
+  [data-settings-rail-scroller][data-more-start][data-more-end] {
+    mask-image: linear-gradient(
+      to right,
+      transparent,
+      black 2rem,
+      black calc(100% - 2rem),
+      transparent
+    );
+  }
+}
+
+/*
  * **The title folds into the bar** — ADR 20260907-nothing-from-nowhere,
  * decision 5, slice 18e (issue #1422).
  *
@@ -3076,6 +3103,54 @@ details[open]::details-content {
   }
 }
 
+/*
+ * **A stacked table on a phone** (`Table`'s `stack`). The departure log's
+ * divers table is nine columns; at 390px its emergency contacts were cut at
+ * the card edge and every row stood 110px tall for cells nobody could see.
+ * Below `sm`, on a screen only, each row is a block: the first cell leads,
+ * and each other cell is a line under its column's name (`Td`'s `label`).
+ * Paper keeps the table: `screen` keeps a print preview at any width out.
+ */
+@media screen and (width < 40rem) {
+  .table-stack .table-scroll-shell {
+    overflow: visible;
+    mask-image: none;
+    animation: none;
+  }
+  .table-stack :is(table, tbody, tr, td) {
+    display: block;
+    min-width: 0;
+  }
+  .table-stack thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .table-stack tr {
+    padding: 0.875rem 1rem;
+  }
+  .table-stack td {
+    padding: 0;
+    overflow: visible;
+  }
+  .table-stack td + td {
+    margin-top: 0.5rem;
+  }
+  .table-stack td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 0.125rem;
+    color: var(--color-muted);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+}
+
 @media print {
   /* A paper reader cannot scroll to trigger an entrance or open a feature list. */
   .marketing-reveal,
@@ -3220,6 +3295,13 @@ details[open]::details-content {
   .sub-surface-ripple-message {
     /* must beat the kill-switch's duration override, which would leave the panel at its final opacity 0 */
     animation-name: none !important;
+  }
+}
+
+/* A walk that does not play (reduced motion) never types: its fields hold the finished text. */
+@media (prefers-reduced-motion: reduce) {
+  [data-walk-phase="before"] [data-walk-before] [data-walk-char] {
+    animation: none;
   }
 }
 

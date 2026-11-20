@@ -41,3 +41,7 @@ so a newer copy on a device is never replaced by an older read.
 A client requesting `includeStoredInstants` gets the committed timestamp for successful event ids, including duplicates. `offlineSyncInstants` reads these timestamps after the writers commit; a retry never invents a new stored time. The browser preserves raw `occurredAt` for local queue ordering and keeps `storedOccurredAt` for comparisons with server snapshots. An unsynced missing-diver mark following the same device's saved applied mark remains visible even when its raw clock is behind the server.
 
 This does not infer cross-device chronology. Fast and slow clocks, a clock corrected between taps, and late sync remain unresolved in #4418. A send/receive offset was investigated and rejected: transport delay can shift an old aboard mark past a newer missing-diver mark. Resolving that needs causal conflict handling, not a guessed wall-clock offset. The automated route/database and IndexedDB tests simulate devices; they are not a physical two-device rehearsal.
+
+## Generations survive a restore
+
+Meeting and seat generations are random fingerprints (`src/db/offline-generation.ts`): only equality is compared. A restore rewinds the database, and a sequential counter would hand the lost branch's number to a different edit; a random step makes the rewound branch draw a new one, so evidence captured on the lost branch is held for review. `restore-drill.postgres.test.ts` demonstrates this on a real server.

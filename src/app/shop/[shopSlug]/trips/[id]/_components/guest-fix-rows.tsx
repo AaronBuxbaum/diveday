@@ -1,9 +1,13 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { waiverSendCopy } from "@/app/actions/waiver-send-types";
+import { helpRequestControl } from "@/app/shop/[shopSlug]/_components/today/help-request-row";
+import { PaymentActionControl } from "@/app/shop/[shopSlug]/_components/today/PaymentActionControl";
+import { paymentActionCopy } from "@/app/shop/[shopSlug]/_components/today/payment-action-copy";
 import { WaiverSendControl } from "@/app/shop/[shopSlug]/_components/today/WaiverSendControl";
 import { buttonClass } from "@/components/ui/button";
 import type { STAFF_RE_ENTRY_KEYS } from "@/features/dive-intent";
+import type { TodayHelpRequest } from "@/features/help-requests";
 import {
   type AdvisoryReason,
   type FixGuest,
@@ -15,7 +19,8 @@ import {
 } from "@/features/trip-fix-list";
 import type { StaffMessageKey } from "@/i18n/staff-messages";
 import { staffParticipantTypeLabel } from "@/i18n/staff-participant-labels";
-import { formatMoneyCents } from "@/lib/format";
+import { helpRequestActionText } from "@/i18n/today-labels";
+import { formatMoneyCents, formatWeekdayTime } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { firstNameOf } from "@/lib/person-name";
 import { diverPhotoDisplayPath } from "@/lib/person-photo";
@@ -47,6 +52,13 @@ const RE_ENTRY_PHRASE_KEYS = {
   refresher_course: "trips.fixList.reEntry.refresherCourse",
 } as const satisfies Record<keyof typeof STAFF_RE_ENTRY_KEYS, StaffMessageKey>;
 
+/** What a guest asked a hand with, said on their row. */
+const HELP_KIND_KEYS = {
+  carry_gear: "trips.fixList.help.carryGear",
+  first_timer: "trips.fixList.help.firstTimer",
+  find_group: "trips.fixList.help.findGroup",
+} as const satisfies Record<string, StaffMessageKey>;
+
 /**
  * Which part of the trip's day the list is drawn for (ADR 20261117-trip-page-clock):
  * `filling` days ahead (one quiet Booked card), `ready` the day before (the
@@ -75,6 +87,7 @@ const REMEDY_KEYS: Readonly<Record<Exclude<FixRemedy, "send_waiver">, StaffMessa
   course_forms: "trips.fixList.remedy.courseForms",
   add_contact: "trips.fixList.remedy.addContact",
   fit_gear: "trips.fixList.remedy.fitGear",
+  arrange_help: "trips.fixList.remedy.arrangeHelp",
   open: "trips.fixList.remedy.open",
 };
 
@@ -94,6 +107,12 @@ type Seat = {
   waiverSendable: boolean;
   /** What a payment fix would take, formatted in the shop's currency. */
   owed: string | null;
+  /** The guest's open help request: the row says it and holds the crew choice. */
+  helpRequest: TodayHelpRequest | null;
+  /** The guest's open invoice, so a money row can copy the pay link or resend it. */
+  order: { id: string; hostedInvoiceUrl: string | null } | null;
+  /** When the guest's next pre-trip reminder goes out. */
+  reminderAt: Date | null;
   cardsHref: string;
   /** The opened guest draws the desk's tap itself, beside the blockers it answers. */
   panelHoldsArrival: boolean;
@@ -124,6 +143,8 @@ function seatOf(entry: RosterEntry, context: RosterRowContext): Seat {
     return reason ? [reason] : [];
   });
   if (booking.reEntryAsk && seat.showsPersonDetail) advisories.push("re_entry_ask");
+  const helpRequest = rows.helpRequestByBooking.get(booking.id) ?? null;
+  if (helpRequest) advisories.push("help_requested");
   const fit = rentalFitCompleteness(
     rows.rentalFitByBooking.get(booking.id) ?? null,
     trip.shopRentalItems,
@@ -198,6 +219,9 @@ function seatOf(entry: RosterEntry, context: RosterRowContext): Seat {
     sendWaiver,
     waiverSendable,
     owed,
+    helpRequest,
+    order: rows.openOrderByBooking.get(booking.id) ?? null,
+    reminderAt: rows.nextReminderAtByBooking.get(booking.id) ?? null,
     cardsHref: `/shop/${trip.shopSlug}/divers/${person.id}#cards`,
     panelHoldsArrival: seat.blockerTexts.length > 0,
   };
@@ -273,6 +297,8 @@ export function guestFixRows(
   const reasonText = (reason: FixReason, seat: Seat | undefined): string => {
     if (reason === "payment_due" && seat?.owed)
       return t("trips.fixList.reason.paymentDueAmount", { amount: seat.owed });
+    if (reason === "help_requested" && seat?.helpRequest)
+      return t(HELP_KIND_KEYS[seat.helpRequest.kind]);
     const ask = seat?.entry.booking.reEntryAsk;
     if (reason === "re_entry_ask" && ask) return t(RE_ENTRY_PHRASE_KEYS[ask]);
     return t(reasonKey(reason));
@@ -314,6 +340,38 @@ export function guestFixRows(
           </Link>
         ),
       };
+    if (remedy === "arrange_help" && seat?.helpRequest) {
+      const request = seat.helpRequest;
+      return {
+        control: () =>
+          helpRequestControl(
+            {
+              requestId: request.id,
+              revision: request.revision,
+              status: request.status,
+              helperPersonId: request.helperPersonId,
+              helperPersonName: request.helperPersonName,
+              crew: request.crew,
+              meetingInstructions: request.meetingInstructions,
+            },
+            helpRequestActionText(t, request.helperPersonName),
+            t,
+          ),
+      };
+    }
+    // A booking invoiced through Stripe: the pay link is one tap, no need to open the guest.
+    if (remedy === "take_payment" && seat?.owed && seat.order)
+      return {
+        control: () => (
+          <PaymentActionControl
+            shopSlug={trip.shopSlug}
+            orderId={seat.order?.id ?? ""}
+            hostedInvoiceUrl={seat.order?.hostedInvoiceUrl ?? null}
+            copy={paymentActionCopy(t)}
+          />
+        ),
+        openLabel: t("trips.fixList.remedy.takeAmount", { amount: seat.owed }),
+      };
     if (remedy === "take_payment" && seat?.owed)
       return { openLabel: t("trips.fixList.remedy.takeAmount", { amount: seat.owed }) };
     // The day before, what nobody can do from the desk is a call away.
@@ -331,7 +389,13 @@ export function guestFixRows(
       openLabel = null,
       panelHoldsControl = false,
     } = remedyControl(item.remedy, seat);
-    const phrase = phraseOf(item, seat);
+    const reminder =
+      seat?.reminderAt && item.reasons.length > 0 && (phase === "filling" || phase === "ready")
+        ? t("trips.fixList.reminderAt", {
+            when: formatWeekdayTime(seat.reminderAt, trip.locale, trip.shopTimezone),
+          })
+        : null;
+    const phrase = [phraseOf(item, seat), reminder].filter(Boolean).join(" · ") || null;
     return {
       key: item.guestId,
       guestIds: [item.guestId],

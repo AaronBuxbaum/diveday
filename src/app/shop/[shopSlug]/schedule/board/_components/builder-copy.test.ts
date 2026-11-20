@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { DIVER_LOCALES } from "@/i18n/settings";
 import { staffTranslator } from "@/i18n/staff-messages";
+import { formatTimeZoneGeneric } from "@/lib/format";
 import { MAX_TRIP_DAYS, MIN_TRIP_DAYS } from "@/lib/trip-days";
 import { builderPriceInput, scheduleBuilderCopy, scheduleBuilderMore } from "./builder-copy";
 
@@ -12,20 +13,22 @@ function strings(value: unknown): string[] {
 
 describe("scheduleBuilderCopy", () => {
   it.each(DIVER_LOCALES)("resolves every word the builder says in %s", (locale) => {
-    const copy = scheduleBuilderCopy(staffTranslator(locale), "America/New_York");
+    const copy = scheduleBuilderCopy(staffTranslator(locale), "America/New_York", locale);
     const words = strings(copy);
     expect(words.length).toBeGreaterThan(100);
     for (const word of words) expect(word.trim()).not.toBe("");
   });
 
   it.each(DIVER_LOCALES)("names the shop timezone beside the move time in %s", (locale) => {
-    const copy = scheduleBuilderCopy(staffTranslator(locale), "Pacific/Honolulu");
-    expect(copy.newDepartureTime).toContain("Pacific/Honolulu");
+    const copy = scheduleBuilderCopy(staffTranslator(locale), "Pacific/Honolulu", locale);
+    // The zone's short name for the reader's language, never its id.
+    expect(copy.newDepartureTime).toContain(formatTimeZoneGeneric(locale, "Pacific/Honolulu"));
+    expect(copy.newDepartureTime).not.toContain("Pacific/Honolulu");
   });
 
   it("hands placeholders over raw, for the component to fill", () => {
     expect(
-      scheduleBuilderCopy(staffTranslator("en-US"), "America/New_York").removeConfirm,
+      scheduleBuilderCopy(staffTranslator("en-US"), "America/New_York", "en-US").removeConfirm,
     ).toContain("{");
   });
 });
