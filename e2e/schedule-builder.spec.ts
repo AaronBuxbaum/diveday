@@ -695,7 +695,7 @@ test.describe("schedule builder", () => {
 
     for (const width of [390, 430]) {
       await page.setViewportSize({ width, height: 800 });
-      const name = page.locator("header a span.truncate").first();
+      const name = page.locator("header a span.line-clamp-2").first();
       const clipped = await name.evaluate((el) => ({
         text: el.textContent ?? "",
         needs: el.scrollWidth,
