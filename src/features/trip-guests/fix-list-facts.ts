@@ -20,6 +20,7 @@ export async function fixListFacts(
   tripId: string,
   startsAt: Date,
   bookingIds: readonly string[],
+  owingBookingIds: readonly string[],
 ): Promise<{
   helpRequestByBooking: ReadonlyMap<string, TodayHelpRequest>;
   openOrderByBooking: ReadonlyMap<string, OpenOrderFact>;
@@ -35,21 +36,28 @@ export async function fixListFacts(
   }
   const [help, orders, delivered] = await Promise.all([
     listTodayHelpWork(db, shopId, [tripId]),
-    openOrdersForBookings(db, shopId, [...bookingIds]),
-    db
-      .select({ bookingId: notificationDeliveries.bookingId, kind: notificationDeliveries.kind })
-      .from(notificationDeliveries)
-      .where(
-        and(
-          inArray(notificationDeliveries.bookingId, [...bookingIds]),
-          inArray(
-            notificationDeliveries.kind,
-            TRIP_REMINDER_CADENCES.map((cadence) => cadence.kind),
+    // Only a seat that owes money can have an invoice to send.
+    openOrdersForBookings(db, shopId, [...owingBookingIds]),
+    // With no reminder left ahead, nothing sent can change what the page says.
+    nextReminderAt({ startsAt, now: nowDate(), sentKinds: new Set() }) === null
+      ? []
+      : db
+          .select({
+            bookingId: notificationDeliveries.bookingId,
+            kind: notificationDeliveries.kind,
+          })
+          .from(notificationDeliveries)
+          .where(
+            and(
+              inArray(notificationDeliveries.bookingId, [...bookingIds]),
+              inArray(
+                notificationDeliveries.kind,
+                TRIP_REMINDER_CADENCES.map((cadence) => cadence.kind),
+              ),
+              eq(notificationDeliveries.status, "sent"),
+              isNull(notificationDeliveries.supersededAt),
+            ),
           ),
-          eq(notificationDeliveries.status, "sent"),
-          isNull(notificationDeliveries.supersededAt),
-        ),
-      ),
   ]);
   const remindersSentByBooking = new Map<string, Set<string>>();
   for (const row of delivered) {
