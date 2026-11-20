@@ -1350,7 +1350,7 @@
   answer takes it back to unknown, and every correction is a new row. Never inferred from boarded,
   not boarded or not back aboard: roll call says where a person is, this says whether they went
   in. It **informs only**: the head count, roll call, readiness, medical holds and fly-safe never
-  read it. The recap and the log entry file read it to stop naming a site the diver sat out.
+  read it. The recap reads it to stop naming a site or a sighting from a dive the diver sat out.
 - **Buddy team** — two or more people staff group together on one departure, so roll call can say
   the thing a deck actually watches for: **someone is back aboard and someone on their team is
   not**. Planning lives in Edit trip behind the shop's default-on `buddyTeamsEnabled` feature switch;

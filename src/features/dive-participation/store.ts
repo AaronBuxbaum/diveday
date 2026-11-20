@@ -3,6 +3,7 @@ import { requireActiveStaffId } from "@/db/authz";
 import type { AppDb, DbExecutor } from "@/db/client";
 import { bookings, diveParticipationNotes, trips } from "@/db/schema";
 import { liveTrip } from "@/db/trips";
+import { seatNotCancelled } from "@/db/trips-queries";
 import { type DiveParticipation, isDiveParticipation } from "@/lib/dive-participation";
 
 /**
@@ -57,6 +58,7 @@ export async function recordDiveParticipation(
         eq(bookings.id, input.bookingId),
         eq(bookings.tripId, input.tripId),
         eq(bookings.shopId, input.shopId),
+        seatNotCancelled,
       ),
     )
     .limit(1);

@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { createBookingParty } from "@/db/bookings";
 import { getTripManifest } from "@/db/manifests";
-import { rollCallEvents, shops } from "@/db/schema";
+import { bookings, rollCallEvents, shops } from "@/db/schema";
 import { listStaff } from "@/db/trips";
 import { upcomingTripsWithCounts } from "@/db/trips-queries.test-support";
 import { fileScopedShopContext } from "@/test/db";
@@ -40,6 +40,14 @@ async function noteContext() {
 }
 
 describe("dive participation notes (in-memory PGlite)", () => {
+  it("refuses a note on a cancelled seat", async () => {
+    const { db, bookingId, base } = await noteContext();
+    await db.update(bookings).set({ status: "cancelled" }).where(eq(bookings.id, bookingId));
+    expect(
+      await recordDiveParticipation(db, { ...base, diveNumber: 1, participation: "sat_out" }),
+    ).toEqual({ ok: false, reason: "seat_not_found" });
+  });
+
   it("reads no note as unknown, never as did not dive", async () => {
     const { db, shop, reef, bookingId } = await noteContext();
     expect((await diveParticipationForTrip(db, shop.id, reef.id)).get(bookingId)).toBeUndefined();

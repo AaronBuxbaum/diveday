@@ -999,7 +999,7 @@ async function loadRecapPageData(
   // simply absent, and every sighting stays logged.
   const observedSpecies: string[] = [];
   const logged = row.sightingsEnabled
-    ? [...boatDives].sort((a, b) => a.executed.diveNumber - b.executed.diveNumber)
+    ? [...livedDives].sort((a, b) => a.executed.diveNumber - b.executed.diveNumber)
     : [];
   for (const { executed } of logged) {
     const entries = executed.observedSpeciesEntries ?? [];

@@ -61,6 +61,7 @@ export function DiveParticipationControl({
             type="button"
             aria-pressed={shown === option.value}
             aria-busy={pending || undefined}
+            disabled={pending}
             onClick={() => choose(option.value)}
             className={`inline-flex min-h-11 min-w-11 items-center justify-center px-3 text-sm transition-colors focus-visible:focus-ring ${segmentClass(
               { selected: shown === option.value },

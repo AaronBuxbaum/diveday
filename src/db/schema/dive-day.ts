@@ -498,8 +498,8 @@ export const diveParticipation = pgEnum("dive_participation", DIVE_PARTICIPATION
  * Kept apart from `roll_call_events` on purpose. Roll call says where a person
  * is; this says whether they went in. Nothing here is inferred from a roll-call
  * mark and nothing reads it to count heads, clear a seat, hold anyone, or say
- * when anyone may fly. The recap and the log entry file read it only to stop
- * naming a site this diver sat out.
+ * when anyone may fly. The recap reads it only to stop
+ * naming a site or a sighting from a dive this diver sat out.
  *
  * Append-only; the newest row per (booking, dive) is the note, and no row at
  * all is `unknown`. A correction is a new row, `unknown` included, so the trail
