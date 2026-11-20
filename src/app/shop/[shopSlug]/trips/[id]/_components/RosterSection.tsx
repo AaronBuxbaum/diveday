@@ -6,6 +6,8 @@ import {
   agencyCheckAllCopy,
   agencyCheckCopies,
 } from "@/app/shop/[shopSlug]/_components/agency-check/agency-check-copy";
+import { HelpRequestProvider } from "@/app/shop/[shopSlug]/_components/today/HelpRequestControl";
+import { helpRequestCopy } from "@/app/shop/[shopSlug]/_components/today/help-request-copy";
 import { DecompressionReminder } from "@/components/DecompressionReminder";
 import { ScrollToHash } from "@/components/ScrollToHash";
 import { buttonClass } from "@/components/ui/button";
@@ -179,24 +181,26 @@ export function RosterSection({
           <div className="space-y-10">
             {/* Mounted with the rows, so a deep link scrolls to a row that exists. */}
             <ScrollToHash />
-            <GuestFixList
-              sections={fixRows.sections}
-              guests={fixRows.guests}
-              // The desk's bar belongs to Check-in alone, right under "2 of 11 here",
-              // which is its legend; no other phase is the desk's.
-              top={phase === "checkin" ? arrival?.instrument?.(fixRows.deskWorkOpen) : undefined}
-              addGuest={
-                addGuestHref && phase !== "filling"
-                  ? { href: addGuestHref, label: t("trips.clock.addGuest") }
-                  : null
-              }
-              initialOpenId={
-                rows.keepOpenBookingId ??
-                rows.paymentMarkRetry?.bookingId ??
-                rows.partyPreview?.leadBookingId
-              }
-              copy={{ close: t("trips.fixList.close") }}
-            />
+            <HelpRequestProvider copy={helpRequestCopy(t)}>
+              <GuestFixList
+                sections={fixRows.sections}
+                guests={fixRows.guests}
+                // The desk's bar belongs to Check-in alone, right under "2 of 11 here",
+                // which is its legend; no other phase is the desk's.
+                top={phase === "checkin" ? arrival?.instrument?.(fixRows.deskWorkOpen) : undefined}
+                addGuest={
+                  addGuestHref && phase !== "filling"
+                    ? { href: addGuestHref, label: t("trips.clock.addGuest") }
+                    : null
+                }
+                initialOpenId={
+                  rows.keepOpenBookingId ??
+                  rows.paymentMarkRetry?.bookingId ??
+                  rows.partyPreview?.leadBookingId
+                }
+                copy={{ close: t("trips.fixList.close") }}
+              />
+            </HelpRequestProvider>
           </div>
         ) : null}
         {record && roster.length > 0 ? (
