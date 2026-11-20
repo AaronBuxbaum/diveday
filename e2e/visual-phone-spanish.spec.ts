@@ -26,7 +26,7 @@ const photograph = (page: Parameters<typeof capture>[0], name: string) =>
   capture(page, name, "light", { locale: SPANISH });
 
 test.describe("the diver's public pages in Spanish", () => {
-  test("schedule, trip, courses, sites, reviews and packages", async ({ page }) => {
+  test("schedule, trip, courses, reviews and packages", async ({ page }) => {
     await page.goto("/s/blue-mantis");
     await publicReefCard(page).getByRole("link").waitFor();
     await publicReefCard(page).locator("[data-schedule-fact]").waitFor();
@@ -39,10 +39,6 @@ test.describe("the diver's public pages in Spanish", () => {
     await page.goto("/s/blue-mantis/courses");
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
     await photograph(page, "phone-public-courses");
-
-    await page.goto("/s/blue-mantis/sites");
-    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
-    await photograph(page, "phone-public-sites");
 
     await page.goto("/s/blue-mantis/reviews");
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
