@@ -36,6 +36,35 @@ function observation(): OfflineRollCallEvent {
   };
 }
 
+it("directs a held crew observation to the current live crew count", async () => {
+  const saved = savedCopy();
+  const event = { ...observation(), bookingId: undefined, crewPersonId: "crew-dana" };
+  vi.stubGlobal(
+    "fetch",
+    vi
+      .fn()
+      .mockResolvedValue(
+        new Response(JSON.stringify({ current: saved.snapshot }), { status: 200 }),
+      ),
+  );
+  render(
+    <ReviewObservation
+      event={event}
+      controls={{
+        ...controls(),
+        reviewTenant: async () => ({ shopSlug: "blue-mantis", round: 1 }),
+        onReviewEnvelope: vi.fn(),
+      }}
+    />,
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Review current roster" }));
+  expect(await screen.findByText(/Dana Divemaster/)).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "Open live roll call" })).toHaveAttribute(
+    "href",
+    "/shop/blue-mantis/trips/trip-1/manifest?checkpoint=departure",
+  );
+});
+
 it("requires an explicit choice and matches the new live receipt before resolving the original", async () => {
   const envelope = savedCopy();
   envelope.events = [observation()];

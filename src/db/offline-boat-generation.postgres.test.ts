@@ -168,6 +168,24 @@ describePostgres("offline evidence across a boat change", () => {
             { historical: true },
           );
           expect(gaps.find((gap) => gap.reason === "missing_diver")).toMatchObject({ awaiting: 1 });
+          expect(
+            await recordRollCall(pg.db, {
+              shopId: shop.id,
+              tripId: trip.id,
+              bookingId: other.booking.id,
+              recordedByPersonId: owner.person.id,
+              checkpoint: "after_dive_2",
+              status: "boarded",
+              source: "live",
+            }),
+          ).toMatchObject({ ok: true });
+          const later = await getTripManifest(pg.db, shop.id, trip.id, "after_dive_2");
+          expect(
+            later?.divers.find((diver) => diver.bookingId === subject.booking.id),
+          ).toMatchObject({ recountRequired: true, rollCall: undefined });
+          expect(later?.summary.recountRequired).toBe(1);
+          expect((await departureCounts(pg.db, shop.id, [trip.id], { readiness: new Map() })).get(trip.id))
+            .toMatchObject({ recountRequired: 1, back: 1 });
         }
         const fresh = (await buildOfflineManifestCopies(pg.db, shop, owner.person.id, [trip.id]))
           .payloads[0];
@@ -287,6 +305,32 @@ describePostgres("offline evidence across a boat change", () => {
         ).toMatchObject({ ok: false, reason: "review_required" });
         const counts = await departureCounts(pg.db, shop.id, [trip.id], { readiness: new Map() });
         expect(counts.get(trip.id)).toMatchObject({ recountRequired: 1 });
+        if (checkpoint === "after_dive_1") {
+          const page = await readOfflineManifestRosterWithWindows(pg.db, shop.id, trip.id);
+          const laterProof = page?.manifests
+            .find((item) => item.checkpoint === "after_dive_2")
+            ?.divers.find((item) => item.bookingId === subject.booking.id)
+            ?.rollCallContext?.liveRecountProof;
+          if (!laterProof) throw new Error("later recount proof missing");
+          expect(
+            await recordRollCall(pg.db, {
+              shopId: shop.id,
+              tripId: trip.id,
+              bookingId: subject.booking.id,
+              recordedByPersonId: owner.person.id,
+              checkpoint: "after_dive_2",
+              status: "boarded",
+              source: "live",
+              liveRecountProof: laterProof,
+            }),
+          ).toMatchObject({ ok: true });
+          const resolved = await getTripManifest(pg.db, shop.id, trip.id, "after_dive_2");
+          expect(
+            resolved?.divers.find((item) => item.bookingId === subject.booking.id),
+          ).toMatchObject({ recountRequired: false, rollCall: { state: "boarded" } });
+          expect((await departureCounts(pg.db, shop.id, [trip.id], { readiness: new Map() })).get(trip.id))
+            .toMatchObject({ recountRequired: 0, back: 2 });
+        }
       }
     });
   }

@@ -234,8 +234,7 @@ export async function readOfflineManifestRosterWithWindows(
         offlineRollCallWitnessEnabled() &&
         manifests.some(
           (manifest) =>
-            manifest.divers.some((diver) => diver.recountRequired) ||
-            manifest.crew.some((crew) => crew.recountRequired),
+            manifest.divers.some((diver) => diver.recountRequired) || manifest.crew.length > 0,
         )
       ) {
         const seats = await tx
@@ -286,8 +285,7 @@ export async function readOfflineManifestRosterWithWindows(
           for (const crew of manifest.crew) {
             const context = crew.rollCallContext;
             const incarnation = crewIncarnations.get(crew.id);
-            if (!crew.recountRequired || !context || context.unknownMeetingDay || !incarnation)
-              continue;
+            if (!context || context.unknownMeetingDay || !incarnation) continue;
             context.liveRecountProof = {
               snapshotId,
               meetingDay: context.meetingDay,

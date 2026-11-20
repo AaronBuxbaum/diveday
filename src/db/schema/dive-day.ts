@@ -105,6 +105,7 @@ export const rollCallEvents = pgTable(
       /** Set only after a signed offline witness was verified. */
       offlineSnapshotId?: string;
       offlineWitnessFrontier?: string[];
+      liveRecountVerified?: boolean;
       occurredAt?: string;
       meetingDay?: number;
       retractsEventId?: string;

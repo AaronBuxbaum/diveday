@@ -6,7 +6,11 @@ import {
 import type { DbExecutor } from "./client";
 import { reviewPersonIsCurrent } from "./offline-review-identity";
 import { offlineFrontierMatches } from "./offline-roll-call-frontier";
-import { manifestRollCallReads, recountScopeKey } from "./roll-call-causal-store";
+import {
+  manifestRollCallReads,
+  recountApplies,
+  recountHasUnknownDay,
+} from "./roll-call-causal-store";
 
 type Capture = {
   shopId: string;
@@ -38,22 +42,27 @@ export async function validateOfflineRollCallCapture(
   booking: Seat,
 ) {
   const source = input.source ?? "live";
+  let liveRecountVerified = false;
   if (source === "offline" && offlineRollCallWitnessEnabled() !== Boolean(input.rollCallWitness))
     return { ok: false as const };
   if (source === "live" && input.reviewWitness && !offlineRollCallWitnessEnabled())
     return { ok: false as const };
   if (source === "live" && offlineRollCallWitnessEnabled()) {
     const { causal, recount } = await manifestRollCallReads(tx, input.shopId, input.tripId);
-    const key = recountScopeKey(
+    if (recountHasUnknownDay(recount, input.shopId, input.tripId, input.bookingId))
+      return { ok: false as const };
+    const needsRecount = recountApplies(
+      recount,
       input.shopId,
       input.tripId,
       input.bookingId,
       checkpoint,
       causal.meetingDay,
     );
-    if (recount.has(key) && !input.reviewWitness) {
+    if ((needsRecount || input.liveRecountProof) && !input.reviewWitness) {
       const proof = input.liveRecountProof;
-      if (!proof || proof.meetingDay !== causal.meetingDay) return { ok: false as const };
+      if (!proof || proof.meetingDay !== causal.meetingDay || input.meetingDay !== proof.meetingDay)
+        return { ok: false as const };
       const witness = verifyRollCallWitness(proof.witness, {
         shopId: input.shopId,
         tripId: input.tripId,
@@ -76,10 +85,11 @@ export async function validateOfflineRollCallCapture(
         JSON.stringify([...frontier].sort()) !== JSON.stringify(witness.frontier)
       )
         return { ok: false as const };
+      liveRecountVerified = true;
     }
   }
   const token = source === "offline" ? input.rollCallWitness : input.reviewWitness;
-  if (!token) return { ok: true as const, witness: null };
+  if (!token) return { ok: true as const, witness: null, liveRecountVerified };
   if (!input.offlineSnapshotId || input.meetingDay === undefined) return { ok: false as const };
   const witness = verifyRollCallWitness(token, {
     shopId: input.shopId,
@@ -126,8 +136,13 @@ export async function validateOfflineRollCallCapture(
   const { causal, recount } = await manifestRollCallReads(tx, input.shopId, input.tripId);
   if (
     source === "offline" &&
-    recount.has(
-      recountScopeKey(input.shopId, input.tripId, input.bookingId, checkpoint, input.meetingDay),
+    recountApplies(
+      recount,
+      input.shopId,
+      input.tripId,
+      input.bookingId,
+      checkpoint,
+      input.meetingDay,
     )
   )
     return { ok: false as const };
@@ -151,5 +166,9 @@ export async function validateOfflineRollCallCapture(
         witness.frontier.every((id) => observed.has(id)) &&
         observed.size === witness.frontier.length;
   if (causal.meetingDay !== input.meetingDay || !matchingFrontier) return { ok: false as const };
-  return { ok: true as const, witness };
+  return {
+    ok: true as const,
+    witness,
+    liveRecountVerified: liveRecountVerified || (source === "live" && Boolean(input.reviewWitness)),
+  };
 }

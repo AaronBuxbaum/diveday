@@ -5,7 +5,11 @@ import { seatSailed } from "@/features/seat-sailed";
 import type { DbExecutor } from "../../db/client";
 import { queryAll } from "../../db/query-helpers";
 import { listTripsReadiness } from "../../db/readiness";
-import { recountKey, rollCallProjectionForDb } from "../../db/roll-call-causal-store";
+import {
+  recountApplies,
+  recountKey,
+  rollCallProjectionForDb,
+} from "../../db/roll-call-causal-store";
 import { newestMarkFirst } from "../../db/roll-call-order";
 import { seatMarks } from "../../db/roll-call-subject";
 import { bookings, rollCallEvents, trips } from "../../db/schema/index";
@@ -157,6 +161,7 @@ export async function departureCounts(
   ]);
   const readiness = await readinessFor(db, shopId, roster, options);
   const { rows: effective, recount } = await rollCallProjectionForDb(db, events);
+  const currentDayByTrip = new Map(events.map((row) => [row.event.tripId, row.currentDay]));
   const recountByTrip = new Map<string, Map<number, Set<string>>>();
   for (const row of events) {
     if (
@@ -250,7 +255,19 @@ export async function departureCounts(
       if (said?.dock === "boarded") boarded += 1;
       if (latest > 0 && said?.afterDive.get(latest) === "boarded") back += 1;
       if (said && isMissing(said.afterDive)) missing += 1;
-      if (recountByTrip.get(tripId)?.get(latest)?.has(seat.id)) recountRequired += 1;
+      const day = currentDayByTrip.get(tripId);
+      if (
+        day !== undefined &&
+        recountApplies(
+          recount,
+          shopId,
+          tripId,
+          seat.id,
+          latest === 0 ? "departure" : `after_dive_${latest}`,
+          day,
+        )
+      )
+        recountRequired += 1;
       if (rosterRowIsBlocked(readiness.get(seat.id))) blocked += 1;
     }
     counts.set(

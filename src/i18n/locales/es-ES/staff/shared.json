@@ -485,6 +485,8 @@
       "reviewLoad": "Revisar lista actual",
       "reviewCurrentTrip": "Salida actual: {trip} · comienza {startsAt}.",
       "reviewCurrentRoster": "Lista actual y pase registrado:",
+      "reviewCrewInstruction": "Registra un nuevo conteo en la lista actual y luego vuelve aquí para descartar esta marca guardada.",
+      "reviewCrewLink": "Abrir el pase de lista actual",
       "reviewAwaiting": "Pendiente de marcar",
       "reviewVerifyPerson": "La plaza actual indica {name}. Verifica que sea la persona y la salida que quieres marcar; la observación anterior no se ha sincronizado.",
       "reviewChoose": "Elige una nueva marca en directo tras verificar la persona:",

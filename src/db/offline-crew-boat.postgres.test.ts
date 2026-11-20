@@ -120,6 +120,28 @@ describePostgres("offline crew count after a boat replacement", () => {
         result,
         crew: after?.crew.find((item) => item.id === crew.id)?.rollCall?.state,
       }).toMatchObject({ result: { ok: false, reason: "review_required" }, crew: undefined });
+      if (order === "boat first") {
+        const currentPage = await readOfflineManifestRosterWithWindows(pg.db, shop.id, trip.id);
+        const pageProof = currentPage?.manifests
+          .find((item) => item.checkpoint === "departure")
+          ?.crew.find((item) => item.id === crew.id)?.rollCallContext?.liveRecountProof;
+        if (!pageProof) throw new Error("current live crew proof missing");
+        expect(await editTripSection(pg.db, shop.id, trip.id, { boatId: null })).toMatchObject({
+          ok: true,
+        });
+        expect(
+          await recordCrewRollCall(pg.db, {
+            shopId: shop.id,
+            tripId: trip.id,
+            personId: crew.id,
+            recordedByPersonId: owner.person.id,
+            checkpoint: "departure",
+            status: "not_boarded",
+            source: "live",
+            liveRecountProof: pageProof,
+          }),
+        ).toMatchObject({ ok: false, reason: "review_required" });
+      }
       if (order === "intake first") {
         expect(after?.crew.find((item) => item.id === crew.id)?.recountRequired).toBe(true);
         const fresh = (await buildOfflineManifestCopies(pg.db, shop, owner.person.id, [trip.id]))

@@ -14,8 +14,8 @@ import { liveTrip, seatNotCancelled } from "@/db/trips";
 import { hasReturned } from "@/lib/trips";
 import type { AppDb } from "../../db/client";
 import {
+  recountApplies,
   recountKey,
-  recountScopeKey,
   rollCallProjectionForDb,
 } from "../../db/roll-call-causal-store";
 import { oldestMarkFirst } from "../../db/roll-call-order";
@@ -268,6 +268,53 @@ export type OpenRollCall = {
  * `home` is each trip's own `endsAt` against `now`, and `onlyTripIds` is
  * required, so the scan stays bounded by the boats asked about.
  */
+type GapRawEvent = { event: typeof rollCallEvents.$inferSelect; day: number };
+
+function hasRecountRisk(
+  rows: readonly GapRawEvent[],
+  recount: ReadonlySet<string>,
+  tripId: string,
+  subjectId: string,
+  day: number,
+) {
+  return rows.some(
+    ({ event, day: eventDay }) =>
+      (event.bookingId === subjectId || event.crewPersonId === subjectId) &&
+      event.tripId === tripId &&
+      eventDay <= day &&
+      recount.has(recountKey(event, eventDay)),
+  );
+}
+
+const gapDiverEvent = ({ event: raw, day }: GapRawEvent) => {
+  const event = asSeatMark(raw);
+  return {
+    bookingId: event.bookingId,
+    checkpoint: event.checkpoint,
+    status: event.status,
+    day,
+    evidenceConflict: event.evidenceConflict,
+    occurredAt: event.occurredAt,
+    id: event.id,
+    retracts: event.retractsEventId,
+  };
+};
+
+const gapCrewEvent = ({ event: raw, day }: GapRawEvent) => {
+  const event = asCrewMark(raw);
+  return {
+    tripId: event.tripId,
+    personId: event.crewPersonId,
+    checkpoint: event.checkpoint,
+    status: event.status,
+    day,
+    evidenceConflict: event.evidenceConflict,
+    occurredAt: event.occurredAt,
+    id: event.id,
+    retracts: event.retractsEventId,
+  };
+};
+
 export async function listRollCallGaps(
   db: AppDb,
   shopId: string,
@@ -381,34 +428,9 @@ export async function listRollCallGaps(
       .orderBy(...oldestMarkFirst()),
   ]);
   const projection = await rollCallProjectionForDb(db, rawEvents);
-  const events = projection.rows.map(({ event: raw, day }) => {
-    const event = asSeatMark(raw);
-    return {
-      bookingId: event.bookingId,
-      checkpoint: event.checkpoint,
-      status: event.status,
-      day,
-      evidenceConflict: event.evidenceConflict,
-      occurredAt: event.occurredAt,
-      id: event.id,
-      retracts: event.retractsEventId,
-    };
-  });
+  const events = projection.rows.map(gapDiverEvent);
   const crewProjection = await rollCallProjectionForDb(db, rawCrewEvents);
-  const crewEvents = crewProjection.rows.map(({ event: raw, day }) => {
-    const event = asCrewMark(raw);
-    return {
-      tripId: event.tripId,
-      personId: event.crewPersonId,
-      checkpoint: event.checkpoint,
-      status: event.status,
-      day,
-      evidenceConflict: event.evidenceConflict,
-      occurredAt: event.occurredAt,
-      id: event.id,
-      retracts: event.retractsEventId,
-    };
-  });
+  const crewEvents = crewProjection.rows.map(gapCrewEvent);
 
   // Seats the desk turned away: off the boat at any checkpoint nobody at the
   // boat has recorded them at (`isTurnedAwayOffBoat`, issue #2907).
@@ -584,50 +606,46 @@ export async function listRollCallGaps(
         turnedAwayIds,
         diverStates: (bookingId) =>
           diverStates(day, bookingId).map((state, index) =>
-            projection.recount.has(
-              recountScopeKey(shopId, trip.id, bookingId, checkpoints[index] ?? "", day),
+            recountApplies(
+              projection.recount,
+              shopId,
+              trip.id,
+              bookingId,
+              checkpoints[index] ?? "",
+              day,
             )
               ? undefined
               : state,
           ),
         crewStates: (personId) =>
           crewStates(day, personId).map((state, index) =>
-            crewProjection.recount.has(
-              recountScopeKey(shopId, trip.id, `crew:${personId}`, checkpoints[index] ?? "", day),
+            recountApplies(
+              crewProjection.recount,
+              shopId,
+              trip.id,
+              `crew:${personId}`,
+              checkpoints[index] ?? "",
+              day,
             )
               ? undefined
               : state,
           ),
         diverRisk: (id) =>
-          rawEvents.some(
-            ({ event, day: eventDay }) =>
-              event.bookingId === id &&
-              event.tripId === trip.id &&
-              eventDay === day &&
-              projection.recount.has(recountKey(event, eventDay)),
-          ) ||
+          hasRecountRisk(rawEvents, projection.recount, trip.id, id, day) ||
           [...(diverStanding.get(-1)?.values() ?? [])].some(
             (mark) => mark.subject === id && mark.status !== "cleared",
           ),
         crewRisk: (id) =>
-          rawCrewEvents.some(
-            ({ event, day: eventDay }) =>
-              event.crewPersonId === id &&
-              event.tripId === trip.id &&
-              eventDay === day &&
-              crewProjection.recount.has(recountKey(event, eventDay)),
-          ) ||
+          hasRecountRisk(rawCrewEvents, crewProjection.recount, trip.id, id, day) ||
           [...(crewStanding.get(-1)?.values() ?? [])].some(
             (mark) => mark.subject === id && mark.status !== "cleared",
           ),
         diverProtected: (id, checkpoint) =>
-          projection.recount.has(recountScopeKey(shopId, trip.id, id, checkpoint, day)) ||
+          recountApplies(projection.recount, shopId, trip.id, id, checkpoint, day) ||
           !!diverStanding.get(day)?.get(`${id}\u0000${checkpoint}`)?.evidenceConflict ||
           diverStanding.get(-1)?.get(`${id}\u0000${checkpoint}`)?.status === "not_boarded",
         crewProtected: (id, checkpoint) =>
-          crewProjection.recount.has(
-            recountScopeKey(shopId, trip.id, `crew:${id}`, checkpoint, day),
-          ) ||
+          recountApplies(crewProjection.recount, shopId, trip.id, `crew:${id}`, checkpoint, day) ||
           !!crewStanding.get(day)?.get(`${id}\u0000${checkpoint}`)?.evidenceConflict ||
           crewStanding.get(-1)?.get(`${id}\u0000${checkpoint}`)?.status === "not_boarded",
         // Somebody counted on a later meeting day at the dock, or at this
