@@ -291,6 +291,7 @@ export async function getTripGuests(
     packageDivesByPerson,
     certificationSummaries,
     courseMaterialsDone,
+    courseProgress,
     agencyCheckCardsByPerson,
     issuedCardByPerson,
     dependentCharters,
@@ -365,6 +366,8 @@ export async function getTripGuests(
           around: trip.startsAt,
         })
       : new Map<string, CourseMaterialsDone>(),
+    // Which outline sessions the instructor has ticked, per student (ADR 20261120-course-session-progress).
+    courseProgressFor(db, shop.id, trip.courseId, roster),
     // The cards the DiveDay browser extension could check from this tab
     // (H-20261008-cert-check-extension), and the N of its "Check all N". Never a held seat's: until a
     // staffer confirms who is standing there, the matched diver's name, birth
@@ -549,7 +552,7 @@ export async function getTripGuests(
      * The tick itself is on the booking row the roster already read.
      */
     courseHasMaterials: readLearningMaterials(trip.course?.learningMaterials).length > 0,
-    ...(await courseProgressFor(db, shop.id, trip.courseId, roster)),
+    ...courseProgress,
     /**
      * What the DiveDay browser extension would search the agency's eLearning
      * page for, per seat, where it can (H-20261008-padi-elearning-check): a PADI course with materials.
