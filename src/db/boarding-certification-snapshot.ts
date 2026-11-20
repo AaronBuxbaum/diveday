@@ -87,7 +87,10 @@ export async function rewriteBoardingSnapshotReviewer(
     .update(rollCallEvents)
     .set({
       certificationSnapshot: sql`(
-      select jsonb_agg(case when card ->> 'reviewedByPersonId' in (${sql.join(fromPersonIds.map((id) => sql`${id}`), sql`, `)})
+      select jsonb_agg(case when card ->> 'reviewedByPersonId' in (${sql.join(
+        fromPersonIds.map((id) => sql`${id}`),
+        sql`, `,
+      )})
         then card || ${JSON.stringify(patch)}::jsonb else card end order by ordinal)
       from jsonb_array_elements(${rollCallEvents.certificationSnapshot}) with ordinality as item(card, ordinal)
     )`,
@@ -96,7 +99,10 @@ export async function rewriteBoardingSnapshotReviewer(
       and(
         eq(rollCallEvents.shopId, shopId),
         seatMarks(),
-        sql`exists (select 1 from jsonb_array_elements(${rollCallEvents.certificationSnapshot}) as held(card) where held.card ->> 'reviewedByPersonId' in (${sql.join(fromPersonIds.map((id) => sql`${id}`), sql`, `)}))`,
+        sql`exists (select 1 from jsonb_array_elements(${rollCallEvents.certificationSnapshot}) as held(card) where held.card ->> 'reviewedByPersonId' in (${sql.join(
+          fromPersonIds.map((id) => sql`${id}`),
+          sql`, `,
+        )}))`,
       ),
     );
 }
