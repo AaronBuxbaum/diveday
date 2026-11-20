@@ -234,7 +234,7 @@ export function OfflineDeckRollCall({
         !problem &&
         !diver.notHere &&
         !diver.turnedAway ? (
-          <div className="mb-8 space-y-3">
+          <div className="space-y-3">
             <p>{t("manifest.deck.physicalHint")}</p>
             <SavedPersonButton
               key={diver.bookingId}

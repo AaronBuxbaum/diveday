@@ -28,14 +28,13 @@ import { nowDate } from "@/lib/clock";
 import { formatShortDate } from "@/lib/format";
 import { capturedPaymentStatuses } from "@/lib/payment-source";
 import { fileScopedShopContext } from "@/test/db";
-import { ariaLabelsIn, findElements, hiddenInputNamesIn, hrefsIn } from "@/test/jsx-inspect";
+import { ariaLabelsIn, findElements, hiddenInputNamesIn, ordersHrefs } from "@/test/jsx-inspect";
 import { nextHeadersStub } from "@/test/next-headers";
 import { demoteOwnerToManager } from "@/test/staff-session";
 import { listShopStaff } from "../../../../features/staff-accounts/store";
 import { type OrderLedgerDay, OrdersLedger } from "./_components/OrdersLedger";
 import { OrdersToolbar } from "./_components/OrdersToolbar";
 import { PayoutLines } from "./_components/PayoutLines";
-import { importedHrefs } from "./imported-tree.test-support";
 
 const ctx = fileScopedShopContext();
 
@@ -301,7 +300,7 @@ describe("the paid-after-close queue", () => {
       element,
       "section",
     ).find((node) => node.props["aria-label"] === PAID_AFTER_CLOSE);
-    expect(hrefsIn(section).some((href) => href.includes("/trips/"))).toBe(true);
+    expect(ordersHrefs(section).some((href) => href.includes("/trips/"))).toBe(true);
     const texts: string[] = [];
     const collect = (node: unknown): void => {
       if (typeof node === "string") texts.push(node);
@@ -367,7 +366,7 @@ describe("the failed-refunds queue", () => {
       orderId = await aRefundFailed(db, session);
     });
     expect(ariaLabelsIn(element)).toContain(FAILED_REFUNDS);
-    expect(hrefsIn(element)).toContain(`/shop/${SHOP_SLUG}/orders/${orderId}`);
+    expect(ordersHrefs(element)).toContain(`/shop/${SHOP_SLUG}/orders/${orderId}`);
   });
 
   it("hides it from a divemaster", async () => {
@@ -649,10 +648,11 @@ describe("imported payment history", () => {
     const element = await renderWith();
 
     expect(ariaLabelsIn(element)).toContain(PANEL);
-    expect(importedHrefs(element)).toContain(`/shop/${SHOP_SLUG}/divers/${source.personId}`);
-    expect(importedHrefs(element)).toContain("/import-receipts/receipt_42.pdf");
-    // An imported row never gets an order detail link: its uuid is not an order id.
-    expect(importedHrefs(element)).not.toContain(`/shop/${SHOP_SLUG}/orders/${source.historyId}`);
+    expect(ordersHrefs(element)).toContain(`/shop/${SHOP_SLUG}/divers/${source.personId}`);
+    expect(ordersHrefs(element)).toContain("/import-receipts/receipt_42.pdf");
+    // An imported row never receives an order detail link just because it is
+    // rendered under Orders — its uuid must not be confused for an order id.
+    expect(ordersHrefs(element)).not.toContain(`/shop/${SHOP_SLUG}/orders/${source.historyId}`);
     // The `Unverified` mark rides the disclosure's own summary line now, where
     // it says once about the whole folded section what it used to repeat on
     // every row of a permanently open table.
@@ -673,7 +673,7 @@ describe("imported payment history", () => {
         .set({ receiptDocumentUrl: "https://untrusted.example/receipt.pdf" })
         .where(eq(importedPaymentHistory.id, source.historyId));
     });
-    expect(importedHrefs(element)).not.toContain("https://untrusted.example/receipt.pdf");
+    expect(ordersHrefs(element)).not.toContain("https://untrusted.example/receipt.pdf");
   });
 });
 
@@ -765,7 +765,7 @@ describe("the trip filter", () => {
     // filter, and never a 500.
     const element = await renderWith({ tripId: "nope", status: "open", range: "all" });
     expect(listedOrders(element)).toBeGreaterThan(1);
-    expect(hrefsIn(element).filter((href) => href.includes("tripId="))).toEqual([]);
+    expect(ordersHrefs(element).filter((href) => href.includes("tripId="))).toEqual([]);
   });
 
   it("still says which departure it filtered for when nothing matches", async () => {
@@ -776,7 +776,7 @@ describe("the trip filter", () => {
     // and it carries the way back to the departure itself.
     const element = await renderWith({ tripId, status: "void" });
     expect(listedOrders(element)).toBe(0);
-    expect(hrefsIn(element)).toContain(`/shop/${SHOP_SLUG}/trips/${tripId}`);
+    expect(ordersHrefs(element)).toContain(`/shop/${SHOP_SLUG}/trips/${tripId}`);
   });
 });
 
@@ -844,7 +844,7 @@ describe("the diver filter", () => {
     // And it leaves no trace: no hidden rider, no filter pinned on the page's
     // own links, so the staffer is not carrying the bad id around with them.
     expect(toolbarProps(element)?.personId).toBeUndefined();
-    expect(hrefsIn(element).filter((href) => href.includes("personId="))).toEqual([]);
+    expect(ordersHrefs(element).filter((href) => href.includes("personId="))).toEqual([]);
   });
 });
 

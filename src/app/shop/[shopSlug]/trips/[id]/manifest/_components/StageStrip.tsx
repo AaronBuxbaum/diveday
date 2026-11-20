@@ -126,7 +126,7 @@ export function StageStrip({
             {index < copy.taps.length - 1 ? (
               <span
                 aria-hidden="true"
-                className="pointer-events-none absolute top-1/2 -end-4 w-4 -translate-y-1/2 text-center text-sm font-bold text-muted max-sm:hidden"
+                className="pointer-events-none absolute top-1/2 -end-4 w-4 -translate-y-1/2 text-center text-base font-bold text-muted max-sm:hidden"
               >
                 {tap.stage === "underway" ? "↔" : "→"}
               </span>

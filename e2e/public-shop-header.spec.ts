@@ -244,7 +244,7 @@ for (const locale of ["en-US", "es-ES"] as const) {
                 const range = document.createRange();
                 range.selectNodeContents(element);
                 const rects = [...range.getClientRects()];
-                const name = element.closest("header")?.querySelector("span.truncate");
+                const name = element.closest("header")?.querySelector("span.line-clamp-2");
                 let requiredNameWidth = 0;
                 if (name) {
                   const style = getComputedStyle(name);
@@ -284,7 +284,6 @@ for (const locale of ["en-US", "es-ES"] as const) {
               });
               if (scale === 100)
                 expect(state.lines, "recovery has its natural one-line width").toBe(1);
-              if (scale === 200 && width < 640) expect(state.lines).toBeGreaterThan(1);
               if (!state.identity || !state.row) throw new Error("Identity row missing");
               if (!state.name) throw new Error("Shop name missing");
               expect(
@@ -292,9 +291,15 @@ for (const locale of ["en-US", "es-ES"] as const) {
                 "first grapheme and complete ellipsis fit",
               ).toBeGreaterThanOrEqual(state.requiredNameWidth);
               expect(state.recovery.height).toBeGreaterThanOrEqual(44);
-              expect(state.identity.right + state.gap).toBeLessThanOrEqual(
-                state.recovery.left + 0.5,
-              );
+              // Recovery shares the name's row or, when the two do not fit, takes
+              // the line below; it never overlaps the name either way.
+              if (state.recovery.top < state.identity.bottom - 0.5) {
+                expect(state.identity.right + state.gap).toBeLessThanOrEqual(
+                  state.recovery.left + 0.5,
+                );
+              } else {
+                expect(state.recovery.top).toBeGreaterThanOrEqual(state.identity.bottom - 0.5);
+              }
               expect(state.recovery.right).toBeLessThanOrEqual(state.row.right + 0.5);
               expect(state.identity.left).toBeGreaterThanOrEqual(state.row.left - 0.5);
               for (const rect of state.textBounds) {

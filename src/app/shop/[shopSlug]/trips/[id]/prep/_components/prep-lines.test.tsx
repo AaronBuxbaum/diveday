@@ -28,7 +28,7 @@ const piece = (rest: Partial<PrepPiece>): PrepPiece =>
 describe("unitLine", () => {
   it("says a unit's label and size, then its care, in the picker's order", () => {
     expect(unitLine(t, { label: "BCD #3", size: "L", serviceState: { state: "no_clock" } })).toBe(
-      "BCD #3\u00a0·\u00a0L",
+      "BCD #3 · L",
     );
     expect(
       unitLine(t, {

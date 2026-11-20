@@ -166,13 +166,6 @@ export function OfflineTripScreen({
               label={t("shared.offlineManifest.single.skipLink")}
               level="page"
             />
-            {/* **The page's name first** (phone polish 2026-11-20): inside the
-                deck's details it stood ~950px down, under the roll-call
-                controls, so the first screen had no heading saying which saved
-                copy this is or how old. */}
-            <div className="mb-6">
-              <OfflineTripHeader view={view} controls={controls} />
-            </div>
             <OfflineDeckRollCall
               view={view}
               controls={controls}
@@ -198,6 +191,7 @@ export function OfflineTripScreen({
               }
               details={
                 <>
+                  <OfflineTripHeader view={view} controls={controls} />
                   {(envelope.snapshot.rollCallMeetingDays?.length ?? 0) > 1 ? (
                     <Field label={t("manifest.conflicts.meetingDay")} htmlFor="offline-meeting-day">
                       <select
