@@ -231,7 +231,7 @@ function DayRule({ parts, stickyTop }: { parts: WeekLedgerRow["dayParts"]; stick
  * Only a fact longer than the whole line wraps inside itself — never
  * `whitespace-nowrap`, which would run a long site name past the column.
  */
-const FACT = "inline-block";
+const FACT = "inline-block whitespace-normal";
 
 /**
  * Where `DayJumpStrip` lands for one day: the day's first row, never its sticky
@@ -358,9 +358,11 @@ function Row({
             {meta.length > 0 ? (
               <p className="mt-1 text-sm text-muted">
                 {meta.map((part, index) => (
+                  // The dot rides on the fact before it (no-break space), so no
+                  // wrapped line opens with "·".
                   // biome-ignore lint/suspicious/noArrayIndexKey: the separator's only identity is its position
                   <Fragment key={index}>
-                    {index > 0 ? " · " : null}
+                    {index > 0 ? "\u00a0· " : null}
                     {part}
                   </Fragment>
                 ))}

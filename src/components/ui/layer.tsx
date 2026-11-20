@@ -100,12 +100,18 @@ export function Dialog({
         role="dialog"
         {...dialogProps}
         aria-labelledby={titleId}
-        className={`w-full max-w-md rounded-panel border border-border bg-surface p-5 shadow-2xl outline-none sm:p-6 ${closing ? "animate-scale-out" : "animate-scale-in"} ${className}`}
+        // Never taller than the screen: a fixed layer does not scroll with the
+        // page, so the "Add a unit" form on a phone ran past the bottom edge
+        // with its submit cut in half and nothing to scroll. The title stays;
+        // the body scrolls inside the dialog.
+        className={`flex max-h-[calc(100dvh-2rem)] w-full max-w-md flex-col rounded-panel border border-border bg-surface shadow-2xl outline-none ${closing ? "animate-scale-out" : "animate-scale-in"} ${className}`}
       >
-        <h2 id={titleId} className={SECTION_TITLE_CLASS}>
+        <h2 id={titleId} className={`${SECTION_TITLE_CLASS} shrink-0 px-5 pt-5 sm:px-6 sm:pt-6`}>
           {title}
         </h2>
-        <div className="mt-4">{children}</div>
+        <div className="min-h-0 overflow-y-auto overscroll-contain px-5 pt-4 pb-5 sm:px-6 sm:pb-6">
+          {children}
+        </div>
       </div>
     </LayerScrim>,
     document.body,

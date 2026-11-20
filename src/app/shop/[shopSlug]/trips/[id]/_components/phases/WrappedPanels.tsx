@@ -121,14 +121,17 @@ export function CloseOutCard({
                   ? item.id
                   : item.kind
             }
-            className="flex items-start gap-3 px-4 py-3 sm:items-center sm:px-6"
+            // Wraps: an armed "Dive 2 not made" confirm is wider than the row
+            // leaves it, and squeezed beside it the names stood one letter
+            // to a line. Its doors drop under the words instead.
+            className="flex flex-wrap items-start gap-x-3 gap-y-2 px-4 py-3 sm:items-center sm:px-6"
           >
             <StatusMark variant="danger" size="md" className="mt-0.5 sm:mt-0" />
-            <div className="min-w-0 flex-1">
+            <div className="min-w-0 flex-1 basis-40">
               <p className="font-semibold">{title}</p>
               {sub ? <p className="text-sm text-muted [overflow-wrap:anywhere]">{sub}</p> : null}
             </div>
-            <div className="flex shrink-0 flex-col items-end gap-1">
+            <div className="ms-auto flex max-w-full shrink-0 flex-col items-end gap-1">
               <Link href={href} className={FIX(index === 0)}>
                 {fix}
               </Link>

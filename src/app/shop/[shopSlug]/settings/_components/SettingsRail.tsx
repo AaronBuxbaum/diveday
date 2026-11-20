@@ -137,6 +137,7 @@ export function SettingsRail({
     };
   }, [currentId]);
   const moreBelow = useMoreBelow(scrollerRef);
+  const sideways = useMoreSideways(scrollerRef);
 
   return (
     <nav aria-label={ariaLabel} className={`relative ${SETTINGS_RAIL_COLUMN_CLASS}`}>
@@ -149,6 +150,8 @@ export function SettingsRail({
         data-settings-rail-scroller
         data-rail-settled={settledFor === currentId ? "" : undefined}
         data-more-below={moreBelow ? "" : undefined}
+        data-more-start={sideways.start ? "" : undefined}
+        data-more-end={sideways.end ? "" : undefined}
         className={`${SETTINGS_RAIL_FRAME_CLASS} overflow-y-hidden lg:overflow-x-hidden lg:overflow-y-auto`}
       >
         <div className={SETTINGS_RAIL_CONTENT_CLASS}>
@@ -240,6 +243,41 @@ function useMoreBelow(scrollerRef: React.RefObject<HTMLDivElement | null>): bool
     };
   }, [scrollerRef]);
   return moreBelow;
+}
+
+/**
+ * Whether the phone's one-line section bar has rows past either edge. The
+ * bar recentres on the current row, so on most settings pages it is cut on
+ * both sides; a hard cut there read as a clipped word, not a bar that scrolls
+ * (`waiver-materiality-choice`, `waivers-course-form-add`). The edge with
+ * more rows fades out (`data-more-start`/`data-more-end` in globals.css).
+ */
+function useMoreSideways(scrollerRef: React.RefObject<HTMLDivElement | null>): {
+  start: boolean;
+  end: boolean;
+} {
+  const [edges, setEdges] = useState({ start: false, end: false });
+  useEffect(() => {
+    const scroller = scrollerRef.current;
+    if (!scroller) return;
+    const measure = () => {
+      // `scrollLeft` runs negative in a right-to-left box; its size is what counts.
+      const travelled = Math.abs(scroller.scrollLeft);
+      const start = travelled > 1;
+      const end = scroller.scrollWidth - travelled - scroller.clientWidth > 1;
+      setEdges((was) => (was.start === start && was.end === end ? was : { start, end }));
+    };
+    measure();
+    scroller.addEventListener("scroll", measure, { passive: true });
+    const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(measure);
+    observer?.observe(scroller);
+    if (scroller.firstElementChild) observer?.observe(scroller.firstElementChild);
+    return () => {
+      scroller.removeEventListener("scroll", measure);
+      observer?.disconnect();
+    };
+  }, [scrollerRef]);
+  return edges;
 }
 
 /**

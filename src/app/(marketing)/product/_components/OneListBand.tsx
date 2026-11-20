@@ -106,8 +106,31 @@ export function OneListBand({ t }: { t: DiverTranslator }) {
           <Eyebrow as="h3">{t(k("whereEyebrow"))}</Eyebrow>
           <p className={`mt-3 ${SECTION_TITLE_CLASS} text-balance`}>{t(k("whereTitle"))}</p>
         </div>
-        <div className="mt-6 overflow-x-auto">
-          <table className="w-full min-w-[34rem] border-collapse text-start">
+        {/* A phone reads each row as a card: three columns at 390 clipped the
+            third off the edge (phone polish, 2026-11-20). */}
+        <ul className="mt-6 space-y-3 sm:hidden">
+          {WHERE_ROWS.map((row) => (
+            <li key={row} className="rounded-xl border border-border bg-background p-4">
+              <p className="font-semibold">{t(k(`where.${row}.record`))}</p>
+              <dl className="mt-3 space-y-3 text-sm">
+                <div>
+                  <dt className="text-xs font-medium tracking-wide text-muted uppercase">
+                    {t(k("whereHeaders.who"))}
+                  </dt>
+                  <dd className="mt-1 text-muted">{t(k(`where.${row}.who`))}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-medium tracking-wide text-muted uppercase">
+                    {t(k("whereHeaders.sees"))}
+                  </dt>
+                  <dd className="mt-1">{t(k(`where.${row}.sees`))}</dd>
+                </div>
+              </dl>
+            </li>
+          ))}
+        </ul>
+        <div className="mt-6 hidden sm:block">
+          <table className="w-full border-collapse text-start">
             <thead>
               <tr className="border-b border-border text-xs tracking-wide text-muted uppercase">
                 <th scope="col" className="py-2.5 pe-3 text-start font-medium">

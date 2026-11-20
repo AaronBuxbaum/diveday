@@ -45,7 +45,7 @@ function bodyLines(item: HTMLElement): HTMLParagraphElement[] {
 
 /** The row's one meta line, or `null` when the row renders none. */
 function metaLine(item: HTMLElement): string | null {
-  return bodyLines(item)[0]?.textContent ?? null;
+  return bodyLines(item)[0]?.textContent?.replaceAll("\u00a0", " ") ?? null;
 }
 
 describe("a week row is a link, never a button", () => {

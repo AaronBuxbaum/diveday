@@ -90,8 +90,12 @@ export function ReviewLedgerRow({
       moreLabel={t("reviews.rowMoreSrLabel", { name: review.diverName })}
     />
   );
+  // A published row's acts are only the "⋯" (Publish is for the rest). In the
+  // trailing slot it stacked under the review on a phone, alone on a ~60px row
+  // of its own (`staff-reviews`); beside the stars it costs no height.
+  const actionsBesideStars = ratingOnly || review.isPublished;
   return (
-    <LedgerRow as="li" stacked pad="lg" trailing={ratingOnly ? undefined : actions}>
+    <LedgerRow as="li" stacked pad="lg" trailing={actionsBesideStars ? undefined : actions}>
       <div id={`review-${review.id}`} className="min-w-0 scroll-mt-24">
         <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
           <StarRating
@@ -99,7 +103,7 @@ export function ReviewLedgerRow({
             label={t("reviews.rating", { rating: review.rating })}
             className="shrink-0"
           />
-          {ratingOnly ? <div className="ms-auto">{actions}</div> : null}
+          {actionsBesideStars ? <div className="order-last ms-auto">{actions}</div> : null}
           {review.isStandout && review.isPublished ? (
             <Badge tone="primary" size="sm" className="shrink-0">
               {t("reviews.standout")}

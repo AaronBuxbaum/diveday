@@ -139,6 +139,7 @@ function ResolvedShopPageHeader({
   returnTo,
   title,
   titlePrefix,
+  titleEnd,
   description,
   descriptionIsCaption = false,
   meta,
@@ -166,6 +167,12 @@ function ResolvedShopPageHeader({
   returnTo?: string | null;
   title: string;
   titlePrefix?: React.ReactNode;
+  /**
+   * One small control at the title row's end, such as a record's "⋯". As an
+   * `actions` door it fell under the meta lines on a phone and stood alone on
+   * a row of its own (`diver-activity-open`); here it stays beside the name.
+   */
+  titleEnd?: React.ReactNode;
   description?: string;
   /**
    * The description explains the page rather than naming its subject
@@ -244,7 +251,7 @@ function ResolvedShopPageHeader({
               `text-balance` because the titles that do wrap here are boat
               names ("Two-Tank Reef — Molasses & French"), and an even two
               lines reads better than a full line plus one orphaned word. */}
-          <div className={titlePrefix ? "flex items-center gap-3" : undefined}>
+          <div className={titlePrefix || titleEnd ? "flex items-center gap-3" : undefined}>
             {titlePrefix}
             <h1
               // The heading fades as it passes under the bar, so it and the
@@ -254,10 +261,11 @@ function ResolvedShopPageHeader({
               // which is the staff shell alone.
               data-chrome-fold-title
               lang={titleLang}
-              className={`font-brand-display ${display ? GREETING_TITLE_CLASS : PAGE_TITLE_CLASS}${eyebrow ? " mt-2" : ""}${titleClassName ? ` ${titleClassName}` : ""}`}
+              className={`min-w-0 font-brand-display ${display ? GREETING_TITLE_CLASS : PAGE_TITLE_CLASS}${eyebrow ? " mt-2" : ""}${titleClassName ? ` ${titleClassName}` : ""}`}
             >
               {bindTitleDash(title)}
             </h1>
+            {titleEnd ? <div className="ms-auto shrink-0">{titleEnd}</div> : null}
           </div>
           {/* The same words, delivered into the staff shell's bar so they can
               fold into it as the page scrolls (ADR

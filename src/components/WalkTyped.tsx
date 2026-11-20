@@ -141,12 +141,23 @@ export function WalkSwap({
   to: React.ReactNode;
 }) {
   const delay = { "--late-delay": `${at}ms` } as CSSProperties;
+  // Each screen fills the cell the taller one sets, so a short screen after a
+  // tall one sits on its own ground, not above blank frame (phone polish,
+  // 2026-11-20).
   return (
     <div className="grid">
-      <div data-walk-gone="" style={delay} className="col-start-1 row-start-1">
+      <div
+        data-walk-gone=""
+        style={delay}
+        className="col-start-1 row-start-1 flex flex-col [&>*]:flex-1"
+      >
         {from}
       </div>
-      <div data-walk-late="" style={delay} className="col-start-1 row-start-1">
+      <div
+        data-walk-late=""
+        style={delay}
+        className="col-start-1 row-start-1 flex flex-col [&>*]:flex-1"
+      >
         {to}
       </div>
     </div>

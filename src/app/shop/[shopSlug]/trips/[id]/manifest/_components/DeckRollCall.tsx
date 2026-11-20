@@ -39,7 +39,7 @@ export function DeckRollCall({
   const { manifest, rollCall, actions } = view;
   const { t, shopSlug, tripId } = rollCall.divers;
   const recordClass = buttonClass({ size: "deck", className: "w-full" });
-  const undoClass = buttonClass({ variant: "link", className: "min-h-11" });
+  const undoClass = buttonClass({ variant: "link", flush: true, className: "min-h-11" });
   const divers = manifest.divers
     .map(withholdHeldSeatParticulars)
     .map((diver) => (buddiesEnabled ? diver : { ...diver, buddyTeam: undefined }));
