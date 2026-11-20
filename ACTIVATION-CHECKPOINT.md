@@ -31,3 +31,6 @@ Latest checkpoint: gated crew boat/intake ordering and the two-day unknown-histo
 
 
 Review blocker: unknown-day server evidence remains permanently unresolved because there is no authorized auditable disposition for its actual event IDs; current signed recount can be recorded and shown but does not resolve the history. Saved offline manifests also need named uncertainty and incomplete-count parity. Do not use as an activation PR. The disposable PG crew race and current-recount suite passed six tests, and focused UI checks passed. A fresh full build/browser and exact-head CI have not been verified for this checkpoint.
+
+
+Local verification after this checkpoint: the current working tree with the unrelated #4804 visual-harness files applied built successfully, and fresh-snapshot/mixed-queue browser coverage passed in system Chromium (1 test). This is not exact-head CI and does not resolve the historical disposition or saved-copy warning gaps above.
