@@ -180,6 +180,7 @@ export default async function StaffingPage({
         copy={{
           label: t("schedule.views.label"),
           week: t("schedule.views.week"),
+          boats: t("schedule.views.boats"),
           crew: t("schedule.views.crew"),
           plan: t("schedule.views.plan"),
         }}

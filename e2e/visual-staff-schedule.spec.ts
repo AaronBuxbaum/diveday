@@ -343,6 +343,13 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "schedule-builder", scheme);
       });
 
+      // One day across every boat (issue #4258): the shop's own day, boat by boat.
+      test(`the boats view draws one day across every boat (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/schedule/boats");
+        await page.getByRole("heading", { level: 1 }).waitFor();
+        await capture(page, "schedule-boats-day", scheme);
+      });
+
       test(`the multi-day course shows its first-session time (${scheme})`, async ({ page }) => {
         const week = weekStartOf(daysFromNow(9));
         await page.goto(`/shop/blue-mantis/schedule/board?week=${week}`);

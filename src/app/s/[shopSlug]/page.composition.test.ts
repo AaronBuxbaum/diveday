@@ -67,8 +67,11 @@ describe("the public schedule's welcome band", () => {
   it("stands above the timetable, and the full story stays below it", () => {
     expect(positionOf("<ShopWelcome")).toBeGreaterThan(-1);
     expect(positionOf("<ShopWelcome")).toBeLessThan(positionOf("<WeekLedger"));
-    // The story renders inside the shelves, which follow the ledger.
-    expect(positionOf("<ScheduleShelves")).toBeGreaterThan(positionOf("<WeekLedger"));
+    // The story renders inside the shelves, which follow the ledger (a shop that leads with its
+    // courses shows that one shelf above it).
+    expect(positionOf("<ScheduleShelves {...shelfProps} only={leadsCourses")).toBeGreaterThan(
+      positionOf("<WeekLedger"),
+    );
   });
 
   it("jumps to the board only when there is one and to courses only when the shop teaches", () => {
