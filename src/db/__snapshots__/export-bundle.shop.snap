@@ -74,7 +74,7 @@ boat_snags.csv 0 rows 06ec9548988823e4 [id,boat_id,boat_name,checklist_item_id,c
 departure_boat_safety_snapshots.csv 1 rows 76851f8a7997211b [id,trip_id,boat_id,boat_name,judged_on,departure_starts_at,papers,radio,notices,captured_at]
 prior_visits.csv 3 rows 2b5449b25f88920f [id,person_id,person_name,visited_on,title,status_label,amount_label,source_label,source_reference,imported_at]
 trip_credit_entries.csv 0 rows 429265b9830358ca [id,person_id,kind,amount_cents,currency,reason,booking_id,restores_entry_id,actor_person_id,occurred_at]
-course_session_progress.csv 0 rows 09a93365afd976f4 [id,person_id,course_id,step_title,done_at,done_by_person_id]
+course_session_progress.csv 0 rows 866f0e0c0c8c60ea [id,person_id,course_id,step_title,done_at,done_by_person_id]
 computer_import_batches.csv 13 rows d0a6c5d4e0fb8c1c [id,person_id,request_key,selection_hash,imported_count,skipped_count,created_at]
 computer_dives.csv 13 rows aea2fa806c24332d [id,person_id,batch_id,fingerprint,record,annotation,deleted_at,created_at]
 computer_dive_profiles.csv 13 rows 66873dc1fec37e19 [id,person_id,dive_id,samples]

@@ -1,4 +1,6 @@
-import { expect, READ_ONLY, test } from "./fixtures";
+import { expect, READ_ONLY, signedInAsOwner, test } from "./fixtures";
+
+signedInAsOwner();
 
 /** One day across every boat, reached from the Schedule views (issue #4258). */
 test("the Boats view draws a day across the shop's boats", {

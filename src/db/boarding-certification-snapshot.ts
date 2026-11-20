@@ -75,9 +75,10 @@ export function boardingCertificationSnapshot(shopId: string, personId: string):
 export async function rewriteBoardingSnapshotReviewer(
   db: DbExecutor,
   shopId: string,
-  fromPersonId: string,
+  fromPersonIds: string[],
   toPersonId: string | null,
 ): Promise<void> {
+  if (fromPersonIds.length === 0) return;
   const patch =
     toPersonId === null
       ? { reviewedByPersonId: null, reviewedByName: null }
@@ -86,7 +87,10 @@ export async function rewriteBoardingSnapshotReviewer(
     .update(rollCallEvents)
     .set({
       certificationSnapshot: sql`(
-      select jsonb_agg(case when card ->> 'reviewedByPersonId' = ${fromPersonId}
+      select jsonb_agg(case when card ->> 'reviewedByPersonId' in (${sql.join(
+        fromPersonIds.map((id) => sql`${id}`),
+        sql`, `,
+      )})
         then card || ${JSON.stringify(patch)}::jsonb else card end order by ordinal)
       from jsonb_array_elements(${rollCallEvents.certificationSnapshot}) with ordinality as item(card, ordinal)
     )`,
@@ -95,7 +99,10 @@ export async function rewriteBoardingSnapshotReviewer(
       and(
         eq(rollCallEvents.shopId, shopId),
         seatMarks(),
-        sql`${rollCallEvents.certificationSnapshot} @> ${JSON.stringify([{ reviewedByPersonId: fromPersonId }])}::jsonb`,
+        sql`exists (select 1 from jsonb_array_elements(${rollCallEvents.certificationSnapshot}) as held(card) where held.card ->> 'reviewedByPersonId' in (${sql.join(
+          fromPersonIds.map((id) => sql`${id}`),
+          sql`, `,
+        )}))`,
       ),
     );
 }

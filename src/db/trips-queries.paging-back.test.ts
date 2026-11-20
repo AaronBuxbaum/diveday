@@ -102,11 +102,12 @@ describe("paged schedule, counting only the page", () => {
         plannedDives: 2,
       });
     }
-    const everything = await upcomingTripsWithCounts(db, shop.id);
+    const everything = (await upcomingTripsWithCounts(db, shop.id)).filter((t) => !t.isPrivate);
 
     for (const limit of [1, 3, 7, 50]) {
       const walks = await Promise.all(
         [undefined, true].map(async (hasSpace) => {
+          // Public reads count the page only; `hasSpace` counts first.
           const rows: Page["trips"] = [];
           let cursor: string | undefined;
           for (let hops = 0; hops < 200; hops++) {
@@ -114,6 +115,7 @@ describe("paged schedule, counting only the page", () => {
               cursor,
               limit,
               hasSpace,
+              publicOnly: true,
             });
             rows.push(...page.trips);
             if (!page.nextCursor) break;

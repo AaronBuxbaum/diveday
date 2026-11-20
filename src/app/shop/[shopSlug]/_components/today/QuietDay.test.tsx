@@ -38,6 +38,12 @@ describe("QuietDay", () => {
     );
   });
 
+  it("ends with one tip for the dock, after the work", () => {
+    const { container } = render(<QuietDay {...props} loadOut={null} />);
+    const tip = container.querySelector("p.text-muted:last-child");
+    expect(tip?.textContent?.length).toBeGreaterThan(20);
+  });
+
   it("says nothing of tomorrow when tomorrow has no load-out", () => {
     render(<QuietDay {...props} loadOut={null} />);
     expect(screen.queryByRole("heading", { name: "Tomorrow from tonight" })).toBeNull();

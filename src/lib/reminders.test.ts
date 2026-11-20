@@ -3,6 +3,7 @@ import type { ChecklistState } from "./readiness-summary";
 import {
   dueReminder,
   MAX_REMINDER_LEAD_HOURS,
+  nextReminderAt,
   reminderEarnsItsSend,
   TRIP_REMINDER_CADENCES,
   TRIP_REMINDER_RHYTHM,
@@ -202,5 +203,29 @@ describe("dueReminder on the fall-back day", () => {
     expect(dueReminder({ startsAt: monday, now: elapsedWeek, sentKinds: none })?.kind).toBe(
       "trip_reminder_7d",
     );
+  });
+});
+
+describe("nextReminderAt", () => {
+  it("names the week-out time before it opens", () => {
+    expect(nextReminderAt({ startsAt, now: h(200), sentKinds: none })).toEqual(h(168));
+  });
+
+  it("names the 24-hour time once the week-out reminder has gone", () => {
+    expect(
+      nextReminderAt({ startsAt, now: h(100), sentKinds: new Set(["trip_reminder_7d"]) }),
+    ).toEqual(h(24));
+  });
+
+  it("names no time for a reminder already due, or when both have gone", () => {
+    expect(nextReminderAt({ startsAt, now: h(100), sentKinds: none })).toEqual(h(24));
+    expect(
+      nextReminderAt({
+        startsAt,
+        now: h(10),
+        sentKinds: new Set(["trip_reminder_7d", "trip_reminder_24h"]),
+      }),
+    ).toBeNull();
+    expect(nextReminderAt({ startsAt, now: h(10), sentKinds: none })).toBeNull();
   });
 });
