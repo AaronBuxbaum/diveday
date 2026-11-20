@@ -91,7 +91,6 @@ html[data-device-text-size] :is(a, button, summary) {
    Inheriting wrap-anywhere made "Find my booking" a one-letter flex column. */
 html[data-device-text-size] .device-text-public-identity {
   width: 100%;
-  flex-wrap: wrap;
 }
 /* Formatted time units keep their nonbreaking spaces at ordinary sizes.
    Applied scaling may break between their parts, never inside the zone word. */
@@ -105,9 +104,7 @@ html[data-device-text-size] .device-text-word-break {
   display: inline;
 }
 html[data-device-text-size] .device-text-recovery {
-  flex-grow: 1;
-  flex-basis: min-content;
-  max-inline-size: max-content;
+  max-inline-size: 100%;
   overflow-wrap: normal;
 }
 html[data-device-text-size] [data-device-text-catch-up] form {

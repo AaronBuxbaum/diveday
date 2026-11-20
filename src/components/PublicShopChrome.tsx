@@ -77,15 +77,16 @@ export function PublicShopHeader({
       stackedOnPhone
       naturalHeight
       leading={
-        /* Identity yields to recovery's natural width. Min-content flex basis
-           lets recovery move to another line only when even its longest word
-           cannot fit beside the name's floor (ADR 20260907-in-your-hands, 19d).
-           Fixed 8px gaps keep the first grapheme and complete ellipsis. */
-        <div className="device-text-public-identity flex min-w-0 items-center justify-between gap-[8px]">
+        /* The name keeps its whole width and recovery moves to the next line
+           when the two do not fit side by side (phone polish, 2026-11-20): at
+           200% text the name gave way to recovery and read "Bl…". A name too
+           long for one line takes two before it is cut. Fixed 8px gaps keep the
+           first grapheme and complete ellipsis. */
+        <div className="device-text-public-identity flex min-w-0 flex-wrap items-center justify-between gap-x-[8px]">
           <Link
             href={publicSchedulePath(shop.slug)}
             // diveday:allow-type-ramp: the shop name is a wordmark, not a heading
-            className={`font-brand-display flex min-h-11 flex-1 ${shop.logoUrl ? "min-w-[calc(2rem_+_8px_+_2em)]" : "min-w-11"} items-center gap-[8px] text-lg font-semibold tracking-tight`}
+            className={`font-brand-display flex min-h-11 max-w-full flex-auto ${shop.logoUrl ? "min-w-[calc(2rem_+_8px_+_2em)]" : "min-w-11"} items-center gap-[8px] text-lg font-semibold tracking-tight`}
           >
             {/* The shop's logo is the nav's mark beside its name (visual review
               2026-10-24, B16); it stood as an orphan tile beside the hero. */}
@@ -97,7 +98,7 @@ export function PublicShopHeader({
                 className="size-8 shrink-0 rounded-inset border border-border bg-surface object-cover"
               />
             ) : null}
-            <span className="min-w-[2em] truncate">{shop.name}</span>
+            <span className="line-clamp-2 min-w-[2em] wrap-break-word">{shop.name}</span>
           </Link>
           {recoveryLabel ? (
             <a

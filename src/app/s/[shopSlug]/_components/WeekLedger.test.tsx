@@ -43,9 +43,12 @@ function bodyLines(item: HTMLElement): HTMLParagraphElement[] {
   return Array.from(body?.querySelectorAll("p") ?? []);
 }
 
-/** The row's one meta line, or `null` when the row renders none. */
+/**
+ * The row's one meta line, or `null` when the row renders none. The no-break
+ * space that glues each dot to the fact before it reads as a plain space here.
+ */
 function metaLine(item: HTMLElement): string | null {
-  return bodyLines(item)[0]?.textContent ?? null;
+  return bodyLines(item)[0]?.textContent?.replaceAll("\u00a0", " ") ?? null;
 }
 
 describe("a week row is a link, never a button", () => {
@@ -284,7 +287,13 @@ describe("a fact on the meta line moves whole", () => {
 
     const fragments = screen
       .getAllByRole("listitem")
-      .flatMap((item) => Array.from(bodyLines(item)[0]?.children ?? []));
+      .flatMap((item) =>
+        Array.from(
+          bodyLines(item)[0]?.querySelectorAll(
+            ":scope > .inline-block, :scope > .whitespace-nowrap > .inline-block",
+          ) ?? [],
+        ),
+      );
     expect(fragments.map((fragment) => fragment.textContent)).toEqual([
       "First time back in a while",
       "Course session · Scuba Refresher",

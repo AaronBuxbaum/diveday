@@ -135,7 +135,11 @@ export function TripPitch({
             <TripCrewLine crew={crew} locale={locale} className="mt-6" />
             <PublicStaffProfiles profiles={profiles} locale={locale} />
             {logEntry ? (
-              <div className={pitchHasDoor(briefings, crew) ? "mt-6" : undefined}>
+              <div
+                className={
+                  pitchHasDoor(briefings, crew) || profiles.length > 0 ? "mt-6" : undefined
+                }
+              >
                 <LogEntryPreview
                   line={t("trip.logEntryWaiting")}
                   date={formatShortDate(logEntry.startsAt, locale, timeZone)}
