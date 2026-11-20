@@ -196,5 +196,35 @@ describePostgres("recount across meeting days", () => {
       recountRequired: false,
       rollCall: { state: "boarded" },
     });
+    await pg.db
+      .update(rollCallEvents)
+      .set({ meetingDay: null })
+      .where(and(eq(rollCallEvents.tripId, trip.id), eq(rollCallEvents.source, "offline")));
+    const ambiguous = await getTripManifest(pg.db, shop.id, trip.id, "after_dive_1");
+    expect(ambiguous?.divers.find((item) => item.bookingId === seat.booking.id)).toMatchObject({
+      recountRequired: true,
+      rollCall: undefined,
+    });
+    expect(ambiguous?.crew.find((item) => item.id === crew.id)).toMatchObject({
+      recountRequired: true,
+      rollCall: undefined,
+    });
+    const ambiguousPage = await readOfflineManifestRosterWithWindows(pg.db, shop.id, trip.id);
+    const ambiguousProof = ambiguousPage?.manifests
+      .find((item) => item.checkpoint === "after_dive_1")
+      ?.divers.find((item) => item.bookingId === seat.booking.id)
+      ?.rollCallContext?.liveRecountProof;
+    expect(
+      await recordRollCall(pg.db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        bookingId: seat.booking.id,
+        recordedByPersonId: owner.person.id,
+        checkpoint: "after_dive_1",
+        status: "boarded",
+        source: "live",
+        liveRecountProof: ambiguousProof,
+      }),
+    ).toMatchObject({ ok: false, reason: "review_required" });
   });
 });

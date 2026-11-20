@@ -25,6 +25,7 @@ import {
   tripScheduleDays,
   trips,
 } from "./schema";
+import { rollCallDayIndex } from "./trip-meeting-windows";
 import { liveTrip } from "./trips-live";
 
 export type RollCallCausalSubject = {
@@ -209,7 +210,7 @@ async function offlineSourcesForRows<T extends { event: CausalEvent; day: number
   ];
   if (!seats.length && !crew.length) return [];
   const events = await db
-    .select()
+    .select({ event: rollCallEvents, day: rollCallDayIndex() })
     .from(rollCallEvents)
     // diveday:roll-call-both-subjects: the paired subject predicates bound this lookup.
     .where(
@@ -224,9 +225,7 @@ async function offlineSourcesForRows<T extends { event: CausalEvent; day: number
       ),
     );
   const existing = new Set(rows.map(({ event }) => event.id));
-  return events
-    .filter((event) => !existing.has(event.id))
-    .map((event) => ({ event, day: event.meetingDay ?? -1 }));
+  return events.filter(({ event }) => !existing.has(event.id));
 }
 
 /** Keep invalidated positive evidence visible as an unresolved count, not an older answer. */

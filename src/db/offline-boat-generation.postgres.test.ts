@@ -9,8 +9,13 @@ import { listRollCallGaps } from "@/features/roll-call-gaps";
 import { nowDate } from "@/lib/clock";
 import { clientRollCallEvidenceId } from "@/lib/roll-call-causality";
 import { describePostgres, postgresTestDb } from "@/test/postgres";
-import { getTripManifest, onTheWaterByRollCall, recordRollCall } from "./manifests";
-import { boats, trips } from "./schema";
+import {
+  getTripManifest,
+  listDepartureRollCallByTrip,
+  onTheWaterByRollCall,
+  recordRollCall,
+} from "./manifests";
+import { boats, rollCallEvents, trips } from "./schema";
 import { seedDemo } from "./seed";
 import { getShopBySlug } from "./shops";
 import { editTripSection, getTripRoster, listStaff } from "./trips";
@@ -40,6 +45,18 @@ describePostgres("offline evidence across a boat change", () => {
       if (!trip || !owner) throw new Error("fixture missing");
       const [subject, other] = await getTripRoster(pg.db, shop.id, trip.id);
       if (!subject || !other) throw new Error("seats missing");
+      if (checkpoint === "after_dive_1")
+        expect(
+          await recordRollCall(pg.db, {
+            shopId: shop.id,
+            tripId: trip.id,
+            bookingId: subject.booking.id,
+            recordedByPersonId: owner.person.id,
+            checkpoint: "departure",
+            status: "not_boarded",
+            source: "live",
+          }),
+        ).toMatchObject({ ok: true });
       expect(
         await recordRollCall(pg.db, {
           shopId: shop.id,
@@ -135,6 +152,11 @@ describePostgres("offline evidence across a boat change", () => {
       ).toMatchObject({ ok: true });
       const [restored] = await pg.db.select().from(trips).where(eq(trips.id, trip.id));
       expect(restored?.offlineMeetingGeneration).toBe(original.offlineMeetingGeneration + 2);
+      if (order === "intake first" && checkpoint === "after_dive_1")
+        await pg.db
+          .update(rollCallEvents)
+          .set({ meetingDay: null })
+          .where(eq(rollCallEvents.clientEventId, input.clientEventId));
       if (order === "boat first")
         expect(await recordRollCall(pg.db, input)).toMatchObject({
           ok: false,
@@ -184,8 +206,11 @@ describePostgres("offline evidence across a boat change", () => {
             later?.divers.find((diver) => diver.bookingId === subject.booking.id),
           ).toMatchObject({ recountRequired: true, rollCall: undefined });
           expect(later?.summary.recountRequired).toBe(1);
-          expect((await departureCounts(pg.db, shop.id, [trip.id], { readiness: new Map() })).get(trip.id))
-            .toMatchObject({ recountRequired: 1, back: 1 });
+          expect(
+            (await departureCounts(pg.db, shop.id, [trip.id], { readiness: new Map() })).get(
+              trip.id,
+            ),
+          ).toMatchObject({ recountRequired: 1, back: 1 });
         }
         const fresh = (await buildOfflineManifestCopies(pg.db, shop, owner.person.id, [trip.id]))
           .payloads[0];
@@ -245,6 +270,12 @@ describePostgres("offline evidence across a boat change", () => {
           recounted?.divers.find((diver) => diver.bookingId === subject.booking.id),
         ).toMatchObject({ rollCall: { state: "not_boarded" }, recountRequired: false });
         expect(recounted?.summary.recountRequired).toBe(0);
+        if (checkpoint === "after_dive_1")
+          expect(
+            (await listDepartureRollCallByTrip(pg.db, shop.id, [trip.id]))
+              .get(trip.id)
+              ?.get(subject.booking.id),
+          ).toBe("not_boarded");
         expect(await onTheWaterByRollCall(pg.db, shop.id, trip.id, subject.booking.id)).toBe(
           checkpoint === "departure" ? null : "missing_after_dive",
         );
@@ -328,8 +359,11 @@ describePostgres("offline evidence across a boat change", () => {
           expect(
             resolved?.divers.find((item) => item.bookingId === subject.booking.id),
           ).toMatchObject({ recountRequired: false, rollCall: { state: "boarded" } });
-          expect((await departureCounts(pg.db, shop.id, [trip.id], { readiness: new Map() })).get(trip.id))
-            .toMatchObject({ recountRequired: 0, back: 2 });
+          expect(
+            (await departureCounts(pg.db, shop.id, [trip.id], { readiness: new Map() })).get(
+              trip.id,
+            ),
+          ).toMatchObject({ recountRequired: 0, back: 2 });
         }
       }
     });
