@@ -43,6 +43,7 @@ import {
 } from "./boarding-certification-snapshot";
 import { contactReplaced, revokeLinksSentToOldContact } from "./contact-change";
 import { refileCourseFormRecords } from "./course-forms";
+import { nextOfflineGeneration } from "./offline-generation";
 import { retireRecapLinks } from "./recap-links";
 import { reconcileRecoveryActivityIdentity } from "./recovery-activities-merge";
 import { liveTrip } from "./trips-live";
@@ -1291,7 +1292,7 @@ export async function mergeDiverRecords(input: {
         // already recorded offline evidence see the new boundary.
         const assignmentGeneration =
           tableName === "bookings"
-            ? sql`, "offline_assignment_generation" = "offline_assignment_generation" + 1`
+            ? sql`, "offline_assignment_generation" = ${nextOfflineGeneration(sql.raw(`"offline_assignment_generation"`))}`
             : sql``;
         // Only a capability whose purpose follows a merge moves; a staff
         // credential one refused the merge above, and never reaches here.

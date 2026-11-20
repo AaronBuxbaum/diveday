@@ -462,7 +462,8 @@ describe("claimPartySeat", () => {
       .from(bookings)
       .where(eq(bookings.id, memberOne.bookingId))
       .limit(1);
-    expect(row).toMatchObject({ personId: outcome.personId, offlineAssignmentGeneration: 1 });
+    expect(row).toMatchObject({ personId: outcome.personId });
+    expect(row?.offlineAssignmentGeneration).not.toBe(0);
     expect(row?.personId).not.toBe(placeholderPersonId);
     expect(row?.claimedAt).not.toBeNull();
     expect(row?.identityUnconfirmedAt).toBeNull();
