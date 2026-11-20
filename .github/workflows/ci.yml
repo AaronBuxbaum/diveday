@@ -1572,7 +1572,8 @@ jobs:
     steps:
       - name: Lower layer of a stack
         if: ${{ needs.stack-gate.outputs.run == 'false' }}
-        run: echo 'Lower layer of a stack: CI runs on the top pull request, so this layer has nothing to check here. Add the ci-now label to run it.' | tee -a "$GITHUB_STEP_SUMMARY"
+        run: |
+          echo 'Lower layer of a stack. CI runs on the top pull request, so there is nothing to check here. Add the ci-now label to run it.' | tee -a "$GITHUB_STEP_SUMMARY"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         if: ${{ needs.stack-gate.outputs.run != 'false' }}
       - name: Collect exact-attempt CI evidence
