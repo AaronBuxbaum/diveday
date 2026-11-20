@@ -10,7 +10,7 @@
  * need it, and nothing in `src/db` may import a feature.
  */
 import { and, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
-import { divesStandingNotMade } from "@/db/dive-not-made";
+import { standingNotMadeDivesOf } from "@/db/dive-not-made";
 import { liveTrip, seatNotCancelled } from "@/db/trips";
 import { hasReturned } from "@/lib/trips";
 import type { AppDb } from "../../db/client";
@@ -359,6 +359,8 @@ export async function listRollCallGaps(
         from ${tripScheduleDays} d
         where d.trip_id = ${trips.id}
       )`,
+      // The dives the crew recorded not made, in the same statement (#4809).
+      notMade: standingNotMadeDivesOf(trips),
     })
     .from(trips)
     .leftJoin(courses, and(eq(courses.id, trips.courseId), eq(courses.shopId, trips.shopId)))
@@ -378,7 +380,7 @@ export async function listRollCallGaps(
   if (sailed.length === 0) return [];
   const tripIds = sailed.map((trip) => trip.id);
 
-  const [roster, rawEvents, rawCrewEvents, notMadeByTrip] = await Promise.all([
+  const [roster, rawEvents, rawCrewEvents] = await Promise.all([
     db
       .select({
         tripId: bookings.tripId,
@@ -436,9 +438,8 @@ export async function listRollCallGaps(
         ),
       )
       .orderBy(...oldestMarkFirst()),
-    divesStandingNotMade(db, shopId, tripIds),
   ]);
-  const notMade = notMadeStanding(notMadeByTrip, [...rawEvents, ...rawCrewEvents]);
+  const notMade = notMadeStanding(sailed, [...rawEvents, ...rawCrewEvents]);
   const projection = await rollCallProjectionForDb(db, rawEvents, { allSubjectEvents: true });
   const events = projection.rows.map(gapDiverEvent);
   const crewProjection = await rollCallProjectionForDb(db, rawCrewEvents, {
@@ -692,14 +693,19 @@ export async function listRollCallGaps(
  * checkpoint that day or on an unknown day. A count begun there outranks it.
  */
 function notMadeStanding(
-  notMadeByTrip: ReadonlyMap<string, ReadonlyMap<number, ReadonlySet<number>>>,
+  sailed: readonly { id: string; notMade: readonly { day: number; dive: number }[] | null }[],
   events: readonly GapRawEvent[],
 ) {
+  const recorded = new Set(
+    sailed.flatMap((trip) =>
+      (trip.notMade ?? []).map(({ day, dive }) => `${trip.id}\u0000${day}\u0000${dive}`),
+    ),
+  );
   const countBegun = new Set(
     events.map(({ event, day }) => `${event.tripId}\u0000${day}\u0000${event.checkpoint}`),
   );
   return (tripId: string, day: number, dive: number) =>
-    notMadeByTrip.get(tripId)?.get(day)?.has(dive) === true &&
+    recorded.has(`${tripId}\u0000${day}\u0000${dive}`) &&
     ![day, -1].some((on) => countBegun.has(`${tripId}\u0000${on}\u0000after_dive_${dive}`));
 }
 

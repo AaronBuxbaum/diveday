@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, isNotNull, isNull, or } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNotNull, isNull, or, sql } from "drizzle-orm";
 import { isStaff } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import { rollCallDayOf, rollCallDayStarts } from "@/lib/trip-days";
@@ -6,7 +6,6 @@ import { boatHasLeft } from "./aboard-at-sea";
 import { loadActiveStaffRoles } from "./authz";
 import type { AppDb, DbExecutor } from "./client";
 import { recordTripActivity } from "./operations";
-import { queryAll } from "./query-helpers";
 import {
   diveNotMadeEvents,
   executedDives,
@@ -296,60 +295,33 @@ export async function diveNotMadeStanding(
 }
 
 /**
- * **Every standing not-made dive on these departures** (issue #4809), for the
- * open head counts (`listRollCallGaps`): by trip, then meeting day (0-based),
- * the dive numbers whose newest word that day is `not_made` and that nobody
- * has logged. A count of the dive is the reader's to weigh, since it holds
+ * **The standing not-made dives of the departure in the enclosing query**
+ * (issue #4809), as a column for the open head counts (`listRollCallGaps`),
+ * so the detector pays no extra statement: each meeting day (0-based) and dive
+ * whose newest word that day is `not_made` and that nobody has logged, or
+ * null for none. A count of the dive is the reader's to weigh, since it holds
  * the roll call; the log is weighed here, and either wins over the record.
  */
-export async function divesStandingNotMade(
-  db: DbExecutor,
-  shopId: string,
-  tripIds: readonly string[],
-): Promise<Map<string, Map<number, Set<number>>>> {
-  const out = new Map<string, Map<number, Set<number>>>();
-  if (tripIds.length === 0) return out;
-  const [words, logs] = await queryAll(db, [
-    () =>
-      db
-        .select({
-          tripId: diveNotMadeEvents.tripId,
-          day: diveNotMadeEvents.meetingDay,
-          dive: diveNotMadeEvents.diveNumber,
-          word: diveNotMadeEvents.word,
-        })
-        .from(diveNotMadeEvents)
-        .where(
-          and(
-            eq(diveNotMadeEvents.shopId, shopId),
-            inArray(diveNotMadeEvents.tripId, [...tripIds]),
-          ),
-        )
-        .orderBy(desc(diveNotMadeEvents.recordedAt), desc(diveNotMadeEvents.seq)),
-    () =>
-      db
-        .select({ tripId: executedDives.tripId, dive: executedDives.diveNumber })
-        .from(executedDives)
-        .where(
-          and(
-            eq(executedDives.shopId, shopId),
-            inArray(executedDives.tripId, [...tripIds]),
-            liveLog(),
-          ),
-        ),
-  ]);
-  const logged = new Set(logs.map((log) => `${log.tripId}\u0000${log.dive}`));
-  const decided = new Set<string>();
-  for (const row of words) {
-    const key = `${row.tripId}\u0000${row.day}\u0000${row.dive}`;
-    if (decided.has(key)) continue;
-    decided.add(key);
-    if (row.word !== "not_made" || logged.has(`${row.tripId}\u0000${row.dive}`)) continue;
-    const days = out.get(row.tripId) ?? new Map<number, Set<number>>();
-    const dives = days.get(row.day) ?? new Set<number>();
-    dives.add(row.dive);
-    days.set(row.day, dives);
-    out.set(row.tripId, days);
-  }
-  return out;
+export function standingNotMadeDivesOf(trip: { id: typeof trips.id; shopId: typeof trips.shopId }) {
+  return sql<{ day: number; dive: number }[] | null>`(
+    select json_agg(json_build_object('day', newest.meeting_day, 'dive', newest.dive_number))
+    from (
+      select distinct on (${diveNotMadeEvents.meetingDay}, ${diveNotMadeEvents.diveNumber})
+        ${diveNotMadeEvents.meetingDay} as meeting_day,
+        ${diveNotMadeEvents.diveNumber} as dive_number,
+        ${diveNotMadeEvents.word} as word
+      from ${diveNotMadeEvents}
+      where ${diveNotMadeEvents.tripId} = ${trip.id} and ${diveNotMadeEvents.shopId} = ${trip.shopId}
+      order by ${diveNotMadeEvents.meetingDay}, ${diveNotMadeEvents.diveNumber},
+        ${diveNotMadeEvents.recordedAt} desc, ${diveNotMadeEvents.seq} desc
+    ) newest
+    where newest.word = 'not_made'
+      and not exists (
+        select 1 from ${executedDives}
+        where ${executedDives.tripId} = ${trip.id}
+          and ${executedDives.shopId} = ${trip.shopId}
+          and ${executedDives.diveNumber} = newest.dive_number
+          and ${liveLog()}
+      )
+  )`;
 }
