@@ -45,6 +45,7 @@ import { flushUrgentCrewNotices, recordCrewCalledOff, recordCrewTimeMoved } from
 import { correctFlySafeForTripChange, type FlySafeCorrectionOutcome } from "./fly-safe-correction";
 import { releaseUnclaimedGearReservationsForTrips } from "./gear";
 import { publishManifestEvent } from "./manifest-events";
+import { nextOfflineGeneration } from "./offline-generation";
 import { recordDeskLine } from "./operations";
 import { rearmTripReminders } from "./reminder-rearm";
 import { recordedRollCallRows } from "./roll-call-history";
@@ -1257,7 +1258,9 @@ async function updateTripRecord(
     if (meetingTimesChanged || scheduleDaysMoved || boatChanged) {
       await tx
         .update(trips)
-        .set({ offlineMeetingGeneration: sql`${trips.offlineMeetingGeneration} + 1` })
+        .set({
+          offlineMeetingGeneration: sql`${nextOfflineGeneration(trips.offlineMeetingGeneration)}`,
+        })
         .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)));
     }
     timesChanged = timesMoved;
@@ -1500,7 +1503,7 @@ export async function setTripStatus(
       .set({
         status,
         cancelledAt: now,
-        offlineMeetingGeneration: sql`case when ${trips.status} is distinct from ${status} then ${trips.offlineMeetingGeneration} + 1 else ${trips.offlineMeetingGeneration} end`,
+        offlineMeetingGeneration: sql`case when ${trips.status} is distinct from ${status} then ${nextOfflineGeneration(trips.offlineMeetingGeneration)} else ${trips.offlineMeetingGeneration} end`,
       })
       .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)))
       .returning();

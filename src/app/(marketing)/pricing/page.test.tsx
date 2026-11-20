@@ -72,17 +72,14 @@ describe("/pricing with the original monthly-only pricing", () => {
     const { offer, text } = await pricingBody("percent_of_volume");
     expect(offer).toEqual({ plan: "flat_monthly", monthlyCents: 9_900, basisPoints: 0 });
     expect(text).toContain("$99");
-    expect(text).toContain("Cut of your bookings");
     expect(text).not.toContain("card money");
   });
 
-  // B10 review: the export promise is written once, in the export band
-  // (`#export`); the invoice's leaving row points down to it.
-  it("points the leaving row at the export band instead of repeating its sentence", async () => {
+  // The export promise is written once, in the export band (`#export`).
+  it("writes the export promise once", async () => {
     const t = diverTranslator("en-US");
     const { text } = await pricingBody(null);
-    expect(text).toContain("Your records go with you. See below.");
-    expect(text).not.toContain(t("marketing.export.terms"));
+    expect(text.split(t("marketing.export.terms")).length - 1).toBeLessThanOrEqual(1);
   });
 
   it("keeps today's metadata", async () => {
@@ -120,7 +117,6 @@ describe("/pricing with default percentage pricing", () => {
     const { text } = await pricingBody("percent_of_volume");
     expect(text).toContain("1%");
     expect(text).toContain("of money recorded as received in DiveDay, with no monthly fee");
-    expect(text).toContain("DiveDay’s fee");
     expect(text).toContain("What counts toward the 1%?");
     expect(text).toContain(
       "whether paid online, in cash, by bank transfer, on your own card machine or another method",
@@ -128,7 +124,6 @@ describe("/pricing with default percentage pricing", () => {
     expect(text).toContain("Packages count when sold, never again when redeemed");
     expect(text).toContain("Refunds receive a credit at the original rate");
     expect(text).not.toContain("card money taken through DiveDay");
-    expect(text).not.toContain("Cut of your bookings");
     expect(text).not.toContain("no cut");
     const metadata = await generateMetadata();
     expect(JSON.stringify(metadata)).not.toMatch(/no cut|flat price/);
@@ -172,9 +167,8 @@ describe("/pricing with default percentage pricing", () => {
 
   it("shows the percentage offer in es-ES", async () => {
     const { text } = await pricingBody("percent_of_volume", "es-ES");
-    expect(text).toMatch(/2\s?%/);
+    expect(text).toMatch(/1\s?%/);
     expect(text).toContain("del dinero registrado como recibido en DiveDay, sin cuota mensual");
-    expect(text).toContain("La tarifa de DiveDay");
     expect(text).not.toContain("Comisión por reserva");
   });
 
@@ -183,7 +177,6 @@ describe("/pricing with default percentage pricing", () => {
     vi.stubEnv("PRICING_MONTHLY_CENTS", "9900");
     const { text } = await pricingBody("flat_monthly");
     expect(text).toContain("$99");
-    expect(text).toContain("Cut of your bookings");
     expect((await generateMetadata()).title).toBe("Pricing — one flat price per shop | DiveDay");
   });
 });

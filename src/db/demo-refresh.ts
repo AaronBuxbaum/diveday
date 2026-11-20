@@ -6,6 +6,7 @@ import type { AppDb, DbExecutor } from "./client";
 import { clearCrewAwayAcknowledgements } from "./crew-away-acknowledgements";
 import { isDemoShopWithDemoOwnerOrCaptainAccount } from "./demo-account-guard";
 import { DEMO_SHOP_SLUG } from "./demo-shop";
+import { nextOfflineGeneration } from "./offline-generation";
 import { shops, trips } from "./schema";
 import { bringDemoBoatsAtSeaHome } from "./seed-boat-at-sea";
 import { demoTodayDepartureStart } from "./seed-clock";
@@ -331,7 +332,7 @@ async function ensureDemoSailsTodayInTransaction(
         startsAt,
         endsAt,
         revision: sql`${trips.revision} + 1`,
-        offlineMeetingGeneration: sql`${trips.offlineMeetingGeneration} + 1`,
+        offlineMeetingGeneration: sql`${nextOfflineGeneration(trips.offlineMeetingGeneration)}`,
       })
       .where(and(eq(trips.shopId, shopId), eq(trips.id, current.id)));
     await rebindDepartureBoatSafetyTime(tx, shopId, current.id, current.startsAt, startsAt, now);

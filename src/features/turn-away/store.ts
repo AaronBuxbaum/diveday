@@ -1,4 +1,5 @@
 import { and, eq, inArray, sql } from "drizzle-orm";
+import { nextOfflineGeneration } from "@/db/offline-generation";
 import { liveTrip, seatHeld, seatNotCancelled } from "@/db/trips";
 import { activeStaffRecorderId } from "@/features/no-show";
 import { standingArrivalStatus } from "../../db/arrival-provenance";
@@ -138,7 +139,7 @@ export async function turnBookingAway(
         status: "no_show",
         turnedAwayReason: input.reason,
         turnedAwayAt: now,
-        offlineAssignmentGeneration: sql`${bookings.offlineAssignmentGeneration} + 1`,
+        offlineAssignmentGeneration: sql`${nextOfflineGeneration(bookings.offlineAssignmentGeneration)}`,
       })
       .where(and(eq(bookings.id, seat.id), seatHeld))
       .returning({ id: bookings.id });

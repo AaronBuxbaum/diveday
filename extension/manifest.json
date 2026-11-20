@@ -25,7 +25,7 @@
   ],
   "content_scripts": [
     {
-      "matches": ["https://dive.day/shop/*"],
+      "matches": ["https://www.dive.day/shop/*"],
       "js": ["protocol.js", "bridge.js"],
       "run_at": "document_idle"
     }
