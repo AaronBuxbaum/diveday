@@ -396,7 +396,7 @@ test.describe("print", () => {
     const reefId = await seededTripId(page, "blue-mantis", "Two-Tank Reef — Molasses & French");
     await page.goto(`/shop/blue-mantis/trips/${reefId}?pass=${DEMO_RECAP_BOOKING_ID}`);
     await page.getByRole("link", { name: staff("print.counter.passReceipt") }).click();
-    await page.getByText("Show this at the counter, or say your name.").waitFor();
+    await page.getByRole("link", { name: staff("print.counter.passCard") }).waitFor();
     await capturePrint(page, "paper-pass-receipt");
   });
 
