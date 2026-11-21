@@ -9,8 +9,8 @@
 recovery layers: Neon PITR, and a scheduled logical export into a private, versioned S3 bucket that
 DiveDay controls. The second one was built as far as its edges and no further —
 `infra/lib/infra-stack.ts` §11 has the bucket, the lifecycle rules, and a write-only
-`diveday-backup-uploader` IAM user; `src/db/export.ts` → `src/lib/export.ts` has the bundle seam;
-`src/features/backup-export/` has an S3 client and the shop-owned weekly delivery built on both.
+`diveday-backup-uploader` IAM user; `src/db/export/index.ts` → `src/lib/export.ts` has the bundle seam;
+`src/features/records/backup-export/` has an S3 client and the shop-owned weekly delivery built on both.
 
 Nothing called one from the other. The runbook said so plainly, in two places: a `TODO(owner)` on
 "decide what runs the export on a schedule and wire it up", and a line under *What this runbook does
@@ -42,7 +42,7 @@ its own Sentry monitor, one log line per pass, one shop's failure never costing 
 
 Specifics worth recording:
 
-- **The bundle assembly moved to `src/features/backup-export/bundle.ts`** and both runners call it,
+- **The bundle assembly moved to `src/features/records/backup-export/bundle.ts`** and both runners call it,
   so "the same bundle, two destinations" is a fact rather than an intention.
 - **Key convention `exports/<YYYY-MM-DD>/<slug>.zip`**, as the runbook already specified. Date
   first is load-bearing, not cosmetic — see the watchdog below.

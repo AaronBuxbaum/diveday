@@ -12,7 +12,7 @@ type CertificationAgency = (typeof CERTIFICATION_AGENCIES)[number];
  *
  * The DiveDay browser extension (`extension/`, H-20261008-cert-check-extension, ADR
  * 20261008-cert-check-extension) runs in the staffer's own browser. It opens
- * the agency's public lookup page (`src/features/agency-verification/rules.ts`), fills in
+ * the agency's public lookup page (`src/features/certifications/agency-verification.ts`), fills in
  * the diver's details, and hands back the text of the page that comes back.
  * Nothing in the extension decides anything: it carries words. This module is
  * where those words become a verdict, on the server, under tests.

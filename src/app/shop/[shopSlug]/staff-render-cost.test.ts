@@ -29,25 +29,25 @@ import {
   getShopDayDepartures,
   getTodayWork,
   todayNextDepartureTripId,
-} from "@/features/today";
+} from "@/features/day/today";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { perDiverBookingPriceCents } from "@/lib/courses";
 import { queryTimingLogger, withQueryStats } from "@/lib/observability/query-timing";
 import { seededShopContext } from "@/test/db";
 import { phaseCountingDb, report } from "@/test/render-phases";
-import { inHorizonReadiness } from "../../../features/blockers/store";
-import { hasActiveCourses } from "../../../features/courses/store";
-import { diverCrewWithAway } from "../../../features/crew-away-diver/store";
-import { getReadyPageData } from "../../../features/ready/store";
-import { getShopReviewAggregate } from "../../../features/reviews/store";
-import { issuePartySeatClaims } from "../../../features/seat-claims/store";
-import { shopClock } from "../../../features/shop-clock/rules";
-import { getTripGuests } from "../../../features/trip-guests/store";
-import { getTripOverview } from "../../../features/trip-overview/store";
-import { loadTripSharedReads } from "../../../features/trip-shared-reads/store";
-import { siteSightings } from "../../../features/trip-sightings/store";
-import { latestTripStage } from "../../../features/trip-stages/store";
+import { getShopReviewAggregate } from "../../../features/after-the-dive/reviews/store";
+import { inHorizonReadiness } from "../../../features/boarding/blockers";
+import { getReadyPageData } from "../../../features/boarding/ready";
+import { issuePartySeatClaims } from "../../../features/bookings/seat-claims/store";
+import { diverCrewWithAway } from "../../../features/crew-and-boats/crew-away-diver";
+import { shopClock } from "../../../features/day/shop-clock";
+import { siteSightings } from "../../../features/sites/trip-sightings";
+import { hasActiveCourses } from "../../../features/training/courses/store";
+import { getTripGuests } from "../../../features/trips/trip-guests/store";
+import { getTripOverview } from "../../../features/trips/trip-overview";
+import { loadTripSharedReads } from "../../../features/trips/trip-shared-reads";
+import { latestTripStage } from "../../../features/trips/trip-stages";
 
 /**
  * **What the three busiest staff renders cost, in statements** — the evidence
@@ -61,7 +61,7 @@ import { latestTripStage } from "../../../features/trip-stages/store";
  *
  * What a test cannot see: React's `cache()`. Vitest resolves React's client
  * build, whose `cache()` calls straight through, so the per-request memo on the
- * staff gate's session, roles and shop reads (`src/features/session/rules.ts`) saves
+ * staff gate's session, roles and shop reads (`src/features/accounts/session.ts`) saves
  * nothing *here* — its saving is measured in the running app, by the
  * `render.db_queries` line each staff render logs. The savings below are the
  * structural ones: a reader that no longer runs twice whatever React does.
@@ -88,7 +88,7 @@ vi.mock("next/server", () => ({ after: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
 const { auth } = await import("@/lib/auth");
-const { requireShopSurface } = await import("../../../features/session/rules");
+const { requireShopSurface } = await import("../../../features/accounts/session");
 
 async function timedSeededShop() {
   const { db: plain, shop } = await seededShopContext();
@@ -653,7 +653,7 @@ const TRIP_CEILING = 72;
  * The trip page measured 10: its shared reads, then `getTripOverview`'s four
  * steps after its fan-out. 10 → 7: the overview's dependent reads (ratings and
  * shifts on the crew, the off-cadence list, both clash reads) now chain inside
- * its one wave (`src/features/trip-overview/store.ts`, issue #2353).
+ * its one wave (`src/features/trips/trip-overview.ts`, issue #2353).
  */
 // 7 → 8: not a new wait, an old one made visible. The marine provider now
 // answers after the database goes quiet, as a real one does, and Today's queue

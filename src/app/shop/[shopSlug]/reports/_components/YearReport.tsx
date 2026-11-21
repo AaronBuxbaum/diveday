@@ -1,8 +1,8 @@
 import { GroupLabel } from "@/components/ui/group-label";
 import { LedgerRow } from "@/components/ui/ledger";
 import { ProgressBar } from "@/components/ui/ProgressBar";
-import { formatReportMoney, type MonthlyReport } from "@/features/reporting";
-import type { ShopYearCell, ShopYearSummary } from "@/features/shop-year";
+import { formatReportMoney, type MonthlyReport } from "@/features/reports/reporting";
+import type { ShopYearCell, ShopYearSummary } from "@/features/reports/shop-year";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatCalendarDate } from "@/lib/calendar-date";
 import { formatMonthDay, monthNames, shortMonthNames } from "@/lib/format";
@@ -21,7 +21,7 @@ import { YearStrip, type YearStripCopy } from "./YearStrip";
  * **No money here, on any of it.** The printed card this data draws leaves
  * the shop, so the figure a shop would least like a stranger to read is absent from
  * the read itself rather than filtered out at the last surface — see
- * `getShopYear` in `src/features/reporting/store.ts`.
+ * `getShopYear` in `src/features/reports/reporting/store.ts`.
  *
  * How many sites the ledger names before it folds the rest into one line. Five
  * is what the canvas draws and it is the number a reader takes in without

@@ -6,12 +6,16 @@ import { after } from "next/server";
 import { z } from "zod";
 import { getDb } from "@/db/client";
 import { offerDepartureToDiver } from "@/db/interest-offers";
-import { checkInBooking, undoCheckInBooking } from "@/features/check-in";
-import { parseForm } from "@/features/form-parse";
-import { revalidateAndRedirect } from "@/features/navigation";
-import { markBookingNoShow, settleDockObservations, undoBookingNoShow } from "@/features/no-show";
-import { requireShopSurface } from "@/features/session";
-import { turnBookingAway } from "@/features/turn-away";
+import { requireShopSurface } from "@/features/accounts/session";
+import { checkInBooking, undoCheckInBooking } from "@/features/boarding/check-in";
+import {
+  markBookingNoShow,
+  settleDockObservations,
+  undoBookingNoShow,
+} from "@/features/boarding/no-show";
+import { turnBookingAway } from "@/features/boarding/turn-away";
+import { parseForm } from "@/features/platform/form-parse";
+import { revalidateAndRedirect } from "@/features/platform/navigation";
 import { noticeUrl } from "@/lib/staff-notices";
 import { TURN_AWAY_REASONS } from "@/lib/turn-away";
 import { uuidParam } from "@/lib/uuid";

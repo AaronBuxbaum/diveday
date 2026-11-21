@@ -5,8 +5,8 @@ import { unseededTestDb } from "@/test/db";
 import {
   DIVE_SITE_IMPORT_COLUMNS,
   prepareDiveSiteImport,
-} from "../features/dive-sites/dive-site-import.rules";
-import { commitDiveSiteImport } from "../features/dive-sites/dive-site-import.store";
+} from "../features/sites/dive-sites/dive-site-import.rules";
+import { commitDiveSiteImport } from "../features/sites/dive-sites/dive-site-import.store";
 import { diveSites, people, shops } from "./schema";
 
 async function bareContext() {

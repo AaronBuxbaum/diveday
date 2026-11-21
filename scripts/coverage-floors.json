@@ -4,7 +4,7 @@
     {
       "why": "Floors for the newly matched files were seeded on 2026-11-01 from older measurements; these three files changed on main since and this re-land touches none of them",
       "files": {
-        "src/features/anonymize/store.ts": "91.79 -> 91.77",
+        "src/features/records/anonymize.ts": "91.79 -> 91.77",
         "src/db/waivers-requests.ts": "92.7 -> 92.3",
         "src/lib/offline-manifest-store.ts": "74.57 -> 73.31"
       }
@@ -19,7 +19,7 @@
     {
       "why": "Issue #2722 (card ledger, #3733): anonymize.ts and readiness.ts read one cards table instead of three; promo-caps.ts and refunds.ts changed on the base layer this stack merged. Measured by CI on #3733 at 9db4a0d4; the coverage artifact cannot be downloaded from an agent session, so the values are copied from the job log",
       "files": {
-        "src/features/anonymize/store.ts": "91.77 -> 91.55",
+        "src/features/records/anonymize.ts": "91.77 -> 91.55",
         "src/db/promo-caps.ts": "75 -> 73.33",
         "src/db/refunds.ts": "84.18 -> 83.76",
         "src/lib/readiness.ts": "99.06 -> 99.05"
@@ -28,7 +28,7 @@
     {
       "why": "Main CI went red on the coverage floors after merges that added untested branches (run 41740948676 at ef6d0693). Measured values copied from the job log because the coverage artifact cannot be downloaded from an agent session. booking-gates.ts and trip-admission.ts fell by several points; restoring tests is tracked in a follow-up issue",
       "files": {
-        "src/features/anonymize/store.ts": "91.55 -> 90.79",
+        "src/features/records/anonymize.ts": "91.55 -> 90.79",
         "src/db/checkouts.ts": "87.54 -> 87.5",
         "src/lib/booking-gates.ts": "93.75 -> 86.66",
         "src/lib/trip-admission.ts": "98.64 -> 95.52"
@@ -56,7 +56,7 @@
       "why": "Roll call by meeting day (#2557): manifests.ts and roll-call-alerts.ts now fold marks per meeting day, and the single-day path skips the later-day branches (an earlier day's missing diver held past the cut, a claim compared to a later day's end). Those branches are tested where the fold lives, in src/lib/roll-call-days.test.ts and the two-Saturday suites.",
       "files": {
         "src/db/manifests.ts": "88.88 -> 87.91",
-        "src/features/roll-call-alerts/store.ts": "90.47 -> 89.02"
+        "src/features/boarding/roll-call-alerts/store.ts": "90.47 -> 89.02"
       }
     },
     {
@@ -66,9 +66,9 @@
       }
     },
     {
-      "why": "The walk-in branches left src/features/seat-diver/store.ts with the walk-in door (the entry case and the owes-confirmation entry check were both covered), so the same untested remainder is a larger share. No branch was added untested. Measured by CI on #3972; the coverage artifact cannot be downloaded from an agent session, so the value is copied from the job log",
+      "why": "The walk-in branches left src/features/bookings/seat-diver.ts with the walk-in door (the entry case and the owes-confirmation entry check were both covered), so the same untested remainder is a larger share. No branch was added untested. Measured by CI on #3972; the coverage artifact cannot be downloaded from an agent session, so the value is copied from the job log",
       "files": {
-        "src/features/seat-diver/store.ts": "79.59 -> 79.38"
+        "src/features/bookings/seat-diver.ts": "79.59 -> 79.38"
       }
     },
     {
@@ -82,7 +82,7 @@
     {
       "why": "Batching the erasure sweeps replaced several covered per-row branches with set-based statements, so the same fully-tested code reports a slightly lower share; every branch the batch added is covered by the anonymize and merge tests.",
       "files": {
-        "src/features/anonymize/store.ts": "93.04 -> 92.89"
+        "src/features/records/anonymize.ts": "93.04 -> 92.89"
       }
     }
   ],
@@ -94,7 +94,7 @@
   "src/db/certifications-in-training.ts": 50,
   "src/db/checkouts.ts": 90.62,
   "src/db/erasure-coordinated-send.ts": 90.19,
-  "src/db/export-crew-roll-call.ts": 58.33,
+  "src/db/export/crew-roll-call.ts": 58.33,
   "src/db/manifest-events.ts": 75.92,
   "src/db/manifests.ts": 91.99,
   "src/db/medical-alerts.ts": 94.28,
@@ -130,37 +130,37 @@
   "src/db/waivers-requests.ts": 94.17,
   "src/db/waivers-templates.ts": 78.43,
   "src/db/waivers-trip-status.ts": 50,
-  "src/features/anonymization/rules.ts": 100,
-  "src/features/anonymize/store.ts": 92.89,
-  "src/features/card-restore/store.ts": 76.92,
-  "src/features/card-undo/rules.ts": 100,
-  "src/features/cert-scan/rules.ts": 85.1,
-  "src/features/certification-junior/store.ts": 88.23,
-  "src/features/check-in/arrival-elsewhere.store.ts": 90,
-  "src/features/check-in/rules.ts": 100,
-  "src/features/check-in/store.ts": 92.25,
-  "src/features/course-certified/store.ts": 70.21,
-  "src/features/e2e-test-routes/manifest-read-counter.ts": 100,
-  "src/features/guardian-erasure/store.ts": 100,
-  "src/features/nitrox-mod/rules.ts": 100,
-  "src/features/offline-manifest-snapshots/payload.ts": 78.84,
-  "src/features/offline-manifest-snapshots/roster-confirmation.ts": 100,
-  "src/features/offline-manifest-snapshots/store.ts": 90.76,
-  "src/features/offline-manifest-snapshots/sync-instants.ts": 75,
-  "src/features/party-waiver-queue/store.ts": 100,
-  "src/features/processor-erasure/store.ts": 91.17,
-  "src/features/readiness-link-rescue/store.ts": 77.77,
-  "src/features/requirement-form/store.ts": 100,
-  "src/features/roll-call-alerts/rules.ts": 100,
-  "src/features/roll-call-alerts/store.ts": 89.02,
-  "src/features/roll-call-gaps/store.ts": 86.88,
-  "src/features/seat-diver/store.ts": 86.86,
-  "src/features/signed-waiver-page/store.ts": 100,
-  "src/features/standing-sailed-roll-call/store.ts": 100,
-  "src/features/today/today-roll-call-rows.ts": 83.33,
-  "src/features/waiver-draft/rules.ts": 100,
-  "src/features/waiver-guardian-copy/store.ts": 80,
-  "src/features/waivers-page/store.ts": 100,
+  "src/features/records/anonymization.ts": 100,
+  "src/features/records/anonymize.ts": 92.89,
+  "src/features/certifications/card-restore.ts": 76.92,
+  "src/features/certifications/card-undo.ts": 100,
+  "src/features/certifications/cert-scan.ts": 85.1,
+  "src/features/certifications/certification-junior.ts": 88.23,
+  "src/features/boarding/check-in/arrival-elsewhere.store.ts": 90,
+  "src/features/boarding/check-in/rules.ts": 100,
+  "src/features/boarding/check-in/store.ts": 92.25,
+  "src/features/training/course-certified.ts": 70.21,
+  "src/features/platform/e2e-test-routes/manifest-read-counter.ts": 100,
+  "src/features/records/guardian-erasure.ts": 100,
+  "src/features/safety/nitrox-mod.ts": 100,
+  "src/features/boarding/offline-manifest-snapshots/payload.ts": 78.84,
+  "src/features/boarding/offline-manifest-snapshots/roster-confirmation.ts": 100,
+  "src/features/boarding/offline-manifest-snapshots/store.ts": 90.76,
+  "src/features/boarding/offline-manifest-snapshots/sync-instants.ts": 75,
+  "src/features/waivers/party-waiver-queue.ts": 100,
+  "src/features/records/processor-erasure.ts": 91.17,
+  "src/features/boarding/readiness-link-rescue.ts": 77.77,
+  "src/features/waivers/requirement-form.ts": 100,
+  "src/features/boarding/roll-call-alerts/rules.ts": 100,
+  "src/features/boarding/roll-call-alerts/store.ts": 89.02,
+  "src/features/boarding/roll-call-gaps.ts": 86.88,
+  "src/features/bookings/seat-diver.ts": 86.86,
+  "src/features/waivers/signed-waiver-page.ts": 100,
+  "src/features/boarding/standing-sailed-roll-call.ts": 100,
+  "src/features/day/today/today-roll-call-rows.ts": 83.33,
+  "src/features/waivers/waiver-draft.ts": 100,
+  "src/features/waivers/waiver-guardian-copy.ts": 80,
+  "src/features/waivers/waivers-page.ts": 100,
   "src/lib/authz.ts": 100,
   "src/lib/booking-gates.ts": 100,
   "src/lib/cert-check-extension.ts": 82.25,

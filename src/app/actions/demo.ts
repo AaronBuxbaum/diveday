@@ -10,23 +10,23 @@ import { DemoSightingCleanupBlocked } from "@/db/demo-sighting-guard";
 import { demoRoleEmail } from "@/db/people";
 import { resetDemoSchedule } from "@/db/seed";
 import { dismissDemoStarts, getShopById, getShopBySlug } from "@/db/shops";
+import { requireStaffSession } from "@/features/accounts/session";
 import {
   findPreview,
   previewIdFrom,
   previewIsOpen,
   previewPath,
   recordPreviewOpen,
-} from "@/features/demo-preview";
+} from "@/features/demo/demo-preview";
 import {
   DEMO_SEAT_COOKIE,
   DEMO_SEAT_MAX_AGE_SECONDS,
   isDemoSeatFor,
   signDemoSeat,
-} from "@/features/demo-seat";
-import { demoStartDeparture, demoStartFrom } from "@/features/demo-starts";
-import { mintDemoShop } from "@/features/demo-template";
-import { isQuietDemoDevice, QUIET_DEMO_COOKIE } from "@/features/quiet-demo-device";
-import { requireStaffSession } from "@/features/session";
+} from "@/features/demo/demo-seat";
+import { demoStartDeparture, demoStartFrom } from "@/features/demo/demo-starts";
+import { mintDemoShop } from "@/features/demo/demo-template";
+import { isQuietDemoDevice, QUIET_DEMO_COOKIE } from "@/features/demo/quiet-demo-device";
 import { auth, getAuth } from "@/lib/auth";
 import { nowDate } from "@/lib/clock";
 import { DEMO_BYPASS_PASSWORD } from "@/lib/demo-bypass";
@@ -86,7 +86,7 @@ async function demoSignInHeaders(): Promise<Headers> {
 }
 
 /**
- * Leave this browser a seat in demo shop `shopId` (`src/features/demo-seat/rules.ts`): the
+ * Leave this browser a seat in demo shop `shopId` (`src/features/demo/demo-seat.ts`): the
  * only proof the diver preview, which has no session, keeps of which shop it
  * may switch back to staff in.
  */
@@ -177,7 +177,7 @@ export async function enterDemoAction(formData?: FormData) {
   // visitor is waiting on must not queue behind a telemetry or mail round trip.
   //
   // Skipped whole for a browser the founder marked as his own
-  // (src/features/quiet-demo-device/rules.ts): his own demo is neither news for his inbox
+  // (src/features/demo/quiet-demo-device.ts): his own demo is neither news for his inbox
   // nor a prospect for the funnel.
   const quiet = isQuietDemoDevice((await cookies()).get(QUIET_DEMO_COOKIE)?.value);
   if (!quiet) after(() => announceDemoEntry({ slug, role, source }));
@@ -197,7 +197,7 @@ export async function enterDemoAction(formData?: FormData) {
   let targetEmail = ownerEmail;
   if (role !== "owner") {
     // Every minted demo seeds exactly one instructor, divemaster, and captain
-    // (src/db/seed.ts), so this always resolves in practice; the owner
+    // (src/db/seed/index.ts), so this always resolves in practice; the owner
     // fallback just means a picker click can never dead-end even if that changes.
     targetEmail = (shop ? await demoRoleEmail(db, shop.id, role) : null) ?? ownerEmail;
   }
@@ -237,7 +237,7 @@ export async function enterDemoAction(formData?: FormData) {
  * The first open replays the seeded day, so a link opened on day five shows
  * this morning's boats and not last week's. Later opens leave the shop as the
  * visitor left it. A browser the founder marked as his own enters without
- * being counted (`src/features/quiet-demo-device/rules.ts`).
+ * being counted (`src/features/demo/quiet-demo-device.ts`).
  */
 export async function enterPreviewAction(formData: FormData) {
   const id = previewIdFrom(formData.get("preview"));

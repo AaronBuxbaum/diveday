@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
-import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
+import { seedRollCallEvidence } from "@/db/seed/roll-call-evidence";
 import { fileScopedShopContext } from "@/test/db";
 import {
   type CharterContext,
@@ -8,7 +8,7 @@ import {
   markSeat,
   seatBlockerCodes,
 } from "@/test/training-mark-context";
-import { createDiver } from "../features/divers/store";
+import { createDiver } from "../features/people/divers/store";
 import { cancelBooking, createBooking } from "./bookings";
 import { getBookingReadiness } from "./readiness";
 import { crewSubject } from "./roll-call-subject";

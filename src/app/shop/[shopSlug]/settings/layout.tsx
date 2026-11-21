@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { Suspense } from "react";
 import { canPersonManagePaymentSettings, canPersonManageShopSettings } from "@/db/authz";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
-import { requireShopSurface } from "@/features/session";
+import { requireShopSurface } from "@/features/accounts/session";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import {

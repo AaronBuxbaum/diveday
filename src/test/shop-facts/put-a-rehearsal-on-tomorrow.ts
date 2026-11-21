@@ -2,7 +2,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import type { AppDb } from "../../db/client";
 import { trips } from "../../db/schema/index";
 import { createTrip } from "../../db/trips";
-import { seatDiver } from "../../features/seat-diver/store";
+import { seatDiver } from "../../features/bookings/seat-diver";
 import { HOUR_MS } from "../../lib/clock";
 
 /**

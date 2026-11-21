@@ -4,9 +4,13 @@ import { StoredPhoto } from "@/components/StoredPhoto";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { getDb } from "@/db/client";
 import { isMarineLifeSlug } from "@/db/marine-life-catalog";
-import type { MonthSightings } from "@/features/month-sightings";
-import { monthSightings } from "@/features/month-sightings";
-import { cacheStamp, reportCacheRead, shopRowsCacheGeneration } from "@/features/runtime-cache";
+import {
+  cacheStamp,
+  reportCacheRead,
+  shopRowsCacheGeneration,
+} from "@/features/platform/runtime-cache";
+import type { MonthSightings } from "@/features/sites/month-sightings";
+import { monthSightings } from "@/features/sites/month-sightings";
 import { marineLifeCard } from "@/i18n/marine-life-labels";
 import type { DiverTranslator } from "@/i18n/messages";
 import { nowDate } from "@/lib/clock";

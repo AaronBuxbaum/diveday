@@ -9,7 +9,7 @@ import {
   e2eTestRouteAuthorized,
   requireDemoTenant,
   testRouteRefused,
-} from "@/features/e2e-test-routes";
+} from "@/features/platform/e2e-test-routes";
 
 /**
  * **What a crew member would be told, without telling them** (ADR

@@ -2,7 +2,7 @@ import type { AppDb } from "../../db/client";
 import { createPerson } from "../../db/people";
 import { createCertification, reviewCertification } from "../../db/readiness";
 import { createTrip, listStaff } from "../../db/trips";
-import { seatDiver } from "../../features/seat-diver/store";
+import { seatDiver } from "../../features/bookings/seat-diver";
 import { HOUR_MS } from "../../lib/clock";
 
 /** Setup only: the browser still selects and cancels through the ordinary weather workspace. */

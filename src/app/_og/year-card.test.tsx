@@ -2,8 +2,8 @@ import { ImageResponse } from "next/og";
 import sharp from "sharp";
 import { describe, expect, it } from "vitest";
 import { contrastRatio } from "@/lib/brand";
-import type { ShopYearSummary } from "../../features/shop-year/rules";
-import { yearCardPalette } from "../../features/year-card/rules";
+import type { ShopYearSummary } from "../../features/reports/shop-year";
+import { yearCardPalette } from "../../features/reports/year-card";
 import { YEAR_CARD_SIZE, YearCard } from "./year-card";
 
 const year = {

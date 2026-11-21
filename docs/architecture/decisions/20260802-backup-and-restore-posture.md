@@ -20,7 +20,7 @@ copy, in different storage under different credentials, is what makes that a sur
 failure rather than a total one.
 
 A seam for producing that copy already exists and is tested:
-`loadShopExportBundleInput(db, shopId, now)` (`src/db/export.ts`) → `buildExportBundle` →
+`loadShopExportBundleInput(db, shopId, now)` (`src/db/export/index.ts`) → `buildExportBundle` →
 `zipExportBundle` (`src/lib/export.ts`), the machinery behind the staff CSV export. It reads inside
 one `read only` / `repeatable read` transaction, so a bundle is a relationally consistent snapshot
 rather than a smear of per-statement reads.
@@ -78,7 +78,7 @@ something concrete to attach to. Adds a small, near-free S3 bill (a shop's bundl
 photos; IA/Glacier IR transitions keep the long tail cheap) and one more IAM principal to rotate.
 
 Commits us to: keeping the export seam's table list honest as the schema grows (a new table that
-never reaches `src/db/export.ts` is silently outside the secondary copy), actually running the
+never reaches `src/db/export/index.ts` is silently outside the secondary copy), actually running the
 quarterly restore test and recording it, and treating the backup bucket as undeletable — a
 `cdk destroy` will leave it behind on purpose, and cleaning it up is a deliberate manual act.
 

@@ -1,4 +1,4 @@
-import { UNDO_PARAMS } from "@/features/undo";
+import { UNDO_PARAMS } from "@/features/platform/undo";
 import { shopPath } from "@/lib/staff-notices";
 
 /** Consumed once by FlashParams, never restored by the record's pager links. */

@@ -21,7 +21,7 @@ payment history, whose whole reason for existing is to stop depending on Stripe 
 past. That record deferred the multi-table question explicitly: "the portability decision DATA-A10
 tracks covers several tables at once and is not this record's to make." This is that record.
 
-The reasons also lived in the wrong place. `src/db/export.test.ts`'s coverage guard forces every
+The reasons also lived in the wrong place. `src/db/export/index.test.ts`'s coverage guard forces every
 schema table into exported / folded / excluded, which is why none of this drifted silently — but a
 comment in a test is not where a shop owner reads why their notes are missing. The bundle README and
 the export settings page are, and by 2026-08-06 the page's own "not included" line had gone stale
@@ -111,11 +111,11 @@ joins is exported (as `buddy_team_members.id`).
   handle and the same accepted over-reach the `activity_events` sweep already used, logged under
   `internal_note_name`. *Superseded 2026-11-01: erasure no longer redacts a mention inside a note filed under someone else; see the amendment in 20260802-diver-data-erasure.*
 - **`course_inquiries.csv` was empty on every demo** until this change, because nothing seeded a
-  lead. `src/db/seed-course-inquiries.ts` now seeds three, one per `person_id` state — linked,
+  lead. `src/db/seed/course-inquiries.ts` now seeds three, one per `person_id` state — linked,
   unlinked-with-an-address, and unlinked-with-no-address — which is also the first visible fixture
   for the residue [20260802-diver-data-erasure](20260802-diver-data-erasure.md) records: a lead with
   no email can never be reached by an erasure that starts from one.
-- **It does not add an importer.** These files round-trip nothing; `src/features/import/store.ts` still reads
+- **It does not add an importer.** These files round-trip nothing; `src/features/records/import/store.ts` still reads
   contacts only. Portability here means "you leave with your history", not "you can put it back".
 - **It does not decide retention.** How long these trails are kept is
   [20260803-append-only-retention](20260803-append-only-retention.md)'s `RETENTION_DAYS`, and a

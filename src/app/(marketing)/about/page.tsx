@@ -9,7 +9,7 @@ import { CaptainPhoneFrame } from "@/components/MarketingSections";
 import { buttonClass, proseLinkClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { BANNER_TITLE_CLASS, SUB_TITLE_CLASS } from "@/components/ui/typography";
-import { FOUNDER_EMAIL, FOUNDER_NAME } from "@/features/company-identity";
+import { FOUNDER_EMAIL, FOUNDER_NAME } from "@/features/public-site/company-identity";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import type { DiverLocale } from "@/i18n/settings";

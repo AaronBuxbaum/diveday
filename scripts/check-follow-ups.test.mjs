@@ -544,7 +544,7 @@ describe("--body, the pre-flight for one drafted issue", () => {
       "--body",
       draft(
         "bad.md",
-        "Kind: docs / correctness-of-comment\nEffort: XS\nTouches: src/db/seed-trip-legs.ts\n\nThe comment disagrees with the code.\n",
+        "Kind: docs / correctness-of-comment\nEffort: XS\nTouches: src/db/seed/trip-legs.ts\n\nThe comment disagrees with the code.\n",
       ),
     );
     expect(result.status).toBe(1);

@@ -76,7 +76,7 @@ const record = {
   createdAt: new Date("2026-07-29T00:00:00.000Z"),
 };
 
-/** The same row after `anonymizeDiver` strips it — see src/features/anonymize/store.ts. */
+/** The same row after `anonymizeDiver` strips it — see src/features/records/anonymize.ts. */
 const erased = {
   ...record,
   signedName: null,

@@ -69,8 +69,8 @@ own in-memory PGlite database.
   `playwright test` directly against the existing build.
 - The reset route is reachable in a production *runtime* when `DIVEDAY_E2E=1` and no `DATABASE_URL` is
   set. The `DATABASE_URL` guard remains the hard production protection; a future change must keep it.
-- `resetDemoSchedule` (`src/db/seed.ts`) must still cover every mutable demo-schedule table or
+- `resetDemoSchedule` (`src/db/seed/index.ts`) must still cover every mutable demo-schedule table or
   isolation silently breaks — this change also closed the `orders` / `order_line_items` gap that
-  slipped through (regression in `src/db/seed.test.ts`).
+  slipped through (regression in `src/db/seed/index.test.ts`).
 - Reusing an authenticated session across specs to skip the repeated UI sign-in (a `storageState`
   per worker) is a further speedup left for later; specs still sign in through the UI.

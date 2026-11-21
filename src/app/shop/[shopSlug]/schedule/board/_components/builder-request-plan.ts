@@ -1,6 +1,6 @@
 import type { listDateInterestsByIds } from "@/db/interest-dates";
-import type { listBoats } from "@/features/boats";
-import { adviseRequests, departureShapeFor } from "@/features/request-advisor";
+import { adviseRequests, departureShapeFor } from "@/features/bookings/request-advisor";
+import type { listBoats } from "@/features/crew-and-boats/boats";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatMoneyScanned } from "@/lib/format";
 import type { BuilderRequestPlan } from "./ScheduleBuilder";

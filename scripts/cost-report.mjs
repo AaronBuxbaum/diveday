@@ -127,7 +127,7 @@ export function generateCostReport(env = getEnvironment(), { now = new Date() } 
 
 async function loadUsageModule() {
   const { require: tsRequire } = await import("tsx/cjs/api");
-  return tsRequire("../src/features/usage/index.ts", import.meta.url);
+  return tsRequire("../src/features/platform/usage/index.ts", import.meta.url);
 }
 
 const MEASUREMENT_SOURCES = {

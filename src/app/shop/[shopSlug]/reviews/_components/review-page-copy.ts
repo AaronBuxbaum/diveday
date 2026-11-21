@@ -1,4 +1,4 @@
-import type { ReviewModerationReason } from "@/features/reviews";
+import type { ReviewModerationReason } from "@/features/after-the-dive/reviews";
 import type { StaffMessageKey } from "@/i18n/staff-messages";
 
 /**

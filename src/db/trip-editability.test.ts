@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
-import { getMovePreflight } from "../features/move-preflight/store";
+import { getMovePreflight } from "../features/bookings/move-preflight/store";
 import { cancelDeparture } from "./aboard-at-sea";
 import { upsertTripRequirements } from "./readiness";
 import { tripStageEvents, trips } from "./schema";

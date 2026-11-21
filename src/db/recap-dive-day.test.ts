@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
-import { getRecapPageData } from "../features/recap/store";
+import { getRecapPageData } from "../features/after-the-dive/recap/store";
 import { createBookingParty } from "./bookings";
 import { createTrip } from "./trips";
 import { upcomingTripsWithCounts } from "./trips-queries.test-support";

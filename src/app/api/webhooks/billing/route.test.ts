@@ -8,7 +8,7 @@ import { fileScopedShopContext } from "@/test/db";
 import {
   ensureShopBillingCustomer,
   getShopSubscription,
-} from "../../../../features/shop-subscriptions/store";
+} from "../../../../features/money/shop-subscriptions";
 
 // One seeded database for the file and a rolled-back transaction per test
 // (src/test/db.ts, `fileScopedShopContext`).
@@ -18,30 +18,31 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
 });
-vi.mock("../../../../features/shop-subscriptions/store", async (importOriginal) => {
+vi.mock("../../../../features/money/shop-subscriptions", async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import("../../../../features/shop-subscriptions/store")>();
+    await importOriginal<typeof import("../../../../features/money/shop-subscriptions")>();
   return { ...actual, applyBillingEffect: vi.fn(actual.applyBillingEffect) };
 });
-vi.mock("../../../../features/webhook-events/store", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../../../features/webhook-events/store")>();
+vi.mock("../../../../features/platform/webhook-events", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("../../../../features/platform/webhook-events")>();
   return {
     ...actual,
     releaseStripeWebhookEventClaim: vi.fn(actual.releaseStripeWebhookEventClaim),
   };
 });
 // The routes report only where a DSN is configured; the suite runs without one.
-vi.mock("../../../../features/sentry-dsn/rules", () => ({
+vi.mock("../../../../features/platform/sentry-dsn", () => ({
   SENTRY_DSN: "https://key@sentry.invalid/1",
 }));
 vi.mock("@sentry/nextjs", () => ({ captureException: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
-const webhookEvents = await import("../../../../features/webhook-events/store");
-const subscriptions = await import("../../../../features/shop-subscriptions/store");
+const webhookEvents = await import("../../../../features/platform/webhook-events");
+const subscriptions = await import("../../../../features/money/shop-subscriptions");
 const actualApply = (
-  await vi.importActual<typeof import("../../../../features/shop-subscriptions/store")>(
-    "../../../../features/shop-subscriptions/store",
+  await vi.importActual<typeof import("../../../../features/money/shop-subscriptions")>(
+    "../../../../features/money/shop-subscriptions",
   )
 ).applyBillingEffect;
 const { POST } = await import("./route");

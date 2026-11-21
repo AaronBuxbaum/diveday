@@ -253,7 +253,7 @@ describe("redirectInTry: the shapes that are correct", () => {
 
   it("leaves a test alone — asserting a helper throws means catching the sentinel", () => {
     expect(
-      lines("try {\n  redirect('/x');\n} catch {}\n", "src/features/session/rules.test.ts"),
+      lines("try {\n  redirect('/x');\n} catch {}\n", "src/features/accounts/session.test.ts"),
     ).toEqual([]);
   });
 

@@ -1,7 +1,7 @@
 // i18n-exempt-file: test fixture; only the staffing week's tests import it, and its words are the bundle's English.
 import { render } from "@testing-library/react";
 import { vi } from "vitest";
-import { staffWeek, type WeekGap, type WeekPerson } from "@/features/staffing-week";
+import { staffWeek, type WeekGap, type WeekPerson } from "@/features/crew-and-boats/staffing-week";
 import { DEFAULT_DIVER_LOCALE } from "@/i18n/settings";
 import type { AvailabilityBlock, CrewAssignmentRequest } from "@/lib/crew-requests";
 import { type GapWords, StaffingWeek, type StaffingWeekWords } from "./StaffingWeek";

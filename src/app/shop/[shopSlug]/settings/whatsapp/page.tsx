@@ -7,12 +7,12 @@ import { SectionCard } from "@/components/ui/card";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
 import type { NoticeTone } from "@/components/ui/tone";
 import type { WhatsAppConnectRefusal } from "@/db/whatsapp-accounts";
-import { requireShopSurface } from "@/features/session";
+import { requireShopSurface } from "@/features/accounts/session";
 import {
   canPersonManageMessagingSettings,
   getWhatsAppSettingsPage,
-} from "@/features/whatsapp-settings-page";
-import { whatsAppSignupConfigFromEnvironment } from "@/features/whatsapp-signup";
+} from "@/features/messages/whatsapp-settings-page";
+import { whatsAppSignupConfigFromEnvironment } from "@/features/messages/whatsapp-signup";
 import { requestLocale } from "@/i18n/request";
 import { ownerOrManagerWords, sayWords } from "@/i18n/shared-sentences";
 import { staffTranslator } from "@/i18n/staff-messages";

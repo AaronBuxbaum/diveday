@@ -83,7 +83,7 @@ const FAN_OUT_MEMBERS = new Set(["all", "allSettled"]);
 
 /**
  * For a `Promise.all` that is genuinely not over queries on that executor.
- * Nothing in the tree needs it today — `src/features/import/store.ts`'s bounded fetch pool
+ * Nothing in the tree needs it today — `src/features/records/import/store.ts`'s bounded fetch pool
  * looked like the case for it, but `mapWithConcurrency` is generic and takes no
  * executor at all, so the rule never reaches it. Kept because the shape is real
  * (a fan-out over HTTP, or over an executor the function was handed twice), and
@@ -130,7 +130,7 @@ export function findTransactionFanOut(contents, { jsx = false } = {}) {
    * hands back `TemplateHead`, the expression, then a plain `}` — and the
    * closing backtick then opens what it reads as a *new* template, which
    * swallows everything up to the next backtick anywhere in the file. In
-   * `src/db/seed-trip-legs.ts` the next backtick was in a comment reading
+   * `src/db/seed/trip-legs.ts` the next backtick was in a comment reading
    * "Sequential, never `Promise.all`", so this guard reported a violation
    * against a comment saying the opposite — with its own docblock promising
    * that a match inside a comment is impossible.
@@ -192,7 +192,7 @@ export function findTransactionFanOut(contents, { jsx = false } = {}) {
    * Without this, a `{` in the return type disarms the function before its
    * body ever opens, so the whole body is exempt. `createDemoShop(db:
    * DbExecutor): Promise<{ slug: string; ownerEmail: string }>` in
-   * `src/db/seed.ts` was exempt exactly this way, and it is the common shape:
+   * `src/db/seed/index.ts` was exempt exactly this way, and it is the common shape:
    * every async reader in `src/db` that returns an object is
    * `Promise<{ … }>`. The sibling with a `Promise<void>` return was caught,
    * which is what made the hole look like correct behaviour.
@@ -317,7 +317,8 @@ export function findParentUpdateLocks(contents) {
  *
  * `describePostgres` (`src/test/postgres.ts`) skips unless
  * `DIVEDAY_TEST_POSTGRES_URL` names a server, and only CI's `real-postgres` job
- * sets it for database and feature-module `*.postgres.test.ts` files (`ci.yml`). A
+ * sets it for database (one folder deep, like `src/db/seed/`) and feature-module
+ * `*.postgres.test.ts` files (`ci.yml`). A
  * `describePostgres` block in any other file therefore skips in the unit shards
  * and is never selected by the job: the race tests of `lockSeatDeparture` sat in
  * `seat-locks.test.ts` that way, green and inert, until 2026-10-13. The job's
@@ -326,7 +327,8 @@ export function findParentUpdateLocks(contents) {
  * Returns `{ line, text }` for each use of either name outside that glob.
  * `src/test/postgres.ts` defines them and is the one other file allowed to.
  */
-export const REAL_SERVER_SUITE = /^src\/(?:db|features\/[^/]+)\/[^/]+\.postgres\.test\.ts$/;
+export const REAL_SERVER_SUITE =
+  /^src\/(?:db(?:\/[^/]+)?|features\/[^/]+(?:\/[^/]+)?)\/[^/]+\.postgres\.test\.ts$/;
 const REAL_SERVER_NAMES = /\b(describePostgres|postgresTestDb)\b/;
 const REAL_SERVER_HOME = "src/test/postgres.ts";
 // The real action race is listed explicitly in the real-postgres CI job.

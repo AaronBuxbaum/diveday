@@ -2,7 +2,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { diverTranslator } from "@/i18n/messages";
-import type { ReadyPageData } from "../../../../../features/ready/store";
+import type { ReadyPageData } from "../../../../../features/boarding/ready";
 import { RunningLate } from "./RunningLate";
 
 vi.mock("../day-of-actions", () => ({

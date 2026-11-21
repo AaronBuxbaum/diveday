@@ -6,8 +6,8 @@ import { PaymentActionControl } from "@/app/shop/[shopSlug]/_components/today/Pa
 import { paymentActionCopy } from "@/app/shop/[shopSlug]/_components/today/payment-action-copy";
 import { WaiverSendControl } from "@/app/shop/[shopSlug]/_components/today/WaiverSendControl";
 import { buttonClass } from "@/components/ui/button";
-import type { STAFF_RE_ENTRY_KEYS } from "@/features/dive-intent";
-import type { TodayHelpRequest } from "@/features/help-requests";
+import type { TodayHelpRequest } from "@/features/messages/help-requests";
+import type { STAFF_RE_ENTRY_KEYS } from "@/features/trips/dive-intent";
 import {
   type AdvisoryReason,
   type FixGuest,
@@ -16,7 +16,7 @@ import {
   type FixReason,
   type FixRemedy,
   fixListOf,
-} from "@/features/trip-fix-list";
+} from "@/features/trips/trip-fix-list";
 import type { StaffMessageKey } from "@/i18n/staff-messages";
 import { staffParticipantTypeLabel } from "@/i18n/staff-participant-labels";
 import { helpRequestActionText } from "@/i18n/today-labels";

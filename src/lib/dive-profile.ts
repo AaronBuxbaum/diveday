@@ -1,7 +1,7 @@
 /**
  * **Reading a dive computer's depth samples**: the numbers a recap shows beside the chart, taken
  * from the recording and nothing else. Evidence for a diver's own keepsake, never an input to
- * readiness, no-fly or any gate (`src/features/computer-dives/README.md`).
+ * readiness, no-fly or any gate (`src/features/after-the-dive/computer-dives/README.md`).
  */
 
 export type ProfileSample = { seconds: number; meters: number };

@@ -1,10 +1,10 @@
 import { getDb } from "@/db/client";
-import { connectionForRoute } from "@/features/render-connection";
 import {
   type AppleRouteParams,
   appleServiceResponse,
   configuredWalletPlatforms,
-} from "@/features/wallet-pass";
+} from "@/features/boarding/wallet-pass";
+import { connectionForRoute } from "@/features/platform/render-connection";
 
 export async function GET(request: Request, { params }: { params: Promise<AppleRouteParams> }) {
   await connectionForRoute(

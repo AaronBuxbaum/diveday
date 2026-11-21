@@ -1,7 +1,7 @@
 import type { AppDb } from "@/db/client";
 import { dateRequestPartyOnDeparture } from "@/db/date-request-offer-bookings";
 import { type DateInterestRow, listDateInterestsByIds } from "@/db/interest-dates";
-import { getBookableDiver, isSeatedOnTrip } from "@/features/divers";
+import { getBookableDiver, isSeatedOnTrip } from "@/features/people/divers";
 import { uuidParam } from "@/lib/uuid";
 import type { BookableDiver } from "../../../../../../lib/diver-choice-types";
 

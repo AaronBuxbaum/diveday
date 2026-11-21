@@ -31,7 +31,7 @@ import {
  * multi-navigation journey. This is a different flow with a different subject —
  * what a shop's cards refuse, and where it says so.
  *
- * The seeded fixtures come from `src/db/seed-cert-gates.ts`, which exists so
+ * The seeded fixtures come from `src/db/seed/cert-gates.ts`, which exists so
  * each of these refusals can be about exactly one thing:
  *
  * - **Advanced Drift — French Reef Wall** — Advanced Open Water and nothing
@@ -49,7 +49,7 @@ import {
 const ADVANCED_CHARTER = "Advanced Drift — French Reef Wall";
 const DEEP_CHARTER = "Deep Adventure — USCGC Duane";
 const AOW_COURSE = "Advanced Open Water Diver — two-day course";
-// How far out src/db/seed-cert-gates.ts puts each departure (`at(31, …)`,
+// How far out src/db/seed/cert-gates.ts puts each departure (`at(31, …)`,
 // `at(29, …)`), so the lookup opens the board on that week.
 const CHARTERS = { daysOut: 31 };
 const COURSE = { daysOut: 29 };
@@ -521,7 +521,7 @@ test.describe("with Accept-Language: es", () => {
  *
  * Anonymous and READ_ONLY: the public schedule takes no session and writes
  * nothing. The assertions use the demo shop's own page-one departures rather
- * than `seed-cert-gates.ts`'s fixtures, which sail 29-32 days out and are
+ * than `seed/cert-gates.ts`'s fixtures, which sail 29-32 days out and are
  * therefore several keyset pages down.
  */
 test.describe("what the public schedule card says a departure requires", () => {

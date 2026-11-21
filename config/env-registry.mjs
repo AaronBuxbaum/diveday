@@ -241,7 +241,7 @@ export const ENV_GROUPS = [
     seam: null,
     doc: [
       "Dedicated signing keys for three bearer-token families, each optional. Unset,",
-      "recap links (src/lib/recap-links.ts) and buddy links (src/features/buddy-tokens/rules.ts)",
+      "recap links (src/lib/recap-links.ts) and buddy links (src/features/bookings/buddy-tokens.ts)",
       "sign with a key derived from AUTH_SECRET, and the waiver integrity seal",
       "(src/lib/waiver-integrity.ts) signs with AUTH_SECRET itself. So rotating",
       "AUTH_SECRET with these unset breaks every recap and buddy link in flight and",
@@ -1123,7 +1123,7 @@ export const ENV_GROUPS = [
         // cdk.json's mediaDomainName when set, otherwise the *.cloudfront.net
         // name AWS assigns. It is not decoration in either case: three
         // allowlists derive from this single value (the CSP img-src in
-        // src/features/content-security-policy/rules.ts, the image-optimizer patterns in
+        // src/features/platform/content-security-policy.ts, the image-optimizer patterns in
         // next.config.ts, and isManagedStorageUrl in
         // src/lib/storage/blob-host.ts), and media URLs are stored absolute, so
         // changing it strands every row written before the change.
@@ -1133,7 +1133,7 @@ export const ENV_GROUPS = [
   {
     seam: "integrations",
     doc: [
-      "Outbound integrations a shop connects for itself (src/features/integrations).",
+      "Outbound integrations a shop connects for itself (src/features/shop-setup/integrations).",
       "Each is one DiveDay-owned app registration with the provider, shared by every",
       "shop: the per-shop half is an OAuth grant sealed into shop_integrations, never",
       "a variable. Zapier needs no registration at all -- a shop pastes its own hook",
@@ -1158,7 +1158,8 @@ export const ENV_GROUPS = [
         key: "SHOPIFY_API_VERSION",
         from: "manual",
         targets: LOCAL_AND_VERCEL,
-        absent: "uses the Admin API version pinned in src/features/integrations/shopify.ts",
+        absent:
+          "uses the Admin API version pinned in src/features/shop-setup/integrations/shopify.ts",
       },
       {
         key: "SQUARE_CLIENT_ID",
@@ -1300,7 +1301,7 @@ export const ENV_GROUPS = [
       "The e2e harness's own switches, set by playwright.config.ts on every server it",
       "starts and never anywhere else. DIVEDAY_E2E=1 re-opens the /api/test/* routes in",
       "a production runtime; DIVEDAY_E2E_SECRET is the bearer token those routes also",
-      "require (src/features/e2e-test-routes/rules.ts). Both stay closed while DATABASE_URL is",
+      "require (src/features/platform/e2e-test-routes/rules.ts). Both stay closed while DATABASE_URL is",
       "set, and `pnpm check:env` fails a production build that carries either one.",
     ],
     keys: [

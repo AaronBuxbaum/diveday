@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
-import { createBoat } from "../features/boats/store";
+import { createBoat } from "../features/crew-and-boats/boats/store";
 import { createTrip, listStaff, setTripCrew, weekBoard } from "./trips";
 import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 

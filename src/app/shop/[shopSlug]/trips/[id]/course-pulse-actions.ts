@@ -3,13 +3,13 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getDb } from "@/db/client";
+import { requireStaffSession } from "@/features/accounts/session";
 import {
   type CourseFollowupResult,
   type CourseTeachingNoteResult,
   claimCourseFollowup,
   recordCourseTeachingNote,
-} from "@/features/course-pulse";
-import { requireStaffSession } from "@/features/session";
+} from "@/features/training/course-pulse";
 import { shopPath } from "@/lib/staff-notices";
 
 export async function saveCourseTeachingNoteAction(

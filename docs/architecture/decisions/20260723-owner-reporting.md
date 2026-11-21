@@ -30,15 +30,15 @@ paid date") makes a single dashboard incoherent — the numbers stop describing 
   gate boarding. One clock, one coherent picture. Standalone retail orders are out of scope for this
   slice; the report says "collected on this month's trips," not "all money."
 - **Layering mirrors the rest of the app.** The arithmetic — fill rate, waiver completion, the
-  headline percentages, empty-month null handling — is pure and DB-free in `src/features/reporting/rules.ts`
+  headline percentages, empty-month null handling — is pure and DB-free in `src/features/reports/reporting/rules.ts`
   (`summarizeMonth`), exhaustively unit-tested. The three aggregate queries live in
-  `src/features/reporting/store.ts` (`getMonthlyReport`), which converts nothing about time — the route turns the
+  `src/features/reports/reporting/store.ts` (`getMonthlyReport`), which converts nothing about time — the route turns the
   shop-local month into a UTC window with `src/lib/zoned.ts` and hands it two instants.
 - **Owner/manager only** (`canViewShopReports` in `src/lib/authz.ts`, delegating to the export
   predicate). Revenue is owner-grade information the daily crew has no reason to see; the page shows
   the same owner-only notice the export does when a captain or instructor lands on it.
 - **The demo is seeded with a realistic trailing quarter** so reporting is not hollow the first time
-  a buyer opens it. `seedHistory` (in `src/db/seed.ts`) back-fills already-sailed trips across this
+  a buyer opens it. `seedHistory` (in `src/db/seed/index.ts`) back-fills already-sailed trips across this
   month, last month, and the one before, with the bookings, `booking_payments`, signed
   `waiver_records`, and paid `orders` those trips left behind. It is derived deterministically from a
   booking counter (never a live clock or randomness) so the frozen-clock e2e fleet renders identical
@@ -106,4 +106,4 @@ their meaning does not move:
 - **Returning divers**: of the distinct divers on the month's departures, how many had an active
   booking on a departure that left before the month began.
 
-The rules are pure in `src/features/report-lines/rules.ts`; the reads are `src/features/report-lines/store.ts`.
+The rules are pure in `src/features/reports/report-lines/rules.ts`; the reads are `src/features/reports/report-lines/store.ts`.

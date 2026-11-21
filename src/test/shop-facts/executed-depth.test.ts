@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { executedDives, shops, trips } from "../../db/schema/index";
-import { DEMO_TODAY_TRIP_TITLE } from "../../db/seed-trips";
+import { DEMO_TODAY_TRIP_TITLE } from "../../db/seed/trips";
 import { fileScopedShopContext } from "../db";
 import { seedExecutedDepth } from "./executed-depth";
 

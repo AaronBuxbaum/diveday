@@ -1,7 +1,7 @@
 import { getLatestCheckoutForBooking, refreshCheckoutFromStripe } from "@/db/checkouts";
 import type { getDb } from "@/db/client";
 import { getBookingPayment } from "@/db/payments";
-import { tripCreditReceipt } from "@/features/trip-credit";
+import { tripCreditReceipt } from "@/features/money/trip-credit";
 import type { ShopCurrency } from "@/lib/money";
 
 /**

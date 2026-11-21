@@ -2,7 +2,7 @@ import { and, eq, inArray, isNull } from "drizzle-orm";
 import type { AppDb } from "../../db/client";
 import { gearItems, gearReservations, people } from "../../db/schema/index";
 import { livePerson } from "../../db/trips-live";
-import { createCounterRental } from "../../features/gear-counter-rentals/store";
+import { createCounterRental } from "../../features/gear/gear-counter-rentals";
 import { calendarDateInTimezone } from "../../lib/calendar-date";
 import { HOUR_MS } from "../../lib/clock";
 

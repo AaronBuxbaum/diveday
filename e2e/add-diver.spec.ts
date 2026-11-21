@@ -265,7 +265,7 @@ test("a diver seated off the name prompt is blocked until staff confirm it is th
   await openNewGuestForm(page);
 
   // One letter off "Marisol Vega", who is in the demo shop's trailing quarter
-  // of sailed departures (src/db/seed-history.ts) — so she has a dive day and
+  // of sailed departures (src/db/seed/history.ts) — so she has a dive day and
   // the prompt has something to say beyond repeating the typed name back.
   await page.getByLabel("Full name").fill("Marisol Vegas");
   await page.getByLabel("Email").fill(`marisol-${e2eNow().getTime()}@example.com`);
@@ -370,7 +370,7 @@ async function scheduleTrip(page: Page, title: string, inDays: number, capacity 
  * Regression: booking a diver from their own record used to skip the waiver
  * entirely — that door called `createBooking` and nothing else — so a diver
  * seated there reached the dock unsigned and no staff surface said why. Every
- * door now goes through `seatDiver` (src/features/seat-diver/store.ts), so the evidence is
+ * door now goes through `seatDiver` (src/features/bookings/seat-diver.ts), so the evidence is
  * the roster's own waiver control reading "Waiver sent".
  */
 test("booking a diver from their record issues their waiver, like every other door", async ({

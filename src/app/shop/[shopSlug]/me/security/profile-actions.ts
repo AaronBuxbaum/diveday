@@ -1,10 +1,10 @@
 "use server";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { formValue, readForm, text } from "@/features/form-parse";
-import { revalidateAndRedirect } from "@/features/navigation";
-import { requireShopSurface } from "@/features/session";
-import { setCrewPublicConsent } from "@/features/staff-accounts";
+import { requireShopSurface } from "@/features/accounts/session";
+import { setCrewPublicConsent } from "@/features/accounts/staff-accounts";
+import { formValue, readForm, text } from "@/features/platform/form-parse";
+import { revalidateAndRedirect } from "@/features/platform/navigation";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 
 const crewPublicForm = z.object({

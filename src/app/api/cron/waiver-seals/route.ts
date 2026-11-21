@@ -1,6 +1,6 @@
 import { getDb } from "@/db/client";
 import { recheckWaiverSeals, waiverSealPassHealthy } from "@/db/waiver-seal-checks";
-import { cronRoute } from "@/features/cron-route";
+import { cronRoute } from "@/features/platform/cron-route";
 import { nowDate } from "@/lib/clock";
 import { WAIVER_SEAL_CHECK_CRONTAB } from "@/lib/waiver-integrity";
 

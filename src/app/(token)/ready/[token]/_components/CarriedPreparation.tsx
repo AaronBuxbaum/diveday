@@ -1,6 +1,6 @@
 import type { getDb } from "@/db/client";
-import type { CarriedPreparation as CarriedPreparationItem } from "@/features/carried-preparation";
-import { carriedPreparationForDiver, type ReadyPageData } from "@/features/ready";
+import type { CarriedPreparation as CarriedPreparationItem } from "@/features/boarding/carried-preparation";
+import { carriedPreparationForDiver, type ReadyPageData } from "@/features/boarding/ready";
 import type { DiverMessageKey, DiverTranslator } from "@/i18n/messages";
 
 /**

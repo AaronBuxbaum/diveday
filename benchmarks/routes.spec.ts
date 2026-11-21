@@ -1,6 +1,6 @@
 import { expect, STUB_BASEMAP_TILE, signedInAsOwner, test } from "../e2e/fixtures";
 import { manifestRow } from "../e2e/helpers";
-import { DEMO_TODAY_TRIP_ID } from "../src/db/seed-identifiers";
+import { DEMO_TODAY_TRIP_ID } from "../src/db/seed/identifiers";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { createRequestWindow, measurementNetworkPolicy } from "./network-policy";
 

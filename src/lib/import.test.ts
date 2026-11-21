@@ -269,7 +269,7 @@ describe("prepareContactImport — safety rules", () => {
     ].join("\n");
     const [row] = prepareContactImport(csv).rows;
     // The prepared card carries the prior-shop provenance; the DB write lands it
-    // `verified` + flagged imported (see src/features/import/store.test.ts).
+    // `verified` + flagged imported (see src/features/records/import/store.test.ts).
     expect(row.cert).toEqual({
       agency: "padi",
       level: "rescue",
@@ -712,7 +712,7 @@ describe("prepareContactImport — safety rules", () => {
   });
 
   it("round-trips a cell the export guarded against spreadsheet-formula injection", () => {
-    // export.ts prefixes a leading '=' with an apostrophe; the importer strips it.
+    // export/index.ts prefixes a leading '=' with an apostrophe; the importer strips it.
     const [row] = prepareContactImport("full_name\n'=cmd").rows;
     expect(row.fullName).toBe("=cmd");
 

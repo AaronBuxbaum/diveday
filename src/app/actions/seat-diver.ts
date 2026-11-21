@@ -3,17 +3,23 @@
 import { z } from "zod";
 import { getDb } from "@/db/client";
 import { busyOnLockWait } from "@/db/lock-bounds";
-import { findSimilarDivers } from "@/features/divers";
-import { discardFormDraft } from "@/features/form-drafts";
-import { blankAsAbsent, formValue, parseForm, readForm, single } from "@/features/form-parse";
-import { revalidateAndRedirect } from "@/features/navigation";
+import { requireShopSurface } from "@/features/accounts/session";
 import {
   type SeatDiverPerson,
   type SeatPartyMember,
   seatDiver,
   seatParty,
-} from "@/features/seat-diver";
-import { requireShopSurface } from "@/features/session";
+} from "@/features/bookings/seat-diver";
+import { findSimilarDivers } from "@/features/people/divers";
+import { discardFormDraft } from "@/features/platform/form-drafts";
+import {
+  blankAsAbsent,
+  formValue,
+  parseForm,
+  readForm,
+  single,
+} from "@/features/platform/form-parse";
+import { revalidateAndRedirect } from "@/features/platform/navigation";
 import { PARTICIPANT_TYPES, type ParticipantType } from "@/lib/participant-types";
 import { blankableDiverEmailSchema, diverNameSchema, diverPhoneSchema } from "@/lib/person-fields";
 import { PARTY_FIRST_ROW, PARTY_NEW_PERSON, readParty } from "@/lib/seat-party-form";
@@ -35,7 +41,7 @@ import {
  * departure, from a diver).
  *
  * Shared rather than per-page because they were once the same code four
- * times over and had drifted apart in the copying (see `src/features/seat-diver/store.ts`).
+ * times over and had drifted apart in the copying (see `src/features/bookings/seat-diver.ts`).
  * `src/app/actions/` is exactly the home AGENTS.md reserves for an action used
  * across pages. What a door still chooses is its `SeatSurfaceId`, bound
  * server-side; everything that follows from it is table-driven

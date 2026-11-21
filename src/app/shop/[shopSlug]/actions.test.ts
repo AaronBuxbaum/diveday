@@ -14,13 +14,13 @@ vi.mock("next/navigation", () => ({
 }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/db/client", () => ({ getDb: vi.fn(async () => ({ db: "handle" })) }));
-vi.mock("../../../features/help-requests/store", () => ({
+vi.mock("../../../features/messages/help-requests/store", () => ({
   assignHelpRequestHelper: vi.fn(),
   completeHelpRequest: vi.fn(),
   undoHelpRequestCompletion: vi.fn(),
 }));
 vi.mock("@/db/user-accounts", () => ({ dismissOrientation: vi.fn() }));
-vi.mock("../../../features/recap/store", () => ({
+vi.mock("../../../features/after-the-dive/recap/store", () => ({
   addCrewRecapPhoto: vi.fn(),
   canAddCrewRecapPhoto: vi.fn(),
   deleteCrewRecapPhoto: vi.fn(),
@@ -31,21 +31,21 @@ vi.mock("../../../features/recap/store", () => ({
   setTripRecapShoutout: vi.fn(),
   unpauseTripRecapAutoSend: vi.fn(),
 }));
-vi.mock("../../../features/navigation/rules", () => ({
+vi.mock("../../../features/platform/navigation", () => ({
   revalidateAndRedirect: vi.fn((path: string, to: string = path) => {
     throw new Error(`REDIRECT:${to}`);
   }),
 }));
-vi.mock("../../../features/session/rules", () => ({ requireStaffSession: vi.fn() }));
+vi.mock("../../../features/accounts/session", () => ({ requireStaffSession: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
 const { assignHelpRequestHelper, completeHelpRequest, undoHelpRequestCompletion } = await import(
-  "../../../features/help-requests/store"
+  "../../../features/messages/help-requests/store"
 );
 const { revalidatePath } = await import("next/cache");
 const { dismissOrientation } = await import("@/db/user-accounts");
-const { revalidateAndRedirect } = await import("../../../features/navigation/rules");
-const { requireStaffSession } = await import("../../../features/session/rules");
+const { revalidateAndRedirect } = await import("../../../features/platform/navigation");
+const { requireStaffSession } = await import("../../../features/accounts/session");
 const {
   deleteCrewRecapPhotoAction,
   deleteRecapPhotoAction,

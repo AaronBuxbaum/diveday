@@ -4,7 +4,7 @@ import { browserFallbacks, expandBrowserFallback } from "./browser-impact-safety
 describe("browser boundary safety", () => {
   it.each([
     "src/db/schema/people.ts",
-    "src/db/seed-trips.ts",
+    "src/db/seed/trips.ts",
     "src/db/queries.ts",
     "src/app/api/checkin/route.ts",
     "playwright.config.ts",

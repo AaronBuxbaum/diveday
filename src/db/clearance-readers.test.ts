@@ -6,8 +6,8 @@ import { fileScopedShopContext } from "@/test/db";
 import { prepareContactImport } from "@/test/import-fixture";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
 import { commitContactImport } from "@/test/words-wiring";
-import { repointHeldBooking } from "../features/identity-repoint/store";
-import { physicianReferrals } from "../features/invite-suggestions/store";
+import { physicianReferrals } from "../features/crew-and-boats/invite-suggestions/store";
+import { repointHeldBooking } from "../features/people/identity-repoint";
 import {
   medicalReferralAnswers,
   recordMedicalEvaluationForShop,

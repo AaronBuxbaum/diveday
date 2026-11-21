@@ -7,8 +7,8 @@ import { hashPassword } from "@/lib/password-hashing";
 import { createPendingHandle, hashPendingHandle } from "@/lib/pending-sign-in";
 import { totpCode } from "@/lib/totp";
 import { describePostgres, holdRowLock, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
-import { anonymizeDiver } from "../features/anonymize/store";
-import { removeStaffMember, setStaffAccountStatus } from "../features/staff-accounts/store";
+import { removeStaffMember, setStaffAccountStatus } from "../features/accounts/staff-accounts";
+import { anonymizeDiver } from "../features/records/anonymize";
 import { beginTotpEnrollment, disableTotp, enableTotp } from "./account-security";
 import type { AppDb, AppTransaction } from "./client";
 import {

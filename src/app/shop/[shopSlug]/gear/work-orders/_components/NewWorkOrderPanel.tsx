@@ -19,8 +19,8 @@ import {
   textareaClassFor,
 } from "@/components/ui/form";
 import { LedgerRow } from "@/components/ui/ledger";
-import type { ShopSurface } from "@/features/session";
-import { getWorkOrderNewPage } from "@/features/work-order-new-page";
+import type { ShopSurface } from "@/features/accounts/session";
+import { getWorkOrderNewPage } from "@/features/gear/work-order-new-page";
 import { gearItemKindLabel } from "@/i18n/gear-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { ADD_ONE, ADD_PARAM, addPanelHref } from "@/lib/add-panel";

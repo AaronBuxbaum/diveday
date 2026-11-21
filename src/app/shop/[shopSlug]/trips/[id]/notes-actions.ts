@@ -6,9 +6,9 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getDb } from "@/db/client";
 import { addInternalNote, deleteInternalNote, restoreInternalNote } from "@/db/operations";
-import { readForm, text } from "@/features/form-parse";
-import { revalidateAndRedirect } from "@/features/navigation";
-import { requireShopSurface } from "@/features/session";
+import { requireShopSurface } from "@/features/accounts/session";
+import { readForm, text } from "@/features/platform/form-parse";
+import { revalidateAndRedirect } from "@/features/platform/navigation";
 import { noticeUrl } from "@/lib/staff-notices";
 import { requireRosterBooking, tripPath } from "./roster-booking";
 

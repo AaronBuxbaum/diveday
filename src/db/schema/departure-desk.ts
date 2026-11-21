@@ -23,7 +23,7 @@ import { trips } from "./trips";
 /**
  * Where a found item stands. `open` until it goes home with its owner
  * (`returned`) or the shop gives up on it (`discarded`). Both resolved states
- * are pruned after `RETENTION_DAYS.lost_items` (`src/features/retention/rules.ts`).
+ * are pruned after `RETENTION_DAYS.lost_items` (`src/features/records/retention/rules.ts`).
  */
 export const lostItemStatus = pgEnum("lost_item_status", ["open", "returned", "discarded"]);
 

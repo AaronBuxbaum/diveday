@@ -1,8 +1,8 @@
 import { Badge } from "@/components/ui/badge";
 import { LedgerGroup, LedgerRow } from "@/components/ui/ledger";
 import type { SiteLibraryGroup } from "@/db/dive-sites";
-import { planningNoteIsFresh } from "@/features/dive-site-memory";
-import { siteFitCutsAgainstGroup, siteLibraryRequirement } from "@/features/dive-sites";
+import { planningNoteIsFresh } from "@/features/sites/dive-site-memory";
+import { siteFitCutsAgainstGroup, siteLibraryRequirement } from "@/features/sites/dive-sites";
 import { staffDiveSiteDepthText } from "@/i18n/depth-labels";
 import { diveSiteDifficultyLabel } from "@/i18n/dive-site-labels";
 import type { DiverTranslator } from "@/i18n/messages";

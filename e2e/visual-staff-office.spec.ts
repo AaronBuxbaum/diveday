@@ -364,7 +364,7 @@ for (const scheme of ["light", "dark"] as const) {
       // Waiting on the worklist group specifically, not just the heading: the
       // groups render above the published run, and a capture taken before they
       // land photographs a half-built page. The seed leaves exactly one review
-      // waiting (`seed-history.ts` — Today's deep link depends on that count),
+      // waiting (`seed/history.ts` — Today's deep link depends on that count),
       // so the group's clear-the-lot act is deliberately absent here; the
       // reviews spec exercises it with a second review in hand.
       test(`the review moderation queue renders true to the design (${scheme})`, async ({
@@ -561,7 +561,7 @@ for (const scheme of ["light", "dark"] as const) {
       // the unanswered ones under a group carrying their count, the answered
       // ones under theirs, and a stranger's row showing the address it came
       // from because it has no record to open. The seed puts one of each in
-      // (`src/db/seed-inbox.ts`), which is the whole reason this surface can be
+      // (`src/db/seed/inbox.ts`), which is the whole reason this surface can be
       // photographed at all. Waiting on the second group as well as the
       // heading: both render from one query, so a capture taken on the first
       // alone can photograph a half-built list.

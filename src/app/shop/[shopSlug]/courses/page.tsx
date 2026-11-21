@@ -12,9 +12,13 @@ import { type FilterChip, FilterChips } from "@/components/ui/FilterChips";
 import { SearchField } from "@/components/ui/form";
 import { ShopNotice } from "@/components/ui/outcome";
 import { QueryForm } from "@/components/ui/QueryForm";
-import type { CourseListView } from "@/features/courses";
-import { COURSE_LIST_VIEWS, courseListViewParam, getCoursesPage } from "@/features/courses-page";
-import { requireShopSurface } from "@/features/session";
+import { requireShopSurface } from "@/features/accounts/session";
+import type { CourseListView } from "@/features/training/courses";
+import {
+  COURSE_LIST_VIEWS,
+  courseListViewParam,
+  getCoursesPage,
+} from "@/features/training/courses-page";
 import { CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";

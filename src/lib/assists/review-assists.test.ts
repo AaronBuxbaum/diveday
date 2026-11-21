@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { callStructured } from "@/lib/claude/structured";
 import { fakeClaude, fakeClaudeMessage } from "@/test/fakes";
-import { reviewFlagsCall, reviewFlagsFor } from "../../features/review-flags/rules";
-import { reviewThemes, reviewThemesCall } from "../../features/review-themes/rules";
+import { reviewFlagsCall, reviewFlagsFor } from "../../features/after-the-dive/review-flags";
+import { reviewThemes, reviewThemesCall } from "../../features/after-the-dive/review-themes";
 
 function answering(value: unknown) {
   return fakeClaude({ reply: () => fakeClaudeMessage({ text: JSON.stringify(value) }) });

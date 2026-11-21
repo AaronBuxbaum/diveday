@@ -7,7 +7,7 @@ import { HOUR_MS, nowDate } from "../../lib/clock";
 /**
  * Give Priya's outstanding release one failed email and one delivered text.
  *
- * Priya is the seed's deliberate waiver holdout (`src/db/seed-bookings.ts`), so her record offers
+ * Priya is the seed's deliberate waiver holdout (`src/db/seed/bookings.ts`), so her record offers
  * all four ways of getting a release signed, the record `diver-profile-paper-waiver` photographs at
  * rest. Issuing here keeps that capture calm; it is stamped an hour on, past her seat releases.
  */

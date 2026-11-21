@@ -3,7 +3,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
-import type { LastKnownDive } from "../../../../../../features/last-dive/store";
+import type { LastKnownDive } from "../../../../../../features/people/last-dive";
 import { LastDiveGroup, monthsSince, newerSaid } from "./LastDiveGroup";
 import type { DiverProfile } from "./shared";
 

@@ -213,7 +213,7 @@ their container becomes narrow relative to the type. This layout fallback uses t
 post-hydration size observer; the root font bridge remains synchronous before first content paint.
 
 Slice [19d / #4234](https://github.com/AaronBuxbaum/diveday/issues/4234) uses
-`src/features/device-text-size` synchronously in the root layout's head, before
+`src/features/platform/device-text-size.ts` synchronously in the root layout's head, before
 body content can paint. It feature-detects the system-font shorthand, reads a temporary hidden
 probe, removes it even on failure, and writes only a finite reading above 17. Unsupported,
 unavailable, default and smaller readings leave the root untouched. No UA guess or persisted

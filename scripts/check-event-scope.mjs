@@ -37,6 +37,8 @@ import { filesUnder } from "./files-under.mjs";
 
 const ROOT = process.cwd();
 const GUARDED_ROOTS = ["src/db", "src/features", "src/app", "src/lib"];
+/** A seed scenario writes the demo, not a read a person sees: the whole `src/db/seed/` folder is skipped. */
+const SEED_DIRECTORY = path.normalize("src/db/seed/");
 const SCHEMA_DIR = "src/db/schema";
 const SOURCE_EXTENSIONS = new Set([".ts", ".tsx"]);
 const QUERY_WINDOW = 40;
@@ -47,11 +49,11 @@ const IS_TEST = /\.test\.tsx?$/;
 const EXTRA_TABLES = ["executedDives", "recapPhotos", "tripRecapPhotos"];
 
 /**
- * `retention.ts` prunes every shop's expired rows in one pass, and the seed
- * writes the tables rather than reading them.
+ * `retention.ts` prunes every shop's expired rows in one pass (the seed writes the tables
+ * rather than reading them, and its whole folder is `SEED_DIRECTORY`).
  */
 const SKIPPED_FILES = new Set(
-  ["src/features/retention/store.ts", "src/db/seed.ts"].map((file) => path.normalize(file)),
+  ["src/features/records/retention/store.ts"].map((file) => path.normalize(file)),
 );
 
 /** The event tables a schema file declares with a `shopId` column. */
@@ -119,7 +121,7 @@ async function main() {
       const normalized = path.normalize(file);
       if (SKIPPED_FILES.has(normalized) || IS_TEST.test(file)) continue;
       if (normalized.startsWith(path.normalize(SCHEMA_DIR))) continue;
-      if (path.basename(file).startsWith("seed-")) continue;
+      if (normalized.startsWith(SEED_DIRECTORY)) continue;
       const result = findUnscopedEventReads(await readFile(path.join(ROOT, file), "utf8"), tables);
       guarded += result.guarded;
       for (const finding of result.findings) {

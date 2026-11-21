@@ -9,9 +9,9 @@ import { nowDate } from "@/lib/clock";
 import type { InquiryFormState } from "@/lib/course-inquiry";
 import { fileScopedShopContext } from "@/test/db";
 import { nextHeadersStub } from "@/test/next-headers";
-import { getCourseBySlug } from "../../features/courses/store";
-import { classroomFixture } from "../../features/recovery-activities/fixture.test-support";
-import { transitionRecoveryActivity } from "../../features/recovery-activities/store";
+import { getCourseBySlug } from "../../features/training/courses/store";
+import { classroomFixture } from "../../features/trips/recovery-activities/fixture.test-support";
+import { transitionRecoveryActivity } from "../../features/trips/recovery-activities/store";
 import { notificationSchema } from "../../lib/notifications/kinds";
 
 const ctx = fileScopedShopContext();

@@ -1,4 +1,4 @@
-import type { getOrdersIndex } from "@/features/orders-index";
+import type { getOrdersIndex } from "@/features/money/orders-index";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { calendarDateInTimezone, calendarDateToUtcMidnight } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";

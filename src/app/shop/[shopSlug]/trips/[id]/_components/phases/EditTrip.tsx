@@ -5,7 +5,7 @@ import { SummaryCaret } from "@/components/ui/disclosure";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { AppDb } from "@/db/client";
 import { listDepartureBoardedByTrip } from "@/db/manifests";
-import type { TripGuests } from "@/features/trip-guests";
+import type { TripGuests } from "@/features/trips/trip-guests";
 import { repeatsRowText } from "@/i18n/series-sentences";
 import { type FormNotice, noticeForForm, shopPath } from "@/lib/staff-notices";
 import type { detailsReadRows } from "../details-rows";

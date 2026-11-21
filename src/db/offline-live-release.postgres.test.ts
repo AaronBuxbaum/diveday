@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, expect, it, vi } from "vitest";
-import { markBookingNoShow } from "@/features/no-show/store";
-import { buildOfflineManifestCopies } from "@/features/offline-manifest-snapshots";
+import { markBookingNoShow } from "@/features/boarding/no-show";
+import { buildOfflineManifestCopies } from "@/features/boarding/offline-manifest-snapshots";
 import { nowDate } from "@/lib/clock";
 import { describePostgres, postgresTestDb } from "@/test/postgres";
 import { recordRollCall } from "./manifests";

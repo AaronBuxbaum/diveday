@@ -12,7 +12,7 @@ import {
   type PlacedTrip,
   type StaffWeek,
   type WeekShift,
-} from "@/features/staffing-week";
+} from "@/features/crew-and-boats/staffing-week";
 import { awayDatesText } from "@/i18n/away-labels";
 import { fill } from "@/i18n/fill";
 import type { AvailabilityBlock } from "@/lib/crew-requests";

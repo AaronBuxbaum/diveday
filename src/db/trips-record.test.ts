@@ -1,10 +1,10 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
+import { seedRollCallEvidence } from "@/db/seed/roll-call-evidence";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
-import { createBoat, deleteBoat } from "../features/boats/store";
+import { createBoat, deleteBoat } from "../features/crew-and-boats/boats/store";
 import {
   boatTripFixture,
   tripBoatPatch,

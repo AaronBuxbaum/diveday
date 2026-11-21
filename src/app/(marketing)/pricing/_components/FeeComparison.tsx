@@ -9,7 +9,7 @@ import {
   type DiveDayTerms,
   FEE_ASSUMPTIONS,
   type SystemCost,
-} from "@/features/fee-comparison";
+} from "@/features/money/fee-comparison";
 import { formatMoneyScanned } from "@/lib/format";
 import { cachedFormatter } from "@/lib/intl-cache";
 import { MoneySlider } from "./MoneySlider";
@@ -37,7 +37,7 @@ const START_CENTS = 3_000_000;
  * **The same month on two systems.** One slider for the money received and one table with a
  * row per fee and a column per system, every percent taken off the whole amount, and FareHarbor's OTA fee on the 37% of it
  * counted as through online travel agencies (footnoted, with its source). The arithmetic is `compareMonth`, tested in
- * `src/features/fee-comparison/rules.test.ts`; the sources and assumptions are written on the
+ * `src/features/money/fee-comparison.test.ts`; the sources and assumptions are written on the
  * page beside it. DiveDay's column is highlighted and its terms are the offer's.
  */
 export function FeeComparison({

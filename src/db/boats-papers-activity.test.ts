@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
-import { createBoat, editBoatWithinCertificate } from "../features/boats/store";
+import { createBoat, editBoatWithinCertificate } from "../features/crew-and-boats/boats/store";
 import { activityEvents } from "./schema";
 import { listStaff } from "./trips";
 

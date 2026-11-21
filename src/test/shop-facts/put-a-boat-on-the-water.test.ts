@@ -1,8 +1,8 @@
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { expect, it } from "vitest";
 import { people, rollCallEvents, tripAssignments, tripDives } from "../../db/schema/index";
-import { listTripLostItems } from "../../features/lost-items/store";
-import { listTripSightings } from "../../features/trip-sightings/store";
+import { listTripLostItems } from "../../features/day/lost-items/store";
+import { listTripSightings } from "../../features/sites/trip-sightings";
 import { nowDate } from "../../lib/clock";
 import { fileScopedShopContext } from "../db";
 import { putABoatOnTheWater } from "./put-a-boat-on-the-water";

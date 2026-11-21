@@ -22,7 +22,7 @@ import { REEF_TRIP_TITLE } from "./reef-trip-title";
  * due inside `GEAR_SERVICE_DUE_SOON_DAYS`.
  *
  * The reef boat rather than the wreck trip the demo assigns units on
- * (`seed-gear.ts`), because `?owedRefund=1` cancels that departure to owe a
+ * (`seed/gear.ts`), because `?owedRefund=1` cancels that departure to owe a
  * refund on it, and a Gear tab photographed on a cancelled trip shows the
  * wrong page. The four units are the wreck trip's, reserved for the reef boat's own
  * window, which does not overlap it.

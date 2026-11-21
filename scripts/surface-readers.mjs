@@ -40,7 +40,8 @@ export async function surfaceReaders(root, page, { importsOf, resolveSpecifier }
     seen.add(key);
     // The one-reader contract is explicitly "requireShopSurface plus one surface reader".
     // It is a session gate, and moving its lib origin must not count it as a second page read.
-    if (file === "src/features/session/rules.ts" && symbol === "requireShopSurface") return false;
+    if (file === "src/features/accounts/session.ts" && symbol === "requireShopSurface")
+      return false;
     const source = await read(file);
     const escaped = symbol.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     const ownValue =
@@ -94,7 +95,9 @@ export async function surfaceReaders(root, page, { importsOf, resolveSpecifier }
       }
     for (const name of names)
       if (await isLoader(target, name)) {
-        readers.add(`@/features/${target.split("/")[2]}`);
+        // The concept's door: `src/features/<area>/<concept>` (a folder) or `<concept>.ts` (a file).
+        const [, , area, concept] = target.split("/");
+        readers.add(`@/features/${area}/${concept.replace(/\.[cm]?[jt]sx?$/, "")}`);
         break;
       }
   }

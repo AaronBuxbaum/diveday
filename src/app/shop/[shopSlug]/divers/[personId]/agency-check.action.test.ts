@@ -11,7 +11,7 @@ import {
   seededStaffPersonId,
   staffSession,
 } from "@/test/staff-session";
-import { addAgencyListedCards } from "../../../../../features/agency-check/store";
+import { addAgencyListedCards } from "../../../../../features/certifications/agency-check";
 
 // One seeded database for the file and a rolled-back transaction per test
 // (src/test/db.ts, `fileScopedShopContext`).
@@ -39,14 +39,14 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
 });
-vi.mock("../../../../../features/session/rules", async () =>
+vi.mock("../../../../../features/accounts/session", async () =>
   (await import("@/test/staff-session")).sessionMockOverStaffSession(),
 );
 vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
 const { refresh } = await import("next/cache");
-const { requireStaffSession } = await import("../../../../../features/session/rules");
+const { requireStaffSession } = await import("../../../../../features/accounts/session");
 const { addAgencyListedCardsAction, agencyCheckAction } = await import("./agency-check-actions");
 
 const NAUI_PAGE = "Verify Diver Certification\nLena Ortiz\n1990-04-12\nAdvanced Scuba Diver";

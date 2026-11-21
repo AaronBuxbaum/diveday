@@ -1,4 +1,4 @@
-import type { SafetyMonth } from "@/features/safety-report";
+import type { SafetyMonth } from "@/features/safety/safety-report";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 
 /** Unknown historical records do not count as clean or as proof of no card. */

@@ -6,7 +6,7 @@ import { buttonClass } from "@/components/ui/button";
 import {
   HOME_SCREEN_INSTALL_DISMISSED_KEY,
   homeScreenInstallPreference,
-} from "@/features/home-screen-install";
+} from "@/features/platform/home-screen-install";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { rendersFlush } from "@/test/button-flush";
 import { HomeScreenInstall, type HomeScreenInstallCopy } from "./HomeScreenInstall";

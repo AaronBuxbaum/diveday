@@ -361,7 +361,7 @@ export const waiverRecords = pgTable(
      * guardian's signature removed after the fact is the tampering the seal
      * exists to catch. `guardian_name` and `guardian_email` are personal data
      * of a third party and go with the diver's own under erasure
-     * (`src/features/anonymize/store.ts`); the fact and date of the co-signature survive,
+     * (`src/features/records/anonymize.ts`); the fact and date of the co-signature survive,
      * exactly as the diver's `signed_at` does.
      */
     guardianName: text("guardian_name"),
@@ -373,7 +373,7 @@ export const waiverRecords = pgTable(
     /**
      * **The guardian's address was erased on their own request**, and by whom
      * (H-20261007-guardian-email-erasure, issue #1673). The guardian is a third party with no record of
-     * their own, so `eraseGuardianEmail` (`src/features/guardian-erasure/store.ts`) nulls
+     * their own, so `eraseGuardianEmail` (`src/features/records/guardian-erasure.ts`) nulls
      * `guardian_email` alone and leaves the diver, the medical answers and
      * the co-signature standing. `guardian_email` is inside the version 1
      * seal, so a release whose seal verified is re-sealed as version 4 — every
@@ -739,7 +739,7 @@ export const waiverSealAcknowledgements = pgTable(
  * peers, and each button wears its own last outcome. A single latest-attempt
  * column can only ever light one of them.
  *
- * Deliberately out of the export bundle (`src/db/export.test.ts`): the outcome
+ * Deliberately out of the export bundle (`src/db/export/index.test.ts`): the outcome
  * a destination system could use is already on `waiver_records.csv`; this is
  * the per-channel mechanics behind it.
  *

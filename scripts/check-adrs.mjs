@@ -1,4 +1,4 @@
-// Every ADR is well-formed and a new one is short.
+// Every ADR is well-formed, a new one is short, and the README's index matches the files.
 //
 // The word cap: an ADR is read whole by every session a skill or a link sends to it, at about
 // 1.3k tokens for the corpus average. The 20 written between 2026-10-01 and 2026-10-10 averaged
@@ -6,6 +6,11 @@
 // rejected drafts went in with the decision. Those belong in the PR, an issue or `docs/`, linked
 // from Context. So an ADR whose id is dated after CAP_FROM may hold at most WORD_CAP words,
 // HTML comments not counted; the older corpus is left as it is.
+//
+// The index: `docs/architecture/decisions/README.md` carries a generated two-column table (the
+// id, then the decision's opening words, struck through with "→ <successor>" once superseded),
+// written by `node scripts/adr-index.mjs --write`. Before it a session found an ADR with
+// `ls | grep`.
 //
 // The quotes: a fenced block opening with a `// <path>:<line>` header must match the source it
 // cites (`quoteProblems`), so a code line an ADR quotes cannot silently rot (issue #1738).
@@ -15,6 +20,8 @@ import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
+
+import { expectedReadme } from "./adr-index.mjs";
 
 /** Ids dated after this day are capped. */
 export const CAP_FROM = "20261010";
@@ -162,10 +169,21 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
     );
   }
 
+  const { readme, expected } = expectedReadme(root);
+  if (expected === null) {
+    failures.push(
+      "README.md: the generated index block (adr-index:start … adr-index:end) is missing",
+    );
+  } else if (expected !== readme) {
+    failures.push(
+      "README.md: the index table is stale — run `node scripts/adr-index.mjs --write` (on a merge conflict in the table, take either side and run it again)",
+    );
+  }
+
   if (failures.length > 0) {
     console.error(`ADR validation failed:\n${failures.map((item) => `- ${item}`).join("\n")}`);
     process.exit(1);
   }
 
-  console.log(`adrs: ${entries.length} records valid`);
+  console.log(`adrs: ${entries.length} records valid, index current`);
 }

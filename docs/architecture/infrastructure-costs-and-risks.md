@@ -10,7 +10,7 @@ historical evidence. Earlier estimates and completed proposals are preserved in 
 - `pnpm cost:report --json` reads local probe configuration and source inventory without calling
   provider APIs. Credentials being present does not prove a probe works.
 - `pnpm cost:report --live --json` reuses the
-  [usage collector](../../src/features/usage/collect.ts) for configured Vercel and Neon probes.
+  [usage collector](../../src/features/platform/usage/collect.ts) for configured Vercel and Neon probes.
   Failed, absent and unconfigured measurements remain distinct. No all-provider total is derived.
 - Each live reading names its source, requested UTC calendar-month window, unit, scope, plan
   verification limit and request time. This is not necessarily the account's invoice period.
@@ -63,7 +63,7 @@ Conversation counts and a supposed 1,000-conversation allowance are not a delive
 model. A charge depends on the applicable category, recipient market, rate version and billing
 account. Provider message identity and delivery outcome must be reconciled with account invoices
 before a modeled charge can be called actual spend. The tenant-scoped
-`readWhatsAppDeliveredUsage` reader in `@/features/whatsapp-webhook` counts verified delivered
+`readWhatsAppDeliveredUsage` reader in `@/features/messages/whatsapp-webhook` counts verified delivered
 callbacks by sending WABA/phone and pricing classification. The shop export includes
 `whatsapp_delivered_usage.csv`; coverage starts with callbacks received since deployment, not
 complete historical/account usage. Market, rate version, money, currency and invoice payer remain

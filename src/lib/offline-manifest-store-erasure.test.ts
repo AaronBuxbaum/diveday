@@ -4,7 +4,7 @@ import { HttpResponse, http } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { withRefreshedSyncFrame } from "@/test/offline-sync-frame";
-import { ANONYMIZED_PERSON_NAME } from "../features/anonymization/rules";
+import { ANONYMIZED_PERSON_NAME } from "../features/records/anonymization";
 import {
   appendOfflineArrival,
   appendOfflineChecklistCheck,

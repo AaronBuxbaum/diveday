@@ -4,7 +4,7 @@ import { HOUR_MS } from "@/lib/clock";
 import type { Notification } from "@/lib/notifications";
 import { describePostgres, holdRowLock, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
 import { raceShop } from "@/test/postgres-shop";
-import { repointHeldBooking } from "../features/identity-repoint/store";
+import { repointHeldBooking } from "../features/people/identity-repoint";
 import { createBooking } from "./bookings";
 import { drainNotificationRetries, sendNotification } from "./notifications";
 import { bookings, notificationSendQueue, people } from "./schema";

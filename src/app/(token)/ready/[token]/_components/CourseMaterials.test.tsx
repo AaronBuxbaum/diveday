@@ -2,7 +2,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { diverTranslator } from "@/i18n/messages";
-import type { ReadyPageData } from "../../../../../features/ready/store";
+import type { ReadyPageData } from "../../../../../features/boarding/ready";
 import { CourseMaterials } from "./CourseMaterials";
 
 /**

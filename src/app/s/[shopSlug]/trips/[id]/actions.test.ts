@@ -6,7 +6,10 @@ import { bookingCapabilities, bookings, cards, people, shops } from "@/db/schema
 import { createTrip } from "@/db/trips-create";
 import { HOUR_MS, nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
-import { issueBookingHandoff, readKnownDiver } from "../../../../../features/booking-handoff/store";
+import {
+  issueBookingHandoff,
+  readKnownDiver,
+} from "../../../../../features/bookings/booking-handoff/store";
 
 const capabilityIssueHook = vi.hoisted(() => ({
   beforeIssue: null as ((input: { bookingId: string; purpose: string }) => Promise<void>) | null,
@@ -66,9 +69,9 @@ vi.mock("@/db/booking-capabilities", async (importOriginal) => {
   };
 });
 vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn() }));
-vi.mock("@/features/sentry-server", () => ({ sentry: { captureException: vi.fn() } }));
-vi.mock("@/features/booking-handoff", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/features/booking-handoff")>();
+vi.mock("@/features/platform/sentry-server", () => ({ sentry: { captureException: vi.fn() } }));
+vi.mock("@/features/bookings/booking-handoff", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/features/bookings/booking-handoff")>();
   return { ...actual, consumeBookingHandoff: vi.fn(actual.consumeBookingHandoff) };
 });
 vi.mock("./_lib/record-lead-booker-locale", async (importOriginal) => {
@@ -101,8 +104,8 @@ const { createBookingParty } = await import("@/db/bookings");
 const { checkRateLimit, RATE_LIMITS } = await import("@/lib/rate-limit");
 const { bookSpot, joinWaitlist } = await import("./actions");
 const { cookies } = await import("next/headers");
-const { sentry } = await import("@/features/sentry-server");
-const { consumeBookingHandoff } = await import("@/features/booking-handoff");
+const { sentry } = await import("@/features/platform/sentry-server");
+const { consumeBookingHandoff } = await import("@/features/bookings/booking-handoff");
 const { recordLeadBookerLocale } = await import("./_lib/record-lead-booker-locale");
 const { issueReturningDiverReceiptForBooking } = await import(
   "./_lib/issue-returning-diver-receipt"

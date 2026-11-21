@@ -5,7 +5,7 @@ import { fileScopedShopContext } from "@/test/db";
 import { createBooking, setBookingParticipantType } from "./bookings";
 import { getTripManifest, recordRollCall } from "./manifests";
 import { tripRequirements, trips } from "./schema";
-import { seedRollCallEvidence } from "./seed-roll-call-evidence";
+import { seedRollCallEvidence } from "./seed/roll-call-evidence";
 import { listStaff } from "./trips";
 import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 

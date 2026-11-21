@@ -19,7 +19,7 @@ const HARNESS = /\b(?:process\.)?env(?:\.|\[["'])(DIVEDAY_E2E|DIVEDAY_CLOCK)\b(?
 const SEAM = "src/lib/runtime-mode.ts";
 
 const REMAINING = new Set([
-  "src/features/test-clock/rules.ts", // writes the clock, the one place that sets it
+  "src/features/platform/test-clock.ts", // writes the clock, the one place that sets it
 ]);
 
 async function walk(directory) {

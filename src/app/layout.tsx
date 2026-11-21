@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
-import { deviceTextSizeScript } from "@/features/device-text-size";
+import { deviceTextSizeScript } from "@/features/platform/device-text-size";
 import { boatModeScript } from "@/lib/boat-mode";
 import { THEME_COLORS } from "./_brand/colors";
 import "./globals.css";

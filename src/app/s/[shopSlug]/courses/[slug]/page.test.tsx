@@ -22,17 +22,17 @@ vi.mock("@/app/actions/inquiry", () => ({
   ),
 }));
 vi.mock("@/db/client", () => ({ getDb: vi.fn(async () => ({})) }));
-vi.mock("../../../../../features/courses/store", () => ({ getCourseBySlug: vi.fn() }));
-vi.mock("../../../../../features/shops-cached/store", () => ({ shopBySlugCached: vi.fn() }));
+vi.mock("../../../../../features/training/courses/store", () => ({ getCourseBySlug: vi.fn() }));
+vi.mock("../../../../../features/platform/shops-cached", () => ({ shopBySlugCached: vi.fn() }));
 vi.mock("@/db/trips", () => ({ listUpcomingSessionsForCourse: vi.fn() }));
-vi.mock("../../../../../features/crew-away-diver/store", () => ({
+vi.mock("../../../../../features/crew-and-boats/crew-away-diver", () => ({
   diverCrewWithAway: vi.fn(async () => []),
 }));
-vi.mock("@/features/public-staff-profiles", () => ({
+vi.mock("@/features/public-site/public-staff-profiles", () => ({
   assignedPublicStaffProfiles: vi.fn(async () => []),
 }));
 vi.mock("@/lib/auth", () => ({ auth: vi.fn(async () => null) }));
-vi.mock("../../../../../features/session/rules", () => ({
+vi.mock("../../../../../features/accounts/session", () => ({
   isLiveShopStaff: vi.fn(async () => false),
 }));
 vi.mock("@/i18n/request", () => ({
@@ -43,10 +43,12 @@ vi.mock("@/i18n/request", () => ({
 }));
 
 const { submitInquiryAction } = await import("@/app/actions/inquiry");
-const { getCourseBySlug } = await import("../../../../../features/courses/store");
-const { shopBySlugCached } = await import("../../../../../features/shops-cached/store");
+const { getCourseBySlug } = await import("../../../../../features/training/courses/store");
+const { shopBySlugCached } = await import("../../../../../features/platform/shops-cached");
 const { listUpcomingSessionsForCourse } = await import("@/db/trips");
-const { assignedPublicStaffProfiles } = await import("@/features/public-staff-profiles");
+const { assignedPublicStaffProfiles } = await import(
+  "@/features/public-site/public-staff-profiles"
+);
 const { default: CoursePage } = await import("./page");
 
 const course: Course = {
@@ -343,7 +345,7 @@ describe("public course structured data", () => {
   });
 
   it("emits no graph for a hidden course in staff preview", async () => {
-    const { isLiveShopStaff } = await import("../../../../../features/session/rules");
+    const { isLiveShopStaff } = await import("../../../../../features/accounts/session");
     vi.mocked(isLiveShopStaff).mockResolvedValueOnce(true);
     request.locale = "en-US";
     vi.mocked(shopBySlugCached).mockResolvedValue(shop(null, null));

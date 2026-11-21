@@ -1,6 +1,10 @@
 import { arrivalCardFacts, arrivalDockCallLine } from "@/components/arrival-card-facts";
 import type { TripChangeEvent } from "@/db/trip-change-events";
-import { arrivalCardDocument, escapeHtml, htmlDocument } from "@/features/arrival-card-document";
+import {
+  arrivalCardDocument,
+  escapeHtml,
+  htmlDocument,
+} from "@/features/boarding/arrival-card-document";
 import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import { PERSONAL_GEAR_KEYS } from "@/i18n/packing-labels";
 import { CHECKLIST_DETAIL_KEYS } from "@/i18n/readiness-summary-labels";

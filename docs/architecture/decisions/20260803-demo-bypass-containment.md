@@ -62,7 +62,7 @@ a constant-work compare and a named constant respectively.
      verification link. Flipping `is_demo` on a real tenant now grants nothing.
      **The two real-account writers enforce this rather than merely implying it** (amended
      2026-08-04, security review): `onboardAction` (`src/app/onboard/actions.ts`) and
-     `inviteStaffMember` (`src/features/staff-accounts/store.ts`) each refuse an address in the namespace
+     `inviteStaffMember` (`src/features/accounts/staff-accounts.ts`) each refuse an address in the namespace
      outright — `email_reserved` — so the namespace is an invariant of the write path and not a
      consequence of nobody wanting an unroutable address.
 - **The environment gate takes its environment as a parameter**, typed as a plain string map rather
@@ -106,7 +106,7 @@ that already held a `*.demo.invalid` account, at which point `DEMO_BYPASS_PASSWO
 tenant. Both writers now call `isDemoAccountEmail` and refuse (`email_reserved`), each through the
 error mechanism its surface already has — `backToForm` on `/onboard`, an `InviteStaffResult` reason
 on the team page — so the namespace is a property of the schema's write path. Demo seeding
-(`src/db/seed.ts`, `DEV_STAFF_LOGINS`) writes those rows directly and is deliberately not routed
+(`src/db/seed/index.ts`, `DEV_STAFF_LOGINS`) writes those rows directly and is deliberately not routed
 through either guard; that split is the thing to preserve if a third writer ever appears.
 
 The new coupling to cost: **any future demo-minting path must generate its staff addresses under

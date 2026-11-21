@@ -1,10 +1,10 @@
 import { getDb } from "@/db/client";
-import { cronRoute } from "@/features/cron-route";
+import { cronRoute } from "@/features/platform/cron-route";
 import {
   dispatchDueIntegrationDeliveries,
   INTEGRATIONS_CRON_BUDGET_MS,
   INTEGRATIONS_CRON_CRONTAB,
-} from "@/features/integrations";
+} from "@/features/shop-setup/integrations";
 
 export const maxDuration = 300;
 
@@ -19,7 +19,7 @@ export const maxDuration = 300;
  * stated grounds that every cron has one.
  *
  * The schedule comes from the dispatcher rather than being restated here, and
- * `src/features/integrations/dispatcher.test.ts` asserts it against
+ * `src/features/shop-setup/integrations/dispatcher.test.ts` asserts it against
  * config/crons.json. The default margin matches the other sub-daily passes: twenty
  * minutes late on an hourly drain is worth a look, and anything tighter would
  * page on a slow provider rather than on a cron that stopped.

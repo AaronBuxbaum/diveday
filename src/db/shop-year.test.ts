@@ -4,10 +4,14 @@ import { diveSiteSlugFrom } from "@/lib/dive-site-slug";
 import { currentShopSeason, seasonStartInstant, shopSeasonOf } from "@/lib/season";
 import { shiftInstantByCalendarDays } from "@/lib/zoned";
 import { fileScopedShopContext, unseededTestDb } from "@/test/db";
-import { summarizeMonth } from "../features/reporting/rules";
-import { getShopYear, getYearMonthInputs, getYearToDate } from "../features/reporting/store";
-import { seasonScale } from "../features/season-scale/store";
-import { summarizeShopYear } from "../features/shop-year/rules";
+import { summarizeMonth } from "../features/reports/reporting/rules";
+import {
+  getShopYear,
+  getYearMonthInputs,
+  getYearToDate,
+} from "../features/reports/reporting/store";
+import { seasonScale } from "../features/reports/season-scale";
+import { summarizeShopYear } from "../features/reports/shop-year";
 import type { AppDb } from "./client";
 import { paymentEntries } from "./payments";
 import {

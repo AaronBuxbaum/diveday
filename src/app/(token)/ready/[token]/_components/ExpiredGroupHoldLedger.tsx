@@ -3,7 +3,7 @@ import { ThreadShell } from "@/components/thread/ThreadShell";
 import { resolveExpiredGroupHoldOrganizer } from "@/db/booking-capabilities";
 import type { AppDb } from "@/db/client";
 import { getShopById } from "@/db/shops";
-import { issuePartySeatClaims } from "@/features/seat-claims";
+import { issuePartySeatClaims } from "@/features/bookings/seat-claims";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { publicSchedulePath } from "@/lib/public-routes";

@@ -1,6 +1,6 @@
 import type { listedDepartureSummaries } from "@/app/s/[shopSlug]/_components/schedule-reads";
 import type { pagedUpcomingTripsWithCounts } from "@/db/trips";
-import { offSeason } from "@/features/off-season";
+import { offSeason } from "@/features/trips/off-season";
 import type { DiverTranslator } from "@/i18n/messages";
 import { DIVER_CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { timeZoneLabel } from "@/i18n/timezone-labels";
@@ -300,7 +300,7 @@ export function schedulePagerHrefs({
  *
  * Nothing public on the board for the next thirty days is a state the
  * storefront is now designed for rather than an empty list under "No trips
- * on the books yet" — see `src/features/off-season/rules.ts` for why the answer is
+ * on the books yet" — see `src/features/trips/off-season.ts` for why the answer is
  * derived from a departure the shop scheduled, and never from a column
  * somebody has to remember to update.
  *

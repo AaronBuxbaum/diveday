@@ -1,0 +1,146 @@
+import { demoEmail } from "@/lib/simulator-email";
+import type { DbExecutor } from "../client";
+import {
+  bookings,
+  type diveSites,
+  people,
+  personRoles,
+  type TripAssignmentRole,
+  tripAssignments,
+  tripDives,
+  tripRequirements,
+  tripScheduleDays,
+  trips,
+} from "../schema";
+import { at, nextCreatedAt } from "./clock";
+
+/**
+ * A departure that only runs with enough people, and is short (ADR
+ * 20260813-minimum-head-count-departures).
+ *
+ * The long-range run is the trip a minimum head count exists for: the fuel and
+ * the crew cost the same whether two divers turn up or ten, so a shop states a
+ * floor and a moment it will decide by. This fixture is that trip in the state
+ * a shop actually looks at it — **short, with the deadline still ahead**, which
+ * is the window where ringing round the regulars still saves the day.
+ *
+ * Constraints this scenario has to keep:
+ *
+ * - **Its own departure, never a diver added to a seeded boat** (ADR
+ *   20260803-seed-scenario-modules). The other fixtures pin exact seat counts
+ *   and exact blocker stacks; borrowing one of their boats would break them.
+ * - **Short, not due.** Four days out with a 48-hour window leaves the decision
+ *   two days ahead of the fleet's frozen clock, so the demo shows the working
+ *   state and the hourly sweep (`/api/cron/shop-tick`) has nothing to do —
+ *   a fixture that cancelled itself the first time the cron ran would take its
+ *   own surface off the board.
+ * - **Adds only, called late** like `seedCertGates`/`seedCounterBlockers`, so no
+ *   row seeded before it moves (`nextCreatedAt` is shared across scenarios).
+ * - **5 seats left** (capacity 8, three sold): the e2e fleet matches trips by
+ *   remaining seats, and 3, 6, 7, and Full are spoken for.
+ * - **No price.** Every departure on the demo board is deliberately unpriced,
+ *   which is what makes the board's group-level "None of these departures has
+ *   a price yet" flag the one notice rather than a pill on every row — and
+ *   `schedule-builder.spec.ts` rests on exactly that. Pricing this one charter
+ *   made the board mixed and quietly retired the flag. A price adds nothing to
+ *   what this fixture is for, which is a head count.
+ */
+const DEMO_MINIMUM_TRIP = "Long-Range Day — Duane & Outer Reef";
+const DEMO_MINIMUM_DIVERS = [
+  { fullName: "Rosa Lindqvist", email: demoEmail("rosa.lindqvist"), phone: "+13055550192" },
+  { fullName: "Amir Haddad", email: demoEmail("amir.haddad"), phone: "+13055550193" },
+  { fullName: "Wren Okafor", email: demoEmail("wren.okafor"), phone: "+13055550194" },
+] as const;
+
+export async function seedMinimumSeats(
+  db: DbExecutor,
+  shopId: string,
+  ctx: {
+    siteByName: Map<string, typeof diveSites.$inferSelect>;
+    captainId: string | undefined;
+    /**
+     * Who skippers the long-range day. It is offshore 06:30–17:00 local, and the
+     * shop's one captain is at the counter that same day running the refresher
+     * and the Discover Scuba session — so rostering him here had him on the
+     * water and in the pool at once, which `setTripCrew` refuses to write and
+     * the standing-clash marker reported on the demo board (issue #1781). The
+     * owner takes the long day offshore; the captain keeps the shop-side pair.
+     */
+    ownerId: string;
+    divemasterId: string | undefined;
+  },
+): Promise<void> {
+  // Fail loudly rather than seed a siteless boat: the same rule
+  // `seedCounterBlockers` states, for the same reason — a rename upstream would
+  // leave this fixture quietly weaker and still green.
+  const site = ctx.siteByName.get("USCGC Duane");
+  if (!site) throw new Error("seed: minimum-seat trip needs a dive site");
+
+  const startsAt = at(4, 6, 30);
+  const endsAt = at(4, 17, 0);
+  const [trip] = await db
+    .insert(trips)
+    .values({
+      shopId,
+      title: DEMO_MINIMUM_TRIP,
+      description:
+        "A long day offshore. We run this one with at least six divers aboard — if it hasn't filled two days out, we call it off and let everyone know.",
+      startsAt,
+      endsAt,
+      capacity: 8,
+      priceCents: 21500,
+      plannedDives: 3,
+      minimumBookings: 6,
+      minimumDecisionHours: 48,
+    })
+    .returning();
+  if (!trip) throw new Error("seed: minimum-seat trip insert returned no row");
+
+  await db.insert(tripScheduleDays).values({ tripId: trip.id, dayNumber: 1, startsAt, endsAt });
+  await db.insert(tripDives).values([
+    { tripId: trip.id, diveNumber: 1, diveSiteId: site.id },
+    { tripId: trip.id, diveNumber: 2, diveSiteId: null },
+    { tripId: trip.id, diveNumber: 3, diveSiteId: null },
+  ]);
+
+  // The shop's ordinary gate, nothing exotic: this fixture is about the head
+  // count, and a stack of blockers on top would make its cards read as a
+  // readiness scenario instead.
+  await db.insert(tripRequirements).values({
+    tripId: trip.id,
+    shopId,
+    requiresWaiver: true,
+    minimumCertificationLevel: "advanced_open_water" as const,
+  });
+
+  await db.insert(tripAssignments).values([
+    // The owner, not the captain — see `ownerId` above.
+    { tripId: trip.id, personId: ctx.ownerId, tripRole: "captain" as TripAssignmentRole },
+    ...(ctx.divemasterId
+      ? [
+          {
+            tripId: trip.id,
+            personId: ctx.divemasterId,
+            tripRole: "divemaster" as TripAssignmentRole,
+          },
+        ]
+      : []),
+  ]);
+
+  for (const diver of DEMO_MINIMUM_DIVERS) {
+    const [person] = await db
+      .insert(people)
+      .values({ shopId, ...diver, createdAt: nextCreatedAt() })
+      .returning();
+    if (!person) throw new Error("seed: minimum-seat diver insert returned no row");
+    await db.insert(personRoles).values({ personId: person.id, role: "diver" as const });
+    await db.insert(bookings).values({
+      bookedAs: "diver",
+      shopId,
+      tripId: trip.id,
+      personId: person.id,
+      status: "booked" as const,
+      createdAt: nextCreatedAt(),
+    });
+  }
+}

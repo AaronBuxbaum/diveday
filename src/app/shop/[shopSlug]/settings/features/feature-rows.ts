@@ -1,4 +1,4 @@
-import type { AssistDarkReason } from "@/features/claude";
+import type { AssistDarkReason } from "@/features/ai/claude";
 import type { StaffMessageKey } from "@/i18n/staff-messages";
 import { SHOP_FEATURES, type ShopFeature, type ShopSwitch } from "@/lib/shop-features";
 

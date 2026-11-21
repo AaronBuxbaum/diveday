@@ -8,10 +8,10 @@ import { getBookingPayment, setBookingPayment } from "@/db/payments";
 import type { PaymentStatus } from "@/db/schema";
 import { recordShopActivity } from "@/db/shop-activity";
 import { getShopCurrency } from "@/db/stripe-accounts";
-import { formValue, readForm, text } from "@/features/form-parse";
-import { revalidateAndRedirect } from "@/features/navigation";
-import { paymentMarkFactsForTrip } from "@/features/payment-marks";
-import { requireShopSurface } from "@/features/session";
+import { requireShopSurface } from "@/features/accounts/session";
+import { paymentMarkFactsForTrip } from "@/features/money/payment-marks";
+import { formValue, readForm, text } from "@/features/platform/form-parse";
+import { revalidateAndRedirect } from "@/features/platform/navigation";
 import {
   addsToHeldMoney,
   heldAfterDepositReceipt,

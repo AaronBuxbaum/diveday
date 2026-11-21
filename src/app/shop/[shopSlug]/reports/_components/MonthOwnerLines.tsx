@@ -1,9 +1,9 @@
 import { GroupLabel } from "@/components/ui/group-label";
 import { type WeatherCalls, weatherCallsInWindow } from "@/db/blowouts";
 import type { DbExecutor } from "@/db/client";
-import { leadTimeLines, wholePercent } from "@/features/lead-time";
-import { bookingLeadTimes } from "@/features/reporting";
-import { type SeatsGivenUp, seatsGivenUpInWindow } from "@/features/seats-given-up";
+import { type SeatsGivenUp, seatsGivenUpInWindow } from "@/features/bookings/seats-given-up";
+import { leadTimeLines, wholePercent } from "@/features/reports/lead-time";
+import { bookingLeadTimes } from "@/features/reports/reporting";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { weekdayNames } from "@/lib/format";
 
@@ -96,7 +96,7 @@ export function OwnerLines({
 /**
  * **How far ahead boats sell** (item 34; glossary "Booking lead time"): one
  * line per busy weekday over the last twelve months, quiet until a weekday has
- * the history to say it (`src/features/lead-time/rules.ts`).
+ * the history to say it (`src/features/reports/lead-time.ts`).
  */
 export async function LeadTimes({
   db,

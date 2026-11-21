@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { eq, sql } from "drizzle-orm";
 import { expect, it } from "vitest";
-import { closePricingMonth } from "@/features/pricing-volume";
+import { closePricingMonth } from "@/features/money/pricing-volume";
 import { describePostgres, holdRowLock, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
 import type { AppDb } from "./client";
 import { recordCollectionBalance } from "./collection-ledger";

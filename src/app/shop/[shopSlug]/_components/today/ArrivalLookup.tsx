@@ -1,7 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { LedgerRow } from "@/components/ui/ledger";
 import { ITEM_TITLE_CLASS } from "@/components/ui/typography";
-import type { ArrivalElsewhere, CheckInQueueRow } from "@/features/check-in";
+import type { ArrivalElsewhere, CheckInQueueRow } from "@/features/boarding/check-in";
 import { presenceText } from "@/i18n/presence-labels";
 import { readinessStatusText, readinessStatusTone } from "@/i18n/readiness-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";

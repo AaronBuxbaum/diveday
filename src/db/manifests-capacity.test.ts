@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
-import { markBookingNoShow } from "../features/no-show/store";
+import { markBookingNoShow } from "../features/boarding/no-show";
 import {
   clearAnswers,
   manifestContext,

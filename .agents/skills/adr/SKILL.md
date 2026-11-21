@@ -21,9 +21,12 @@ file — write it.
    incident narrative, measurements and rejected drafts go in the PR, an issue or `docs/`, linked
    from Context. Alternatives get one honest line each; consequences include the escape hatch
    (what triggers revisiting, roughly what leaving costs).
-3. Nothing to index: `node scripts/adr-index.mjs` prints the list when you want it.
+3. Run `node scripts/adr-index.mjs --write`: the README's index gains the row, and
+   `pnpm check:adrs` fails while it is stale. A conflict in that table on a rebase is resolved by
+   taking either side and running the script again.
 4. If the stack changed, update the table in `docs/architecture/overview.md`; if this resolves
    a deferred decision, remove it from that table.
 5. Superseding? New ADR states "Supersedes NNNN"; edit the old one's status line to
-   "Superseded by MMMM" — never rewrite its content.
+   "Superseded by MMMM" — never rewrite its content — and rerun the index script, which reads
+   the successor from that line.
 6. Commit the ADR in the same PR as the change it justifies.

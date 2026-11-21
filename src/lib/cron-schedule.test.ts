@@ -1,8 +1,8 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { BOOKKEEPER_CRON_CRONTAB } from "../features/bookkeeper/rules";
-import { DIETARY_RETENTION_CRONTAB } from "../features/retention/rules";
+import { BOOKKEEPER_CRON_CRONTAB } from "../features/money/bookkeeper/rules";
+import { DIETARY_RETENTION_CRONTAB } from "../features/records/retention/rules";
 import { PRICING_CLOSE_CRONTAB } from "./billing/pricing-plans";
 import {
   DAILY_TICK_CRONTAB,
@@ -162,7 +162,7 @@ describe("the daily tick", () => {
     // - trip-reminders: a reminder lands inside the shop's own daytime, which
     //   no fixed UTC hour does across zones (issue #697; `sendDueReminders`).
     const SUB_DAILY_ALLOWED = new Set([
-      // shop-tick: every shop cadence (src/features/shop-tick), each a promise
+      // shop-tick: every shop cadence (src/features/platform/shop-tick), each a promise
       // a fixed UTC hour cannot keep across zones: the minimum-head-count
       // decision at the moment printed on the booking page (ADR
       // 20260813-minimum-head-count-departures); a reminder inside the shop's
@@ -195,10 +195,10 @@ describe("the daily tick", () => {
   it("keeps the sub-daily routes off the generic notification queue", () => {
     for (const routePath of [
       "src/app/api/cron/shop-tick/route.ts",
-      "src/features/shop-tick/shop-tick.ts",
-      "src/features/shop-tick/minimum-seats.ts",
+      "src/features/platform/shop-tick/shop-tick.ts",
+      "src/features/platform/shop-tick/minimum-seats.ts",
       "src/app/api/cron/wallet-passes/route.ts",
-      "src/features/wallet-pass/store.ts",
+      "src/features/boarding/wallet-pass/store.ts",
     ]) {
       const route = readFileSync(path.join(process.cwd(), routePath), "utf8");
       expect(route).not.toMatch(/sendNotification\b|sendNotificationBatch\b/);

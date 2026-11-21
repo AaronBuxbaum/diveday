@@ -4,7 +4,7 @@ import { useActionState } from "react";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { FormStatus } from "@/components/ui/form";
-import type { CourseFollowupResult } from "@/features/course-pulse";
+import type { CourseFollowupResult } from "@/features/training/course-pulse";
 
 export function CourseFollowupForm({
   action,

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { requestPricingOffer } from "@/features/pricing-offer";
+import { requestPricingOffer } from "@/features/money/pricing-offer";
 import { sharedLinkCard } from "@/lib/marketing";
 
 /** /pricing's metadata, for the configured offer; kept beside the page so the route file stays under its baseline. */

@@ -185,7 +185,7 @@ not an estimate.
   supplied shop but does not prove the trip does. It deletes assignments by `tripId` alone.
   Several child tables and read helpers rely on a parent join rather than carrying or requiring
   `shop_id`, contrary to the repository tenant-row invariant.
-- **Owned paths:** `src/db/trips.ts`, `src/features/reporting/store.ts`, trip-assignment/dive schema and tests,
+- **Owned paths:** `src/db/trips.ts`, `src/features/reports/reporting/store.ts`, trip-assignment/dive schema and tests,
   relevant actions, migration, architecture documentation if the tenant-row rule is refined.
 - **Acceptance criteria:**
   - every trip-child read/write proves the parent trip belongs to the session shop in the same
@@ -239,7 +239,7 @@ not an estimate.
 - **Why PR review should have caught it:** cold start checks for any shop and then seeds without a
   transaction, advisory lock, or conflict-safe inserts. Concurrent first requests can race, and a
   rejected memoized initialization promise poisons that process instance.
-- **Owned paths:** `src/db/client.ts`, `src/db/seed.ts`, bootstrap tests.
+- **Owned paths:** `src/db/client.ts`, `src/db/seed/index.ts`, bootstrap tests.
 - **Acceptance criteria:**
   - bootstrap is serialized or fully idempotent around the canonical demo shop;
   - a failed initialization clears the memoized promise so a later request can retry;

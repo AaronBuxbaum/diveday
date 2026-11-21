@@ -416,7 +416,7 @@ describe("the fee comparison labels its figures as sourced estimates", () => {
  * true of what a shop would *carry somewhere else*, and not true of the export
  * bundle, which also withholds retry queues, provider linkage, DiveDay's own
  * reconciliation ledgers and the buddy-team trail (the
- * `EXCLUDED_TABLES` list pinned by src/db/export.test.ts, and the real Settings
+ * `EXCLUDED_TABLES` list pinned by src/db/export/index.test.ts, and the real Settings
  * screen's own "Not included, on purpose:" line, which names all of it).
  *
  * So the mockup — which mirrors that Settings screen element for element, and

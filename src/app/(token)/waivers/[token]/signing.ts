@@ -14,9 +14,9 @@ import {
   refuseSignedElsewhere,
   type WaiverKey,
 } from "@/db/waivers";
-import { formValue, parseForm } from "@/features/form-parse";
-import { revalidateAndRedirect } from "@/features/navigation";
-import { sendGuardianReleaseCopy } from "@/features/waiver-guardian-copy";
+import { formValue, parseForm } from "@/features/platform/form-parse";
+import { revalidateAndRedirect } from "@/features/platform/navigation";
+import { sendGuardianReleaseCopy } from "@/features/waivers/waiver-guardian-copy";
 import { requestFirstHandLocale } from "@/i18n/request";
 import { trackEvent } from "@/lib/analytics";
 import { nowDate } from "@/lib/clock";

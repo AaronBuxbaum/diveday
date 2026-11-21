@@ -4,15 +4,14 @@ import { z } from "zod";
 import { canPersonManageBilling } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { getShopById } from "@/db/shops";
+import { requireStaffSession } from "@/features/accounts/session";
 import {
   billingConfigFromEnvironment,
   billingProviderFromEnvironment,
   checkoutLines,
   percentBillingFromEnvironment,
-} from "@/features/billing";
-import { parseForm } from "@/features/form-parse";
-import { pricingConfig } from "@/features/pricing-flags";
-import { requireStaffSession } from "@/features/session";
+} from "@/features/money/billing";
+import { pricingConfig } from "@/features/money/pricing-flags";
 import {
   ensureShopBillingCustomer,
   getShopSubscription,
@@ -20,8 +19,9 @@ import {
   recordShopCheckoutSession,
   shopPricing,
   snapshotShopPricing,
-} from "@/features/shop-subscriptions";
-import { trialEndsAt } from "@/features/trial";
+} from "@/features/money/shop-subscriptions";
+import { parseForm } from "@/features/platform/form-parse";
+import { trialEndsAt } from "@/features/shop-setup/trial";
 import { freeTimeEndsAt } from "@/lib/billing/standing";
 import { nowDate } from "@/lib/clock";
 import { publicAppUrl } from "@/lib/notifications";

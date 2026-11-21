@@ -33,7 +33,7 @@ describe("classifyTestFile", () => {
 
   it("preserves the registered database project's isolation after relocation", () => {
     const source = `import { seededShopContext } from "${FIXTURE}";`;
-    const moved = "src/features/availability/store.test.ts";
+    const moved = "src/features/bookings/availability/store.test.ts";
     for (const file of [
       moved,
       `${ROOT}/${moved}`,

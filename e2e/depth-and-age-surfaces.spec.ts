@@ -54,7 +54,7 @@ test.describe("staff", () => {
     await page.goto(`${tripPath}`);
 
     // The seed gives one diver on this trip a date of birth putting them at 13
-    // (src/db/seed.ts), so the roster carries the manifest's "Minor · age N"
+    // (src/db/seed/index.ts), so the roster carries the manifest's "Minor · age N"
     // badge, the capsule being the word alone. An adult's age waits in the
     // row's reference panel; the minor's is the one the crew acts on (H-20260730-minimum-age-gate-data).
     await rosterRow(page, "Lena Fischer");

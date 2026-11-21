@@ -38,7 +38,7 @@ example.
 `fakes.ts` the providers, `staff-session.ts` a signed-in staff member, `frozen-clock.ts` the
 clock, `source.ts` the tree a guard walks. Reuse an existing scenario helper in `src/test/` when
 it matches the case; otherwise insert the minimal rows through the real database and schema.
-For cross-tenant coverage, `src/db/export.test.ts` inserts a rival shop and person, then proves
+For cross-tenant coverage, `src/db/export/index.test.ts` inserts a rival shop and person, then proves
 each export contains only its own rows. There is no shared `factories.ts` interface.
 
 **A rule over source is a guard.** A test that reads files to assert a rule lives in `check:repo`
@@ -192,9 +192,9 @@ What a diff runs is decided by reading it, at two places:
   modules that name it, a `public/` asset to the code that names its path, and picks the captures
   that visit those routes plus a fixed smoke set; an edit inside an `e2e/visual-*.spec.ts` or a capture
   helper picks the captures it touched. A schema edit is followed from the tables it changes to the
-  modules that read them, and a seed scenario's (`src/db/seed-<scenario>.ts`) from the tables it
+  modules that read them, and a seed scenario's (`src/db/seed/<scenario>.ts`) from the tables it
   writes, never through a seed module (the demo action that runs the seed is on every public page).
-  It captures everything for the capture harness, the seed's orchestrator (`src/db/seed.ts`), the
+  It captures everything for the capture harness, the seed's orchestrator (`src/db/seed/index.ts`), the
   catalog seed, a stylesheet, a root config or renderer dependency, a module every page runs (the
   proxy, the service worker), and its own plumbing (`ci.yml`, the setup action, these scripts).
   **A pull request captures light mode only** (`--light-only`, 2026-10-24: dark was 339 of 836
@@ -549,7 +549,7 @@ the last of which is the surprising one:
   transaction on a failed statement (`current transaction is aborted, commands ignored until end of
   transaction block`, 25P02), so every line after an expected `.rejects.toThrow()` fails too — or
   worse, a second expected refusal passes for the wrong reason. In autocommit only the failing
-  statement fails. `src/features/divers/store.test.ts`'s erasure test and `src/features/shop-subscriptions/store.test.ts`'s
+  statement fails. `src/features/people/divers/store.test.ts`'s erasure test and `src/features/money/shop-subscriptions.test.ts`'s
   two "another shop holds this Stripe id" tests take their own for this reason.
 
 `fileScopedEmptyContext()` is the empty counterpart for pure report projections that insert
@@ -608,7 +608,7 @@ named, and all picked up by that glob rather than by a list anyone has to rememb
 | `promo-caps.postgres.test.ts` | The last use of a capped code goes to exactly one of two checkouts |
 | `waitlist.postgres.test.ts` | One diver joining a full departure's wait list twice at once leaves one person and one entry |
 | `tips.postgres.test.ts` | One booking tipping twice at once asks Stripe for one session |
-| `src/features/calendar-sync/feed-leaving.postgres.test.ts` | A calendar feed issued while its holder is removed or demoted: either order leaves no live feed the holder no longer earns, because all three take the staffer's `people` row lock (#3996, #4012) |
+| `src/features/crew-and-boats/calendar-sync/feed-leaving.postgres.test.ts` | A calendar feed issued while its holder is removed or demoted: either order leaves no live feed the holder no longer earns, because all three take the staffer's `people` row lock (#3996, #4012) |
 | `postgres-harness.postgres.test.ts` | The harness itself: finishing a test never terminates a connection that is still alive, and an unreleased `holdRowLock` gate does not hang teardown |
 
 A new suite needs no wiring beyond the name: write `src/db/<thing>.postgres.test.ts` against
@@ -790,7 +790,7 @@ the acceptance evidence is reviewed and the trial lands (or is reverted for fail
   imports `test`/`expect` from `e2e/fixtures.ts`, not `@playwright/test` directly — the fixtures
   point each worker at its own server and reset the demo shop's schedule (`POST /api/test/reset`)
   before each test. A server's first reset is a real `resetDemoSchedule` and copies what it wrote;
-  every later one runs the delete half and replays that copy (`src/features/demo-reset-snapshot/store.ts`, ADR
+  every later one runs the delete half and replays that copy (`src/features/demo/demo-reset-snapshot.ts`, ADR
   20261024-e2e-reset-replays-a-snapshot); the demos earlier tests minted are deleted the same way,
   foreign-key checks settled by set (ADR 20261120-e2e-purge-settles-by-set), and says in a
   `Server-Timing` header how it was served and what it cost. Iterating on a
@@ -811,7 +811,7 @@ the acceptance evidence is reviewed and the trial lands (or is reverted for fail
 - **Every `/api/test/*` route is guarded, and that is enforced.** The harness's own endpoints
   (`reset`, `depart-trip`, plus the `seed-*` routes) reset and seed state and mint real tokens — `seed-account-token`
   hands back a valid password-reset or invite token for any account by email — so each handler must
-  open with `e2eTestRouteAuthorized(request)` (`src/features/e2e-test-routes/rules.ts`: env predicate plus a
+  open with `e2eTestRouteAuthorized(request)` (`src/features/platform/e2e-test-routes/rules.ts`: env predicate plus a
   `DIVEDAY_E2E_SECRET` bearer token, failing closed). `pnpm check:e2e-fixtures` fails when a handler
   under `src/app/api/test/**` doesn't call it, and each route carries auth-gate unit tests asserting
   the refusal lands before any database work. A route that writes to a shop reaches it through

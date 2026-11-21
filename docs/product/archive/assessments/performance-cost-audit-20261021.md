@@ -247,9 +247,9 @@ Existing safeguards worth preserving:
 - `src/db/people-fk-indexes.test.ts:14-69` deliberately indexes high-volume person FKs and
   ratchets others. Its 113 ceiling is a documented write-cost tradeoff, not 113 proven missing
   indexes to add blindly.
-- Export reads use a read-only repeatable-read transaction (`src/db/export.ts:114-144`), while
+- Export reads use a read-only repeatable-read transaction (`src/db/export/index.ts:114-144`), while
   import fetches remote evidence before its transaction and bounds fetch concurrency
-  (`src/features/import/store.ts:117-151`). Keep both properties.
+  (`src/features/records/import/store.ts:117-151`). Keep both properties.
 - Backups have deterministic object keys, outcome reporting, a census, and an independent
   watchdog. Integration dispatch has an atomic claim, idempotency, retry caps, stale-processing
   recovery, provider timeouts, and first-attempt dispatch after writes. These mechanisms exist.
@@ -259,7 +259,7 @@ Existing safeguards worth preserving:
 ### DB-01 — Platform backup has no progress checkpoint and can starve later shops (P1)
 
 **Confirmed code; impact conditional on total estate backup time.**
-`src/features/backup-export/platform-backup.ts:94-103` lists all real shops in ascending
+`src/features/records/backup-export/platform-backup.ts:94-103` lists all real shops in ascending
 `createdAt,id` order. `src/app/api/cron/platform-backup/route.ts:120-124` skips all remaining
 shops once 240 seconds pass; it never persists a cursor, per-period completed set, or resume
 job. Each weekly run starts again at the beginning. If the first shops consistently consume
@@ -277,8 +277,8 @@ Compare last successful backup age per shop, not just latest bucket write. Effor
 ### DB-02 — Export/backup memory and photo fan-out are unbounded (P1)
 
 **Confirmed code; resource failure threshold needs measurement.**
-`src/db/export.ts:273` and its table readers materialize the whole shop.
-`src/features/backup-export/bundle.ts:53-79` retains bundle input, all photo bytes, generated
+`src/db/export/index.ts:273` and its table readers materialize the whole shop.
+`src/features/records/backup-export/bundle.ts:53-79` retains bundle input, all photo bytes, generated
 files, and the zip result. `src/lib/export.ts:430-435` synchronously compresses everything
 with `zipSync`. `src/lib/export.ts:467-485` launches a fetch for every unique managed photo
 in one `Promise.all` and reads each full `arrayBuffer`. The ten-second per-photo timeout
@@ -296,12 +296,12 @@ concurrent exports. Effort S for fetch limits, L for streaming snapshot job.
 
 ### DB-03 — Settings counts sometimes build the entire export (P2)
 
-**Confirmed code.** `src/db/export.ts:1165-1187` promises counts without data materialization,
+**Confirmed code.** `src/db/export/index.ts:1165-1187` promises counts without data materialization,
 but any shop with a rehearsal trip takes `loadShopExportBundleInput` and counts the resulting
 tables' rows. A shop that used rehearsal functionality makes a metadata/settings request
 scale with all retained customer, transaction, and operational data. No photo fetch occurs in
 this path, but the DB reads and in-memory CSV input assembly still occur. The ordinary branch
-also awaits numerous counts one by one (`src/db/export.ts:1190` onward).
+also awaits numerous counts one by one (`src/db/export/index.ts:1190` onward).
 
 **Change:** reuse the export scope/exclusion predicates in count-only SQL so rehearsals are
 excluded identically without loading full rows. Batch or use limited concurrent independent
@@ -312,7 +312,7 @@ backend optimization because it changes no exported data contract.
 ### DB-04 — Retention's deadline is checked after a whole round, not each batch (P1)
 
 **Confirmed control flow; failure requires slow batch/large backlog.**
-`src/features/retention/store.ts:448-456` runs every pending table's `pruneBatch` before checking the
+`src/features/records/retention/store.ts:448-456` runs every pending table's `pruneBatch` before checking the
 45-second budget; the route ceiling is 60 seconds (`src/app/api/cron/retention/route.ts:17`).
 If the budget expires on the first table, all remaining tables still execute. The documented
 reserve for one in-flight batch is therefore not enforced. A killed run can lose its summary
@@ -328,11 +328,11 @@ fair progress. Preserve retention policy values. Effort M.
 ### DB-05 — Dietary-note retention falls outside the backlog machinery (P1)
 
 **Confirmed code; privacy/backlog risk conditional on volume or errors.**
-`src/features/retention/store.ts:98-124` clears at most one 5,000-row batch;
-`src/features/retention/store.ts:458-463` invokes it once after the main draining loop. Its failures are
+`src/features/records/retention/store.ts:98-124` clears at most one 5,000-row batch;
+`src/features/records/retention/store.ts:458-463` invokes it once after the main draining loop. Its failures are
 logged but not included in `failedTables`; its limit has no `capped` outcome. The route runs
 weekly (`src/app/api/cron/retention/route.ts:37`), although dietary test/comments describe a
-nightly pass. `src/features/retention/rules.ts:477` sets a 30-day cutoff. More than 5,000 newly expired
+nightly pass. `src/features/records/retention/rules.ts:477` sets a 30-day cutoff. More than 5,000 newly expired
 notes/week makes a growing backlog that the normal capped-table alarms do not describe.
 Even without backlog, weekly scheduling means cutoff enforcement can lag by almost a week.
 This is a policy/implementation alignment question, not permission to shorten retention.
@@ -346,9 +346,9 @@ oldest uncleared eligible note and alert on an overdue backlog. Effort M; privac
 
 **Confirmed arithmetic; degradation occurs during slow provider responses.**
 `src/app/api/cron/integrations/route.ts:12,67` allows 300 seconds and asks for 50 deliveries.
-`src/features/integrations/dispatcher.ts:74` processes them sequentially, with no overall
+`src/features/shop-setup/integrations/dispatcher.ts:74` processes them sequentially, with no overall
 elapsed-time budget. Zapier's per-call timeout is 15 seconds
-(`src/features/integrations/zapier.ts:16,73`): 50 timed-out calls alone need 750 seconds, before
+(`src/features/shop-setup/integrations/zapier.ts:16,73`): 50 timed-out calls alone need 750 seconds, before
 DB work. QuickBooks can require multiple provider calls. The per-call timeout prevents one
 infinite wait, but does not make the pass fit. The write path similarly requests ten items
 inside the originating invocation (`dispatch-on-write.ts:17,33`). Claims and stale-processing
@@ -364,9 +364,9 @@ increasing polling. Effort M.
 
 ### DB-07 — Recap jobs hydrate already-sent work and fan out per departure (P2)
 
-**Confirmed unnecessary work.** `src/features/recap/store.ts:1656-1666` obtains `alreadySent`, but
-`src/features/recap/store.ts:1678-1720` then fetches executed dives and recent dive days per distinct
-candidate trip before `src/features/recap/store.ts:1739` skips those bookings. Repeated hourly runs
+**Confirmed unnecessary work.** `src/features/after-the-dive/recap/store.ts:1656-1666` obtains `alreadySent`, but
+`src/features/after-the-dive/recap/store.ts:1678-1720` then fetches executed dives and recent dive days per distinct
+candidate trip before `src/features/after-the-dive/recap/store.ts:1739` skips those bookings. Repeated hourly runs
 recompute fly-safe facts for recaps that will not be sent. `rows.filter` inside each trip
 iteration also creates O(trips × candidate bookings) application work; `Promise.all` submits
 all trip hydration at once. For a large lookback this consumes pool queue, CPU, and DB reads
@@ -382,8 +382,8 @@ Effort M; two safety reviews for any change affecting eligibility/fly-safe input
 ### DB-08 — All-shop reminder/recap sweeps have no durable page boundary (P2)
 
 **Confirmed growth pattern, not a current outage.**
-`src/features/reminders/store.ts:377-427` loads every booking within a cross-shop horizon, then builds a
-single `IN` list of all booking IDs. `src/features/recap/store.ts:1597-1666` follows the same pattern over
+`src/features/messages/reminders.ts:377-427` loads every booking within a cross-shop horizon, then builds a
+single `IN` list of all booking IDs. `src/features/after-the-dive/recap/store.ts:1597-1666` follows the same pattern over
 its lookback. Time windows and indexes constrain age but not number of shops/seats. Current
 batch sending helps provider throughput but does not bound candidate memory/query parameters,
 processing duration, or fair progress if one invocation cannot finish the window.
@@ -396,9 +396,9 @@ messages so idle repeat scans are visible. Effort M/L.
 
 ### DB-09 — Weekly digest computes the expensive Today graph twice (P2)
 
-**Confirmed duplication.** `src/features/weekly-digest/store.ts:305-323` calls `getTodayWork` twice with
+**Confirmed duplication.** `src/features/reports/weekly-digest/store.ts:305-323` calls `getTodayWork` twice with
 only `includeOpsAlerts` different. Both share readiness evidence, which is good, but each
-runs the main Today wave (`src/features/today/today-reader.ts:1655-1800`), including common roll-call, boat-work,
+runs the main Today wave (`src/features/day/today/today-reader.ts:1655-1800`), including common roll-call, boat-work,
 waitlist, staffing, reviews, inbox, and equipment reads. This runs inside a cron, so React
 request-cache assumptions should not be used to claim cross-call deduplication.
 
@@ -411,10 +411,10 @@ copies run faster in parallel. Effort M.
 ### DB-10 — Monthly reporting has a long serial query chain; year CSV multiplies it (P2)
 
 **Confirmed statement structure; latency benefit needs a real Postgres measurement.**
-`src/features/reporting/store.ts:263-665` awaits at least fourteen top-level reads one after another for
+`src/features/reports/reporting/store.ts:263-665` awaits at least fourteen top-level reads one after another for
 one report (trip spine, waiver totals, multiple money sources, tips/referrals/types). Many
 share only the input scope and can be independent. `getYearMonthInputs` at
-`src/features/reporting/store.ts:979-986` fans monthly reports out, multiplying statements over the season
+`src/features/reports/reporting/store.ts:979-986` fans monthly reports out, multiplying statements over the season
 and competing for the pool. The separate money reads are intentional to prevent join
 multiplication; merging all money into one naive join would corrupt revenue.
 
@@ -553,11 +553,11 @@ resource ownership in source; browser memory/timing impact was not measured.
 
 This is not a speculative optimization. While examining the map lifecycle, the audit found an unsafe
 HTML sink. `src/app/shop/[shopSlug]/dive-sites/page.tsx:129-140` passes persisted `site.name` and
-`site.locationName` into `SiteMap`. `src/features/dive-sites/rules.ts:91-96` validates string lengths and trims,
+`site.locationName` into `SiteMap`. `src/features/sites/dive-sites/rules.ts:91-96` validates string lengths and trims,
 but does not reject HTML metacharacters. `src/components/map/SiteMap.tsx:143` interpolates `pin.name`
 inside an HTML attribute, `:163-170` constructs and passes popup HTML containing name/subtitle/href,
 and `:125` interpolates the shop name. React escaping does not protect strings passed directly to
-Leaflet. The CSP explicitly keeps `unsafe-inline` (`src/features/content-security-policy/rules.ts:52-57`).
+Leaflet. The CSP explicitly keeps `unsafe-inline` (`src/features/platform/content-security-policy.ts:52-57`).
 
 Confirmed: user-provided text reaches an HTML parser without escaping. A stored-XSS exploit has not
 been executed in a browser in this audit. Use DOM nodes with `textContent` and explicit safe
@@ -753,7 +753,7 @@ usage-based, not the report's mandatory $19 base.
 
 If the production project has that Free allowance, it can exhaust its 100-hour allowance before
 this warning reaches 120. Actual production plan was not read, so an imminent outage is not
-established. In addition, `src/features/usage/neon.ts:113-125,143-175` requests org consumption and sums
+established. In addition, `src/features/platform/usage/neon.ts:113-125,143-175` requests org consumption and sums
 all projects. A per-project quota cannot be safely evaluated using an org-wide total. Monthly
 GiB-months (`cost-guardrails.ts:155-167`) likewise do not establish headroom against a current-size
 storage limit.
@@ -786,7 +786,7 @@ remain authoritative; switching every message to the cheapest channel is not a s
 
 **P2; confirmed missing application-level deadline; outage cost requires failure injection.**
 
-`src/features/log-shipping/cloudwatch.ts:165-195` sets `maxAttempts: 2` but does not set an application
+`src/features/platform/log-shipping/cloudwatch.ts:165-195` sets `maxAttempts: 2` but does not set an application
 request deadline, abort signal, or explicit handler timeouts. `drain()` awaits create-stream and
 PUT sequentially (`:269-293`); `flushLogs()` waits for a previous flush (`:314-320`). The breaker
 counts completed failures (`:209-228`), so a transport that stalls without rejecting does not

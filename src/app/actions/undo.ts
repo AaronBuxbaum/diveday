@@ -1,14 +1,14 @@
 "use server";
 
 import { notFound } from "next/navigation";
-import { formFields } from "@/features/form-parse";
-import { requireShopSurface } from "@/features/session";
-import { readUndoOffer } from "@/features/undo";
+import { requireShopSurface } from "@/features/accounts/session";
+import { formFields } from "@/features/platform/form-parse";
+import { readUndoOffer } from "@/features/platform/undo";
 import { takeBack } from "./undo-registry";
 
 /**
  * **The one Undo** (issue #2764): every land-then-undo toast posts here, with
- * the offer its removal landed with (`src/features/undo/rules.ts`) as hidden fields.
+ * the offer its removal landed with (`src/features/platform/undo.ts`) as hidden fields.
  *
  * The slug is bound by the page, so it is checked against the session first
  * (`requireShopSurface`, a 404 for a shop that is not this staffer's). The

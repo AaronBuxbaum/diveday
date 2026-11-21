@@ -9,7 +9,7 @@ import {
 } from "@/app/actions/passkeys";
 import { buttonClass } from "@/components/ui/button";
 import { FormStatus } from "@/components/ui/form";
-import { browserSupportsPasskeys } from "@/features/passkeys";
+import { browserSupportsPasskeys } from "@/features/accounts/passkeys";
 
 export function PasskeyAuthentication({
   label,

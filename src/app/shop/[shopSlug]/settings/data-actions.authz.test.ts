@@ -10,7 +10,7 @@ import {
   seededStaffPersonId,
   staffSession,
 } from "@/test/staff-session";
-import { recordProcessorErasureObligations } from "../../../../features/processor-erasure/store";
+import { recordProcessorErasureObligations } from "../../../../features/records/processor-erasure";
 
 /**
  * The two processor-erasure actions are owner-only (`canPersonErasePersonalData`),
@@ -32,20 +32,20 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
 });
-vi.mock("../../../../features/session/rules", async () =>
+vi.mock("../../../../features/accounts/session", async () =>
   (await import("@/test/staff-session")).sessionMockOverStaffSession(),
 );
 // Never reach Stripe: a refused retry must not call it, and an allowed one is
 // not what this file proves.
-vi.mock("../../../../features/processor-erasure/store", async (importOriginal) => {
+vi.mock("../../../../features/records/processor-erasure", async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import("../../../../features/processor-erasure/store")>();
+    await importOriginal<typeof import("../../../../features/records/processor-erasure")>();
   return { ...actual, retryProcessorErasure: vi.fn(actual.retryProcessorErasure) };
 });
 
 const { getDb } = await import("@/db/client");
-const { requireStaffSession } = await import("../../../../features/session/rules");
-const { retryProcessorErasure } = await import("../../../../features/processor-erasure/store");
+const { requireStaffSession } = await import("../../../../features/accounts/session");
+const { retryProcessorErasure } = await import("../../../../features/records/processor-erasure");
 const { dischargeProcessorErasureAction, retryProcessorErasureAction } = await import(
   "./data-actions"
 );

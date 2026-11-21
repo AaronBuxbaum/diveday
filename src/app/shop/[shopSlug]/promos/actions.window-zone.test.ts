@@ -30,11 +30,11 @@ vi.mock("@/db/shop-promos", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/shop-promos")>();
   return { ...actual, createShopPromoCode: vi.fn(async () => ({ ok: true }) as const) };
 });
-vi.mock("../../../../features/session/rules", () => ({ requireStaffSession: vi.fn() }));
+vi.mock("../../../../features/accounts/session", () => ({ requireStaffSession: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
 const { createShopPromoCode } = await import("@/db/shop-promos");
-const { requireStaffSession } = await import("../../../../features/session/rules");
+const { requireStaffSession } = await import("../../../../features/accounts/session");
 const { createPromoAction } = await import("./actions");
 
 function promoForm(window: Record<string, string>) {

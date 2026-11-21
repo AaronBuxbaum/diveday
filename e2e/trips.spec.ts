@@ -41,7 +41,7 @@ test("the public schedule lists seeded trips with capacity states, a month rail,
   const tripList = page.getByRole("list", { name: "Upcoming trips" });
   await expect(tripList.getByText("3 seats", { exact: true })).toHaveCount(1); // 11 of 14 booked, two of them not diving
   // The sold-out wreck trip, and the weekly Saturday run sold out on its next
-  // date (src/db/seed-booth.ts).
+  // date (src/db/seed/booth.ts).
   await expect(
     tripList.getByText(
       diverTranslator("en-US")("schedule.filters.partySeats", { count: 0, party: 1 }),
@@ -264,7 +264,7 @@ test.describe("trip pulse", () => {
     expect(shopWide).toBeGreaterThan(1);
 
     // The seed puts one open invoice on this departure
-    // (src/db/seed-open-invoice.ts); Orders narrows to it by `tripId`.
+    // (src/db/seed/open-invoice.ts); Orders narrows to it by `tripId`.
     await page.goto(`/shop/blue-mantis/orders?status=open&range=all&tripId=${tripId}`);
     // Narrowed, and it says so with the departure's own name rather than
     // leaving a staffer to wonder which boat an empty list is about.

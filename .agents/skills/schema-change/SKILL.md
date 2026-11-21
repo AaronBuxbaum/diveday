@@ -19,7 +19,7 @@ questions — read the schema module.
 2. **Generate the migration**: `pnpm db:generate` (drizzle-kit will prompt a name via
    `--name=<kebab-slug>` — always name it). Review the generated SQL once — you are the only
    reviewer there will be.
-3. **Update `src/db/seed.ts`** if dev/e2e needs rows in the new table — e2e boots from the seed,
+3. **Update `src/db/seed/index.ts`** if dev/e2e needs rows in the new table — e2e boots from the seed,
    so an unseeded feature is an untested feature.
 4. **Test against the new schema.** Unit/integration tests boot PGlite from the committed
    migration chain via `createTestDb()` — the column exists as soon as the migration does.

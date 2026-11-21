@@ -73,7 +73,7 @@ describe("GET /s/[shopSlug]/availability.json", () => {
 
   it("names no person anywhere in the document", async () => {
     const text = await (await call("blue-mantis")).text();
-    // The seeded cast (src/db/seed-cast.ts) is what the fixture's bookings are
+    // The seeded cast (src/db/seed/cast.ts) is what the fixture's bookings are
     // made of; none of them may reach a document the whole internet can read.
     for (const name of ["Adaeze", "Nwosu", "Marcus", "Keiko", "@"]) {
       expect(text, `document carries "${name}"`).not.toContain(name);

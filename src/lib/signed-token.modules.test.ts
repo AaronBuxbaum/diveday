@@ -51,7 +51,7 @@ describe("modules still mint and verify the tokens they always did", () => {
   });
 
   it("buddy referrals", async () => {
-    const m = await import("../features/buddy-tokens/rules");
+    const m = await import("../features/bookings/buddy-tokens");
     expect(m.buddyReferralId(BOOKING)).toBe(MINTED.buddy);
     expect(m.bookingIdFromBuddyReferral(MINTED.buddy)).toBe(BOOKING);
     expect(m.bookingIdFromBuddyReferral(`${MINTED.buddy.slice(0, -1)}A`)).toBeNull();
@@ -85,7 +85,7 @@ describe("modules still mint and verify the tokens they always did", () => {
   });
 
   it("course preview", async () => {
-    const m = await import("../features/course-preview-gate/rules");
+    const m = await import("../features/training/course-preview-gate");
     const now = 1_800_000_000_000;
     expect(m.signCoursePreview("shop", "course", now)).toBe(MINTED.preview);
     expect(m.coursePreviewIsValid(MINTED.preview, "shop", "course", now)).toBe(true);
@@ -96,7 +96,7 @@ describe("modules still mint and verify the tokens they always did", () => {
   });
 
   it("today catch-up", async () => {
-    const m = await import("../features/today-catch-up-token/rules");
+    const m = await import("../features/day/today-catch-up-token");
     expect(m.signTodayCatchUp(CATCH_UP_SCOPE, [BOOKING])).toBe(MINTED.catchUp);
     expect(m.verifyTodayCatchUp(MINTED.catchUp, CATCH_UP_SCOPE)).toEqual([BOOKING]);
     expect(m.verifyTodayCatchUp(`${MINTED.catchUp.slice(0, -1)}é`, CATCH_UP_SCOPE)).toBeNull();
@@ -104,7 +104,7 @@ describe("modules still mint and verify the tokens they always did", () => {
   });
 
   it("schedule move result", async () => {
-    const m = await import("../features/schedule-move-result/rules");
+    const m = await import("../features/trips/schedule-move-result");
     expect(m.signScheduleMoveResult("shop", BOOKING, 2)).toBe(MINTED.move);
     expect(m.verifyScheduleMoveResult(MINTED.move, "shop")).toEqual({
       id: BOOKING,
@@ -116,7 +116,7 @@ describe("modules still mint and verify the tokens they always did", () => {
   });
 
   it("demo seat", async () => {
-    const m = await import("../features/demo-seat/rules");
+    const m = await import("../features/demo/demo-seat");
     const now = 1_800_000_000_000;
     expect(m.isDemoSeatFor(MINTED.seat, "shop", now)).toBe(true);
     expect(m.isDemoSeatFor(MINTED.seat, "other", now)).toBe(false);
@@ -125,7 +125,7 @@ describe("modules still mint and verify the tokens they always did", () => {
   });
 
   it("quiet demo device", async () => {
-    const m = await import("../features/quiet-demo-device/rules");
+    const m = await import("../features/demo/quiet-demo-device");
     expect(m.quietDemoToken(QUIET_ENV)).toBe(MINTED.quiet);
     expect(m.isQuietDemoDevice(MINTED.quiet, QUIET_ENV)).toBe(true);
     expect(m.isQuietDemoDevice(`${MINTED.quiet.slice(0, -1)}é`, QUIET_ENV)).toBe(false);

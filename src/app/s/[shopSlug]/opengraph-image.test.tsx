@@ -17,7 +17,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("@/db/client", () => ({ getDb: mocks.getDb }));
 vi.mock("@/db/shops", () => ({ getShopBySlug: mocks.getShopBySlug }));
-vi.mock("../../../features/og-rasterizer/rules", () => ({
+vi.mock("../../../features/public-site/og-rasterizer", () => ({
   allowSvgRasterization: mocks.allowSvgRasterization,
 }));
 

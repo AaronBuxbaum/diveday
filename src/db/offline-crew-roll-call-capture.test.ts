@@ -2,15 +2,15 @@ import { afterAll, beforeAll, expect, it, vi } from "vitest";
 import {
   buildOfflineManifestCopies,
   readOfflineManifestRosterWithWindows,
-} from "@/features/offline-manifest-snapshots";
-import { listRollCallGaps } from "@/features/roll-call-gaps";
-import { getDayCloseout } from "@/features/today/closeout-reader";
+} from "@/features/boarding/offline-manifest-snapshots";
+import { listRollCallGaps } from "@/features/boarding/roll-call-gaps";
+import { getDayCloseout } from "@/features/day/today/closeout-reader";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { getTripManifest, recordCrewRollCall, recordRollCall } from "./manifests";
 import { crewSubject } from "./roll-call-subject";
 import { boats } from "./schema";
-import { seedRollCallEvidence } from "./seed-roll-call-evidence";
+import { seedRollCallEvidence } from "./seed/roll-call-evidence";
 import { editTripSection, getTripRoster, listStaff } from "./trips";
 import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 

@@ -23,7 +23,7 @@ import { fileURLToPath } from "node:url";
  * And one for the harness's server-side half:
  *
  * 3. Every HTTP handler under `src/app/api/test/**` must call
- *    `e2eTestRouteAuthorized(request)` (`src/features/e2e-test-routes/rules.ts`). These
+ *    `e2eTestRouteAuthorized(request)` (`src/features/platform/e2e-test-routes/rules.ts`). These
  *    routes exist only so the Playwright fleet can reset and seed state, and
  *    they do things no deployment may ever expose: the `accountToken` fact on
  *    `shop` mints a valid password-reset/invite token for any account by email,
@@ -53,7 +53,7 @@ import { fileURLToPath } from "node:url";
  *    one, so a nested `reset` cannot inherit the exemption below.
  * 5. Every file under `src/app/api/test/**` that reaches a shop — resolves one
  *    by slug, takes a `shopSlug`, or reads or writes `shops` — must call
- *    `requireDemoTenant(` (`src/features/e2e-test-routes/rules.ts`, issue #2751), or be
+ *    `requireDemoTenant(` (`src/features/platform/e2e-test-routes/rules.ts`, issue #2751), or be
  *    in `SHOP_READERS_BY_DESIGN` with the reason it is safe without. A route
  *    that resolved a caller's slug and wrote to it with no demo check was
  *    seven routes deep before this existed (security review, 2026-11-02).
@@ -149,7 +149,7 @@ export function shopReadersWithoutDemoGate(files) {
 
 const HTTP_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE"];
 const guardImportPattern =
-  /import\s*\{[^}]*\be2eTestRouteAuthorized\b[^}]*\}\s*from\s*["']@\/features\/e2e-test-routes["']/;
+  /import\s*\{[^}]*\be2eTestRouteAuthorized\b[^}]*\}\s*from\s*["']@\/features\/platform\/e2e-test-routes["']/;
 // Route handlers are the module's top-level named exports, so anchor to the
 // start of a line: `export async function POST(`, `export function GET(`, or
 // `export const DELETE = `.
@@ -207,7 +207,7 @@ async function checkTestRouteGuards() {
     const contents = await readFile(path.join(ROOT, relativePath), "utf8");
     if (!hasTestRouteGuardImport(contents)) {
       problems.push(
-        `${relativePath}: does not import e2eTestRouteAuthorized from @/features/e2e-test-routes`,
+        `${relativePath}: does not import e2eTestRouteAuthorized from @/features/platform/e2e-test-routes`,
       );
       continue;
     }

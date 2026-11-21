@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { acknowledgeFlySafeFollowUp } from "@/db/fly-safe-correction";
-import { requireShopSurface } from "@/features/session";
+import { requireShopSurface } from "@/features/accounts/session";
 import { shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 

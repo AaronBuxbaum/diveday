@@ -7,9 +7,16 @@ import { canPersonManageWaiverTemplates } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { createCourseForm, deleteCourseForm, recordCourseFormVersion } from "@/db/course-forms";
 import { recordWaiverTemplate, standingWaiverExposure } from "@/db/waivers";
-import { blankAsAbsent, formValue, parseForm, readForm, single, text } from "@/features/form-parse";
-import { revalidateAndRedirect } from "@/features/navigation";
-import { requireStaffSession } from "@/features/session";
+import { requireStaffSession } from "@/features/accounts/session";
+import {
+  blankAsAbsent,
+  formValue,
+  parseForm,
+  readForm,
+  single,
+  text,
+} from "@/features/platform/form-parse";
+import { revalidateAndRedirect } from "@/features/platform/navigation";
 import {
   COURSE_FORM_BODY_MAX,
   COURSE_FORM_BODY_MIN,

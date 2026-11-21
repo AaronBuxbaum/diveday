@@ -4,7 +4,7 @@ import { requestCrewAssignment } from "../../db/crew-requests";
 import { DEV_STAFF_LOGINS } from "../../db/dev-credentials";
 import { bookings, people, personRoles, tripAssignments, trips } from "../../db/schema/index";
 import { seatNotCancelled } from "../../db/trips";
-import { seatDiver } from "../../features/seat-diver/store";
+import { seatDiver } from "../../features/bookings/seat-diver";
 import { calendarDateInTimezone } from "../../lib/calendar-date";
 import { courseRatioCapacity, INTRO_COURSE_RATIO } from "../../lib/course-ratios";
 

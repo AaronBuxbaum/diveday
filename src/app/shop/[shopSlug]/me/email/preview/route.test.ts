@@ -8,15 +8,15 @@ import { describe, expect, it, vi } from "vitest";
  * preview, and nothing is read.
  */
 
-vi.mock("../../../../../../features/session/rules", () => ({
+vi.mock("../../../../../../features/accounts/session", () => ({
   requireShopSurface: vi.fn(),
   isLiveShopStaff: vi.fn(async () => true),
 }));
 vi.mock("@/lib/notifications/app-url", () => ({ publicAppUrl: vi.fn(() => null) }));
-vi.mock("@/features/weekly-digest", () => ({ previewWeeklyDigest: vi.fn() }));
+vi.mock("@/features/reports/weekly-digest", () => ({ previewWeeklyDigest: vi.fn() }));
 
-const { requireShopSurface } = await import("../../../../../../features/session/rules");
-const { previewWeeklyDigest } = await import("@/features/weekly-digest");
+const { requireShopSurface } = await import("../../../../../../features/accounts/session");
+const { previewWeeklyDigest } = await import("@/features/reports/weekly-digest");
 const { GET } = await import("./route");
 
 describe("the Monday email preview", () => {

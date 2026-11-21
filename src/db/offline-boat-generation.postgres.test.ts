@@ -1,11 +1,11 @@
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, expect, it, vi } from "vitest";
-import { departureCounts } from "@/features/departure-counts";
 import {
   buildOfflineManifestCopies,
   readOfflineManifestRosterWithWindows,
-} from "@/features/offline-manifest-snapshots";
-import { listRollCallGaps } from "@/features/roll-call-gaps";
+} from "@/features/boarding/offline-manifest-snapshots";
+import { listRollCallGaps } from "@/features/boarding/roll-call-gaps";
+import { departureCounts } from "@/features/trips/departure-counts";
 import { nowDate } from "@/lib/clock";
 import { clientRollCallEvidenceId } from "@/lib/roll-call-causality";
 import { describePostgres, postgresTestDb } from "@/test/postgres";

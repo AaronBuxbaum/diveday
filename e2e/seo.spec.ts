@@ -151,7 +151,7 @@ test("the schedule page's JSON-LD points at the availability document", { tag: R
  * `src/app/sitemap.ts` deliberately excludes every `isDemo` shop (including
  * the canonical `blue-mantis` e2e/visual fixture — see its docstring and
  * ADR 20260724-per-visitor-demo-shops), and the dev/e2e seed
- * (`src/db/seed.ts`) never inserts a non-demo shop, so there is no seeded
+ * (`src/db/seed/index.ts`) never inserts a non-demo shop, so there is no seeded
  * shop this suite can assert *into* the sitemap. What's real and checkable
  * here: the marketing surface is fully listed, the demo shop is correctly
  * left out (proving the `isDemo` filter is live, not a no-op), and a

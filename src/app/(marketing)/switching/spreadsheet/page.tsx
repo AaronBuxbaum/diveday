@@ -8,7 +8,7 @@ import { SwitchingImportCta } from "@/components/SwitchingImportCta";
 import { buttonClass } from "@/components/ui/button";
 import { DisclosureRow } from "@/components/ui/disclosure";
 import { groupLabelClass } from "@/components/ui/group-label";
-import { requestPricingOffer } from "@/features/pricing-offer";
+import { requestPricingOffer } from "@/features/money/pricing-offer";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import type { DiverLocale } from "@/i18n/settings";

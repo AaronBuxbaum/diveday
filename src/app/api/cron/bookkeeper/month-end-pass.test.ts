@@ -12,7 +12,7 @@ import {
   recordBookkeeperDeliveryOutcome,
   resolveBookkeeperStopToken,
   setBookkeeper,
-} from "../../../../features/bookkeeper/store";
+} from "../../../../features/money/bookkeeper/store";
 import { sendDueMonthEndEmails } from "./month-end-pass";
 
 // The window between the claim and the send is the files being built, so a

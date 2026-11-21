@@ -2,12 +2,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/db/client", () => ({ getDb: vi.fn(async () => ({ db: "handle" })) }));
-vi.mock("@/features/dive-participation", () => ({ recordDiveParticipation: vi.fn() }));
-vi.mock("@/features/session", () => ({ requireShopSurface: vi.fn() }));
+vi.mock("@/features/after-the-dive/dive-participation", () => ({
+  recordDiveParticipation: vi.fn(),
+}));
+vi.mock("@/features/accounts/session", () => ({ requireShopSurface: vi.fn() }));
 
 const { revalidatePath } = await import("next/cache");
-const { recordDiveParticipation } = await import("@/features/dive-participation");
-const { requireShopSurface } = await import("@/features/session");
+const { recordDiveParticipation } = await import("@/features/after-the-dive/dive-participation");
+const { requireShopSurface } = await import("@/features/accounts/session");
 const { recordDiveParticipationAction } = await import("./dive-participation-action");
 
 const SHOP_ID = "00000000-0000-4000-8000-000000000001";

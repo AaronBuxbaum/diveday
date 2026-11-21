@@ -9,7 +9,7 @@ Amended the same day after a dive-domain review and a security review (see "Revi
 ## Context
 
 A staffer put on a departure, taken off one, or answered on their own crew request heard nothing.
-They found out by opening the calendar feed (`src/features/calendar-sync`) or the staffing week. The
+They found out by opening the calendar feed (`src/features/crew-and-boats/calendar-sync`) or the staffing week. The
 product owner approved telling them by email on 2026-10-09, with three conditions: rapid edits are
 coalesced, the staffer who made a change is never told about their own act, and the hook sits on
 the one write path rather than on each surface.

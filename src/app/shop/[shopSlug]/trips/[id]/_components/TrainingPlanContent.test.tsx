@@ -2,7 +2,7 @@
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
-import { trainingAllocationPlan } from "../../../../../../features/training-allocation-plan/rules";
+import { trainingAllocationPlan } from "../../../../../../features/training/training-allocation-plan";
 import { TrainingPlanContent } from "./TrainingPlanContent";
 
 afterEach(cleanup);

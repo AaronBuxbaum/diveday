@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { ReadyPageData } from "../../../../features/ready/store";
+import type { ReadyPageData } from "../../../../features/boarding/ready";
 
 /**
  * **Sharing a photo with the boat goes through the diver's own readiness
@@ -13,7 +13,7 @@ vi.mock("next/navigation", () => ({
     throw new Error(`REDIRECT:${path}`);
   }),
 }));
-vi.mock("../../../../features/navigation/rules", () => ({
+vi.mock("../../../../features/platform/navigation", () => ({
   revalidateAndRedirect: vi.fn((_path: string, to: string) => {
     throw new Error(`REDIRECT:${to}`);
   }),
@@ -21,8 +21,9 @@ vi.mock("../../../../features/navigation/rules", () => ({
 // All upload data operations below are mocked, so this unit needs only an opaque handle.
 vi.mock("@/db/client", () => ({ getDb: vi.fn(async () => ({})) }));
 vi.mock("@/db/people", () => ({ recordDiverOwnLocaleForBooking: vi.fn() }));
-vi.mock("../../../../features/recap/store", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../../../features/recap/store")>();
+vi.mock("../../../../features/after-the-dive/recap/store", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("../../../../features/after-the-dive/recap/store")>();
   return {
     ...actual,
     isRecapOpen: vi.fn(async () => true),
@@ -51,7 +52,7 @@ vi.mock("./action-helpers", () => ({
     reason === "rate_limited" ? `/ready/${token}?error=rate` : `/ready/${token}`,
 }));
 
-const { addRecapPhoto } = await import("../../../../features/recap/store");
+const { addRecapPhoto } = await import("../../../../features/after-the-dive/recap/store");
 const { storeRecapImage } = await import("@/lib/storage");
 const { uploadRecapPhotoFromReadyAction } = await import("./recap-photo-actions");
 

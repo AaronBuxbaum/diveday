@@ -184,7 +184,7 @@ for (const scheme of ["light", "dark"] as const) {
        * **One diver's whole record**, in the composition ADR
        * 20260827-people-not-lists gave it, the file now ahead of the story:
        * masthead, status ledger, the file as inset groups (each gap said by
-       * its own row), then the story. Priya is the diver `seed-diver-trail.ts`
+       * its own row), then the story. Priya is the diver `seed/diver-trail.ts`
        * gives a trail past one page to, so the folded Activity group is real
        * here.
        */
@@ -315,7 +315,7 @@ for (const scheme of ["light", "dark"] as const) {
       /**
        * **The bench on a diver's own record** (ADR 20261008-gear-work-orders):
        * the pieces of theirs the shop has on file, their tickets, and the door
-       * to a new one. Tom is the diver `seed-work-orders.ts` leaves with a
+       * to a new one. Tom is the diver `seed/work-orders.ts` leaves with a
        * ticket waiting on a part, so the group stands open as it does when
        * there is work outstanding.
        */
@@ -331,7 +331,7 @@ for (const scheme of ["light", "dark"] as const) {
        * really about, and the one a seeded demo never shows: every seeded
        * diver has a card, a signature or a balance waiting on somebody. The
        * status section renders *nothing at all* here, which is the pinned rule
-       * (`src/features/diver-status/rules.test.ts`), and this is the only baseline that can catch
+       * (`src/features/people/diver-status.test.ts`), and this is the only baseline that can catch
        * a heading or an "all clear" line creeping back in above the story.
        *
        * Built rather than seeded: a fresh diver has no cards, no bookings and

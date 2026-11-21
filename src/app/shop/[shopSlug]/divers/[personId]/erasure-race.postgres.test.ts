@@ -6,7 +6,7 @@ import { mergeDiverRecords } from "@/db/diver-merge";
 import { cards, people, personRoles, shops, userAccounts } from "@/db/schema";
 import { describePostgres, postgresTestDb } from "@/test/postgres";
 import { redirectedTo, staffSession } from "@/test/staff-session";
-import { anonymizeDiver } from "../../../../../features/anonymize/store";
+import { anonymizeDiver } from "../../../../../features/records/anonymize";
 
 vi.mock("next/navigation", () => ({
   redirect: vi.fn((to: string) => {
@@ -21,12 +21,12 @@ vi.mock("@/db/client", async (original) => ({
   ...(await original<typeof import("@/db/client")>()),
   getDb: vi.fn(),
 }));
-vi.mock("../../../../../features/session/rules", async () =>
+vi.mock("../../../../../features/accounts/session", async () =>
   (await import("@/test/staff-session")).sessionMockOverStaffSession(),
 );
 vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn() }));
 const { getDb } = await import("@/db/client");
-const { requireStaffSession } = await import("../../../../../features/session/rules");
+const { requireStaffSession } = await import("../../../../../features/accounts/session");
 const { erasePersonAction, mergeDiverAction, deletePersonAction } = await import(
   "@/app/shop/[shopSlug]/divers/[personId]/record-actions"
 );

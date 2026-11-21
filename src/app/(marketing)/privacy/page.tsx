@@ -8,7 +8,7 @@ import {
   COMPANY_GOVERNING_LAW,
   COMPANY_LEGAL_NAME,
   COMPANY_POSTAL_ADDRESS,
-} from "@/features/company-identity";
+} from "@/features/public-site/company-identity";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import type { DiverLocale } from "@/i18n/settings";
@@ -63,7 +63,7 @@ export const metadata: Metadata = {
  * **Only current, verifiable behaviour.** Every claim here is readable off the
  * code: the sub-processors off `src/app/observability-client.tsx` and the
  * notification adapters, the retention windows off `RETENTION_DAYS`
- * (`src/features/retention/rules.ts`), the capability-URL redaction off
+ * (`src/features/records/retention/rules.ts`), the capability-URL redaction off
  * `src/lib/capability-urls.ts`. Nothing is aspirational, and where a policy is
  * genuinely unsettled the page says *that* rather than inventing a number.
  *
@@ -201,7 +201,7 @@ async function PrivacyBody({ locale }: { locale: DiverLocale }) {
         />
       </LegalSection>
 
-      {/* The numbers in this list are `RETENTION_DAYS` (src/features/retention/rules.ts)
+      {/* The numbers in this list are `RETENTION_DAYS` (src/features/records/retention/rules.ts)
           rendered as prose. They are stated in years and days rather than
           interpolated from the constant on purpose: a policy sentence reads
           "3 years", not "1095 days", and the two would drift apart in

@@ -1,9 +1,12 @@
 import { after } from "next/server";
 import { z } from "zod";
 import type { AppDb } from "@/db/client";
-import type { StripeWebhookEvent } from "@/features/payments";
-import { type PayoutSummaryLookup, payoutSummaryLookupFromEnvironment } from "@/features/payments";
-import { recordStripePayout, summarizeStripePayout } from "@/features/payouts";
+import type { StripeWebhookEvent } from "@/features/money/payments";
+import {
+  type PayoutSummaryLookup,
+  payoutSummaryLookupFromEnvironment,
+} from "@/features/money/payments";
+import { recordStripePayout, summarizeStripePayout } from "@/features/money/payouts";
 import { errorClassToken } from "@/lib/error-token";
 import { log } from "@/lib/log";
 

@@ -8,7 +8,7 @@ import { TEST_FROZEN_CLOCK } from "@/test/frozen-clock";
 import { purgeAsVerifiedShop } from "@/test/offline-manifest-purge";
 import { rawStoredRecord } from "@/test/offline-raw-record";
 import { withRefreshedSyncFrame } from "@/test/offline-sync-frame";
-import { RETENTION_DAYS } from "../features/retention/rules";
+import { RETENTION_DAYS } from "../features/records/retention/rules";
 import {
   acknowledgeDiscardedOfflineRecords,
   appendOfflineArrival,
@@ -579,7 +579,7 @@ describe("OFFLINE_MANIFEST_PENDING_GRACE_MS", () => {
 
   it("stays inside the shortest window the retention table gives a device-held artifact", async () => {
     // `push_subscriptions` (30 days) is the closest analogue in
-    // `src/features/retention/rules.ts`: a device credential, useful only while its trip
+    // `src/features/records/retention/rules.ts`: a device credential, useful only while its trip
     // is near, "pure blast radius" afterwards. A dock copy holds emergency
     // contacts and medical blockers on a shared tablet, so its grace period
     // has no business being more generous than that.

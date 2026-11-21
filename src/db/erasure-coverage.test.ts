@@ -2,12 +2,12 @@ import { readFileSync } from "node:fs";
 import { and, eq, getTableName, isNull } from "drizzle-orm";
 import { getTableConfig } from "drizzle-orm/pg-core";
 import { describe, expect, it } from "vitest";
-import { passContentHash } from "@/features/wallet-pass";
+import { passContentHash } from "@/features/boarding/wallet-pass";
 import { hashBearerToken } from "@/lib/bearer-tokens";
 import { fileScopedShopContext } from "@/test/db";
 import { schemaTableNameOf } from "@/test/schema-tables";
 import { walletContentFixture } from "@/test/wallet-credentials";
-import { anonymizeDiver } from "../features/anonymize/store";
+import { anonymizeDiver } from "../features/records/anonymize";
 import { ERASURE_KEEPS } from "../test/substrate-fixtures/db/erasure-coverage-keeps.test-support";
 import { OUTSIDE_CLOSURE_REASONS } from "../test/substrate-fixtures/db/erasure-outside-closure-classification.test-support";
 import { PROCESSOR_OBJECT_COLUMNS } from "../test/substrate-fixtures/db/erasure-processor-columns.test-support";
@@ -18,7 +18,7 @@ import {
   stripCommentsAndStrings,
 } from "../test/substrate-fixtures/db/erasure-source.test-support";
 import type { AppDb } from "./client";
-import { EXPORT_TABLES, type ExportTableRead } from "./export-tables";
+import { EXPORT_TABLES, type ExportTableRead } from "./export/tables";
 import { erasedPersonRowDeletes } from "./person-columns";
 import * as schema from "./schema";
 import {
@@ -33,7 +33,7 @@ import {
 const ctx = fileScopedShopContext({ history: true });
 
 /**
- * The structural guard on the erasure path (`src/features/anonymize/store.ts`, ADR
+ * The structural guard on the erasure path (`src/features/records/anonymize.ts`, ADR
  * 20260802-diver-data-erasure), in the shape of the one
  * `delete-path-coverage.test.ts` already puts over the two demo-reap orderings.
  *
@@ -157,7 +157,7 @@ function erasureWriteSites(): { written: Set<string>; unresolved: string[] } {
   // the static instrument is here to prevent, so leaving it would have been a
   // guard that reads green over the statement it stopped running (issue #1607,
   // found by a `security-reviewer` pass on the first draft of this file).
-  const source = stripCommentsAndStrings(readFileSync("src/features/anonymize/store.ts", "utf8"));
+  const source = stripCommentsAndStrings(readFileSync("src/features/records/anonymize.ts", "utf8"));
   const written = new Set<string>();
   const unresolved: string[] = [];
   for (const match of source.matchAll(/\.(?:update|delete)\(\s*([A-Za-z][A-Za-z0-9_]*)\s*\)/g)) {
@@ -180,7 +180,7 @@ function erasureWriteSites(): { written: Set<string>; unresolved: string[] } {
  * into a deleted table is harmless if the referencing rows go first.
  */
 function erasureHardDeleteOrder(): string[] {
-  const source = stripCommentsAndStrings(readFileSync("src/features/anonymize/store.ts", "utf8"));
+  const source = stripCommentsAndStrings(readFileSync("src/features/records/anonymize.ts", "utf8"));
   const order: string[] = [];
   const sites =
     /\.delete\(\s*([A-Za-z][A-Za-z0-9_]*)\s*\)|(?<!function )\bdeleteRegisteredPersonRows\(\s*tx\b/g;
@@ -203,9 +203,9 @@ function erasureHardDeleteOrder(): string[] {
  */
 const WRITTEN_VIA_HELPER: Record<string, string> = {
   wallet_passes:
-    "`voidWalletPassesForPerson` (@/features/wallet-pass) voids/revokes owned snapshots, strips their name and clears crew identities across tenant snapshots, including expired passes",
+    "`voidWalletPassesForPerson` (@/features/boarding/wallet-pass) voids/revokes owned snapshots, strips their name and clears crew identities across tenant snapshots, including expired passes",
   wallet_pass_registrations:
-    "`voidWalletPassesForPerson` (@/features/wallet-pass) soft-deletes owned pass registrations so devices lose download/registration authority",
+    "`voidWalletPassesForPerson` (@/features/boarding/wallet-pass) soft-deletes owned pass registrations so devices lose download/registration authority",
   trip_assignments:
     "`forgetTrainingPlanPeople` (./training-plan-privacy) clears personal instructor/author handles and timestamps while preserving the operational crew assignment; erasure refuses staff-role identities",
   claude_call_content:
@@ -231,7 +231,7 @@ const WRITTEN_VIA_HELPER: Record<string, string> = {
  * that does not was prose quoting a target in a docblock.
  */
 function erasureTargetLiterals(): Set<string> {
-  const source = readFileSync("src/features/anonymize/store.ts", "utf8");
+  const source = readFileSync("src/features/records/anonymize.ts", "utf8");
   const masked = stripCommentsAndStrings(source);
   const literals = new Set<string>();
   for (const match of source.matchAll(/target:\s*"([a-z_]+)"/g)) {
@@ -380,7 +380,7 @@ describe("erasure coverage", () => {
   });
 
   /**
-   * The export read list (`./export-tables`) names, per table, the column a
+   * The export read list (`./export/tables`) names, per table, the column a
    * diver's own bundle reads it by. A table a diver can ask to *see* as theirs
    * is a table they can ask to have *forgotten*, so every one of them must be
    * decided by the erasure path above — and the scope column must really be a
@@ -583,7 +583,7 @@ describe("erasure coverage", () => {
    * order the order check reads.
    */
   it("runs every scrub section, in the order the file defines them", () => {
-    const source = readFileSync("src/features/anonymize/store.ts", "utf8");
+    const source = readFileSync("src/features/records/anonymize.ts", "utf8");
     const defined = [...source.matchAll(/^async function (scrub\w+)\(/gm)].map((m) => m[1]);
     const list = source.match(/const SCRUB_SECTIONS = \[([^\]]*)\]/)?.[1] ?? "";
     const listed = [...list.matchAll(/\b(scrub\w+)\b/g)].map((m) => m[1]);

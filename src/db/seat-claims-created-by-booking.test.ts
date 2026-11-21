@@ -2,7 +2,7 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
-import { issuePartySeatClaims, openMinorSeatWaiver } from "../features/seat-claims/store";
+import { issuePartySeatClaims, openMinorSeatWaiver } from "../features/bookings/seat-claims/store";
 import { createBookingParty } from "./bookings";
 import type { AppDb } from "./client";
 import { mergeDiverRecords } from "./diver-merge";

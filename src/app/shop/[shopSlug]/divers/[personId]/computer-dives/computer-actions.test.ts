@@ -6,8 +6,8 @@ vi.mock("next/navigation", () => ({
     throw new Error("not_found");
   }),
 }));
-vi.mock("@/features/session", () => ({ requireShopSurface: vi.fn() }));
-vi.mock("@/features/computer-dives", () => ({
+vi.mock("@/features/accounts/session", () => ({ requireShopSurface: vi.fn() }));
+vi.mock("@/features/after-the-dive/computer-dives", () => ({
   annotateComputerDive: vi.fn(),
   commitComputerFiles: vi.fn(),
   deleteComputerDive: vi.fn(),
@@ -16,9 +16,9 @@ vi.mock("@/features/computer-dives", () => ({
   previewComputerFiles: vi.fn(),
   restoreComputerDive: vi.fn(),
 }));
-const { requireShopSurface } = await import("@/features/session");
+const { requireShopSurface } = await import("@/features/accounts/session");
 const { previewComputerFiles, commitComputerFiles, exportComputerDiveSummaryCsv } = await import(
-  "@/features/computer-dives"
+  "@/features/after-the-dive/computer-dives"
 );
 const { previewAction, commitAction, exportCsvAction } = await import("./computer-actions");
 const personId = "11111111-1111-4111-8111-111111111111";

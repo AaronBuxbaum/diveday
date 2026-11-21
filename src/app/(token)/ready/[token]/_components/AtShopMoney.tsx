@@ -1,4 +1,4 @@
-import type { ReadyPageData } from "@/features/ready";
+import type { ReadyPageData } from "@/features/boarding/ready";
 import type { DiverTranslator } from "@/i18n/messages";
 import { atShopMoneyLine, atShopRentalLines } from "./pay-step-lines";
 

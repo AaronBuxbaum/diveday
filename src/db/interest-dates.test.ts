@@ -4,8 +4,8 @@ import { calendarDateInTimezone, shiftCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import type { CourseInquiryExperience } from "@/lib/course-inquiry";
 import { fileScopedShopContext } from "@/test/db";
-import { getCourseBySlug } from "../features/courses/store";
-import { createDiver } from "../features/divers/store";
+import { createDiver } from "../features/people/divers/store";
+import { getCourseBySlug } from "../features/training/courses/store";
 import {
   addInterest,
   interestRow,

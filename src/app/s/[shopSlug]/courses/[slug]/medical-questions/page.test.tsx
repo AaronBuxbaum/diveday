@@ -22,14 +22,14 @@ vi.mock("next/navigation", () => ({
   }),
 }));
 vi.mock("@/db/client", () => ({ getDb: vi.fn(async () => ({})) }));
-vi.mock("../../../../../../features/courses/store", () => ({ getCourseBySlug: vi.fn() }));
-vi.mock("../../../../../../features/shops-cached/store", () => ({ shopBySlugCached: vi.fn() }));
+vi.mock("../../../../../../features/training/courses/store", () => ({ getCourseBySlug: vi.fn() }));
+vi.mock("../../../../../../features/platform/shops-cached", () => ({ shopBySlugCached: vi.fn() }));
 vi.mock("@/i18n/request", () => ({
   requestTranslator: async () => ({ locale: "en-US", t: diverTranslator("en-US") }),
 }));
 
-const { getCourseBySlug } = await import("../../../../../../features/courses/store");
-const { shopBySlugCached } = await import("../../../../../../features/shops-cached/store");
+const { getCourseBySlug } = await import("../../../../../../features/training/courses/store");
+const { shopBySlugCached } = await import("../../../../../../features/platform/shops-cached");
 const { default: CourseMedicalQuestionsPage } = await import("./page");
 
 const t = diverTranslator("en-US");

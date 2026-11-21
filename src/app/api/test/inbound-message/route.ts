@@ -9,9 +9,9 @@ import {
   e2eTestRouteAuthorized,
   requireDemoTenant,
   testRouteRefused,
-} from "@/features/e2e-test-routes";
+} from "@/features/platform/e2e-test-routes";
 import { nowDate } from "@/lib/clock";
-import { handleInboundReplyKeyword } from "../../../../features/reply-keywords/store";
+import { handleInboundReplyKeyword } from "../../../../features/messages/reply-keywords/store";
 
 /**
  * **Delivers one inbound message as if a provider had** (ADR

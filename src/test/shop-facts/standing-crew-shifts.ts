@@ -2,7 +2,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import { z } from "zod";
 import type { AppDb } from "../../db/client";
 import { people, personRoles, trips } from "../../db/schema";
-import { createStaffShift } from "../../features/staffing/store";
+import { createStaffShift } from "../../features/crew-and-boats/staffing/store";
 
 export const standingCrewShiftsArgs = z.object({ title: z.string().min(1).max(120) }).strict();
 

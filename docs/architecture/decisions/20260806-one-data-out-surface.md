@@ -16,7 +16,7 @@ DiveDay shipped two settings routes for one promise:
 
 They are not neighbours that happen to sit near each other. They are the same thing twice:
 
-- **The same bundle.** `src/features/backup-export/run-backup.ts` imports `loadShopExportBundleInput`
+- **The same bundle.** `src/features/records/backup-export/run-backup.ts` imports `loadShopExportBundleInput`
   from `@/db/export`. A backup is literally the export bundle, built by the export loader, on a
   schedule, to a bucket. The surface's own copy already said so out loud —
   `backup.how.weekly` reads *"It's the same bundle as the Data export download."*

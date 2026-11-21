@@ -53,7 +53,7 @@ vi.mock("./waiver-issue", async (importOriginal) => {
   };
 });
 
-import { seatDiver } from "../features/seat-diver/store";
+import { seatDiver } from "../features/bookings/seat-diver";
 import { activityEvents, bookings, people, personRoles, waiverRecords } from "./schema";
 import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 

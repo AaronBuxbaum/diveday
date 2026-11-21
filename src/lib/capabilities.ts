@@ -197,7 +197,7 @@ export const CAPABILITY_POLICY = {
     reissue: "adds",
     use: "idempotent",
   },
-  // One staffer's Monday email (`src/features/weekly-digest`). Opening it sets
+  // One staffer's Monday email (`src/features/reports/weekly-digest`). Opening it sets
   // `user_accounts.weekly_digest` to false. Minted once per digest sent, after
   // that week's send claim lands (issue #3721).
   weekly_digest_unsubscribe: {

@@ -5,7 +5,7 @@ import { manifestContext } from "@/test/substrate-fixtures/db/manifests-test-fix
 import { aboardAtSeaBookingIds } from "./aboard-at-sea";
 import { getTripManifest } from "./manifests";
 import { bookings, tripScheduleDays, trips } from "./schema";
-import { seedRollCallEvidence } from "./seed-roll-call-evidence";
+import { seedRollCallEvidence } from "./seed/roll-call-evidence";
 
 for (const role of ["diver", "crew"] as const) {
   it(`does not release today's at-risk seat using unknown-day retained ashore evidence for ${role}`, async () => {

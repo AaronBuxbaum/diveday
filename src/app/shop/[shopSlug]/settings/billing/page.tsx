@@ -6,12 +6,13 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
+import { requireShopSurface } from "@/features/accounts/session";
 import {
   billingConfigFromEnvironment,
   percentBillingFromEnvironment,
   planCopyParams,
   planMoney,
-} from "@/features/billing";
+} from "@/features/money/billing";
 import {
   canPersonManageBilling,
   getBillingPage,
@@ -19,10 +20,9 @@ import {
   holdsLiveSubscription,
   shopPricing,
   subscriptionSnapshot,
-} from "@/features/billing-page";
-import { pricingConfig } from "@/features/pricing-flags";
-import { requireShopSurface } from "@/features/session";
-import { trialDaysRemaining, trialEndsAt } from "@/features/trial";
+} from "@/features/money/billing-page";
+import { pricingConfig } from "@/features/money/pricing-flags";
+import { trialDaysRemaining, trialEndsAt } from "@/features/shop-setup/trial";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { percentFeeCents } from "@/lib/billing/pricing-plans";

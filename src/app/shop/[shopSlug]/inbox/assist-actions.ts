@@ -2,8 +2,8 @@
 
 import { requireActiveStaffId } from "@/db/authz";
 import { getDb } from "@/db/client";
-import { draftReplyToMessage } from "@/features/inbox-assists";
-import { requireStaffSession } from "@/features/session";
+import { requireStaffSession } from "@/features/accounts/session";
+import { draftReplyToMessage } from "@/features/ai/inbox-assists";
 import { uuidParam } from "@/lib/uuid";
 
 /** Draft only: no booking, saved request or message is created. */

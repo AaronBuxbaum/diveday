@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { tapTargetLinkClass } from "@/components/ui/button";
-import type { WhatsNextRow as WhatsNextRowProps } from "@/features/recap-after-state";
+import type { WhatsNextRow as WhatsNextRowProps } from "@/features/after-the-dive/recap-after-state";
 
 /**
  * **One quiet row under *Your next dive*** (issue #4328): the next course on

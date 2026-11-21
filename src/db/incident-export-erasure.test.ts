@@ -1,8 +1,8 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
-import { anonymizeDiver } from "../features/anonymize/store";
-import { getIncidentExport } from "../features/incident-export/store";
+import { anonymizeDiver } from "../features/records/anonymize";
+import { getIncidentExport } from "../features/safety/incident-export";
 import { cancelBooking, restoreBooking, splitBookingIdentity } from "./bookings";
 import { activityEvents, bookings, people } from "./schema";
 import { getTripRoster, listStaff } from "./trips";

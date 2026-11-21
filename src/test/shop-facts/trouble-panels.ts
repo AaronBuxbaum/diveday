@@ -13,7 +13,7 @@ import {
   processorErasureObligations,
   trips,
 } from "../../db/schema/index";
-import { recordProcessorErasureObligations } from "../../features/processor-erasure/store";
+import { recordProcessorErasureObligations } from "../../features/records/processor-erasure";
 import { ATTEMPT_RULES } from "../../lib/attempts";
 import { calendarDateInTimezone } from "../../lib/calendar-date";
 import { HOUR_MS } from "../../lib/clock";
@@ -27,7 +27,7 @@ import { HOUR_MS } from "../../lib/clock";
  * diver record. A shop sees them on its worst day, which is why they are
  * photographed, and why the demo shop must never carry them by default: a demo
  * permanently shouting that four payments are broken is a worse demo
- * (`src/db/seed-front-desk.ts` seeds its payment `succeeded` for that reason).
+ * (`src/db/seed/front-desk.ts` seeds its payment `succeeded` for that reason).
  *
  * Each Playwright worker has its own server and in-memory PGlite database
  * (`e2e/servers.ts`), reset before every test (`e2e/fixtures.ts`), so these
@@ -178,7 +178,7 @@ export async function oweStripeTwoErasures(
  * due" state and Today gains its gear-overdue row, and one tank's
  * visual-inspection clock expired so the service sentence and the unit page
  * show the overdue grammar. Backdated in place rather than seeded: the demo
- * fleet stays calm (seed-gear.ts keeps every clock ahead).
+ * fleet stays calm (seed/gear.ts keeps every clock ahead).
  */
 export async function runGearOverdue(
   db: AppDb,

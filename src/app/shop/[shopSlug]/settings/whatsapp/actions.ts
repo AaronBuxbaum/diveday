@@ -10,14 +10,14 @@ import {
   type WhatsAppConnectRefusal,
   whatsAppProviderForAccount,
 } from "@/db/whatsapp-accounts";
-import { parseForm, single } from "@/features/form-parse";
-import { type NoticeRedirect, revalidateWithNotice } from "@/features/navigation";
-import { requireStaffSession } from "@/features/session";
+import { requireStaffSession } from "@/features/accounts/session";
 import {
   completeWhatsAppSignup,
   type WhatsAppSignupOutcome,
   whatsAppSignupConfigFromEnvironment,
-} from "@/features/whatsapp-signup";
+} from "@/features/messages/whatsapp-signup";
+import { parseForm, single } from "@/features/platform/form-parse";
+import { type NoticeRedirect, revalidateWithNotice } from "@/features/platform/navigation";
 import { diverTranslator } from "@/i18n/messages";
 import { toDiverLocale } from "@/i18n/settings";
 import { nowDate } from "@/lib/clock";

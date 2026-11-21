@@ -3,7 +3,7 @@ import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { getDb } from "@/db/client";
 import { diverTranslator } from "@/i18n/messages";
-import type { ReadyPageData } from "../../../../../features/ready/store";
+import type { ReadyPageData } from "../../../../../features/boarding/ready";
 import { TripCancelledCard } from "./TripCancelledCard";
 
 vi.mock("./CarriedPreparation", () => ({ CarriedPreparation: () => <p>carried</p> }));

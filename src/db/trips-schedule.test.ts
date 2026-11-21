@@ -1,13 +1,13 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
+import { seedRollCallEvidence } from "@/db/seed/roll-call-evidence";
 import { nowDate } from "@/lib/clock";
 import { utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 import { advanceClock } from "@/test/clock";
 import { fileScopedShopContext, type seededShopContext } from "@/test/db";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
-import { createBoat } from "../features/boats/store";
-import { createTripLens, deleteTripLens } from "../features/trip-lenses/store";
+import { createBoat } from "../features/crew-and-boats/boats/store";
+import { createTripLens, deleteTripLens } from "../features/trips/trip-lenses";
 import { captureDepartureBoatSafety } from "./boat-safety";
 import { crewSubject } from "./roll-call-subject";
 import { courses, departureBoatSafetySnapshots, tripDives, trips } from "./schema";

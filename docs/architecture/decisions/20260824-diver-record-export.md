@@ -6,7 +6,7 @@
 
 ## Context
 
-`anonymizeDiver` (`src/features/anonymize/store.ts`, ADR 20260802-diver-data-erasure) is thorough about the
+`anonymizeDiver` (`src/features/records/anonymize.ts`, ADR 20260802-diver-data-erasure) is thorough about the
 destructive half of a diver's data rights: owner-only, deliberately stricter than `canDeleteDiver`,
 and it even tracks what the payment processor still owes after erasure
 (`processor_erasure_obligations`, ADR 20260803-processor-erasure-obligations). The constructive
@@ -23,7 +23,7 @@ so satisfying one person's rights manufactures a breach risk for everyone else o
 
 ## Decision
 
-**A second loader, `loadDiverExportBundleInput` (`src/db/export.ts`), scoped to one `person_id` —
+**A second loader, `loadDiverExportBundleInput` (`src/db/export/index.ts`), scoped to one `person_id` —
 a where-clause and a smaller bundle over the same tables, not a second exporter.** Every query in
 it is scoped to `shopId` *and* to this `personId` (or to a booking/order/review id already proven
 to belong to them); there is no query that reads a table by `shopId` alone. Same gate as the shop

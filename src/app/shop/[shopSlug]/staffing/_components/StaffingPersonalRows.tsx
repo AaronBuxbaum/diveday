@@ -1,6 +1,6 @@
 import { GroupLabel } from "@/components/ui/group-label";
 import { LedgerRow } from "@/components/ui/ledger";
-import type { StaffWeek } from "@/features/staffing-week";
+import type { StaffWeek } from "@/features/crew-and-boats/staffing-week";
 import { fill } from "@/i18n/fill";
 import { ShiftRemoveMenu } from "./ShiftRemoveMenu";
 import type { StaffingWeekWords } from "./StaffingWeek";

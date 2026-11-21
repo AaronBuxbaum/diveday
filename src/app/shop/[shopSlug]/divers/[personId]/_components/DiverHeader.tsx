@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
-import type { DiverStanding } from "@/features/diver-standing";
+import type { DiverStanding } from "@/features/people/diver-standing";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatCalendarDate, formatCalendarMonth } from "@/lib/calendar-date";
 import { mailtoHref, telHref } from "@/lib/contact-links";
@@ -61,7 +61,7 @@ export function DiverHeader({
   /**
    * Who this person is to the shop (fifth-loop ideas, item 36): dive days since
    * when, last out, money kept (null unless the reader may see money) and the
-   * friends they brought. `src/features/diver-standing/rules.ts`.
+   * friends they brought. `src/features/people/diver-standing.ts`.
    */
   standing: DiverStanding;
   locale: string;

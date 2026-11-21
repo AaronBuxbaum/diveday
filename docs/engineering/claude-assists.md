@@ -9,7 +9,7 @@ new assist until a human decision and a scoped issue promote it, with an ADR for
 dependency boundary and the right safety review.
 
 **What shipped (2026-10-18):** the provider boundary exists. Claude is a runtime dependency behind
-`src/lib/claude/` and `runAssist` in `src/features/assists/store.ts`, dark without a key, with the shop's
+`src/lib/claude/` and `runAssist` in `src/features/ai/assists/store.ts`, dark without a key, with the shop's
 "Claude suggestions" switch off, or past the shop's $15 monthly cap, and every call is costed in
 `claude_usage` ([ADR 20261018-claude-assists](../architecture/decisions/20261018-claude-assists.md)).
 The features built on it (inbox drafts and sorting, import mapping, card reading, website setup and
@@ -88,8 +88,8 @@ kept here so the ADR stays short.
 ### Recap highlights, filled before send
 
 With "Recap highlights" on (`shops.recap_assist_auto_approve`, Settings → Features, on for a new
-shop since 2026-10-23), the recap send (`autoFillRecapLine` in `src/features/recap/recap-assist.store.ts`, called from
-`src/features/recap/store.ts`) writes Claude's line into `trips.recap_shoutout` as if the crew had saved it,
+shop since 2026-10-23), the recap send (`autoFillRecapLine` in `src/features/after-the-dive/recap/recap-assist.store.ts`, called from
+`src/features/after-the-dive/recap/store.ts`) writes Claude's line into `trips.recap_shoutout` as if the crew had saved it,
 and divers read it on the recap. Turning the switch on is the shop's standing approval. Its guards:
 
 - It fills a blank highlight only. The update is conditioned on `recap_shoutout IS NULL`, so a

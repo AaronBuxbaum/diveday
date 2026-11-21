@@ -3,8 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getDb } from "@/db/client";
-import { recordDiveParticipation } from "@/features/dive-participation";
-import { requireShopSurface } from "@/features/session";
+import { requireShopSurface } from "@/features/accounts/session";
+import { recordDiveParticipation } from "@/features/after-the-dive/dive-participation";
 import { DIVE_PARTICIPATIONS } from "@/lib/dive-participation";
 import { rollCallCheckpointOrdinal } from "@/lib/roll-call";
 import { shopPath } from "@/lib/staff-notices";

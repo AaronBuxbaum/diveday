@@ -38,7 +38,7 @@ const ctx = fileScopedShopContext();
  * asserts both the refusal notice and that the row is as it was.
  *
  * Erasure has a *second* gate underneath: `anonymizeDiver` re-runs
- * `canPersonErasePersonalData` inside its own transaction (src/features/anonymize/store.ts),
+ * `canPersonErasePersonalData` inside its own transaction (src/features/records/anonymize.ts),
  * because "the route forgot to check" has no remedy for a one-way write. The
  * action-level gate tested here is the first of the two, and the one that
  * produces the notice staff actually see — deleting it turns these tests red on
@@ -62,12 +62,12 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
 });
-vi.mock("../../../../../features/session/rules", async () =>
+vi.mock("../../../../../features/accounts/session", async () =>
   (await import("@/test/staff-session")).sessionMockOverStaffSession(),
 );
 vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn() }));
 const { getDb } = await import("@/db/client");
-const { requireStaffSession } = await import("../../../../../features/session/rules");
+const { requireStaffSession } = await import("../../../../../features/accounts/session");
 const { replyToDiverAction, savePersonAction } = await import("./details-actions");
 const { deletePersonAction, eraseGuardianEmailAction, erasePersonAction, mergeDiverAction } =
   await import("./record-actions");

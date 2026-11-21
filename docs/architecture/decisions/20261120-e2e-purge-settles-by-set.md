@@ -15,7 +15,7 @@ columns was rejected for the same reason the replay rejected it.
 
 ## Decision
 
-- `purgeMintedDemoShopsWithoutTriggers` (`src/features/demo-reset-snapshot/store.ts`) runs the
+- `purgeMintedDemoShopsWithoutTriggers` (`src/features/demo/demo-reset-snapshot.ts`) runs the
   unchanged `deleteDemoShopCascade` for each minted shop with foreign-key triggers off
   (`session_replication_role = replica`, inside a savepoint), then one PL/pgSQL settle in the
   `e2e_purge` schema applies cascades and `SET NULL` keys by set and refuses any other key left

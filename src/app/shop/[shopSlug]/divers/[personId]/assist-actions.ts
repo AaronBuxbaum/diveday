@@ -1,10 +1,10 @@
 "use server";
 
 import { personThread } from "@/db/inbound-messages";
-import { bookingAskFromMessage } from "@/features/booking-ask-assists";
-import { recordFormDraftIfVacant } from "@/features/form-drafts";
-import { draftReplyOutcome, translateReplyFor } from "@/features/inbox-assists";
-import { requireShopSurface } from "@/features/session";
+import { requireShopSurface } from "@/features/accounts/session";
+import { bookingAskFromMessage } from "@/features/ai/booking-ask-assists";
+import { draftReplyOutcome, translateReplyFor } from "@/features/ai/inbox-assists";
+import { recordFormDraftIfVacant } from "@/features/platform/form-drafts";
 import { REPLY_BODY_MAX_LENGTH } from "@/lib/inbox";
 import { callPanelHref } from "@/lib/took-a-call";
 import { uuidParam } from "@/lib/uuid";

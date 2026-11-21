@@ -3,7 +3,7 @@ import { expect, it } from "vitest";
 import {
   issueOfflineManifestSnapshot,
   readOfflineManifestRoster,
-} from "@/features/offline-manifest-snapshots";
+} from "@/features/boarding/offline-manifest-snapshots";
 import { nowDate } from "@/lib/clock";
 import { maxRecordedDiveNumber } from "@/lib/manifests";
 import { canonicalRollCallEvidenceId } from "@/lib/roll-call-causality";
@@ -12,7 +12,7 @@ import { aboardAtSeaBookingIds } from "./aboard-at-sea";
 import { getTripManifest, recordCrewRollCall, recordRollCall } from "./manifests";
 import { recordedRollCallRows } from "./roll-call-history";
 import { bookings, rollCallEvents, tripAssignments, trips } from "./schema";
-import { seedRollCallEvidence } from "./seed-roll-call-evidence";
+import { seedRollCallEvidence } from "./seed/roll-call-evidence";
 
 type Mark = Omit<
   Parameters<typeof recordRollCall>[1],

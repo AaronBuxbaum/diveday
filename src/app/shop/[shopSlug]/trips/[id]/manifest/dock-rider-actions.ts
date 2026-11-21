@@ -4,16 +4,20 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getDb } from "@/db/client";
 import { getShopById } from "@/db/shops";
-import { addDockRider, type DockRiderOwes, type DockRiderRefusal } from "@/features/dock-rider";
-import { blankAsAbsent, parseForm, single } from "@/features/form-parse";
-import { requireStaffSession } from "@/features/session";
+import { requireStaffSession } from "@/features/accounts/session";
+import {
+  addDockRider,
+  type DockRiderOwes,
+  type DockRiderRefusal,
+} from "@/features/boarding/dock-rider";
+import { blankAsAbsent, parseForm, single } from "@/features/platform/form-parse";
 import { diverNameSchema, diverPhoneSchema } from "@/lib/person-fields";
 import { shopPath } from "@/lib/staff-notices";
 
 /**
  * The Boat tab's "Add a rider" (batch 4, D6). Its own file so the manifest's
  * shared actions stay as they are; the whole consequence path is
- * `addDockRider` (`src/features/dock-rider/store.ts`). The shop comes off the session,
+ * `addDockRider` (`src/features/boarding/dock-rider.ts`). The shop comes off the session,
  * never the form, and so does the slug the paths are revalidated under.
  */
 

@@ -1,0 +1,230 @@
+import { randomUUID } from "node:crypto";
+import type { AppDb } from "@/db/client";
+import { recordScheduledBackupMedicalAnswers } from "@/db/operations";
+import type { BackupDeliveryTrigger } from "@/db/schema";
+import type { FeedLabels } from "@/features/crew-and-boats/calendar-sync";
+import {
+  claimShopBackupDelivery,
+  finishShopBackupDelivery,
+  renewShopBackupDeliveryClaim,
+  supersedeShopBackupDelivery,
+} from "@/features/records/shop-backup-delivery-claims";
+import { nowDate } from "@/lib/clock";
+import { buildBackupBundle } from "./bundle";
+import {
+  beginBackupDelivery,
+  finishBackupDelivery,
+  setBackupDeliveryObjectKey,
+} from "./delivery-store";
+import {
+  type BackupSecretOptions,
+  getShopBackupDestination,
+  markShopBackupVerified,
+  openBackupCredentials,
+} from "./destination-store";
+import { backupObjectKey, backupPeriodKey } from "./period";
+import { type BackupUploadErrorCode, putS3Object } from "./s3-client";
+
+/**
+ * One shop's backup, end to end: assemble the same bundle the staff export
+ * download produces (README, every CSV, photos), add the shop-wide `trips.ics`
+ * calendar document, and PUT it to the shop's own bucket under the shop's own
+ * sealed credential.
+ *
+ * Never throws for a per-shop problem — every refusal and failure becomes a
+ * recorded delivery row with a code, because "why didn't my backup land" must
+ * be answerable from the settings page, not from a log DiveDay holds.
+ */
+
+export type BackupRunErrorCode =
+  | "encryption_key_unset"
+  | "encryption_key_invalid"
+  | "credential_unreadable"
+  | "shop_missing"
+  | "bundle_failed"
+  | "media_incomplete"
+  | BackupUploadErrorCode;
+
+export type RunShopBackupResult =
+  | { status: "delivered"; deliveryId: string; objectKey: string; byteCount: number }
+  | { status: "skipped_already_delivered"; periodKey: string }
+  | { status: "skipped_in_progress"; periodKey: string }
+  | { status: "skipped_superseded"; periodKey: string }
+  | { status: "no_destination" }
+  | { status: "failed"; errorCode: BackupRunErrorCode; deliveryId: string };
+
+export type RunShopBackupInput = {
+  shopId: string;
+  trigger: BackupDeliveryTrigger;
+  /**
+   * Translated words for the ride-along `trips.ics`, resolved by the caller
+   * against the shop's locale — the same contract as `calendar-sync`'s feed.
+   */
+  icsLabels: FeedLabels;
+  /** Canonical app origin for the event links inside `trips.ics`. */
+  origin: string;
+  now?: Date;
+  /** The staffer behind a manual run; their name goes on each diver's medical-answers read line. */
+  readerPersonId?: string;
+  /** Used for both the photo fetches and the upload, so tests own all I/O. */
+  fetchImpl?: typeof fetch;
+} & BackupSecretOptions;
+
+export async function runShopBackup(
+  db: AppDb,
+  input: RunShopBackupInput,
+): Promise<RunShopBackupResult> {
+  const now = input.now ?? nowDate();
+  const periodKey = backupPeriodKey(now);
+
+  const destination = await getShopBackupDestination(db, input.shopId);
+  if (!destination) return { status: "no_destination" };
+
+  const scheduledToken = input.trigger === "scheduled" ? randomUUID() : null;
+  const scheduledClaim =
+    scheduledToken !== null
+      ? await claimShopBackupDelivery(db, {
+          shopId: input.shopId,
+          periodKey,
+          token: scheduledToken,
+          now,
+        })
+      : null;
+  if (scheduledClaim?.status === "already_delivered") {
+    return { status: "skipped_already_delivered", periodKey };
+  }
+  if (scheduledClaim?.status === "in_progress") {
+    return { status: "skipped_in_progress", periodKey };
+  }
+  const claim =
+    scheduledClaim?.status === "claimed" && scheduledToken !== null
+      ? { token: scheduledToken, attemptNumber: scheduledClaim.attemptNumber }
+      : null;
+
+  const delivery = await beginBackupDelivery(db, {
+    shopId: input.shopId,
+    periodKey,
+    trigger: input.trigger,
+    now,
+  });
+  const fail = async (errorCode: BackupRunErrorCode): Promise<RunShopBackupResult> => {
+    await finishBackupDelivery(db, {
+      id: delivery.id,
+      shopId: input.shopId,
+      status: "failed",
+      errorCode,
+      now: input.now ?? nowDate(),
+    });
+    return { status: "failed", errorCode, deliveryId: delivery.id };
+  };
+
+  // Opened only here, at the moment of use, and handed straight to the signer
+  // — the plaintext secret never reaches a log, a row, or a return value.
+  const credentials = openBackupCredentials(destination, { key: input.key });
+  if (!credentials) return fail("credential_unreadable");
+
+  let zip: Uint8Array;
+  let shopSlug: string;
+  let mediaComplete: boolean;
+  let medicalAnswerPersonIds: readonly string[];
+  try {
+    // The same assembly the platform backup uses (./bundle.ts), so both copies
+    // of a shop's data are byte-for-byte the same artifact.
+    const bundle = await buildBackupBundle(db, {
+      shopId: input.shopId,
+      icsLabels: input.icsLabels,
+      origin: input.origin,
+      now,
+      readerPersonId: input.readerPersonId,
+      fetchImpl: input.fetchImpl,
+    });
+    if (!bundle.ok) return fail("shop_missing");
+    zip = bundle.zip;
+    shopSlug = bundle.shopSlug;
+    mediaComplete = bundle.mediaComplete;
+    medicalAnswerPersonIds = bundle.medicalAnswerPersonIds;
+  } catch {
+    // A bundle that cannot be assembled is a bug worth a code in the history,
+    // not an exception that takes the rest of the cron pass down with it.
+    return fail("bundle_failed");
+  }
+
+  if (claim) {
+    const renewed = await renewShopBackupDeliveryClaim(db, {
+      shopId: input.shopId,
+      periodKey,
+      token: claim.token,
+      now: input.now ?? nowDate(),
+    });
+    if (!renewed) {
+      await supersedeShopBackupDelivery(db, {
+        shopId: input.shopId,
+        periodKey,
+        deliveryId: delivery.id,
+        now: input.now ?? nowDate(),
+      });
+      return { status: "skipped_superseded", periodKey };
+    }
+  }
+
+  const objectKey = backupObjectKey(
+    destination.prefix,
+    shopSlug,
+    periodKey,
+    claim
+      ? { trigger: "scheduled", attemptNumber: claim.attemptNumber }
+      : { trigger: "manual", deliveryId: delivery.id },
+  );
+  await setBackupDeliveryObjectKey(db, { id: delivery.id, shopId: input.shopId, objectKey });
+  const uploaded = await putS3Object({
+    endpoint: destination.endpoint,
+    region: destination.region,
+    bucket: destination.bucket,
+    key: objectKey,
+    body: zip,
+    contentType: "application/zip",
+    credentials,
+    now: input.now ?? nowDate(),
+    fetchImpl: input.fetchImpl,
+  });
+  if (!uploaded.ok) return fail(uploaded.errorCode);
+  // The answers are in the shop's storage now, and only now: a scheduled run
+  // says so on the shop's trail, once for this delivery, and on each diver's
+  // trail the first time (#3871; layer-2 dock review S2). A failed upload, or
+  // a retry before one lands, writes nothing.
+  if (input.trigger === "scheduled") {
+    await recordScheduledBackupMedicalAnswers(db, {
+      shopId: input.shopId,
+      personIds: medicalAnswerPersonIds,
+      deliveryId: delivery.id,
+    });
+  }
+
+  // Partial bytes landed, but this must not complete the weekly claim or verify the destination.
+  if (!mediaComplete) return fail("media_incomplete");
+
+  const finishedAt = input.now ?? nowDate();
+  if (claim) {
+    const completion = await finishShopBackupDelivery(db, {
+      shopId: input.shopId,
+      periodKey,
+      token: claim.token,
+      deliveryId: delivery.id,
+      objectKey,
+      byteCount: zip.byteLength,
+      now: finishedAt,
+    });
+    if (completion === "superseded") return { status: "skipped_superseded", periodKey };
+  } else {
+    await finishBackupDelivery(db, {
+      id: delivery.id,
+      shopId: input.shopId,
+      status: "succeeded",
+      objectKey,
+      byteCount: zip.byteLength,
+      now: finishedAt,
+    });
+  }
+  await markShopBackupVerified(db, input.shopId, finishedAt);
+  return { status: "delivered", deliveryId: delivery.id, objectKey, byteCount: zip.byteLength };
+}

@@ -7,9 +7,9 @@ import { upcomingTripsWithCounts } from "@/db/trips-queries.test-support";
 import { staffTranslator } from "@/i18n/staff-messages";
 import type { CoursePricing } from "@/lib/courses";
 import { fileScopedShopContext } from "@/test/db";
-import { listBoats } from "../../../../../../features/boats/store";
-import { listTripLenses } from "../../../../../../features/trip-lenses/store";
-import { getTripOverview } from "../../../../../../features/trip-overview/store";
+import { listBoats } from "../../../../../../features/crew-and-boats/boats/store";
+import { listTripLenses } from "../../../../../../features/trips/trip-lenses";
+import { getTripOverview } from "../../../../../../features/trips/trip-overview";
 import { tripAboutRows } from "./trip-about-rows";
 
 const ctx = fileScopedShopContext();
@@ -247,7 +247,7 @@ describe("tripAboutRows (in-memory PGlite)", () => {
 
   /**
    * Domain review F8: closing the snorkeler seats does not take the booked
-   * snorkeler (`seed-mixed-boat.ts`) off the reef boat, so the line still says
+   * snorkeler (`seed/mixed-boat.ts`) off the reef boat, so the line still says
    * every planned site is marked not good for snorkeling.
    */
   it("warns about a booked snorkeler over unsuitable sites, seats closed", async () => {

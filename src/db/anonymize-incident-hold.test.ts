@@ -2,7 +2,7 @@ import { and, eq, ne, notExists } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
-import { anonymizeDiver } from "../features/anonymize/store";
+import { anonymizeDiver } from "../features/records/anonymize";
 import { removeIncidentPerson } from "./incident-reports";
 import {
   bookings,

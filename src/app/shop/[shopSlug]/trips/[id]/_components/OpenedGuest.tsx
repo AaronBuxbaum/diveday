@@ -4,7 +4,7 @@ import { AgencyCheckRow } from "@/app/shop/[shopSlug]/_components/agency-check/A
 import { AutoOpenDetails } from "@/components/AutoOpenDetails";
 import { buttonClass } from "@/components/ui/button";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
-import { STAFF_RE_ENTRY_KEYS } from "@/features/dive-intent";
+import { STAFF_RE_ENTRY_KEYS } from "@/features/trips/dive-intent";
 import { guardianCoSignedText } from "@/i18n/guardian-labels";
 import { CERTIFICATION_LEVEL_KEYS, STAFF_DIVE_RECENCY_KEYS } from "@/i18n/readiness-labels";
 import { rentalFitLineText } from "@/i18n/rental-labels";

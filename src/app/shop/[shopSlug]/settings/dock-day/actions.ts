@@ -7,9 +7,9 @@ import {
   setShopDockDayRhythm,
   setShopMinTurnaround,
 } from "@/db/shops";
-import { formValue, text } from "@/features/form-parse";
-import { parseMinTurnaroundMinutes } from "@/features/move-preflight";
-import { defineAction, land, type NoticeOf } from "@/features/server-action";
+import { parseMinTurnaroundMinutes } from "@/features/bookings/move-preflight";
+import { formValue, text } from "@/features/platform/form-parse";
+import { defineAction, land, type NoticeOf } from "@/features/platform/server-action";
 import { DESK_PAYMENTS } from "@/lib/desk-payment";
 import { DOCK_DAY_FIELDS, parseDockDayRhythm } from "@/lib/diver-planning";
 import { parseCrewLeadMinutes } from "@/lib/dock-call";

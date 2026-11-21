@@ -4,7 +4,7 @@ import { nowMs } from "@/lib/clock";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { seatIsHeld } from "@/lib/no-show";
 import { describePostgres, holdRowLock, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
-import { markBookingNoShow } from "../features/no-show/store";
+import { markBookingNoShow } from "../features/boarding/no-show";
 import type { AppDb } from "./client";
 import { isLockWaitRefusal } from "./lock-bounds";
 import {

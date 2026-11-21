@@ -1,5 +1,5 @@
 import { canPersonManagePaymentSettings, canPersonManageShopSettings } from "@/db/authz";
-import type { ActionGate } from "@/features/server-action";
+import type { ActionGate } from "@/features/platform/server-action";
 
 /* -------------------------------------------------------------------------- *
  * Shop settings mutations
@@ -7,7 +7,7 @@ import type { ActionGate } from "@/features/server-action";
  * Every form on `./SettingsPage.tsx` posts to an action in one of this folder's
  * `*-actions.ts` files, split by the settings group (or sub-page) that owns it:
  * shop, website, messages, money, rentals, boats, team, bookings, data, trip
- * tags and packages. Each is a `defineAction` declaration (`src/features/server-action`):
+ * tags and packages. Each is a `defineAction` declaration (`src/features/platform/server-action.ts`):
  * the pipeline re-derives the session, asks the gates below against live roles,
  * reads the form, and lands where `run` says with `?notice=<code>&saved=<section>`
  * so the page can render the outcome *inside* the section that produced it.

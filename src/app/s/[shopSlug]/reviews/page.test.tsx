@@ -12,7 +12,7 @@ import { diverTranslator } from "@/i18n/messages";
 
 vi.mock("next/server", () => ({ connection: vi.fn(async () => undefined) }));
 vi.mock("@/db/client", () => ({ getDb: vi.fn(async () => ({})) }));
-vi.mock("../../../../features/shops-cached/store", () => ({
+vi.mock("../../../../features/platform/shops-cached", () => ({
   shopBySlugCached: vi.fn(async () => ({
     id: "shop-1",
     slug: "blue-mantis",
@@ -23,7 +23,7 @@ vi.mock("../../../../features/shops-cached/store", () => ({
     reviewsEnabled: true,
   })),
 }));
-vi.mock("../../../../features/reviews/store", () => ({
+vi.mock("../../../../features/after-the-dive/reviews/store", () => ({
   getShopReviewAggregate: vi.fn(async () => ({ average: null, count: 0 })),
   getShopRatingDistribution: vi.fn(async () => new Map()),
   listPublishedShopReviewsPage: vi.fn(),
@@ -33,8 +33,8 @@ vi.mock("@/i18n/request", () => ({
 }));
 
 const { getShopRatingDistribution, getShopReviewAggregate, listPublishedShopReviewsPage } =
-  await import("../../../../features/reviews/store");
-const { shopBySlugCached } = await import("../../../../features/shops-cached/store");
+  await import("../../../../features/after-the-dive/reviews/store");
+const { shopBySlugCached } = await import("../../../../features/platform/shops-cached");
 const { default: PublicReviewsPage } = await import("./page");
 
 afterEach(cleanup);

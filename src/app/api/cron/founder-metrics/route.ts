@@ -1,6 +1,6 @@
 import { getDb } from "@/db/client";
-import { cronRoute } from "@/features/cron-route";
-import { listEmailBounces } from "@/features/email-bounces";
+import { listEmailBounces } from "@/features/messages/email-bounces";
+import { cronRoute } from "@/features/platform/cron-route";
 import {
   claimFounderDigest,
   departureRollCallEvents,
@@ -8,12 +8,12 @@ import {
   markStallsAlerted,
   releaseFounderDigest,
   syncShopMilestones,
-} from "@/features/founder-metrics";
+} from "@/features/reports/founder-metrics";
 import {
   countDemoEntriesBySource,
   countSetupRequestsBySource,
   countUnnotifiedSetupRequests,
-} from "@/features/funnel";
+} from "@/features/reports/funnel";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import {
@@ -46,7 +46,7 @@ export const maxDuration = 60;
  *
  * Fails closed like every cron here: `CRON_SECRET` is required and presented
  * as a bearer token, checked before anything else, the Sentry check-in
- * included — through the shared constant-time check (`src/features/cron-auth/rules.ts`).
+ * included — through the shared constant-time check (`src/features/platform/cron-auth.ts`).
  */
 export const GET = cronRoute({
   id: "founder-metrics",

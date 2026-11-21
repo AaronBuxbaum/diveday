@@ -10,7 +10,7 @@ import {
   releaseBookkeeperMonth,
   tellOwnersAboutBookkeeper,
   withdrawBookkeeperClaimStop,
-} from "@/features/bookkeeper";
+} from "@/features/money/bookkeeper";
 import { monthKey } from "@/lib/calendar";
 import { log } from "@/lib/log";
 import {

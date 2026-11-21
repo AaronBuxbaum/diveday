@@ -13,7 +13,7 @@ import {
   listGlobalDiveSiteTemplates,
 } from "@/db/dive-sites";
 import type { Shop } from "@/db/schema";
-import { type SiteListFilters, siteListHref } from "@/features/dive-sites";
+import { type SiteListFilters, siteListHref } from "@/features/sites/dive-sites";
 import type { DiverTranslator } from "@/i18n/messages";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { joinFacts } from "@/lib/format";

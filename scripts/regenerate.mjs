@@ -32,6 +32,7 @@ export function ratchetScripts(root = ROOT) {
 
 export function steps({ root = ROOT, snapshot = true } = {}) {
   return [
+    { label: "ADR index", command: "node", args: ["scripts/adr-index.mjs", "--write"] },
     {
       label: "human decision index",
       command: "node",
@@ -48,7 +49,7 @@ export function steps({ root = ROOT, snapshot = true } = {}) {
           {
             label: "export-bundle snapshot",
             command: "pnpm",
-            args: ["exec", "vitest", "run", "src/db/export-bundle.snapshot.test.ts", "-u"],
+            args: ["exec", "vitest", "run", "src/db/export/bundle.snapshot.test.ts", "-u"],
             timeoutMs: SUBPROCESS_TIMEOUTS.regenerateSnapshot,
           },
         ]

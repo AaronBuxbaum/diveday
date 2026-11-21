@@ -237,7 +237,7 @@ export type ShopDayDeparture = {
  * instant-based window would print tomorrow's board on this morning's paper.
  *
  * Cancelled departures are excluded for the reason `todaysTrips` excludes them
- * in `src/features/today/closeout-reader.ts` — a boat that will not sail has nothing to hand a
+ * in `src/features/day/today/closeout-reader.ts` — a boat that will not sail has nothing to hand a
  * captain — and `liveTrip()` keeps a deleted departure off the sheet the same
  * way it keeps it off every other read of `trips`.
  */
@@ -1371,7 +1371,7 @@ export type WeekBoardEntry = {
    * line instead of being the thing the ellipsis eats. `boatId` is not read
    * by any cell: it is what lets the caller ask the day the stream's own
    * question — more departures than boats, or one hull in two places at once
-   * (`src/features/boats/rules.ts`) — which is the board's whole question and had no
+   * (`src/features/crew-and-boats/boats/rules.ts`) — which is the board's whole question and had no
    * answer at desktop.
    */
   diveSiteName: string | null;

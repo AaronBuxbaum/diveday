@@ -13,8 +13,8 @@ import {
   revokeAccountPasskey,
   verifyPasskeyStepUp,
 } from "@/db/passkeys";
-import { isStepUpPurpose, safeStepUpReturnPath } from "@/features/security-step-up";
-import { requireShopSurface } from "@/features/session";
+import { isStepUpPurpose, safeStepUpReturnPath } from "@/features/accounts/security-step-up";
+import { requireShopSurface } from "@/features/accounts/session";
 import { getAuth } from "@/lib/auth";
 import { APP_ORIGIN, publicAppUrl } from "@/lib/notifications";
 import {

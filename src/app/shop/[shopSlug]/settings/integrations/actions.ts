@@ -6,8 +6,17 @@ import { canPersonBackfillIntegrations, canPersonManageShopSettings } from "@/db
 import { getDb } from "@/db/client";
 import { recordShopActivity } from "@/db/shop-activity";
 import { getShopById } from "@/db/shops";
-import { formValue, parseForm, readForm, single, text, trimmedText } from "@/features/form-parse";
-import { runIntegrationBackfill } from "@/features/integration-backfill";
+import { requireStaffSession } from "@/features/accounts/session";
+import {
+  formValue,
+  parseForm,
+  readForm,
+  single,
+  text,
+  trimmedText,
+} from "@/features/platform/form-parse";
+import { type NoticeRedirect, revalidateWithNotice } from "@/features/platform/navigation";
+import { runIntegrationBackfill } from "@/features/shop-setup/integration-backfill";
 import {
   chooseSquareLocation,
   createIntegrationOAuthState,
@@ -29,9 +38,7 @@ import {
   squareAuthorizationUrl,
   squareConfigFromEnvironment,
   syncShopifyCatalog,
-} from "@/features/integrations";
-import { type NoticeRedirect, revalidateWithNotice } from "@/features/navigation";
-import { requireStaffSession } from "@/features/session";
+} from "@/features/shop-setup/integrations";
 import { publicAppUrl } from "@/lib/notifications";
 import { secretKeyFromEnvironment } from "@/lib/secret-box";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";

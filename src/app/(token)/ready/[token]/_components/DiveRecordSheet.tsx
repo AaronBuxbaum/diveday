@@ -1,6 +1,6 @@
 import { BrandStyle } from "@/components/BrandStyle";
 import { PaperSheet, SheetMark } from "@/components/paper/PaperSheet";
-import type { AfterStateProps } from "@/features/recap-after-state";
+import type { AfterStateProps } from "@/features/after-the-dive/recap-after-state";
 import { publicAppUrl } from "@/lib/notifications";
 import {
   capabilityPagePrintRule,

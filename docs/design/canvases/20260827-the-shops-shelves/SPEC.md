@@ -174,13 +174,13 @@ the heading.
 ## 9e — Staffing as a week
 
 ```ts
-// src/features/staffing/store.ts — getStaffingView returns the rows its needCrew count already walks:
+// src/features/crew-and-boats/staffing/store.ts — getStaffingView returns the rows its needCrew count already walks:
 // the same courseCrewGap + zero-crew pass, kept intact, now handed back instead of only
 // counted. StaffingView gains:
 //   gapTrips: { tripId: string; title: string; startsAt: Date;
 //               gap: "no_crew" | "no_instructor" | "over_ratio" }[];
 
-// src/features/staffing-week/rules.ts — NEW assembly over the existing reader:
+// src/features/crew-and-boats/staffing-week/rules.ts — NEW assembly over the existing reader:
 export type StaffWeek = {
   days: string[];                                   // ISO dates, Mon..Sun, shop TZ
   people: { personId: string; name: string; role: string;

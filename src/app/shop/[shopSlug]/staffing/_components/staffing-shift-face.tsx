@@ -1,4 +1,4 @@
-import type { WeekShift } from "@/features/staffing-week";
+import type { WeekShift } from "@/features/crew-and-boats/staffing-week";
 import { formatTimeRange } from "@/lib/format";
 
 /**

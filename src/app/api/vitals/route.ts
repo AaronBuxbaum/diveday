@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { redactCapabilityUrl } from "@/app/observability";
-import { flushLogs } from "@/features/log-shipping";
+import { flushLogs } from "@/features/platform/log-shipping";
 import { log } from "@/lib/log";
 import {
   mutationDurationLogContext,

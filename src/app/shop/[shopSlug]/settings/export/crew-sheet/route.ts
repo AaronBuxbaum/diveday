@@ -1,9 +1,9 @@
 import { getDb } from "@/db/client";
 import { canPersonExportShopData } from "@/db/export";
 import { getShopById } from "@/db/shops";
-import { stepUpChallengeUrl } from "@/features/security-step-up";
-import { requireStaffSession } from "@/features/session";
-import { hasRequiredStepUp } from "@/features/step-up";
+import { stepUpChallengeUrl } from "@/features/accounts/security-step-up";
+import { requireStaffSession } from "@/features/accounts/session";
+import { hasRequiredStepUp } from "@/features/accounts/step-up";
 import { requestLocale } from "@/i18n/request";
 import { type MonthRef, parseMonthKey } from "@/lib/calendar";
 import { nowDate } from "@/lib/clock";

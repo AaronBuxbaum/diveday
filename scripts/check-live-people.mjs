@@ -8,7 +8,7 @@ import { bankCounts, ratchetFlags, readCounts } from "./ratchet.mjs";
  * A read of `people` says whether it means removed people too.
  *
  * Removing a diver sets `people.deleted_at` rather than deleting the row
- * (`deleteDiver`, src/features/divers/store.ts), and a staff member who also dives holds
+ * (`deleteDiver`, src/features/people/divers/store.ts), and a staff member who also dives holds
  * the `diver` role, so a removed person can still hold a staff role. A read
  * that forgets the filter does not throw: the 2026-10-11 review found the
  * staff list behind every crew picker, the crew-change eligibility read and
@@ -39,6 +39,8 @@ import { bankCounts, ratchetFlags, readCounts } from "./ratchet.mjs";
 
 const ROOT = process.cwd();
 const GUARDED_ROOTS = ["src/db", "src/lib", "src/features", "src/app"];
+/** A seed scenario writes the demo, not a read a person sees: the whole `src/db/seed/` folder is skipped. */
+const SEED_DIRECTORY = path.normalize("src/db/seed/");
 const SOURCE_EXTENSIONS = new Set([".ts", ".tsx"]);
 const IS_TEST = /\.test\.tsx?$/;
 const QUERY_WINDOW = 60;
@@ -57,7 +59,7 @@ const GUARD = "live-people";
  */
 export const CARRIERS = {
   "src/db/diver-merge.ts": ["activeDiverWhere"],
-  "src/features/divers/store.ts": ["removalScope", "rosterScope", "scope"],
+  "src/features/people/divers/store.ts": ["removalScope", "rosterScope", "scope"],
   "src/db/inbound-messages.ts": ["live"],
 };
 
@@ -125,8 +127,7 @@ async function collect() {
       (relativePath) => SOURCE_EXTENSIONS.has(path.extname(relativePath)),
     )) {
       if (IS_TEST.test(file)) continue;
-      const base = path.basename(file);
-      if (base === "seed.ts" || base.startsWith("seed-")) continue;
+      if (path.normalize(file).startsWith(SEED_DIRECTORY)) continue;
       const source = await readFile(path.join(ROOT, file), "utf8");
       const listed = CARRIERS[file.split(path.sep).join("/")] ?? [];
       const result = findUnfilteredPeopleReads(source, carriersIn(source, listed));

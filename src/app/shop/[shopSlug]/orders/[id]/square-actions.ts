@@ -1,10 +1,10 @@
 "use server";
 import { z } from "zod";
 import { getDb } from "@/db/client";
-import { parseForm, single } from "@/features/form-parse";
-import { linkSquareReceipt, releaseSquareReceipt } from "@/features/integrations";
-import { revalidateWithNotice } from "@/features/navigation";
-import { requireStaffSession } from "@/features/session";
+import { requireStaffSession } from "@/features/accounts/session";
+import { parseForm, single } from "@/features/platform/form-parse";
+import { revalidateWithNotice } from "@/features/platform/navigation";
+import { linkSquareReceipt, releaseSquareReceipt } from "@/features/shop-setup/integrations";
 import { shopPath } from "@/lib/staff-notices";
 
 const form = z.object({

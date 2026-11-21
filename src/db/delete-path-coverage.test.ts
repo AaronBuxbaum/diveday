@@ -2,10 +2,7 @@ import { eq, getTableName, sql } from "drizzle-orm";
 import { getTableConfig } from "drizzle-orm/pg-core";
 import { describe, expect, it } from "vitest";
 import { seededTestDb } from "@/test/db";
-import {
-  capturedDemoResetPlan,
-  resetDemoFromSnapshot,
-} from "../features/demo-reset-snapshot/store";
+import { capturedDemoResetPlan, resetDemoFromSnapshot } from "../features/demo/demo-reset-snapshot";
 import type { AppDb, DbExecutor } from "./client";
 import { PERSON_COLUMNS } from "./person-columns";
 import * as schema from "./schema";
@@ -26,8 +23,8 @@ import {
 
 /**
  * The structural guard on the two hand-maintained delete orderings —
- * `resetDemoSchedule` (src/db/seed.ts) and `deleteDemoShopCascade`
- * (src/db/seed-demo-lifecycle.ts).
+ * `resetDemoSchedule` (src/db/seed/index.ts) and `deleteDemoShopCascade`
+ * (src/db/seed/demo-lifecycle.ts).
  *
  * Both are topological sorts of the foreign-key graph, written by hand because
  * the shop-scoped FKs carry no `ON DELETE CASCADE`. Their existing guard is
@@ -42,7 +39,7 @@ import {
  * This closes the class rather than patching instances. Every table carrying a
  * `shop_id` must either be deleted by a path, or carry a written reason here
  * for why that path leaves it standing — the same "decide it or fail" ratchet
- * `src/db/export.test.ts` applies to the export bundle. Adding a table without
+ * `src/db/export/index.test.ts` applies to the export bundle. Adding a table without
  * deciding its fate fails, and the failure names the table.
  *
  * **It records what the code actually did**, not what a grep found: each path
@@ -169,7 +166,7 @@ const UNSCOPED_REASONS: Record<string, string> = {
   retention_prune_state:
     "global scheduler cursor holding only a table code, with no shop or person key",
   auth_verifications:
-    "better-auth's `verification` model: no foreign key, names its person as text in `identifier`. Both paths sweep it by that column, and so does the erasure (src/features/anonymize/store.ts) — a pending row holds an address and a live token",
+    "better-auth's `verification` model: no foreign key, names its person as text in `identifier`. Both paths sweep it by that column, and so does the erasure (src/features/records/anonymize.ts) — a pending row holds an address and a live token",
   global_dive_sites: "DiveDay’s own catalog of sites, shared by every shop and owned by none",
   global_dive_site_versions: "the catalog's own history, beside the table above",
   notification_rate_limit_state:
@@ -485,7 +482,7 @@ const PROBE = Symbol("delete-path-coverage:probe");
  *
  * The fleet's `/api/test/reset` runs `clearDemoSchedule` and then writes the
  * rows the re-seed would from a shadow taken on the server's first reset
- * (`src/features/demo-reset-snapshot/store.ts`). The shadow is found by difference rather
+ * (`src/features/demo/demo-reset-snapshot.ts`). The shadow is found by difference rather
  * than listed, so these hold it to the delete path above from both sides: it
  * writes only tables the reset deletes from (or that a cascade from one
  * clears), and every table the clear half empties of seeded rows is in it. A

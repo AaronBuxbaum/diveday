@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
 import { setBookingPayment } from "@/db/payments";
 import { activityEvents, bookings, notificationDeliveries, trips } from "@/db/schema";
-import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
+import { seedRollCallEvidence } from "@/db/seed/roll-call-evidence";
 import { nowMs } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import {
@@ -32,7 +32,7 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
 });
-vi.mock("../../../../../features/session/rules", () => ({ requireShopSurface: vi.fn() }));
+vi.mock("../../../../../features/accounts/session", () => ({ requireShopSurface: vi.fn() }));
 vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn() }));
 // The money seam, so a refusal is checked where the refund would have gone.
 vi.mock("@/db/refunds", async (importOriginal) => {
@@ -41,7 +41,7 @@ vi.mock("@/db/refunds", async (importOriginal) => {
 });
 
 const { getDb } = await import("@/db/client");
-const { requireShopSurface } = await import("../../../../../features/session/rules");
+const { requireShopSurface } = await import("../../../../../features/accounts/session");
 const { refundBookingOnCancellation } = await import("@/db/refunds");
 const { removeBookingAction } = await import("./roster-seating-actions");
 

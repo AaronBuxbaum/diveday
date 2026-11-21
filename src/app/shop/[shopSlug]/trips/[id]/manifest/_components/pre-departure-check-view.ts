@@ -1,5 +1,5 @@
 import type { latestPreDepartureChecksForTrip, listChecklistItems } from "@/db/pre-departure-check";
-import type { OpenSnag } from "@/features/boat-snags";
+import type { OpenSnag } from "@/features/crew-and-boats/boat-snags";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatDateTimeTz } from "@/lib/format";
 import type { SnagActions } from "./PreDepartureCheckList";

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { clearManifestReadCount, recordManifestRead } from "@/features/e2e-test-routes";
+import { clearManifestReadCount, recordManifestRead } from "@/features/platform/e2e-test-routes";
 import { POST } from "./route";
 
 const tripId = "11111111-1111-4111-8111-111111111111";

@@ -1,6 +1,6 @@
 # 20261108-concept-leaves — Move substrate leaves by concept in importer-first waves
 
-- **Status:** Accepted
+- **Status:** Superseded by [20261121-feature-areas](20261121-feature-areas.md)
 - **Date:** 2026-11-08
 
 ## Context

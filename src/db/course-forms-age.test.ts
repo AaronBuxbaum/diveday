@@ -8,7 +8,7 @@ import {
   getCourseBySlug,
   getCourseTemplateUpdate,
   pullCourseTemplateUpdates,
-} from "../features/courses/store";
+} from "../features/training/courses/store";
 import {
   createCourseForm,
   getCourseFormsForBooking,

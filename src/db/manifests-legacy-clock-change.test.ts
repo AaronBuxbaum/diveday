@@ -2,7 +2,7 @@ import { expect, it } from "vitest";
 import {
   issueOfflineManifestSnapshot,
   readOfflineManifestRoster,
-} from "@/features/offline-manifest-snapshots";
+} from "@/features/boarding/offline-manifest-snapshots";
 import { nowDate } from "@/lib/clock";
 import { manifestContext } from "@/test/substrate-fixtures/db/manifests-test-fixtures";
 import { getTripManifest, recordCrewRollCall, recordRollCall } from "./manifests";

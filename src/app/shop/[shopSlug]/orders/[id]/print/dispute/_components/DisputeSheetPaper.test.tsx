@@ -4,7 +4,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { PACKET_PAPER } from "@/lib/print-sheets";
-import type { DisputeSheet } from "../../../../../../../../features/dispute-sheet/rules";
+import type { DisputeSheet } from "../../../../../../../../features/money/dispute-sheet/rules";
 import { ShopSheet } from "../../../../../print/_components/ShopSheet";
 import { DisputeSheetPaper } from "./DisputeSheetPaper";
 

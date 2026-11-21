@@ -103,11 +103,11 @@ tables; it is written by the sequence and read only as an ordering key, so it co
 bigint per row.
 
 **Five readers outside the owned paths were left on the old key** and are filed as
-`FU-20260815-two-roll-call-readers-still-tie-break-on-transaction-time`: `src/features/today/today-reader.ts` (twice —
+`FU-20260815-two-roll-call-readers-still-tie-break-on-transaction-time`: `src/features/day/today/today-reader.ts` (twice —
 the queue that raises the missing-diver row, and the half of the DOM-H3 agreement that is now
-guarded on one side only), `src/features/incident-export/store.ts` (twice — the departure log's timeline, whose
+guarded on one side only), `src/features/safety/incident-export.ts` (twice — the departure log's timeline, whose
 footer carries a SHA-256 over the printed facts, so a tie can print two orders and two hashes for
-one unchanged record), and `src/db/export.ts`, which tie-breaks on `id` — `defaultRandom()`, so the
+one unchanged record), and `src/db/export/index.ts`, which tie-breaks on `id` — `defaultRandom()`, so the
 shop's own CSV of the safety trail is arbitrarily ordered on any tie. `maxRecordedDiveNumber`
 (`src/lib/manifests.ts`, called from `src/db/trips-record.ts`) is in the same entry.
 

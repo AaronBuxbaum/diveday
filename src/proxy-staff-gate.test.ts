@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 // Apart from `proxy.test.ts`, which is at its file-length baseline: no
 // database, and the cookie the test sets.
 vi.mock("@/db/client", () => ({ getDb: async () => ({}) }));
-vi.mock("./features/public-route-existence/store", () => ({
+vi.mock("./features/public-site/public-route-existence", () => ({
   rememberedPublicRouteLookup: async () => ({ exists: true, shopExists: true, hidden: false }),
 }));
 const cookie = vi.hoisted(() => ({ roles: null as string[] | null }));

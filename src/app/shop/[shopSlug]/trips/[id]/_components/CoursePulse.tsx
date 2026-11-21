@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { sectionCardClass } from "@/components/ui/card";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
-import type { CoursePulse as CoursePulseData } from "@/features/course-pulse";
+import type { CoursePulse as CoursePulseData } from "@/features/training/course-pulse";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { formatDateTimeTz } from "@/lib/format";
 import { claimCourseFollowupAction, saveCourseTeachingNoteAction } from "../course-pulse-actions";

@@ -42,7 +42,7 @@ test.use(VISUAL_STEP_BOUNDS);
  * answered a question — a red-bordered prompt where five phone numbers should
  * be, read by a crew at the rail. Every other capture in this file sees the
  * seeded shop, which fills the field in deliberately ("an unseeded shop would
- * photograph its own empty state on every capture of that page", `seed.ts`),
+ * photograph its own empty state on every capture of that page", `seed/index.ts`),
  * so this state had never been looked at and the settings capture above
  * claimed, wrongly, that it had been.
  *

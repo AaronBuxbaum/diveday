@@ -4,11 +4,11 @@ import { canPersonRefund } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { getOrder, refreshOrderStatus, refundOrder, voidOrder } from "@/db/orders";
 import { getShopById } from "@/db/shops";
-import { dispatchIntegrationsAfterResponse } from "@/features/integrations";
-import { revalidateAndRedirect } from "@/features/navigation";
-import { stepUpChallengeUrl } from "@/features/security-step-up";
-import { requireStaffSession } from "@/features/session";
-import { hasRequiredStepUp } from "@/features/step-up";
+import { stepUpChallengeUrl } from "@/features/accounts/security-step-up";
+import { requireStaffSession } from "@/features/accounts/session";
+import { hasRequiredStepUp } from "@/features/accounts/step-up";
+import { revalidateAndRedirect } from "@/features/platform/navigation";
+import { dispatchIntegrationsAfterResponse } from "@/features/shop-setup/integrations";
 import { majorToMinor } from "@/lib/money";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { postedOrderId, postedRefundAmount } from "./order-form";
@@ -19,7 +19,7 @@ import { afterOrderRefunded } from "./refund-activity";
  * demo never connects a real Stripe account). Refresh / void / refund all reach
  * out to Stripe with those ids and would error against live platform
  * credentials, so on a demo shop these actions are refused before any Stripe
- * call — and the buttons are rendered disabled to match (src/db/seed.ts).
+ * call — and the buttons are rendered disabled to match (src/db/seed/index.ts).
  */
 // i18n-exempt: scanner false positive — the copy scanner reads the `>` closing this generic as JSX and treats the rest of the signature as a text node; it is code, not copy.
 async function isDemoShop(db: Awaited<ReturnType<typeof getDb>>, shopId: string): Promise<boolean> {

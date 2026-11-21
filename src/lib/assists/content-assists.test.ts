@@ -1,14 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { callStructured } from "@/lib/claude/structured";
 import { fakeClaude, fakeClaudeMessage } from "@/test/fakes";
-import { BENCH_NOTE_SYSTEM, benchNote } from "../../features/bench-note/rules";
 import {
   DESCRIPTION_DRAFT_SYSTEM,
   descriptionDraft,
   descriptionDraftCall,
-} from "../../features/description-draft/rules";
-import { mondayRead } from "../../features/monday-summary/rules";
-import { SITE_BRIEF_SYSTEM, siteBrief, siteBriefCall } from "../../features/site-brief/rules";
+} from "../../features/ai/description-draft";
+import { BENCH_NOTE_SYSTEM, benchNote } from "../../features/gear/bench-note";
+import { mondayRead } from "../../features/reports/monday-summary";
+import { SITE_BRIEF_SYSTEM, siteBrief, siteBriefCall } from "../../features/sites/site-brief";
 import { shopTranslation, sourceDigest } from "./shop-translate";
 
 describe("copywriter", () => {
@@ -260,7 +260,7 @@ describe("bench note", () => {
 
 describe("monday facts", () => {
   it("formats the section's numbers and leaves out nested parts", async () => {
-    const { mondaySectionFacts } = await import("../../features/monday-summary/rules");
+    const { mondaySectionFacts } = await import("../../features/reports/monday-summary");
     expect(
       mondaySectionFacts(
         {

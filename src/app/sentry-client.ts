@@ -1,6 +1,6 @@
 import { redactBreadcrumb, redactEvent, SENTRY_DATA_COLLECTION } from "@/app/observability";
-import { deferSentry } from "@/features/sentry-browser";
-import { SENTRY_DSN } from "@/features/sentry-dsn";
+import { deferSentry } from "@/features/platform/sentry-browser";
+import { SENTRY_DSN } from "@/features/platform/sentry-dsn";
 
 /** Start the SDK on idle, or immediately when the root error boundary needs it. */
 function whenIdle(run: () => void) {

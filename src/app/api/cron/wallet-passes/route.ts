@@ -1,8 +1,11 @@
 import { getDb } from "@/db/client";
-import { requireCronSecret } from "@/features/cron-auth";
-import { flushLogs } from "@/features/log-shipping";
-import { sentry } from "@/features/sentry-server";
-import { configuredWalletPlatforms, pushChangedWalletPasses } from "@/features/wallet-pass";
+import {
+  configuredWalletPlatforms,
+  pushChangedWalletPasses,
+} from "@/features/boarding/wallet-pass";
+import { requireCronSecret } from "@/features/platform/cron-auth";
+import { flushLogs } from "@/features/platform/log-shipping";
+import { sentry } from "@/features/platform/sentry-server";
 
 export const maxDuration = 60;
 const monitorSlug = "diveday-wallet-passes";

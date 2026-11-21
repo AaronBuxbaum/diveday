@@ -11,13 +11,15 @@ vi.mock("next/navigation", () => ({
     throw new Error(`REDIRECT:${path}`);
   }),
 }));
-vi.mock("../../../../features/seat-claims/store", () => ({ openMinorSeatWaiver: vi.fn() }));
+vi.mock("../../../../features/bookings/seat-claims/store", () => ({
+  openMinorSeatWaiver: vi.fn(),
+}));
 vi.mock("./action-helpers", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./action-helpers")>();
   return { ...actual, contextFor: vi.fn() };
 });
 
-const { openMinorSeatWaiver } = await import("../../../../features/seat-claims/store");
+const { openMinorSeatWaiver } = await import("../../../../features/bookings/seat-claims/store");
 const { contextFor } = await import("./action-helpers");
 const { signMinorWaiverAction } = await import("./party-actions");
 

@@ -24,7 +24,7 @@ vi.mock("./manifest-events", async (importOriginal) => {
 });
 
 const { publishManifestEvent } = await import("./manifest-events");
-const { seatDiver } = await import("../features/seat-diver/store");
+const { seatDiver } = await import("../features/bookings/seat-diver");
 const { cancelBooking } = await import("./bookings");
 const { setTripCrew } = await import("./trips-crew");
 const { callTripBlowout } = await import("./blowouts");

@@ -3,7 +3,7 @@
 import { cleanup, screen, within } from "@testing-library/react";
 import { prerender } from "react-dom/static";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { assembleDaySpine, type TodayAction } from "@/features/today";
+import { assembleDaySpine, type TodayAction } from "@/features/day/today";
 
 // The spine composes WaiverSendControl/ResendConfirmationControl/
 // PaymentActionControl, each of which statically imports its own `"use server"`
@@ -32,7 +32,7 @@ vi.mock("next/navigation", async (importOriginal) => ({
   useRouter: () => ({ refresh: vi.fn() }),
 }));
 
-import type { FirstBooking } from "../../../../../features/first-booking/store";
+import type { FirstBooking } from "../../../../../features/bookings/first-booking";
 import { DaySpine } from "./DaySpine";
 import {
   action,
@@ -236,7 +236,7 @@ describe("the first morning", () => {
  * ever" row (20260827-clearwater-surface-language, decision 11).
  *
  * Whether the moment is *live* is `shopFirstBooking`'s question and is pinned
- * in `src/features/first-booking/store.test.ts`; what this file owns is the surface's own
+ * in `src/features/bookings/first-booking.test.ts`; what this file owns is the surface's own
  * rule — one coral element at a time, and which one wins when two are true.
  */
 describe("the first booking ever", () => {

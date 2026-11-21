@@ -1,6 +1,6 @@
 import { eq, sql } from "drizzle-orm";
 import { afterAll, beforeAll, expect, it, vi } from "vitest";
-import { buildOfflineManifestCopies } from "@/features/offline-manifest-snapshots";
+import { buildOfflineManifestCopies } from "@/features/boarding/offline-manifest-snapshots";
 import { describePostgres, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
 import { recordCrewRollCall, recordRollCall } from "./manifests";
 import { offlineReviewRefusals, rollCallEvents, tripAssignments } from "./schema";

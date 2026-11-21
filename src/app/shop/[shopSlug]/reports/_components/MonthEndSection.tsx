@@ -1,7 +1,7 @@
 import { getDb } from "@/db/client";
 import { canPersonExportShopData } from "@/db/export";
-import { readBookkeeper } from "@/features/bookkeeper";
-import { requireStaffSession } from "@/features/session";
+import { requireStaffSession } from "@/features/accounts/session";
+import { readBookkeeper } from "@/features/money/bookkeeper";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { saveBookkeeperAction } from "../bookkeeper-actions";
 import { BookkeeperForm } from "./BookkeeperForm";

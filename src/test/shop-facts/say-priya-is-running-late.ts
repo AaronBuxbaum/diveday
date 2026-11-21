@@ -1,7 +1,7 @@
 import { and, eq, gte, isNull } from "drizzle-orm";
 import type { AppDb } from "../../db/client";
 import { bookings, people, trips } from "../../db/schema/index";
-import { markBookingRunningLate } from "../../features/running-late/store";
+import { markBookingRunningLate } from "../../features/boarding/running-late";
 
 /**
  * Priya Sharma, booked on a departure inside the next day, says she

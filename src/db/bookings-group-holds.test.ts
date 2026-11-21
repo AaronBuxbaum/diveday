@@ -6,7 +6,7 @@ import { nowDate } from "@/lib/clock";
 import { advanceClock } from "@/test/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { recordingCheckout } from "@/test/fakes";
-import { claimPartySeat, issuePartySeatClaims } from "../features/seat-claims/store";
+import { claimPartySeat, issuePartySeatClaims } from "../features/bookings/seat-claims/store";
 import {
   issueBookingCapability,
   resolveExpiredGroupHoldOrganizer,

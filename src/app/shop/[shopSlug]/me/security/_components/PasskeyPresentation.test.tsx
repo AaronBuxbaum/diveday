@@ -20,7 +20,7 @@ vi.mock("@/app/_components/PasskeyAuthentication", () => ({
   PasskeyAuthentication: ({ label }: { label: string }) => <button type="button">{label}</button>,
 }));
 const { supportsPasskeys } = vi.hoisted(() => ({ supportsPasskeys: vi.fn(() => true) }));
-vi.mock("@/features/passkeys", () => ({ browserSupportsPasskeys: supportsPasskeys }));
+vi.mock("@/features/accounts/passkeys", () => ({ browserSupportsPasskeys: supportsPasskeys }));
 beforeEach(() => supportsPasskeys.mockReturnValue(true));
 
 afterEach(cleanup);

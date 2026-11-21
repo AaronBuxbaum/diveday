@@ -91,11 +91,11 @@ describe("the repository's .gitattributes", () => {
   // `pnpm regen` rewrites it in the same test run as the shop snapshot.
   it("gives every snapshot `pnpm regen` rewrites the generated driver", () => {
     const test = readFileSync(
-      path.join(path.dirname(SCRIPT), "..", "src/db/export-bundle.snapshot.test.ts"),
+      path.join(path.dirname(SCRIPT), "..", "src/db/export/bundle.snapshot.test.ts"),
       "utf8",
     );
     const snapshots = [...test.matchAll(/"\.\/(__snapshots__\/[\w.-]+\.snap)"/g)].map(
-      (match) => `src/db/${match[1]}`,
+      (match) => `src/db/export/${match[1]}`,
     );
     expect(snapshots.length).toBeGreaterThan(1);
     for (const file of snapshots)

@@ -1,8 +1,8 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
-import { proposalKey } from "../features/gear-proposals/rules";
-import { getTripPrep, screenGearPicks } from "../features/trip-prep/store";
+import { proposalKey } from "../features/gear/gear-proposals";
+import { getTripPrep, screenGearPicks } from "../features/trips/trip-prep/store";
 import { bookings, cards, gearItems } from "./schema";
 import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 

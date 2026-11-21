@@ -1,36 +1,36 @@
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 
-import { REVIEWS } from "./check-pr-body.mjs";
+import { REVIEWS, reviewPath } from "./check-pr-body.mjs";
 
 /**
  * Safety-critical files the reviewer patterns do not match by name but that decide who may do
  * what or where money moves. Hand-kept; the pattern-matched files below are found, not listed.
  */
 const EXPLICIT = [
-  "src/features/check-in/rules.ts",
-  "src/features/anonymize/store.ts",
-  "src/features/card-restore/store.ts",
-  "src/features/certification-junior/store.ts",
-  "src/features/check-in/store.ts",
-  "src/features/course-certified/store.ts",
-  "src/features/nitrox-mod/rules.ts",
-  "src/features/offline-manifest-snapshots/store.ts",
-  "src/features/party-waiver-queue/store.ts",
-  "src/features/readiness-link-rescue/store.ts",
-  "src/features/roll-call-alerts/store.ts",
-  "src/features/roll-call-alerts/rules.ts",
-  "src/features/signed-waiver-page/store.ts",
-  "src/features/waivers-page/store.ts",
-  "src/features/anonymization/rules.ts",
-  "src/features/waiver-draft/rules.ts",
-  "src/features/cert-scan/rules.ts",
-  "src/features/card-undo/rules.ts",
-  "src/features/guardian-erasure/store.ts",
-  "src/features/processor-erasure/store.ts",
-  "src/features/seat-diver/store.ts",
-  "src/features/roll-call-gaps/store.ts",
-  "src/features/standing-sailed-roll-call/store.ts",
+  "src/features/boarding/check-in/rules.ts",
+  "src/features/records/anonymize.ts",
+  "src/features/certifications/card-restore.ts",
+  "src/features/certifications/certification-junior.ts",
+  "src/features/boarding/check-in/store.ts",
+  "src/features/training/course-certified.ts",
+  "src/features/safety/nitrox-mod.ts",
+  "src/features/boarding/offline-manifest-snapshots/store.ts",
+  "src/features/waivers/party-waiver-queue.ts",
+  "src/features/boarding/readiness-link-rescue.ts",
+  "src/features/boarding/roll-call-alerts/store.ts",
+  "src/features/boarding/roll-call-alerts/rules.ts",
+  "src/features/waivers/signed-waiver-page.ts",
+  "src/features/waivers/waivers-page.ts",
+  "src/features/records/anonymization.ts",
+  "src/features/waivers/waiver-draft.ts",
+  "src/features/certifications/cert-scan.ts",
+  "src/features/certifications/card-undo.ts",
+  "src/features/records/guardian-erasure.ts",
+  "src/features/records/processor-erasure.ts",
+  "src/features/bookings/seat-diver.ts",
+  "src/features/boarding/roll-call-gaps.ts",
+  "src/features/boarding/standing-sailed-roll-call.ts",
   "src/test/shop-facts/manifest-overcapacity-state.ts",
   "src/test/shop-facts/mark-mixed-waiver-delivery.ts",
   "src/test/shop-facts/party-waiver-capacity-state.ts",
@@ -43,7 +43,7 @@ const EXPLICIT = [
   "src/db/account-security.ts",
   // Today's roll-call rows moved above the graph into a feature (issue #2756); the
   // file remains explicit as well as discoverable under src/features.
-  "src/features/today/today-roll-call-rows.ts",
+  "src/features/day/today/today-roll-call-rows.ts",
 ];
 
 /** Never a safety file: tests and fixtures, seed scenarios, fixture modules, copy resolvers, type declarations. */
@@ -52,8 +52,9 @@ const NOT_LOGIC = [
   /\.d\.ts$/,
   /test-fixtures/,
   /-fixtures\.tsx?$/,
-  /(^|\/)seed-[^/]*$/,
-  /-copy\.tsx?$/,
+  /^src\/db\/seed\//,
+  // A copy resolver; a one-file feature concept named "…-copy" (waiver-guardian-copy) is logic.
+  /^(?!src\/features\/).*-copy\.tsx?$/,
   /\.test-support\.tsx?$/,
 ];
 
@@ -69,7 +70,7 @@ export function matchedSafetyFiles(files) {
   return files
     .filter((file) => /^src\/(lib|db|features)\/.+\.tsx?$/.test(file))
     .filter((file) => !NOT_LOGIC.some((re) => re.test(file)))
-    .filter((file) => DOMAIN_EXPERT.patterns.some((re) => re.test(file.toLowerCase())))
+    .filter((file) => DOMAIN_EXPERT.patterns.some((re) => re.test(reviewPath(file))))
     .toSorted();
 }
 

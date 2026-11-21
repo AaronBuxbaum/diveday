@@ -17,6 +17,6 @@ Declined (Aaron, 2026-11-06): keep `hosted_invoice_url` and `invoice_pdf_url` in
 
 ## Unblocks / follow-up
 
-Once approved, dropping the columns is a small, contained change to `src/db/export-shop-files.ts` and the export README's documented schema.
+Once approved, dropping the columns is a small, contained change to `src/db/export/shop-files.ts` and the export README's documented schema.
 
 Part of the [human decision log](README.md#decision-register).

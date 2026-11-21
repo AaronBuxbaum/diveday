@@ -35,7 +35,7 @@ describe("check-assist-prompts", () => {
 
   it("refuses each way a prompt is reached: an assist db module, runAssistOutcome and the seam's import", () => {
     const result = runGuard(GUARD, {
-      "src/features/recap/recap-assist.store.ts": 'import { w } from "./waivers";\n',
+      "src/features/after-the-dive/recap/recap-assist.store.ts": 'import { w } from "./waivers";\n',
       "src/app/shop/x/outcome.ts":
         'const v = await runAssistOutcome(db, input);\nimport { m } from "@/lib/medical";\n',
       "src/db/x-reads.ts":
@@ -45,7 +45,7 @@ describe("check-assist-prompts", () => {
     });
     expect(result.status).toBe(1);
     expect(result.stderr).toContain(
-      "src/features/recap/recap-assist.store.ts:1: imports ./waivers",
+      "src/features/after-the-dive/recap/recap-assist.store.ts:1: imports ./waivers",
     );
     expect(result.stderr).toContain("src/app/shop/x/outcome.ts:2: imports @/lib/medical");
     expect(result.stderr).toContain("src/db/x-reads.ts:2: imports ./waiver-records");
@@ -54,16 +54,16 @@ describe("check-assist-prompts", () => {
 
   it("refuses the crew's medical alert, by any spelling, and the waiver table from the schema barrel", () => {
     const result = runGuard(GUARD, {
-      "src/features/inbox-assists/store.ts":
+      "src/features/ai/inbox-assists.ts":
         'import { bookings, waiverRecords } from "./schema";\nconst a = await db.select({ alert: waiverRecords.medicalAlert });\n',
       "src/lib/assists/x.ts":
         'import {\n  waiverRecords,\n} from "@/db/schema";\nconst d = row.draftMedicalAlert;\nconst c = sql`medical_alert`;\n',
     });
     expect(result.status).toBe(1);
     expect(result.stderr).toContain(
-      "src/features/inbox-assists/store.ts:1: imports waiverRecords from ./schema",
+      "src/features/ai/inbox-assists.ts:1: imports waiverRecords from ./schema",
     );
-    expect(result.stderr).toContain("src/features/inbox-assists/store.ts:2: names medical data");
+    expect(result.stderr).toContain("src/features/ai/inbox-assists.ts:2: names medical data");
     expect(result.stderr).toContain(
       "src/lib/assists/x.ts:1: imports waiverRecords from @/db/schema",
     );
@@ -73,8 +73,7 @@ describe("check-assist-prompts", () => {
 
   it("leaves a prompt module's other tables from the schema barrel alone", () => {
     const result = runGuard(GUARD, {
-      "src/features/inbox-assists/store.ts":
-        'import { bookings, inboundMessages } from "./schema";\n',
+      "src/features/ai/inbox-assists.ts": 'import { bookings, inboundMessages } from "./schema";\n',
     });
     expect(result.status).toBe(0);
   });
@@ -84,7 +83,7 @@ describe("check-assist-prompts", () => {
       "src/app/shop/x/page.tsx": 'import { needsMedicalReview } from "@/lib/medical";\n',
       "src/lib/assists/inbox.test.ts": 'import { x } from "@/lib/medical";\n',
       "src/lib/assists/inbox.ts": 'import { z } from "zod";\nexport const a = z.string();\n',
-      "src/features/assists/store.ts": 'import { x } from "./schema";\n',
+      "src/features/ai/assists/store.ts": 'import { x } from "./schema";\n',
     });
     expect(result.status).toBe(0);
     expect(result.stdout).toContain("1 prompt module(s), none reads medical data");
@@ -94,18 +93,22 @@ describe("check-assist-prompts", () => {
 describe("feature prompt ownership", () => {
   it("refuses medical readers from moved and future feature prompt modules", () => {
     const result = runGuard(GUARD, {
-      "src/features/assists/future.ts": 'import { data } from "@/features/waivers-medical";\n',
-      "src/features/future-assist/store.ts": 'import { waiverRecords } from "@/db/schema";\n',
+      "src/features/ai/assists/future.ts":
+        'import { data } from "@/features/waivers/waivers-medical";\n',
+      "src/features/ai/future-assist/store.ts": 'import { waiverRecords } from "@/db/schema";\n',
     });
     expect(result.status).toBe(1);
     expect(result.stderr).toContain(
-      "src/features/assists/future.ts:1: imports @/features/waivers-medical",
+      "src/features/ai/assists/future.ts:1: imports @/features/waivers/waivers-medical",
     );
-    expect(result.stderr).toContain("src/features/future-assist/store.ts:1: imports waiverRecords");
+    expect(result.stderr).toContain(
+      "src/features/ai/future-assist/store.ts:1: imports waiverRecords",
+    );
   });
   it("still leaves unrelated feature modules alone", () => {
     const result = runGuard(GUARD, {
-      "src/features/roster/store.ts": 'import { needsMedicalReview } from "@/lib/medical";\n',
+      "src/features/boarding/roster/store.ts":
+        'import { needsMedicalReview } from "@/lib/medical";\n',
     });
     expect(result.status).toBe(0);
   });
@@ -115,32 +118,27 @@ describe("feature prompt ownership", () => {
 describe("independent prompt concepts", () => {
   it("refuses medical readers in every split prompt directory", () => {
     const roots = [
-      "bench-note",
-      "booking-request",
-      "cert-scan",
-      "description-draft",
-      "monday-summary",
-      "recap-line",
-      "rental-note",
-      "review-flags",
-      "review-themes",
-      "same-person",
-      "site-brief",
-      "waiver-draft",
-      "website-reading",
+      "src/features/gear/bench-note.ts",
+      "src/features/bookings/booking-request.ts",
+      "src/features/certifications/cert-scan.ts",
+      "src/features/ai/description-draft.ts",
+      "src/features/reports/monday-summary.ts",
+      "src/features/after-the-dive/recap-line.ts",
+      "src/features/gear/rental-note.ts",
+      "src/features/after-the-dive/review-flags.ts",
+      "src/features/after-the-dive/review-themes.ts",
+      "src/features/people/same-person.ts",
+      "src/features/sites/site-brief.ts",
+      "src/features/waivers/waiver-draft.ts",
+      "src/features/ai/website-reading.ts",
     ];
     const files = Object.fromEntries(
-      roots.map((name) => [
-        `src/features/${name}/rules.ts`,
-        'import { data } from "@/features/waivers-medical";\n',
-      ]),
+      roots.map((file) => [file, 'import { data } from "@/features/waivers/waivers-medical";\n']),
     );
     const result = runGuard(GUARD, files);
     expect(result.status).toBe(1);
-    for (const name of roots) {
-      expect(result.stderr).toContain(
-        `src/features/${name}/rules.ts:1: imports @/features/waivers-medical`,
-      );
+    for (const file of roots) {
+      expect(result.stderr).toContain(`${file}:1: imports @/features/waivers/waivers-medical`);
     }
   });
 });

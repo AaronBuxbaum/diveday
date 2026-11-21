@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { parseCspReports } from "@/features/csp-reports";
-import { flushLogs } from "@/features/log-shipping";
+import { parseCspReports } from "@/features/platform/csp-reports";
+import { flushLogs } from "@/features/platform/log-shipping";
 import { log } from "@/lib/log";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
@@ -18,7 +18,7 @@ import { clientIp } from "@/lib/request-ip";
  * necessity (the report comes from a stranger's browser), answering 204 to
  * everything it will not act on, rate-limited per IP because every accepted
  * report costs a CloudWatch log line. What it does *not* share is the beacon's
- * looseness about content — see `src/features/csp-reports/rules.ts` for the fields
+ * looseness about content — see `src/features/platform/csp-reports.ts` for the fields
  * deliberately dropped, `script-sample` above all.
  */
 

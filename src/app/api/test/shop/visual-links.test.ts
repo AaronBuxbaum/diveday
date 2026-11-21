@@ -8,13 +8,13 @@ import {
   checkBookkeeperConfirmation,
   isBookkeeperToken,
   resolveBookkeeperStopToken,
-} from "../../../../features/bookkeeper/store";
+} from "../../../../features/money/bookkeeper/store";
+import { resolveWeeklyDigestUnsubscribeToken } from "../../../../features/reports/weekly-digest/store";
 import {
   checkShoreAlertConfirmation,
   isShoreAlertToken,
   resolveShoreAlertStopToken,
-} from "../../../../features/shore-alert-tokens/store";
-import { resolveWeeklyDigestUnsubscribeToken } from "../../../../features/weekly-digest/store";
+} from "../../../../features/safety/shore-alert-tokens";
 
 vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();

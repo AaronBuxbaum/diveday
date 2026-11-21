@@ -6,28 +6,28 @@ import type { ClaudeProvider } from "@/lib/claude/provider";
 import type { WeeklyDigestEmailSection } from "@/lib/notifications/kinds";
 import { fileScopedShopContext } from "@/test/db";
 import { fakeClaude, fakeClaudeMessage } from "@/test/fakes";
-import { readAssistResults } from "../features/assist-results/store";
-import { runAssist } from "../features/assists/store";
-import {
-  CERT_SCAN_FEATURE,
-  certScanCall,
-  certScanFields,
-  scanCard,
-} from "../features/cert-scan/rules";
-import { readUnsurePair } from "../features/desk-assists/store";
-import { mondayReadFor } from "../features/monday-read/store";
 import {
   autoFillRecapLine,
   draftRecapLine,
   recapLogFor,
-} from "../features/recap/recap-assist.store";
+} from "../features/after-the-dive/recap/recap-assist.store";
+import { readAssistResults } from "../features/ai/assist-results";
+import { runAssist } from "../features/ai/assists/store";
+import { readUnsurePair } from "../features/ai/desk-assists";
 import {
   flagWaitingReviews,
   readReviewFlags,
   readReviewThemes,
   refreshReviewThemes,
   themesMonth,
-} from "../features/review-assists/store";
+} from "../features/ai/review-assists";
+import {
+  CERT_SCAN_FEATURE,
+  certScanCall,
+  certScanFields,
+  scanCard,
+} from "../features/certifications/cert-scan";
+import { mondayReadFor } from "../features/reports/monday-read";
 import { deleteDiveSite } from "./dive-sites";
 import {
   assistResults,

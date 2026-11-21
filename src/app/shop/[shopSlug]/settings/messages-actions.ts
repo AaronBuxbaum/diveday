@@ -2,9 +2,9 @@
 
 import { z } from "zod";
 import { setShopReviewUrl } from "@/db/shops";
-import { setShopDeskHours } from "@/features/desk-pings";
-import { formValue, text } from "@/features/form-parse";
-import { defineAction, land } from "@/features/server-action";
+import { setShopDeskHours } from "@/features/messages/desk-pings";
+import { formValue, text } from "@/features/platform/form-parse";
+import { defineAction, land } from "@/features/platform/server-action";
 import { parseDeskHours } from "@/lib/desk-hours";
 import { SETTINGS_GATE } from "./action-gates";
 

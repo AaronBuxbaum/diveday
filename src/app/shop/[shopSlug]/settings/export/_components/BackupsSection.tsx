@@ -9,7 +9,10 @@ import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/fo
 import { Table, TBody, Td, THead, Th } from "@/components/ui/table";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { ShopBackupDelivery } from "@/db/schema";
-import type { getShopBackupDestination, listBackupDeliveries } from "@/features/backup-export";
+import type {
+  getShopBackupDestination,
+  listBackupDeliveries,
+} from "@/features/records/backup-export";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import { formatByteSize, formatDateTimeTz } from "@/lib/format";
 import { disconnectBackupAction, saveBackupDestinationAction, testBackupAction } from "../actions";

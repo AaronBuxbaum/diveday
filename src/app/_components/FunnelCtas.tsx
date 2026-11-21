@@ -5,7 +5,7 @@ import { FunnelTag } from "@/components/FunnelTag";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
 import { BANNER_TITLE_CLASS } from "@/components/ui/typography";
-import { planCopyParams } from "@/features/billing";
+import { planCopyParams } from "@/features/money/billing";
 import { type DiverMessageKey, type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
 import type { PlanTerms } from "@/lib/billing/pricing-plans";

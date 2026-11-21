@@ -4,15 +4,15 @@ import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { z } from "zod";
 import { getDb } from "@/db/client";
+import { requireStaffSession } from "@/features/accounts/session";
 import {
   type FeedScope,
   feedPath,
   feedSubscribeUrl,
   issueCalendarFeed,
   revokeCalendarFeeds,
-} from "@/features/calendar-sync";
-import { parseForm } from "@/features/form-parse";
-import { requireStaffSession } from "@/features/session";
+} from "@/features/crew-and-boats/calendar-sync";
+import { parseForm } from "@/features/platform/form-parse";
 import { shopPath } from "@/lib/staff-notices";
 import type { FeedIssueState } from "./feed-panel-types";
 

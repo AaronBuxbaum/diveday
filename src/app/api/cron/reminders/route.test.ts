@@ -6,13 +6,13 @@ vi.mock("@/db/client", async (importOriginal) => {
 });
 vi.mock("@/db/media-deletions", () => ({ retryPendingMediaDeletions: vi.fn() }));
 vi.mock("@/db/notifications", () => ({ drainNotificationRetries: vi.fn() }));
-vi.mock("@/features/person-photo", () => ({ cleanupPrivatePersonPhotos: vi.fn() }));
-vi.mock("../../../../features/processor-erasure/store", () => ({
+vi.mock("@/features/people/person-photo", () => ({ cleanupPrivatePersonPhotos: vi.fn() }));
+vi.mock("../../../../features/records/processor-erasure", () => ({
   retryPendingProcessorErasures: vi.fn(),
 }));
 vi.mock("@/db/seed", () => ({ reapExpiredDemoShops: vi.fn() }));
 // The routes report only where a DSN is configured; the suite runs without one.
-vi.mock("../../../../features/sentry-dsn/rules", () => ({
+vi.mock("../../../../features/platform/sentry-dsn", () => ({
   SENTRY_DSN: "https://key@sentry.invalid/1",
 }));
 vi.mock("@sentry/nextjs", () => ({
@@ -23,9 +23,9 @@ vi.mock("@sentry/nextjs", () => ({
 const { getDb } = await import("@/db/client");
 const { retryPendingMediaDeletions } = await import("@/db/media-deletions");
 const { drainNotificationRetries } = await import("@/db/notifications");
-const { cleanupPrivatePersonPhotos } = await import("@/features/person-photo");
+const { cleanupPrivatePersonPhotos } = await import("@/features/people/person-photo");
 const { retryPendingProcessorErasures } = await import(
-  "../../../../features/processor-erasure/store"
+  "../../../../features/records/processor-erasure"
 );
 const { reapExpiredDemoShops } = await import("@/db/seed");
 const Sentry = await import("@sentry/nextjs");

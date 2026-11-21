@@ -17,8 +17,8 @@ import {
   SEEDED_OWNER_EMAIL,
   seededStaffPersonId,
 } from "@/test/staff-session";
-import { editCourse } from "../features/courses/store";
-import { recordStripeDispute } from "../features/payment-disputes/store";
+import { recordStripeDispute } from "../features/money/payment-disputes";
+import { editCourse } from "../features/training/courses/store";
 import { createBooking } from "./bookings";
 import { countSpendableDives, createDivePackage, deleteDivePackage } from "./dive-packages";
 import {
@@ -271,7 +271,7 @@ describe("orders", () => {
   it("bills a demo shop to its own address when tax is on and none was given", async () => {
     // The affordance the test above clears `is_demo` to get out of the way of.
     // The canonical demo ships with Stripe Tax on so its report has something
-    // to report (src/db/seed.ts), and there is no diver to ask for a billing
+    // to report (src/db/seed/index.ts), and there is no diver to ask for a billing
     // address on a counter sale — so it uses the shop's own, which for a sale
     // made at the shop is also the honest answer.
     const { db, shop, entry, staff } = await orderContext();

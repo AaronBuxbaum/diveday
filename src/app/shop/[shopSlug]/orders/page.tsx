@@ -8,8 +8,12 @@ import { Badge } from "@/components/ui/badge";
 import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
 import { LedgerGroup } from "@/components/ui/ledger";
 import { ShopNotice } from "@/components/ui/outcome";
-import { getOrdersIndex, ORDER_DEFAULT_RANGE_DAYS, ORDER_STATUSES } from "@/features/orders-index";
-import { requireShopSurface } from "@/features/session";
+import { requireShopSurface } from "@/features/accounts/session";
+import {
+  getOrdersIndex,
+  ORDER_DEFAULT_RANGE_DAYS,
+  ORDER_STATUSES,
+} from "@/features/money/orders-index";
 import { ORDER_STATUS_KEYS } from "@/i18n/order-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";

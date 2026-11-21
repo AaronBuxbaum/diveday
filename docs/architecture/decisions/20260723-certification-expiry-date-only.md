@@ -59,7 +59,7 @@ impossible dates like `2026-02-31`.
 ## Consequences
 
 - Every write path that inserts/updates a certification or specialty-card expiry now passes a
-  `"YYYY-MM-DD"` string, not a `Date`; `src/db/seed.ts`'s demo fixtures and `src/db/export.ts`'s
+  `"YYYY-MM-DD"` string, not a `Date`; `src/db/seed/index.ts`'s demo fixtures and `src/db/export/index.ts`'s
   CSV column follow the same shape.
 - Comparing expiry no longer risks a raw `Date <= Date` mistake reading the wrong timezone's
   "today" — the type system requires a `CalendarDate` and a `todayLocal`, not an arbitrary `Date`.

@@ -5,7 +5,7 @@ import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import { StatusMark } from "@/components/ui/StatusMark";
-import type { TripMoney } from "@/features/trip-money";
+import type { TripMoney } from "@/features/money/trip-money";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";

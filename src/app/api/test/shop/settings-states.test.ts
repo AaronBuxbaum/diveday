@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { shops } from "@/db/schema";
-import { getShopBackupDestination, listBackupDeliveries } from "@/features/backup-export";
+import { getShopBackupDestination, listBackupDeliveries } from "@/features/records/backup-export";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 

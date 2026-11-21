@@ -8,7 +8,7 @@ import { openSettingsRow, openTripAbout, seededTripId } from "./helpers";
  *
  * What this guards is the join, and the fact that the join is **advice**. The
  * arithmetic has unit tests (`src/lib/divemaster-ratio.test.ts`) and so does
- * the planner that reads it (`src/features/request-advisor/rules.test.ts`), but neither
+ * the planner that reads it (`src/features/bookings/request-advisor.test.ts`), but neither
  * can see the two things that actually matter here: that a number a shop
  * types reaches the departure page at all, and that being under target
  * refuses nothing — the crew panel still edits, the roster still seats.
@@ -36,7 +36,7 @@ test("a shop's target ratio reaches the departure, and refuses nothing", async (
   // 1:1 — tighter than any crew a seeded departure carries, so "under target"
   // is a fact about the number rather than about how the demo happens to be
   // staffed. Today's charter carries two supervisors in the water, its
-  // divemaster and its assistant instructor (`seed-trips.ts`), so a 1:1
+  // divemaster and its assistant instructor (`seed/trips.ts`), so a 1:1
   // target is short whatever the roster's size. The number is not asserted:
   // it follows how many people the seed puts aboard, and that is not what
   // this test is about.

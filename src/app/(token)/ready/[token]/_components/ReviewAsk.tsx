@@ -9,7 +9,7 @@ import {
   FormStatus,
   textareaClassFor,
 } from "@/components/ui/form";
-import type { AfterStateProps } from "@/features/recap-after-state";
+import type { AfterStateProps } from "@/features/after-the-dive/recap-after-state";
 import type { DiverMessageKey, DiverTranslator } from "@/i18n/messages";
 import { MAX_CREW_THANKS_LENGTH, MAX_REVIEW_COMMENT_LENGTH, REVIEW_RATINGS } from "@/lib/reviews";
 

@@ -22,7 +22,7 @@ service until something other than the web app needs one ([ADR-0001](decisions/0
 | Payments | Stripe Connect (Standard) behind `src/lib/payments/`; each shop brings its own account. Imported payment/receipt history stays outside live orders and is explicitly labelled as unverified source evidence. | [20260719 Stripe Connect](decisions/20260719-stripe-connect-orders.md), [20260816 imported evidence](decisions/20260816-imported-payment-history-is-evidence.md) |
 | Personal computer files | Inert person-scoped history; official `@garmin/fitsdk` server adapter and bounded XML/CSV parsers | [20261115 personal evidence](decisions/20261115-personal-computer-evidence.md), [20261115 FIT adapter](decisions/20261115-fit-personal-history.md) |
 | Marine outlook | Open-Meteo Marine API behind `src/lib/marine-forecast.ts` | [20260718 marine outlook](decisions/20260718-automated-marine-outlook.md) |
-| Claude assists | Anthropic API via `@anthropic-ai/sdk` behind `src/lib/claude/`, run through `runAssist` in `src/features/assists/store.ts`; dark without a key | [20261018 Claude assists](decisions/20261018-claude-assists.md) |
+| Claude assists | Anthropic API via `@anthropic-ai/sdk` behind `src/lib/claude/`, run through `runAssist` in `src/features/ai/assists/store.ts`; dark without a key | [20261018 Claude assists](decisions/20261018-claude-assists.md) |
 | Lint/format | Biome | [0002](decisions/0002-toolchain.md) |
 | Unit tests | Vitest + Testing Library, MSW for real fetch boundaries; coverage-v8 floors on the safety files | [0002](decisions/0002-toolchain.md), [20260719 MSW scope](decisions/20260719-msw-offline-sync-only.md), [20261015 coverage floors](decisions/20261015-coverage-and-mutation-testing.md), [20261101 mutation cut](decisions/20261101-cut-mutation-testing.md) |
 | E2E tests | Playwright flows + reg-suit visual regression (the axe scans were removed 2026-10-24) | [0002](decisions/0002-toolchain.md), [20260729 reg-suit](decisions/20260729-reg-suit-visual-regression.md), [20260719 MSW scope](decisions/20260719-msw-offline-sync-only.md), [20260801 axe scans](decisions/20260801-axe-core-playwright-a11y-scans.md) |
@@ -36,7 +36,7 @@ before writing framework-touching code (see AGENTS.md).
 ```
 src/
   app/          # routes, layouts — App Router. Keep route files thin.
-  features/     # feature modules: one index.ts is the public surface, README.md the contract
+  features/     # 23 areas; each concept is one file or a folder with an index.ts door
   lib/          # shared domain logic and helpers, including framework/IO adapters.
   db/           # schema/ (source of truth), client.ts (getDb seam), queries, seed
   components/   # shared UI components, token-styled
@@ -58,13 +58,15 @@ below it; a feature module may import `lib/` and `db/`; `lib/` and `db/` import 
 above them. Domain logic goes in `lib/` (or a feature module) where Vitest can reach it without a
 browser. `pnpm check:architecture` enforces every arrow.
 
-**Feature modules** ([20260730-feature-module-contracts](decisions/20260730-feature-module-contracts.md)):
-a directory under `src/features/` with a required `index.ts` — its *entire* importable surface,
-deep imports fail the check — and a required `README.md` saying what it owns, what it does not, and
-its invariants. Internals are free to move because nothing outside can name them. Tables still live
-in `src/db/schema/` (a feature owns its rows' lifecycle, not their definition), and routes still
-live in `src/app/`. `calendar-sync` is the first one; this is a convention proven on one feature,
-not a migration order.
+**Feature areas** ([20261121-feature-areas](decisions/20261121-feature-areas.md), amending
+[20260730-feature-module-contracts](decisions/20260730-feature-module-contracts.md)):
+`src/features/` holds 23 area folders named for parts of the shop (`bookings`, `boarding`, `gear`,
+`money`, …; `platform` is the plumbing), each with a `README.md` saying what it owns, what it does
+not, and its invariants. A concept in an area is one file (`gear/bench-note.ts`) or, when it has
+several files, a folder whose `index.ts` is its door (`day/today/`). From outside a concept,
+`@/features/<area>/<concept>` is the only importable form; deep imports fail the check, so
+internals are free to move. Tables still live in `src/db/schema/` (a feature owns its rows'
+lifecycle, not their definition), and routes still live in `src/app/`.
 
 ## Settled shape decisions
 

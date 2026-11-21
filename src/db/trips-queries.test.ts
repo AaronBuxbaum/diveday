@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
-import { createTripLens } from "../features/trip-lenses/store";
+import { createTripLens } from "../features/trips/trip-lenses";
 import type { DbExecutor } from "./client";
 import { createDiveSite } from "./dive-sites";
 import { bookings, courses, shops, trips } from "./schema";
@@ -39,12 +39,12 @@ describe("demo seed + schedule queries (in-memory PGlite)", () => {
     const { db, shop } = ctx;
 
     const upcoming = await upcomingTripsWithCounts(db, shop.id);
-    // 42 before `seed-cert-gates.ts` added the four departures whose cert gates
+    // 42 before `seed/cert-gates.ts` added the four departures whose cert gates
     // each refuse for exactly one reason (the AOW course session, the
     // Advanced-only drift, the Duane deep sailing, and the nitrox charter), and
-    // 46 before `seed-counter-blockers.ts` added the one boat that demands
+    // 46 before `seed/counter-blockers.ts` added the one boat that demands
     // everything at once — the counter's five-reason card, and 47 before
-    // `seed-minimum-seats.ts` added the long-range run that only sails with
+    // `seed/minimum-seats.ts` added the long-range run that only sails with
     // six aboard (ADR 20260813-minimum-head-count-departures).
     expect(upcoming).toHaveLength(48);
 
@@ -52,7 +52,7 @@ describe("demo seed + schedule queries (in-memory PGlite)", () => {
     expect(starts).toEqual([...starts].sort((a, b) => a - b));
 
     const bySlugishTitle = Object.fromEntries(upcoming.map((t) => [t.title, t.booked]));
-    // Nine divers, plus the snorkeler and the rider `seed-mixed-boat.ts` adds.
+    // Nine divers, plus the snorkeler and the rider `seed/mixed-boat.ts` adds.
     expect(bySlugishTitle["Two-Tank Reef — Molasses & French"]).toBe(11);
     expect(bySlugishTitle["Wreck Trip — Spiegel Grove"]).toBe(10);
     expect(bySlugishTitle["Two-Tank Reef — Christ of the Abyss"]).toBe(0);

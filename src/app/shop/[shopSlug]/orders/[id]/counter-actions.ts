@@ -12,11 +12,11 @@ import {
 } from "@/db/orders";
 import { counterPaymentActivity, recordShopActivity } from "@/db/shop-activity";
 import { getShopById } from "@/db/shops";
-import { dispatchIntegrationsAfterResponse } from "@/features/integrations";
-import { revalidateAndRedirect } from "@/features/navigation";
-import { stepUpChallengeUrl } from "@/features/security-step-up";
-import { requireStaffSession } from "@/features/session";
-import { hasRequiredStepUp } from "@/features/step-up";
+import { stepUpChallengeUrl } from "@/features/accounts/security-step-up";
+import { requireStaffSession } from "@/features/accounts/session";
+import { hasRequiredStepUp } from "@/features/accounts/step-up";
+import { revalidateAndRedirect } from "@/features/platform/navigation";
+import { dispatchIntegrationsAfterResponse } from "@/features/shop-setup/integrations";
 import { isStaff } from "@/lib/authz";
 import { nowMs } from "@/lib/clock";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";

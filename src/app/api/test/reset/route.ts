@@ -7,15 +7,15 @@ import {
   clearNavigationGates,
   e2eTestRouteAuthorized,
   testRouteRefused,
-} from "@/features/e2e-test-routes";
-import { expireShopRowsCaches } from "@/features/runtime-cache";
+} from "@/features/platform/e2e-test-routes";
+import { expireShopRowsCaches } from "@/features/platform/runtime-cache";
 import {
   type DemoPurge,
   type DemoReset,
   purgeMintedDemoShopsWithoutTriggers,
   resetDemoFromSnapshot,
-} from "../../../../features/demo-reset-snapshot";
-import { restoreBootClock } from "../../../../features/test-clock";
+} from "../../../../features/demo/demo-reset-snapshot";
+import { restoreBootClock } from "../../../../features/platform/test-clock";
 
 /**
  * Resets the seeded demo shop's schedule to its canonical fixture state.
@@ -30,7 +30,7 @@ import { restoreBootClock } from "../../../../features/test-clock";
  * (env-var predicate + `DIVEDAY_E2E_SECRET` bearer token) enforcing that.
  *
  * The schedule comes back from a copy taken on this server's first reset, not
- * from a re-seed (`src/features/demo-reset-snapshot.ts`, ADR
+ * from a re-seed (`src/features/demo/demo-reset-snapshot.ts.ts`, ADR
  * 20261024-e2e-reset-replays-a-snapshot): the re-seed was most of a reset's
  * 1.2s on an idle runner and 4-5s under load. The response says how it was
  * served and what each step cost, in a `Server-Timing` header and in the body,

@@ -7,7 +7,7 @@ import { listPackagesOnSale } from "@/db/dive-packages";
 import { createDiverPackageOrder } from "@/db/orders";
 import type { PackageGiftInput } from "@/db/package-gifts";
 import { getShopBySlug } from "@/db/shops";
-import { parseForm } from "@/features/form-parse";
+import { parseForm } from "@/features/platform/form-parse";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { calendarDateInTimezone, shiftCalendarDate } from "@/lib/calendar-date";

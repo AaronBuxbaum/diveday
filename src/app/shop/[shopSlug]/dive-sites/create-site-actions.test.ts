@@ -30,10 +30,10 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
 });
-vi.mock("../../../../features/session/rules", () => ({ requireStaffSession: vi.fn() }));
+vi.mock("../../../../features/accounts/session", () => ({ requireStaffSession: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
-const { requireStaffSession } = await import("../../../../features/session/rules");
+const { requireStaffSession } = await import("../../../../features/accounts/session");
 const { createDiveSiteAction } = await import("./create-site-actions");
 
 async function signedIn() {
@@ -46,7 +46,7 @@ async function signedIn() {
   return { db, shop, personId, back: shopPath(shop.slug, "dive-sites") };
 }
 
-/** A minimal valid submission, the same shape `src/features/dive-sites/rules.test.ts` uses. */
+/** A minimal valid submission, the same shape `src/features/sites/dive-sites/rules.test.ts` uses. */
 function siteForm(overrides: Record<string, string> = {}): FormData {
   const fields: Record<string, string> = {
     name: "Turtle Garden",

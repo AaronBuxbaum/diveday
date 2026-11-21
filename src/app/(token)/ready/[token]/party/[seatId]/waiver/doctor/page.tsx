@@ -5,7 +5,7 @@ import { verifyBookingCapability } from "@/db/booking-capabilities";
 import { getDb } from "@/db/client";
 import { getShopById } from "@/db/shops";
 import { getDoctorReferral, getWaiverForToken } from "@/db/waivers";
-import { partySeatWaiverKey } from "@/features/seat-claims";
+import { partySeatWaiverKey } from "@/features/bookings/seat-claims";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { uuidParam } from "@/lib/uuid";

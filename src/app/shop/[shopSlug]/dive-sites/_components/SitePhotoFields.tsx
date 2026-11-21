@@ -1,7 +1,7 @@
 import { ImageFileInput } from "@/components/ImageFileInput";
 import { RemovablePhoto, removablePhotoGridClass } from "@/components/RemovablePhoto";
 import { Field } from "@/components/ui/form";
-import { MAX_SITE_IMAGES } from "@/features/dive-sites";
+import { MAX_SITE_IMAGES } from "@/features/sites/dive-sites";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { MAX_IMAGE_MB } from "@/lib/storage/limits";
 import type { SiteFieldValues } from "./SiteFields";

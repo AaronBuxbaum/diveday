@@ -8,7 +8,7 @@ import {
 } from "@/lib/once-only-delivery-kinds";
 import { advanceClock } from "@/test/clock";
 import { fileScopedShopContext } from "@/test/db";
-import { anonymizeDiver } from "../features/anonymize/store";
+import { anonymizeDiver } from "../features/records/anonymize";
 import { createBooking } from "./bookings";
 import type { AppDb } from "./client";
 import { latestDeliveryOnly } from "./latest-delivery";

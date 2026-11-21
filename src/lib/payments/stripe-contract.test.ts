@@ -6,7 +6,7 @@ import {
   invoicingProviderFromEnvironment,
   promotionProviderFromEnvironment,
 } from "@/db/stripe-providers";
-import { verifyStripeWebhook } from "../../features/payments/webhook";
+import { verifyStripeWebhook } from "../../features/money/payments/webhook";
 import {
   STRIPE_EVENT_FIXTURES,
   stripeEventFixture,

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { notFound } from "next/navigation";
+import { requireShopSurface } from "@/features/accounts/session";
 import {
   annotateComputerDive,
   commitComputerFiles,
@@ -10,8 +11,7 @@ import {
   exportComputerDives,
   previewComputerFiles,
   restoreComputerDive,
-} from "@/features/computer-dives";
-import { requireShopSurface } from "@/features/session";
+} from "@/features/after-the-dive/computer-dives";
 import { uuidParam } from "@/lib/uuid";
 
 async function context(shopSlug: string, personId: string) {

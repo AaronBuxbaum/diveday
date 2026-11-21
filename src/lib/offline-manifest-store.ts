@@ -200,7 +200,7 @@ export function subscribeOfflineManifestChanges(listener: OfflineManifestChangeL
  * - *Short enough that "indefinitely" stops being true.* The worst case is
  *   `savedAt + 14 + 28` = 42 days, and measured from the trip itself
  *   `endsAt + 7 + 28` = 35. That lands the grace period itself just under the 30
- *   days `RETENTION_DAYS.push_subscriptions` (`src/features/retention/rules.ts`) gives the
+ *   days `RETENTION_DAYS.push_subscriptions` (`src/features/records/retention/rules.ts`) gives the
  *   closest analogue in the server-side table — a *device* credential, kept only
  *   while its trip is near, "pure blast radius" afterwards. The reasoning there
  *   applies with more force here, not less: this is a shared boat tablet holding
@@ -386,7 +386,7 @@ function clearSavedNotes<T extends OfflineRollCallEvent | OfflineChecklistEvent>
 }
 
 /**
- * `ANONYMIZED_PERSON_NAME` (`src/features/anonymization/rules.ts`), which this client
+ * `ANONYMIZED_PERSON_NAME` (`src/features/records/anonymization.ts`), which this client
  * module cannot import: that file pulls in `node:crypto`. A test pins the two.
  */
 export const OFFLINE_ERASED_NAME = "[anonymized]";

@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { hasRequiredStepUp } from "@/features/step-up/store";
+import { hasRequiredStepUp } from "@/features/accounts/step-up";
 import { createAuth } from "@/lib/auth";
 import { nowDate, nowMs } from "@/lib/clock";
 import { passkeyRelyingParty } from "@/lib/passkeys";

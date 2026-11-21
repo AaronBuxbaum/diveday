@@ -6,15 +6,15 @@ import { getDb } from "@/db/client";
 import { recordDiverOwnLocaleForBooking } from "@/db/people";
 import { openRecapLink } from "@/db/recap-links";
 import { getTipCurrencyForBooking, startTipCheckout, tipBoundsCents } from "@/db/tips";
-import { parseForm } from "@/features/form-parse";
-import { revalidateAndRedirect } from "@/features/navigation";
 import {
   isRecapOpen,
   parseRecapPulseCategories,
   submitRecapPulse,
   unshareRecapPhoto,
-} from "@/features/recap";
-import { submitTripReview } from "@/features/reviews";
+} from "@/features/after-the-dive/recap";
+import { submitTripReview } from "@/features/after-the-dive/reviews";
+import { parseForm } from "@/features/platform/form-parse";
+import { revalidateAndRedirect } from "@/features/platform/navigation";
 import { diverTranslator } from "@/i18n/messages";
 import { requestFirstHandLocale, requestLocale } from "@/i18n/request";
 import { readTypedMoney } from "@/lib/forgiving-fields";

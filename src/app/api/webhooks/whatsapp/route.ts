@@ -3,17 +3,17 @@ import { getDb } from "@/db/client";
 import { recordInboundMessage } from "@/db/inbound-messages";
 import { applyProviderEmailEvent } from "@/db/notifications";
 import { shopIdForWhatsAppEvent } from "@/db/whatsapp-accounts";
-import { pingDeskAfterHoursSafely } from "@/features/desk-pings";
-import { triageInboundMessagesSafely } from "@/features/inbox-assists";
-import { handleInboundReplyKeyword } from "@/features/reply-keywords";
-import { logWebhookRefusal } from "@/features/webhook-refusal";
+import { triageInboundMessagesSafely } from "@/features/ai/inbox-assists";
+import { pingDeskAfterHoursSafely } from "@/features/messages/desk-pings";
+import { handleInboundReplyKeyword } from "@/features/messages/reply-keywords";
 import {
   parseWhatsAppDeliveryEvents,
   parseWhatsAppInboundMessages,
   recordWhatsAppDeliveredUsage,
   verifyWhatsAppSignature,
   whatsAppChallengeResponse,
-} from "@/features/whatsapp-webhook";
+} from "@/features/messages/whatsapp-webhook";
+import { logWebhookRefusal } from "@/features/platform/webhook-refusal";
 import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
 
@@ -133,7 +133,7 @@ export async function POST(request: Request) {
       if (outcome !== "not_a_keyword") {
         log("whatsapp_webhook.reply_keyword", "info", { shopId, outcome });
       }
-      // The desk's after-hours ping (src/features/desk-pings/store.ts): only for a message
+      // The desk's after-hours ping (src/features/messages/desk-pings.ts): only for a message
       // actually filed, never able to fail this webhook, and after the
       // response (#2311), so a slow mail provider cannot hold Meta's request
       // open and earn a retry.

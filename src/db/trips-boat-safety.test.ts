@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { advanceClock } from "@/test/clock";
 import { fileScopedShopContext } from "@/test/db";
-import { deleteBoat } from "../features/boats/store";
+import { deleteBoat } from "../features/crew-and-boats/boats/store";
 import {
   boatTripFixture,
   tripBoatPatch,

@@ -1,4 +1,4 @@
-import { DEMO_RECAP_BOOKING_ID } from "../src/db/seed-identifiers";
+import { DEMO_RECAP_BOOKING_ID } from "../src/db/seed/identifiers";
 import { signRecapToken } from "../src/lib/recap-links";
 import { expect, test } from "./fixtures";
 import { signInAsOwner } from "./helpers";
@@ -8,7 +8,7 @@ import { signInAsOwner } from "./helpers";
  * short reply under a published review, it shows under the review on the
  * shop's public pages signed with the shop's name, and deleting it takes it
  * down again. Escaping, the length limit and the owner/manager gate are unit
- * tested (`src/components/ShopReviews.test.tsx`, `src/features/review-replies/store.test.ts`,
+ * tested (`src/components/ShopReviews.test.tsx`, `src/features/after-the-dive/review-replies.test.ts`,
  * `actions.authz.test.ts`); this is the loop a shop runs.
  */
 

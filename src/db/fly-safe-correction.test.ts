@@ -4,7 +4,7 @@ import { HOUR_MS, nowDate } from "@/lib/clock";
 import type { Notification, NotificationProvider } from "@/lib/notifications";
 import { fileScopedShopContext } from "@/test/db";
 import { fakeEmail } from "@/test/fakes";
-import { sendDueReminders } from "../features/reminders/store";
+import { sendDueReminders } from "../features/messages/reminders";
 import { createBookingParty } from "./bookings";
 import {
   deliveryCarriesFigure,

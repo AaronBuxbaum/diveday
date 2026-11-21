@@ -18,23 +18,23 @@ import {
   moveTrip,
   setTripCrew,
 } from "@/db/trips";
-import { getBoatById, listBoats } from "@/features/boats";
-import { listActiveCourses } from "@/features/courses";
-import { tideWindowsForDeparture } from "@/features/departure-tides";
-import { discardFormDraft } from "@/features/form-drafts";
-import { parseForm } from "@/features/form-parse";
-import type { MovePreflight } from "@/features/move-preflight";
-import { getMovePreflight } from "@/features/move-preflight";
-import { revalidateAndRedirect } from "@/features/navigation";
-import { signScheduleMoveResult } from "@/features/schedule-move-result";
-import { requireShopSurface, requireStaffSession } from "@/features/session";
-import { getTripLens, listTripLenses } from "@/features/trip-lenses";
+import { requireShopSurface, requireStaffSession } from "@/features/accounts/session";
+import type { MovePreflight } from "@/features/bookings/move-preflight";
+import { getMovePreflight } from "@/features/bookings/move-preflight";
+import { getBoatById, listBoats } from "@/features/crew-and-boats/boats";
+import { discardFormDraft } from "@/features/platform/form-drafts";
+import { parseForm } from "@/features/platform/form-parse";
+import { revalidateAndRedirect } from "@/features/platform/navigation";
+import { tideWindowsForDeparture } from "@/features/sites/departure-tides";
+import { listActiveCourses } from "@/features/training/courses";
+import { signScheduleMoveResult } from "@/features/trips/schedule-move-result";
+import { getTripLens, listTripLenses } from "@/features/trips/trip-lenses";
 import {
   type PatternDeparture,
   patternDives,
   patternSiteFields,
   weekdayPatternFor,
-} from "@/features/weekday-pattern";
+} from "@/features/trips/weekday-pattern";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { staffTideWindowText } from "@/i18n/tide-labels";

@@ -7,7 +7,7 @@ import {
   SEEDED_OWNER_EMAIL,
   seededStaffPersonId,
 } from "@/test/staff-session";
-import { getOrdersIndex } from "../features/orders-index/store";
+import { getOrdersIndex } from "../features/money/orders-index";
 
 /**
  * What the Orders index costs (issue #2757): the page reads through one call,

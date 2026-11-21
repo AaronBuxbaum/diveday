@@ -2,8 +2,8 @@
 
 import { redirect } from "next/navigation";
 import { getDb } from "@/db/client";
-import { revalidateAndRedirect } from "@/features/navigation";
-import { setTrainingPlanAssignment } from "@/features/training-plans";
+import { revalidateAndRedirect } from "@/features/platform/navigation";
+import { setTrainingPlanAssignment } from "@/features/training/training-plans";
 import { noticeUrl } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { tripPath } from "./roster-booking";

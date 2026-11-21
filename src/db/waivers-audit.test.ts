@@ -3,8 +3,8 @@ import { describe, expect, it } from "vitest";
 import { RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { verifyWaiverIntegrity, WAIVER_INTEGRITY_VERSION_ERASED } from "@/lib/waiver-integrity";
 import { fileScopedShopContext } from "@/test/db";
-import { ANONYMIZED_PERSON_NAME } from "../features/anonymization/rules";
-import { anonymizeDiver } from "../features/anonymize/store";
+import { ANONYMIZED_PERSON_NAME } from "../features/records/anonymization";
+import { anonymizeDiver } from "../features/records/anonymize";
 import {
   clearAnswers,
   medicalReferralAnswers,

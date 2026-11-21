@@ -9,7 +9,7 @@ import type { DiveDaySession } from "@/lib/auth";
 import { fileScopedShopContext } from "@/test/db";
 import { findElements, inputNamesIn } from "@/test/jsx-inspect";
 import { nextHeadersStub } from "@/test/next-headers";
-import { listShopStaff } from "../../../../../features/staff-accounts/store";
+import { listShopStaff } from "../../../../../features/accounts/staff-accounts";
 
 const ctx = fileScopedShopContext();
 
@@ -33,7 +33,7 @@ const { InvoiceForm } = await import("./InvoiceForm");
 const { invoiceTargetKey } = await import("../_lib/order-form");
 const { NewOrderPanel } = await import("./NewOrderPanel");
 const { InvoiceAddressFields } = await import("./InvoiceAddressFields");
-const { requireShopSurface } = await import("../../../../../features/session/rules");
+const { requireShopSurface } = await import("../../../../../features/accounts/session");
 const { staffTranslator } = await import("@/i18n/staff-messages");
 
 const SHOP_SLUG = "blue-mantis";
@@ -138,7 +138,7 @@ describe("the prefill ids", () => {
 describe("the tax location form", () => {
   it("keeps billing location fields off when tax is disabled", async () => {
     // Turned off explicitly. The seeded demo now ships with Stripe Tax **on**
-    // (src/db/seed.ts), so leaning on the fixture's default made this test
+    // (src/db/seed/index.ts), so leaning on the fixture's default made this test
     // assert the opposite of its own name.
     const { db, shop } = await shopThatCanBill();
     await setShopTaxEnabled(db, shop.id, false);

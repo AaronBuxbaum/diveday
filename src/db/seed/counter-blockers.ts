@@ -1,0 +1,164 @@
+import { demoEmail } from "@/lib/simulator-email";
+import type { DbExecutor } from "../client";
+import {
+  bookings,
+  type DiveSpecialty,
+  type diveSites,
+  people,
+  personRoles,
+  type TripAssignmentRole,
+  tripAssignments,
+  tripDives,
+  tripRequirements,
+  tripScheduleDays,
+  trips,
+} from "../schema";
+import { at, nextCreatedAt } from "./clock";
+
+/**
+ * One diver blocked for **five** reasons at once — the case the Divers
+ * tab's reason list (`trips/[id]/_components/RosterSection.tsx`) exists to
+ * render in full, and which no other fixture produces: every seeded charter
+ * states the shop's default Open Water gate, so the deepest stack reachable at
+ * the counter was a waiver plus a card.
+ *
+ * Constraints this scenario has to keep:
+ *
+ * - **Its own departure, never a diver added to a seeded boat** (ADR
+ *   20260803-seed-scenario-modules). `cert-gates.ts` needs each of its four
+ *   boats to refuse for *exactly one* reason; raising a gate there to stack
+ *   blockers would break it.
+ * - **Tomorrow**, so it falls inside the counter's arrivals window
+ *   (`arrivalsWindow`: 6 h back to 36 h ahead) and off today's departure board.
+ * - **Not sailed**, so it opens no head-count gap on Today or the close-out.
+ * - **Adds only, called late** like `seedCertGates`/`seedBuddyPairs`, so no row
+ *   seeded before it moves (`nextCreatedAt` is shared across scenarios).
+ * - **7 seats left** (capacity 8, one sold): the e2e fleet matches trips by
+ *   remaining seats, and 3, 6, and Full are spoken for.
+ */
+const DEMO_COUNTER_BLOCKED_DIVER = "Tomás Ferreira";
+const DEMO_COUNTER_BLOCKED_TRIP = "Deep Wreck Charter — the Duane on EANx";
+const DEMO_COUNTER_BLOCKED_EMAIL = demoEmail("tomas.ferreira");
+
+export async function seedCounterBlockers(
+  db: DbExecutor,
+  shopId: string,
+  ctx: {
+    siteByName: Map<string, typeof diveSites.$inferSelect>;
+    captainId: string | undefined;
+    /**
+     * The relief skipper for this charter. It sails 08:00–13:00 local on the
+     * same morning as `Morning Two-Tank — Molasses Reef`, and the shop has one
+     * captain and one divemaster — so rostering the usual pair here put both of
+     * them on two hulls at once, which `setTripCrew` refuses to write and the
+     * standing-clash marker reported on the demo board (issue #1781). The owner
+     * takes the wheel and the second instructor assists: what a five-person
+     * shop does on a morning with two boats out.
+     */
+    ownerId: string;
+    /**
+     * Who assists on this charter, so the regular divemaster can run the reef
+     * boat.
+     *
+     * The **lead** instructor, not the relief one: Talia's single assignment is
+     * the whole of the DOM-M7 fixture (`trips.test.ts` asserts she is on
+     * exactly one trip, the Nitrox session), so borrowing her here would quietly
+     * dismantle it. Marcus teaches no session that morning, and a lead
+     * instructor deckhanding the deep charter is an ordinary Wednesday.
+     */
+    assistingInstructorId: string;
+    divemasterId: string | undefined;
+  },
+): Promise<void> {
+  const [diver] = await db
+    .insert(people)
+    .values({
+      shopId,
+      fullName: DEMO_COUNTER_BLOCKED_DIVER,
+      email: DEMO_COUNTER_BLOCKED_EMAIL,
+      phone: "+351215550148",
+      emergencyContactName: "Inês Ferreira (sister)",
+      emergencyContactPhone: "+351-21-555-0149",
+      createdAt: nextCreatedAt(),
+    })
+    .returning();
+  if (!diver) throw new Error("seed: counter-blocked diver insert returned no row");
+  await db.insert(personRoles).values({ personId: diver.id, role: "diver" as const });
+
+  // Fail loudly rather than seed a siteless boat: the site carries its own gate
+  // into the readiness read, so a rename upstream would leave this fixture
+  // quietly weaker and still green.
+  const duane = ctx.siteByName.get("USCGC Duane");
+  if (!duane) throw new Error("seed: counter-blocked trip needs the USCGC Duane dive site");
+
+  const startsAt = at(1, 8, 0);
+  const endsAt = at(1, 13, 0);
+  const [trip] = await db
+    .insert(trips)
+    .values({
+      shopId,
+      title: DEMO_COUNTER_BLOCKED_TRIP,
+      description: "Deep wreck penetration on enriched air.",
+      startsAt,
+      endsAt,
+      capacity: 8,
+      plannedDives: 2,
+      // **Priced, because it is publicly for sale.** This departure is on
+      // `/s/blue-mantis` between two priced charters — `is_private` defaults to
+      // false. With no price
+      // it asked nobody for money and blocked every diver who booked it,
+      // forever (issue #692). $195: a shade above the seeded $180 wreck trip,
+      // for the deep penetration and the enriched air.
+      //
+      // The fixture is unaffected. What it needs is an *unpaid* booking, which
+      // is what it still seeds; the missing price was never the point, and a
+      // priced trip with an unpaid booking raises exactly the same fifth
+      // blocker. `paymentGateIsUnclearable` now refuses the combination on both
+      // forms, so this cannot come back through the UI either.
+      priceCents: 19500,
+    })
+    .returning();
+  if (!trip) throw new Error("seed: counter-blocked trip insert returned no row");
+
+  await db.insert(tripScheduleDays).values({ tripId: trip.id, dayNumber: 1, startsAt, endsAt });
+  await db.insert(tripDives).values([
+    { tripId: trip.id, diveNumber: 1, diveSiteId: duane.id },
+    { tripId: trip.id, diveNumber: 2, diveSiteId: null },
+  ]);
+
+  // Every gate the readiness engine can raise for a non-course charter at once —
+  // the one boat in the fixture that may do so (see the docblock).
+  await db.insert(tripRequirements).values({
+    tripId: trip.id,
+    shopId,
+    requiresWaiver: true,
+    minimumCertificationLevel: "advanced_open_water" as const,
+    requiredSpecialties: ["deep"] as DiveSpecialty[],
+    requiresNitrox: true,
+    requiresPayment: true,
+  });
+
+  // The owner and the lead instructor, not the usual captain and divemaster —
+  // see `ownerId` above. An instructor rostered as a boat's divemaster is a
+  // genuine downgrade rather than a roster over-claim, and `inWaterCrewRole`
+  // counts him as the certified assistant he is qualified to be.
+  await db.insert(tripAssignments).values([
+    { tripId: trip.id, personId: ctx.ownerId, tripRole: "captain" as TripAssignmentRole },
+    {
+      tripId: trip.id,
+      personId: ctx.assistingInstructorId,
+      tripRole: "divemaster" as TripAssignmentRole,
+    },
+  ]);
+
+  // The seat and nothing else: no waiver row, certification, specialty, nitrox
+  // card, or paid order. That absence is the fixture — five blockers on one card.
+  await db.insert(bookings).values({
+    bookedAs: "diver",
+    shopId,
+    tripId: trip.id,
+    personId: diver.id,
+    status: "booked" as const,
+    createdAt: nextCreatedAt(),
+  });
+}

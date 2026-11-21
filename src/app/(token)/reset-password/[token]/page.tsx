@@ -10,7 +10,7 @@ import { DeadLink } from "@/components/DeadLink";
 import { buttonClass } from "@/components/ui/button";
 import { checkAccountToken } from "@/db/account-tokens";
 import { getDb } from "@/db/client";
-import { connectionForRoute } from "@/features/render-connection";
+import { connectionForRoute } from "@/features/platform/render-connection";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { submitPasswordReset } from "./actions";

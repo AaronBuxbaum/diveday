@@ -1,4 +1,4 @@
-import { proposalKey } from "@/features/gear-proposals";
+import { proposalKey } from "@/features/gear/gear-proposals";
 import { gearItemKindLabel } from "@/i18n/gear-labels";
 import { groupUnitsForSize } from "@/lib/gear";
 import { assignGearUnit } from "../actions";

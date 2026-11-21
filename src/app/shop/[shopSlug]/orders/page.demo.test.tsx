@@ -7,7 +7,7 @@ import type { DiveDaySession } from "@/lib/auth";
 import { fileScopedShopContext } from "@/test/db";
 import { findElements } from "@/test/jsx-inspect";
 import { nextHeadersStub } from "@/test/next-headers";
-import { listShopStaff } from "../../../../features/staff-accounts/store";
+import { listShopStaff } from "../../../../features/accounts/staff-accounts";
 import { PaymentsSetupCard } from "./_components/PaymentsSetupCard";
 
 const ctx = fileScopedShopContext();

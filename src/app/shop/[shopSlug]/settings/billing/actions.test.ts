@@ -14,7 +14,7 @@ import {
   applyBillingEffect,
   getShopSubscription,
   recordShopCheckoutSession,
-} from "../../../../../features/shop-subscriptions/store";
+} from "../../../../../features/money/shop-subscriptions";
 
 // One seeded database for the file and a rolled-back transaction per test
 // (src/test/db.ts, `fileScopedShopContext`).
@@ -37,10 +37,10 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
 });
-vi.mock("../../../../../features/session/rules", () => ({ requireStaffSession: vi.fn() }));
+vi.mock("../../../../../features/accounts/session", () => ({ requireStaffSession: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
-const { requireStaffSession } = await import("../../../../../features/session/rules");
+const { requireStaffSession } = await import("../../../../../features/accounts/session");
 const { startBillingCheckoutAction, openBillingPortalAction } = await import("./actions");
 
 const fetchMock = vi.fn<typeof fetch>();

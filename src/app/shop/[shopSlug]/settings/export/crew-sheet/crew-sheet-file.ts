@@ -4,7 +4,7 @@ import {
   buildCrewSheetCsv,
   crewSheetFileName,
   crewSheetForMonth,
-} from "@/features/crew-sheet";
+} from "@/features/crew-and-boats/crew-sheet";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { type MonthRef, monthKey } from "@/lib/calendar";
 import { cachedListFormat } from "@/lib/intl-cache";

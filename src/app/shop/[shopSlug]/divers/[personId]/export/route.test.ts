@@ -21,7 +21,7 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
 });
-vi.mock("../../../../../../features/session/rules", () => ({ requireStaffSession: vi.fn() }));
+vi.mock("../../../../../../features/accounts/session", () => ({ requireStaffSession: vi.fn() }));
 // No network from a unit test: the bundle's photos are fetched from storage.
 vi.mock("@/lib/export", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/export")>();
@@ -36,7 +36,7 @@ vi.mock("@/lib/export", async (importOriginal) => {
 });
 
 const { getDb } = await import("@/db/client");
-const { requireStaffSession } = await import("../../../../../../features/session/rules");
+const { requireStaffSession } = await import("../../../../../../features/accounts/session");
 const { GET } = await import("./route");
 const { zipExportBundle, ExportResourceLimitError } = await import("@/lib/export");
 

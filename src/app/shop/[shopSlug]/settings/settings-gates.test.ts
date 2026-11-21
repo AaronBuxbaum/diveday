@@ -170,7 +170,7 @@ function settingsPageHasGate(page: string, root: string, read: ReadSource): bool
       const binding = bound.get(t[i + 1]);
       if (
         binding?.name !== "requireShopSurface" ||
-        binding.file !== join(root, "src/features/session/index.ts")
+        binding.file !== join(root, "src/features/accounts/session.ts")
       )
         continue;
       const end = close(t, i + 2);
@@ -202,18 +202,20 @@ describe("every settings page names its own gate", () => {
 });
 
 const fixtures = {
-  "/repo/src/features/session/index.ts": "export function requireShopSurface() {}",
-  "/repo/src/features/access/index.ts": 'export { OWNER_GATE as SETTINGS_GATE } from "./policy";',
-  "/repo/src/features/access/policy.ts":
+  "/repo/src/features/accounts/session.ts": "export function requireShopSurface() {}",
+  "/repo/src/features/accounts/access/index.ts":
+    'export { OWNER_GATE as SETTINGS_GATE } from "./policy";',
+  "/repo/src/features/accounts/access/policy.ts":
     'import { canManage } from "./permissions"; export const OWNER_GATE = { allow: canManage } as const;',
-  "/repo/src/features/access/permissions.ts": "export function canManage() { return false; }",
+  "/repo/src/features/accounts/access/permissions.ts":
+    "export function canManage() { return false; }",
 };
 function guarded(source: string, additional: Record<string, string> = {}) {
   const files: Record<string, string> = { ...fixtures, "/repo/page.tsx": source, ...additional };
   return settingsPageHasGate("/repo/page.tsx", "/repo", (file) => files[file]);
 }
-const surface = 'import { requireShopSurface } from "@/features/session";';
-const importedGate = 'import { SETTINGS_GATE as policy } from "@/features/access";';
+const surface = 'import { requireShopSurface } from "@/features/accounts/session";';
+const importedGate = 'import { SETTINGS_GATE as policy } from "@/features/accounts/access";';
 
 describe("the permission contract passed to the surface gate", () => {
   it("follows the bound options through a public re-export and import alias", () => {
@@ -224,7 +226,7 @@ describe("the permission contract passed to the surface gate", () => {
   it("accepts an inline permission predicate", () => {
     expect(
       guarded(
-        `${surface} import { canManage } from "./src/features/access/permissions"; await requireShopSurface(slug, { allow: canManage });`,
+        `${surface} import { canManage } from "./src/features/accounts/access/permissions"; await requireShopSurface(slug, { allow: canManage });`,
       ),
     ).toBe(true);
   });
@@ -238,7 +240,7 @@ describe("the permission contract passed to the surface gate", () => {
   it("rejects an imported impostor policy even when its module contains another allow", () => {
     expect(
       guarded(`${surface} ${importedGate} await requireShopSurface(slug, policy);`, {
-        "/repo/src/features/access/policy.ts":
+        "/repo/src/features/accounts/access/policy.ts":
           "export const OWNER_GATE = {}; const unused = { allow: canManage };",
       }),
     ).toBe(false);

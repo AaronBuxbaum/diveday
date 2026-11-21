@@ -9,8 +9,8 @@ import {
   departureNoteAudience,
 } from "@/db/departure-notes";
 import { holdSend } from "@/db/held-sends";
-import { readForm, text } from "@/features/form-parse";
-import { requireStaffSession } from "@/features/session";
+import { requireStaffSession } from "@/features/accounts/session";
+import { readForm, text } from "@/features/platform/form-parse";
 import { nowMs } from "@/lib/clock";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 

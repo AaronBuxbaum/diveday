@@ -1,15 +1,15 @@
 import { getDb } from "@/db/client";
 import { optOutAddressAfterComplaint } from "@/db/courtesy-email";
 import { applyProviderEmailEvent } from "@/db/notifications";
-import { recordBookkeeperDeliveryOutcome } from "@/features/bookkeeper";
-import { recordEmailBounces } from "@/features/email-bounces";
+import { recordEmailBounces } from "@/features/messages/email-bounces";
 import {
   parseSesEventData,
   sesBookkeeperOutcomesFromData,
   sesBounceReportsFromData,
   sesEmailEventFromData,
-} from "@/features/email-events";
-import { gateSnsWebhook } from "@/features/sns-webhook";
+} from "@/features/messages/email-events";
+import { gateSnsWebhook } from "@/features/messages/sns-webhook";
+import { recordBookkeeperDeliveryOutcome } from "@/features/money/bookkeeper";
 import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
 

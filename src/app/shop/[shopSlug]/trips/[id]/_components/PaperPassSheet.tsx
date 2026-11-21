@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { PaperSheet, SheetMark } from "@/components/paper/PaperSheet";
-import { getPassBooking } from "@/features/print-pass";
-import { requireShopSurface } from "@/features/session";
+import { requireShopSurface } from "@/features/accounts/session";
+import { getPassBooking } from "@/features/boarding/print-pass";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
