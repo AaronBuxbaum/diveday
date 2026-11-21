@@ -50,7 +50,7 @@ describe("the segment's corner", () => {
     // except under enlarged device text, where it holds spacing at the phone's
     // ordinary 4px so only type scales (and 4px is what the 3px corner needs).
     expect(CSS.match(/--spacing:/g)).toHaveLength(1);
-    expect(CSS).toMatch(/html\[data-device-text-size\] \{[^}]*--spacing: min\(0\.25rem,/);
+    expect(CSS).toMatch(/html\[data-device-text-size\] \{\s*--spacing: min\(0\.25rem,/);
     const px = Number(inset?.[1]) * 16 - 0.25 * 16 - 1;
     expect(px).toBe(3);
   });

@@ -82,11 +82,16 @@ html[data-device-text-size] [data-person-sheet] {
   html[data-device-text-size] {
     overflow-wrap: anywhere;
     --sidebar-w: min(14rem, 33vw);
-    /* Type scales with the device; the space around it does not. Every
-       spacing utility is a multiple of this, so at 3x text a page's 16px gutter
-       was 50px a side and the title was left a column two letters wide. 1.1vw
-       is the ordinary 4px at a 390px phone. */
-    --spacing: min(0.25rem, 1.1vw);
+  }
+  /* Type scales with the device; the space around it does not. Every spacing
+     utility is a multiple of this, so at 3x text a phone's 16px gutter was 50px
+     a side and the title was left a column two letters wide. 1.1vw is the
+     ordinary 4px at a 390px phone. Phones only: wider screens keep the scaled
+     space they always had. */
+  @media (max-width: 639px) {
+    html[data-device-text-size] {
+      --spacing: min(0.25rem, 1.1vw);
+    }
   }
 }
 html[data-device-text-size] :is(a, button, summary) {

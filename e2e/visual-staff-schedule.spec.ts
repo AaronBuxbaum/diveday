@@ -33,6 +33,7 @@ import {
   capture,
   FLOW_TIMEOUT_MS,
   installVisualBuildGuard,
+  liveRosterConfirmation,
   openReefTrip,
   REEF_TRIP,
   SURFACE_TIMEOUT_MS,
@@ -629,7 +630,11 @@ for (const scheme of ["light", "dark"] as const) {
         await expect(page.locator("details#participant-terms")).toBeVisible();
         await capture(page, "trip-details-participant-terms", scheme);
 
+        // The "guest list may be out of date" line stands until the page's own
+        // roster confirmation returns; arm the wait before the page can ask.
+        const confirmed = liveRosterConfirmation(page);
         await page.goto(`/shop/blue-mantis/trips/${mixedBoat.tripId}/manifest`);
+        await confirmed;
         const snorkeler = await manifestRow(page, mixedBoat.snorkeler);
         await expect(snorkeler.getByText("Snorkeler", { exact: true })).toBeVisible();
         const deckRider = await manifestRow(page, mixedBoat.rider);
