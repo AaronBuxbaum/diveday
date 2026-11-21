@@ -1942,6 +1942,18 @@ export async function capture(
       { timeout: 15_000 },
     );
     await waitForClientFills(page);
+    // Today's arrival search takes the page's first focus in the same effect
+    // that marks it hydrated, so a shot before that mark photographs the focus
+    // ring on some runs and not others (#4703). Any page without the search
+    // passes straight through.
+    await page.waitForFunction(
+      () => {
+        const search = document.querySelector("#arrival-search");
+        return !search || search.hasAttribute("data-hydrated");
+      },
+      undefined,
+      { timeout: 15_000 },
+    );
   }
   // The standard pair, plus the portrait tablet for the five staff surfaces a
   // shop runs on one. Widest last is deliberate: the base viewport is restored

@@ -82,11 +82,29 @@ html[data-device-text-size] [data-person-sheet] {
   html[data-device-text-size] {
     overflow-wrap: anywhere;
     --sidebar-w: min(14rem, 33vw);
+    /* Type scales with the device; the space around it does not. Every
+       spacing utility is a multiple of this, so at 3x text a page's 16px gutter
+       was 50px a side and the title was left a column two letters wide. 1.1vw
+       is the ordinary 4px at a 390px phone. */
+    --spacing: min(0.25rem, 1.1vw);
   }
 }
 html[data-device-text-size] :is(a, button, summary) {
   max-inline-size: 100%;
 }
+/* Two-up figure grids and a guest row's name-beside-actions are tuned for a
+   phone at ordinary size. At several times that, each cell is a column of
+   one-letter lines, so each stacks and takes the full row. */
+html[data-device-text-size] :is(dl, div).grid-cols-2 {
+  grid-template-columns: minmax(0, 1fr);
+}
+html[data-device-text-size] [data-guest-row] > div {
+  flex-wrap: wrap;
+}
+html[data-device-text-size] [data-guest-open] {
+  flex-basis: 100%;
+}
+
 /* A short control's min-content measure is its longest word, not a glyph.
    Inheriting wrap-anywhere made "Find my booking" a one-letter flex column. */
 html[data-device-text-size] .device-text-public-identity {
@@ -3922,4 +3940,12 @@ svg.leaflet-image-layer.leaflet-interactive path {
   #incident-evidence-heading ~ ul > li:first-child {
     break-before: avoid;
   }
+}
+
+/* A card or phone number is never broken at an ordinary size. At several times
+   that it is wider than the phone, and the page scrolls sideways; it may break
+   once it cannot fit. */
+html[data-device-text-size] .device-text-number {
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
