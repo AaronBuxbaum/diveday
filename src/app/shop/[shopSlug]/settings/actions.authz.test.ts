@@ -819,3 +819,30 @@ describe("saveProfileAction's pick", () => {
     );
   });
 });
+
+/**
+ * **The welcome note** (#4387) is two or three sentences, so it is held to 280 characters: one
+ * over is refused with the profile's notice and the saved note stays.
+ */
+describe("saveProfileAction's welcome note", () => {
+  const profile = (welcomeText: string) => {
+    const form = new FormData();
+    form.set("storefrontLeads", "schedule");
+    form.set("welcomeText", welcomeText);
+    form.set("welcomeSigner", "Ana");
+    return form;
+  };
+
+  it("saves a note of 280 characters and refuses one longer", async () => {
+    const { db, shop, owner } = await context();
+    signIn(shop, owner);
+    const full = "a".repeat(280);
+    await redirectedTo(() => saveProfileAction(profile(full)));
+    expect((await getShopById(db, shop.id))?.welcomeText).toBe(full);
+
+    expect(await redirectedTo(() => saveProfileAction(profile(`${full}b`)))).toContain(
+      "notice=profile-invalid",
+    );
+    expect((await getShopById(db, shop.id))?.welcomeText).toBe(full);
+  });
+});

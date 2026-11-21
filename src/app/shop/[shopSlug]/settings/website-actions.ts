@@ -11,7 +11,12 @@ import {
 import { allValues, checkbox, formValue, text, trimmedText } from "@/features/platform/form-parse";
 import { defineAction, land, type NoticeOf } from "@/features/platform/server-action";
 import { type ShopPick, setShopPick } from "@/features/public-site/shop-pick";
-import { isBrandDisplayFontCode, parseBrandBadges, parseBrandColor } from "@/lib/brand";
+import {
+  isBrandDisplayFontCode,
+  parseBrandBadges,
+  parseBrandColor,
+  WELCOME_TEXT_MAX,
+} from "@/lib/brand";
 import { nowDate } from "@/lib/clock";
 import { publicSchedulePath } from "@/lib/public-routes";
 import { storeShopHeroImage, storeShopLogoImage } from "@/lib/storage";
@@ -21,7 +26,7 @@ import { SETTINGS_GATE } from "./action-gates";
 const profileSchema = z.object({
   noticeText: z.string().trim().max(200),
   storefrontLeads: z.enum(["schedule", "courses"]),
-  welcomeText: z.string().trim().max(1000),
+  welcomeText: z.string().trim().max(WELCOME_TEXT_MAX),
   welcomeSigner: z.string().trim().max(120),
   tagline: z.string().trim().max(120),
   description: z.string().trim().max(1000),

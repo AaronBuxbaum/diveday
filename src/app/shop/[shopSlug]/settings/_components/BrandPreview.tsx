@@ -37,12 +37,17 @@ export function BrandPreview({
   shopName,
   brandColor,
   brandDisplayFont,
+  welcomeText = null,
+  welcomeSigner = null,
   label,
   nightLabel,
 }: {
   shopName: string;
   brandColor: string | null;
   brandDisplayFont: string | null;
+  /** The saved welcome note (#4387) and its signer, drawn under the name; blank draws none. */
+  welcomeText?: string | null;
+  welcomeSigner?: string | null;
   label: string;
   nightLabel: string;
 }) {
@@ -53,6 +58,8 @@ export function BrandPreview({
     ? brandDisplayFont
     : null;
   const fontFamily = face ? brandDisplayFontFamily(face) : undefined;
+  const note = welcomeText?.trim() || null;
+  const signer = note ? welcomeSigner?.trim() || null : null;
   return (
     <figure className="mt-2">
       {face ? (
@@ -75,6 +82,12 @@ export function BrandPreview({
             <p className={SUB_TITLE_CLASS} style={{ fontFamily }}>
               {shopName}
             </p>
+            {note ? (
+              <div className="text-sm">
+                <p className="line-clamp-3 whitespace-pre-line break-words">{note}</p>
+                {signer ? <p className="mt-1 opacity-70">{signer}</p> : null}
+              </div>
+            ) : null}
             <div className="flex flex-wrap items-center gap-2">
               <span
                 className="inline-flex min-h-9 items-center rounded-lg px-3 text-sm font-medium"

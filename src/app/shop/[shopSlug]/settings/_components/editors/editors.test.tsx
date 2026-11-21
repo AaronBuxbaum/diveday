@@ -112,6 +112,40 @@ describe("the profile editor", () => {
     expect(findElements(form, BrandPreview)).toHaveLength(1);
   });
 
+  /** The welcome note (#4387) is two or three sentences: the box stops at 280. */
+  it("holds the welcome note to 280 characters", async () => {
+    const [note] = named(await profileForm(), "welcomeText") as ReactElement<{
+      maxLength?: number;
+    }>[];
+    expect(note?.props.maxLength).toBe(280);
+  });
+
+  /**
+   * The preview shows the saved welcome note and its signer, so an owner sees the note in the
+   * shop's face before opening the storefront; with none saved, the preview has no note.
+   */
+  it("previews the saved welcome note and its signer", async () => {
+    const form = await profileForm();
+    const [preview] = findElements<{ welcomeText?: string | null }>(form, BrandPreview);
+    expect(preview?.props).toHaveProperty("welcomeText");
+    const props = {
+      shopName: "Blue Mantis",
+      brandColor: null,
+      brandDisplayFont: null,
+      label: "Preview",
+      nightLabel: "Night",
+    };
+    const withNote = renderToStaticMarkup(
+      <BrandPreview {...props} welcomeText="Come aboard." welcomeSigner="Ana" />,
+    );
+    expect(withNote).toContain("Come aboard.");
+    expect(withNote).toContain("Ana");
+    const blank = renderToStaticMarkup(
+      <BrandPreview {...props} welcomeText="  " welcomeSigner="Ana" />,
+    );
+    expect(blank).not.toContain("Ana");
+  });
+
   /**
    * **No caption label wraps another label** (K-13 review): with a logo on
    * file the caption "Logo" once labelled the "Remove logo" box.
