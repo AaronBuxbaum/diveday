@@ -8,8 +8,8 @@ import {
   prepareDiveSiteImport,
 } from "../../features/sites/dive-sites/dive-site-import.rules";
 import { commitDiveSiteImport } from "../../features/sites/dive-sites/dive-site-import.store";
-import { loadShopExportBundleInput } from ".";
 import { people, shops } from "../schema";
+import { loadShopExportBundleInput } from ".";
 
 /**
  * **A shop exported and read straight back** (#3889). The export tests pin each

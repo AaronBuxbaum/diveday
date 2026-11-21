@@ -52,7 +52,7 @@ import type { ExportFileSpec } from "./tables";
  * all where the row is shared (the decisions are written above
  * `loadDiverExportBundleInput` in `./export`).
  *
- * A table both bundles write is declared once, in `./export-shared-files`,
+ * A table both bundles write is declared once, in `./shared-files`,
  * where every column names the bundle it belongs to; `diverFile` takes the
  * columns marked for the diver. The two entries written out here are the ones
  * with no shop twin: the diver's own profile, and the release wording *as

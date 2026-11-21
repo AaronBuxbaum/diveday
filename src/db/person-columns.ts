@@ -81,7 +81,7 @@
  *   otherwise: a staffer who recorded a row appears by name on the diver's own
  *   rows, never as the owner of the rows they wrote.
  *
- * `diverOwnRows` (`./export-tables`), the one way the diver's bundle reads by
+ * `diverOwnRows` (`./export/tables`), the one way the diver's bundle reads by
  * their person id (under `readScoped` and in the loader alike), refuses a
  * column this registry does not call `own`, and `export/registry.test.ts`
  * holds both directions to the loader: every `own` column is read, and nothing
@@ -96,7 +96,7 @@
  * column on them is theirs to read: a staff-typed free-text column on an own
  * row (a card's review note, a gear note, a moderation reason, a bench line's
  * description) can name another person, so it is withheld column by column in
- * the `in:` field of `./export-shared-files` (`"shop"`), and an actor's name is
+ * the `in:` field of `./export/shared-files` (`"shop"`), and an actor's name is
  * resolved only for people holding a staff role (`loadDiverExportContext`,
  * #3880). Erasure is a separate question and redacts no name inside anyone's
  * free text (Aaron, 2026-11-01, #3437).
@@ -1814,7 +1814,7 @@ export function exportFate(row: PersonColumn): PersonColumnExport {
 
 /**
  * Throws unless the registry says the diver's own bundle reads `table` by
- * `column` as theirs. `diverOwnRows` (`./export-tables`) calls it before every
+ * `column` as theirs. `diverOwnRows` (`./export/tables`) calls it before every
  * read by a diver's person id, so neither the read list nor a hand-written
  * read can widen a diver's bundle past what this registry decided. Reads by
  * the diver's booking ids do not pass through it.

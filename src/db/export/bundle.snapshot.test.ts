@@ -17,8 +17,8 @@ const ctx = fileScopedShopContext({ history: true });
  *
  * `index.test.ts` and `diver-export.test.ts` assert what a bundle must
  * *contain*; this pins what it *is*, so a change to how the loaders are put
- * together (the read list in `./export-tables`, the per-file row builders in
- * `./export-shop-files` and `./export-diver-files`) cannot quietly change a
+ * together (the read list in `./tables`, the per-file row builders in
+ * `./shop-files` and `./diver-files`) cannot quietly change a
  * cell a shop or a diver is handed. A change that means to move the output
  * updates the snapshot in the same diff, where a reviewer sees which file moved.
  *

@@ -932,7 +932,7 @@ export async function countShopScoped(
 /**
  * **One file of a bundle**: its name, header and README note, and how to build
  * its rows from what the loader read. The bundles are lists of these
- * (`./export-shop-files`, `./export-diver-files`), so a file is written in one
+ * (`./shop-files`, `./diver-files`), so a file is written in one
  * place and a loader only reads.
  */
 export type ExportFileSpec<Context> = {

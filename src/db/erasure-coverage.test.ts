@@ -380,7 +380,7 @@ describe("erasure coverage", () => {
   });
 
   /**
-   * The export read list (`./export-tables`) names, per table, the column a
+   * The export read list (`./export/tables`) names, per table, the column a
    * diver's own bundle reads it by. A table a diver can ask to *see* as theirs
    * is a table they can ask to have *forgotten*, so every one of them must be
    * decided by the erasure path above — and the scope column must really be a
