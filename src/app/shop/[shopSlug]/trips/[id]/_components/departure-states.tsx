@@ -21,14 +21,21 @@ import { PaperPassSheet } from "./PaperPassSheet";
 export async function departureStateOf(
   shopSlug: string,
   tripId: string,
-  params: { pass?: string; blowout?: string; print?: string; notice?: string },
+  params: { pass?: string; receipt?: string; blowout?: string; print?: string; notice?: string },
 ) {
   // Hold the dynamic read while the real loading boundary streams in the E2E harness.
   if (runtimeMode().e2eHarness) await waitForNavigationGate(tripId);
   if (params.pass !== undefined) {
     const bookingId = uuidParam(params.pass);
     if (!bookingId) notFound();
-    return <PaperPassSheet shopSlug={shopSlug} tripId={tripId} bookingId={bookingId} />;
+    return (
+      <PaperPassSheet
+        shopSlug={shopSlug}
+        tripId={tripId}
+        bookingId={bookingId}
+        receipt={params.receipt !== undefined}
+      />
+    );
   }
   if (params.blowout !== undefined) {
     return <BlowoutPageBody shopSlug={shopSlug} tripId={tripId} notice={params.notice} />;

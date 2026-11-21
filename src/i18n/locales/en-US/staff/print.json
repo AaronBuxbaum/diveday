@@ -20,7 +20,9 @@
     }
   },
   "counter": {
-    "passDoor": "Print a pass"
+    "passDoor": "Print a pass",
+    "passReceipt": "Print on a receipt printer",
+    "passCard": "Print on a card"
   },
   "packet": {
     "missingHeading": "If someone is missing",

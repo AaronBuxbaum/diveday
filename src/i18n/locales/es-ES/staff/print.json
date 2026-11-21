@@ -20,7 +20,9 @@
     }
   },
   "counter": {
-    "passDoor": "Imprimir un pase"
+    "passDoor": "Imprimir un pase",
+    "passReceipt": "Imprimir en impresora de tickets",
+    "passCard": "Imprimir en tarjeta"
   },
   "packet": {
     "missingHeading": "Si falta alguien",

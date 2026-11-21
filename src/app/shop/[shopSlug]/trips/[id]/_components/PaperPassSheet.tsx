@@ -1,5 +1,7 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PaperSheet, SheetMark } from "@/components/paper/PaperSheet";
+import { buttonClass } from "@/components/ui/button";
 import { requireShopSurface } from "@/features/accounts/session";
 import { getPassBooking } from "@/features/boarding/print-pass";
 import { requestLocale } from "@/i18n/request";
@@ -9,7 +11,13 @@ import { packsLogbook } from "@/lib/diver-planning";
 import { formatDateWithYear, formatTime } from "@/lib/format";
 import { meetingPointOfRows } from "@/lib/meeting-point";
 import { publicAppUrl, recipientLocale } from "@/lib/notifications";
-import { PAPER_PASS_PAPER, passCodePayload, storefrontAddress } from "@/lib/print-sheets";
+import {
+  PAPER_PASS_PAPER,
+  PAPER_PASS_RECEIPT_PAPER,
+  paperPassPath,
+  passCodePayload,
+  storefrontAddress,
+} from "@/lib/print-sheets";
 import { shopPath } from "@/lib/staff-notices";
 import { SheetCode } from "../../../print/_components/SheetCode";
 import { SheetDocument } from "../../../print/_components/SheetDocument";
@@ -29,6 +37,11 @@ import { sheetAttribution } from "../../../print/_components/ShopSheet";
  * seat hands a finder nothing, and the code can never become a second, quieter
  * spelling of a waiver link.
  *
+ * **On a receipt roll too** (`&receipt=1`): the same words and the same code,
+ * stacked in the 48 mm that 58 mm and 80 mm thermal printers both hold. The
+ * counter reaches it from the pass's own screen, so nothing new sits in the
+ * arrivals rows.
+ *
  * **And nothing about the diver but their name.** No readiness, no waiver
  * state, no medical answer, no money. This is a document that leaves the
  * building in a stranger's pocket.
@@ -37,11 +50,15 @@ export async function PaperPassSheet({
   shopSlug,
   tripId,
   bookingId,
+  receipt,
 }: {
   shopSlug: string;
   tripId: string;
   bookingId: string;
+  /** The pass drawn for a receipt roll rather than an A6 card. */
+  receipt: boolean;
 }) {
+  const paper = receipt ? PAPER_PASS_RECEIPT_PAPER : PAPER_PASS_PAPER;
   const { db, shop, session } = await requireShopSurface(shopSlug);
   const booking = await getPassBooking(db, shop.id, bookingId);
   // A booking of another departure names nothing here, like one of another shop.
@@ -74,13 +91,21 @@ export async function PaperPassSheet({
   return (
     <SheetDocument
       backHref={shopPath(shopSlug, "trips", tripId)}
-      paper={PAPER_PASS_PAPER}
+      paper={paper}
+      doors={
+        <Link
+          href={paperPassPath(shopSlug, tripId, booking.bookingId, { receipt: !receipt })}
+          className={buttonClass({ variant: "ghost", size: "sm" })}
+        >
+          {readerT(receipt ? "print.counter.passCard" : "print.counter.passReceipt")}
+        </Link>
+      }
       brandDisplayFont={shop.brandDisplayFont}
       backLabel={readerT("trips.clock.guests")}
       printLabel={readerT("print.sheet.door")}
     >
       <PaperSheet
-        paper={PAPER_PASS_PAPER}
+        paper={paper}
         lang={locale === readerLocale ? undefined : locale}
         band={
           <>
@@ -137,14 +162,20 @@ export async function PaperPassSheet({
         {/* `gap-4`, 3.4mm at the print root: the code's quiet zone, four of
             its 0.8mm modules, overhangs its box (`SheetCode`) and must stay
             clear of the words beside it. */}
-        <div className="mt-4 flex items-center gap-4">
+        <div
+          className={
+            receipt ? "mt-3 flex flex-col items-center gap-3" : "mt-4 flex items-center gap-4"
+          }
+        >
           <SheetCode
             value={passCodePayload(booking.bookingId)}
             label={t("print.sheet.pass.eyebrow")}
             size={24}
             className="shrink-0"
           />
-          <span className="paper-sheet-muted text-xs leading-snug">
+          <span
+            className={`paper-sheet-muted text-xs leading-snug ${receipt ? "text-center" : ""}`}
+          >
             {t("print.sheet.pass.show")} {t("print.sheet.pass.code")}
           </span>
         </div>

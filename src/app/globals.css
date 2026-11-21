@@ -1570,6 +1570,24 @@ select:not([multiple]):not([size]):dir(rtl) {
   color: var(--sheet-ink);
 }
 
+/* A receipt roll (58 mm and 80 mm thermal printers): the sheet is the 48 mm both
+   hold, so its gutters are 2mm rather than a card's 5mm, and the small type a
+   card sets in 6 to 8pt steps up to what a thermal head draws legibly. */
+.paper-sheet-receipt .paper-sheet-band {
+  gap: 0.5rem;
+  padding: 0.5rem 2mm;
+}
+
+.paper-sheet-receipt .paper-sheet-body {
+  padding: 2mm;
+}
+
+.paper-sheet-receipt .paper-sheet-fold {
+  flex-direction: column;
+  padding: 1.5mm 2mm;
+  font-size: 0.625rem;
+}
+
 .paper-sheet-mark {
   display: inline-flex;
   flex: 0 0 auto;

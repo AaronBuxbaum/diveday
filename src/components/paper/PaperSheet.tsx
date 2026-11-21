@@ -1,5 +1,9 @@
 import type { CSSProperties, ReactNode } from "react";
-import { PRINT_SHEET_BOX_MM, type PrintSheetPaper } from "@/lib/print-sheets";
+import {
+  PAPER_PASS_RECEIPT_PAPER,
+  PRINT_SHEET_BOX_MM,
+  type PrintSheetPaper,
+} from "@/lib/print-sheets";
 
 /**
  * **One sheet of the shop's paper** — ADR 20260908-one-hand, decision 6,
@@ -45,7 +49,7 @@ export function PaperSheet({
   const box = PRINT_SHEET_BOX_MM[paper];
   return (
     <section
-      className={box.height === null ? "paper-sheet paper-sheet-long" : "paper-sheet"}
+      className={sheetClass(paper, box.height === null)}
       lang={lang}
       style={
         {
@@ -68,6 +72,12 @@ export function PaperSheet({
       </div>
     </section>
   );
+}
+
+/** A receipt roll's sheet keeps the long sheet's flow and tightens its gutters to fit 48 mm. */
+function sheetClass(paper: PrintSheetPaper, long: boolean): string {
+  if (paper === PAPER_PASS_RECEIPT_PAPER) return "paper-sheet paper-sheet-long paper-sheet-receipt";
+  return long ? "paper-sheet paper-sheet-long" : "paper-sheet";
 }
 
 /**
