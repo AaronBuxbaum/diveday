@@ -229,7 +229,7 @@ async function SignInForm({ searchParams }: { searchParams: Promise<SignInSearch
             </FormStatus>
           </SignInStatus>
         ) : null}
-        {/* `?session=ended`: requireStaffSession() (src/features/session/rules.ts)
+        {/* `?session=ended`: requireStaffSession() (src/features/accounts/session.ts)
             forced this sign-out because a live database check found the
             account disabled, deleted, or demoted off every staff role since
             its token was minted (issue #701) — worth saying, since the

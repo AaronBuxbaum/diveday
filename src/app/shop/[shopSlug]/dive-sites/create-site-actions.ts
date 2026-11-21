@@ -3,15 +3,19 @@
 import { getDb } from "@/db/client";
 import { createDiveSiteForForm, SITE_NAME_TAKEN } from "@/db/dive-sites";
 import { getShopById } from "@/db/shops";
-import { type DiveSiteFormError, parseDiveSiteForm, submittedValues } from "@/features/dive-sites";
-import { revalidateAndRedirect } from "@/features/navigation";
-import { readRequiredSpecialties } from "@/features/requirement-form";
-import { requireStaffSession } from "@/features/session";
+import { requireStaffSession } from "@/features/accounts/session";
+import { revalidateAndRedirect } from "@/features/platform/navigation";
 import {
   abandonDiveSitePhotos,
   addedDiveSitePhotos,
   uploadDiveSitePhotos,
-} from "@/features/storage";
+} from "@/features/platform/storage";
+import {
+  type DiveSiteFormError,
+  parseDiveSiteForm,
+  submittedValues,
+} from "@/features/sites/dive-sites";
+import { readRequiredSpecialties } from "@/features/waivers/requirement-form";
 import { shopPath } from "@/lib/staff-notices";
 import type { SiteFormState } from "./_components/SiteFormShell";
 import { siteFormExtras } from "./site-forms";

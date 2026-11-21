@@ -242,9 +242,12 @@ describe("a real-Postgres suite", () => {
   it("runs feature-layer PostgreSQL suites through the real-server job", () => {
     expect(
       findMisplacedRealServerSuites(
-        "src/features/setup-request-receipts/setup-request-receipts.postgres.test.ts",
+        "src/features/shop-setup/setup-request-receipts/setup-request-receipts.postgres.test.ts",
         suite,
       ),
+    ).toEqual([]);
+    expect(
+      findMisplacedRealServerSuites("src/features/day/today-catch-up.postgres.test.ts", suite),
     ).toEqual([]);
   });
 

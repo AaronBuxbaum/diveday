@@ -3,7 +3,7 @@ import type { CertificationAgency } from "@/db/schema";
 import {
   type AgencyVerificationPage,
   agencyVerificationPage,
-} from "@/features/agency-verification";
+} from "@/features/certifications/agency-verification";
 import { fill } from "@/i18n/fill";
 import { SPECIALTY_KEYS } from "@/i18n/readiness-labels";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";

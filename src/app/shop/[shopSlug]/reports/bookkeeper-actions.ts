@@ -6,17 +6,17 @@ import type { AppDb } from "@/db/client";
 import { canPersonExportShopData } from "@/db/export";
 import { sendNotification } from "@/db/notifications";
 import { recordShopActivity } from "@/db/shop-activity";
+import { stepUpChallengeUrl } from "@/features/accounts/security-step-up";
+import { requireShopSurface } from "@/features/accounts/session";
+import { hasRequiredStepUp } from "@/features/accounts/step-up";
 import {
   type BookkeeperChange,
   bookkeeperAddress,
   issueBookkeeperConfirmation,
   setBookkeeper,
   tellOwnersAboutBookkeeper,
-} from "@/features/bookkeeper";
-import { confirmContactLinkPath } from "@/features/contact-email-confirmation";
-import { stepUpChallengeUrl } from "@/features/security-step-up";
-import { requireShopSurface } from "@/features/session";
-import { hasRequiredStepUp } from "@/features/step-up";
+} from "@/features/money/bookkeeper";
+import { confirmContactLinkPath } from "@/features/people/contact-email-confirmation";
 import { toDiverLocale } from "@/i18n/settings";
 import { nowDate } from "@/lib/clock";
 import { publicAppUrl } from "@/lib/notifications";

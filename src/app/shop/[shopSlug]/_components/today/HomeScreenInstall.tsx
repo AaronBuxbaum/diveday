@@ -7,7 +7,7 @@ import {
   homeScreenInstallPreference,
   type InstallPlatform,
   installPlatform,
-} from "@/features/home-screen-install";
+} from "@/features/platform/home-screen-install";
 
 export type HomeScreenInstallCopy = {
   body: string;

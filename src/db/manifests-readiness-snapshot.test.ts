@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
-import { anonymizeDiver } from "../features/anonymize/store";
+import { anonymizeDiver } from "../features/records/anonymize";
 import { loadShopExportBundleInput } from "./export";
 import { listCountedAboardBlockedByTrip, recordRollCall } from "./manifests";
 import {

@@ -2,8 +2,8 @@
 
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { parseForm, single } from "@/features/form-parse";
-import { openMinorSeatWaiver } from "@/features/seat-claims";
+import { openMinorSeatWaiver } from "@/features/bookings/seat-claims";
+import { parseForm, single } from "@/features/platform/form-parse";
 import {
   base,
   bounceTarget,

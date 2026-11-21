@@ -95,7 +95,7 @@ comment, and a test pins the rule.
 | 18c — a row closes its own gap: `SettledRows` on the counter's working queue and its settled group, Undo reversed (the manifest roster still waits on H-20260907-diveday-move-like-thing c) | dropped | shipped, then removed: its last list, the trip's Check-in tab, folded into Divers on 2026-10-05, and the component went with it on 2026-10-12 | — |
 | 18d — the sheet follows the thumb: `useDragSheet` on the dock's More sheet, with the grab handle; the scrim tracks the sheet's travel | dropped | built, never wired to a sheet, and deleted on 2026-10-13 (H-20260815-no-legacy) | — |
 | 18e — the title folds into the bar on a phone: `FoldedPageTitle` portals the page's title into `ShopNav`'s slot, three scroll-driven animations over 120px | shipped | `src/components/chrome/FoldedPageTitle.tsx` | `src/components/chrome/FoldedPageTitle.test.tsx`, `src/components/chrome/chrome.test.ts` |
-| 18f — the departure on the lock screen: Add to Wallet on the thread, the pass in the shop's brand, updates from `trips.revision`, the PassKit web service and the Google object (H-20260907-diveday-move-like-thing b decided yes 2026-09-07; built dark until the credentials are held; contract in [SPEC.md](SPEC.md)) | shipped | `src/features/wallet-pass/index.ts` | `src/features/wallet-pass/rules.test.ts`, `signing.test.ts`, `store.test.ts`, `e2e/wallet-pass.spec.ts` |
+| 18f — the departure on the lock screen: Add to Wallet on the thread, the pass in the shop's brand, updates from `trips.revision`, the PassKit web service and the Google object (H-20260907-diveday-move-like-thing b decided yes 2026-09-07; built dark until the credentials are held; contract in [SPEC.md](SPEC.md)) | shipped | `src/features/boarding/wallet-pass/index.ts` | `src/features/boarding/wallet-pass/rules.test.ts`, `signing.test.ts`, `store.test.ts`, `e2e/wallet-pass.spec.ts` |
 
 **What 18a–18d settled that the drawing left open, and what is still owed:**
 
@@ -171,13 +171,13 @@ Read, in this order, before writing code:
    acceptance tests, and the must-nots.
 4. The current code the slice touches: src/app/(token)/ready/[token]/page.tsx and
    src/app/s/[shopSlug]/trips/[id]/_components/TripActions.tsx (where Add to calendar lives),
-   src/db/booking-capabilities.ts (verifyBookingCapability), src/features/ready/store.ts (getReadyPageData),
-   src/features/trip-stages/store.ts (latestTripStage), src/features/trip-calendar/rules.ts and src/lib/trip-revision.ts
+   src/db/booking-capabilities.ts (verifyBookingCapability), src/features/boarding/ready.ts (getReadyPageData),
+   src/features/trips/trip-stages.ts (latestTripStage), src/features/trips/trip-calendar.ts and src/lib/trip-revision.ts
    (how the calendar reads trips.revision), src/lib/brand.ts (deriveBrandTheme),
-   src/lib/bearer-tokens.ts, src/features/calendar-sync/ (the feature-module shape and README to
+   src/lib/bearer-tokens.ts, src/features/crew-and-boats/calendar-sync/ (the feature-module shape and README to
    copy), src/app/api/cron/trip-series/route.ts (the cron pattern: CRON_SECRET gate, Sentry
    monitor), config/env-registry.mjs, the manual-actions registry in infra/lib/infra-stack.ts §17,
-   infra/lib/observability.ts, src/features/anonymize/store.ts (the erasure hook),
+   infra/lib/observability.ts, src/features/records/anonymize.ts (the erasure hook),
    docs/engineering/capability-telemetry-runbook.md.
 5. Only then the artboard docs/design/canvases/20260907-nothing-from-nowhere/Pass.dc.html. The
    ADR outranks the spec, the spec outranks the artboard, and shipped code outranks a drawing for
@@ -188,7 +188,7 @@ reach each step.
 
 Build it as a stack of pull requests, bottom up, each cut from the one below (stacked-prs skill):
 (1) schema — the two tables and their migration, the retention window, the erasure hook;
-(2) the module — src/features/wallet-pass with the pure content builder and its hash, the Apple
+(2) the module — src/features/boarding/wallet-pass with the pure content builder and its hash, the Apple
     renderer on passkit-generator@3.5.8 (the one new dependency, already named in the ADR; add it
     with pnpm), the Google JWT and object client on node:crypto and fetch, the PassKit web-service
     functions, the push function (APNs over node:http2 with the pass certificate), and

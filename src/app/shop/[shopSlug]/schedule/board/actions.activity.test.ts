@@ -12,7 +12,7 @@ import {
   seededStaffPersonId,
   staffSession,
 } from "@/test/staff-session";
-import { verifyScheduleMoveResult } from "../../../../../features/schedule-move-result/rules";
+import { verifyScheduleMoveResult } from "../../../../../features/trips/schedule-move-result";
 
 const ctx = fileScopedShopContext();
 

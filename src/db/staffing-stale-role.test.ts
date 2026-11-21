@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { STAFF_ROLES } from "@/lib/authz";
 import { HOUR_MS, nowMs } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
-import { createStaffShift } from "../features/staffing/store";
+import { createStaffShift } from "../features/crew-and-boats/staffing/store";
 import { personRoles, staffShifts } from "./schema";
 import { listStaff } from "./trips";
 

@@ -1,7 +1,7 @@
 {
   "//": "Every ratcheted check:repo guard's counts, keyed by guard. A count may only fall: `node scripts/check-<guard>.mjs --write` banks a fall and refuses a rise; `--absorb \"<why>\"` records a deliberate rise with its reason. Shared code: scripts/ratchet.mjs.",
   "architecture": {
-    "//": "architecture: per-file architecture debt; node scripts/check-architecture.mjs --write banks a fall. See ADR 20261108-concept-leaves.",
+    "//": "architecture: per-file architecture debt; node scripts/check-architecture.mjs --write banks a fall. See ADR 20261121-feature-areas.",
     "//absorbed": [
       {
         "why": "Three new seams (lib to db values, app to drizzle-orm, the trips barrel): what was left after draining the 2026-10-10 review's list",
@@ -9,7 +9,7 @@
           "src/lib/auth.ts": "0 -> 3",
           "src/lib/dive-declaration.ts": "0 -> 1",
           "src/lib/dive-site-field-guide.ts": "0 -> 1",
-          "src/features/dive-sites/dive-site-import.rules.ts": "0 -> 1",
+          "src/features/sites/dive-sites/dive-site-import.rules.ts": "0 -> 1",
           "src/lib/dive-site-template-sync.ts": "0 -> 1"
         }
       },
@@ -42,34 +42,34 @@
           "src/app/shop/[shopSlug]/trips/[id]/party/[leadId]/waivers/actions.ts": "0 -> 1",
           "src/app/sign-in/page.tsx": "0 -> 1",
           "src/components/ImageFileInput.tsx": "0 -> 1",
-          "src/features/booking-cancelled-notice/store.ts": "0 -> 1",
-          "src/features/booking-handoff/store.ts": "0 -> 1",
-          "src/features/course-certified/store.ts": "0 -> 3",
+          "src/features/bookings/booking-cancelled-notice.ts": "0 -> 1",
+          "src/features/bookings/booking-handoff/store.ts": "0 -> 1",
+          "src/features/training/course-certified.ts": "0 -> 3",
           "src/db/departure-notes.ts": "0 -> 3",
           "src/db/erasure-coordinated-send.ts": "0 -> 1",
-          "src/features/find-my-booking/store.ts": "0 -> 1",
-          "src/features/lost-items/store.ts": "0 -> 3",
+          "src/features/bookings/find-my-booking.ts": "0 -> 1",
+          "src/features/day/lost-items/store.ts": "0 -> 3",
           "src/db/missing-diver-alerts.ts": "0 -> 1",
-          "src/features/monday-read/store.ts": "0 -> 1",
+          "src/features/reports/monday-read.ts": "0 -> 1",
           "src/db/notifications.ts": "0 -> 6",
           "src/db/push-subscriptions.ts": "0 -> 2",
-          "src/features/readiness-link-rescue/store.ts": "0 -> 2",
-          "src/features/reminders/store.ts": "0 -> 3",
-          "src/features/reply-keywords/store.ts": "0 -> 1",
-          "src/features/roll-call-alerts/store.ts": "0 -> 1",
-          "src/features/self-registration/store.ts": "0 -> 1",
+          "src/features/boarding/readiness-link-rescue.ts": "0 -> 2",
+          "src/features/messages/reminders.ts": "0 -> 3",
+          "src/features/messages/reply-keywords/store.ts": "0 -> 1",
+          "src/features/boarding/roll-call-alerts/store.ts": "0 -> 1",
+          "src/features/people/self-registration.ts": "0 -> 1",
           "src/db/sms-opt-outs.ts": "0 -> 1",
           "src/db/staff-reply.ts": "0 -> 1",
           "src/db/trip-rescheduled.ts": "0 -> 3",
-          "src/features/waiver-guardian-copy/store.ts": "0 -> 2",
+          "src/features/waivers/waiver-guardian-copy.ts": "0 -> 2",
           "src/db/waiver-issue.ts": "0 -> 2",
           "src/db/whatsapp-accounts.ts": "0 -> 2",
-          "src/features/your-days/store.ts": "0 -> 2",
-          "src/features/backup-export/s3-client.ts": "0 -> 2",
+          "src/features/bookings/your-days.ts": "0 -> 2",
+          "src/features/records/backup-export/s3-client.ts": "0 -> 2",
           "src/lib/auth.ts": "3 -> 4",
           "src/lib/dive-site-landmarks.ts": "0 -> 1",
           "src/lib/notifications/sender.ts": "0 -> 1",
-          "src/features/same-origin/rules.ts": "0 -> 1",
+          "src/features/platform/same-origin.ts": "0 -> 1",
           "src/lib/send-window.ts": "0 -> 1",
           "src/lib/setup-request-receipts.ts": "0 -> 1"
         }
@@ -104,34 +104,34 @@
           "src/app/shop/[shopSlug]/trips/[id]/party/[leadId]/waivers/actions.ts": "0 -> 1",
           "src/app/sign-in/page.tsx": "0 -> 1",
           "src/components/ImageFileInput.tsx": "0 -> 1",
-          "src/features/booking-cancelled-notice/store.ts": "0 -> 1",
-          "src/features/booking-handoff/store.ts": "0 -> 1",
-          "src/features/course-certified/store.ts": "0 -> 3",
+          "src/features/bookings/booking-cancelled-notice.ts": "0 -> 1",
+          "src/features/bookings/booking-handoff/store.ts": "0 -> 1",
+          "src/features/training/course-certified.ts": "0 -> 3",
           "src/db/departure-notes.ts": "0 -> 3",
           "src/db/erasure-coordinated-send.ts": "0 -> 1",
-          "src/features/find-my-booking/store.ts": "0 -> 1",
-          "src/features/lost-items/store.ts": "0 -> 3",
+          "src/features/bookings/find-my-booking.ts": "0 -> 1",
+          "src/features/day/lost-items/store.ts": "0 -> 3",
           "src/db/missing-diver-alerts.ts": "0 -> 1",
-          "src/features/monday-read/store.ts": "0 -> 1",
+          "src/features/reports/monday-read.ts": "0 -> 1",
           "src/db/notifications.ts": "0 -> 6",
           "src/db/push-subscriptions.ts": "0 -> 2",
-          "src/features/readiness-link-rescue/store.ts": "0 -> 2",
-          "src/features/reminders/store.ts": "0 -> 3",
-          "src/features/reply-keywords/store.ts": "0 -> 1",
-          "src/features/roll-call-alerts/store.ts": "0 -> 1",
-          "src/features/self-registration/store.ts": "0 -> 1",
+          "src/features/boarding/readiness-link-rescue.ts": "0 -> 2",
+          "src/features/messages/reminders.ts": "0 -> 3",
+          "src/features/messages/reply-keywords/store.ts": "0 -> 1",
+          "src/features/boarding/roll-call-alerts/store.ts": "0 -> 1",
+          "src/features/people/self-registration.ts": "0 -> 1",
           "src/db/sms-opt-outs.ts": "0 -> 1",
           "src/db/staff-reply.ts": "0 -> 1",
           "src/db/trip-rescheduled.ts": "0 -> 3",
-          "src/features/waiver-guardian-copy/store.ts": "0 -> 2",
+          "src/features/waivers/waiver-guardian-copy.ts": "0 -> 2",
           "src/db/waiver-issue.ts": "0 -> 2",
           "src/db/whatsapp-accounts.ts": "0 -> 2",
-          "src/features/your-days/store.ts": "0 -> 2",
-          "src/features/backup-export/s3-client.ts": "0 -> 2",
+          "src/features/bookings/your-days.ts": "0 -> 2",
+          "src/features/records/backup-export/s3-client.ts": "0 -> 2",
           "src/lib/auth.ts": "3 -> 4",
           "src/lib/dive-site-landmarks.ts": "0 -> 1",
           "src/lib/notifications/sender.ts": "0 -> 1",
-          "src/features/same-origin/rules.ts": "0 -> 1",
+          "src/features/platform/same-origin.ts": "0 -> 1",
           "src/lib/send-window.ts": "0 -> 1",
           "src/lib/setup-request-receipts.ts": "0 -> 1"
         }
@@ -142,7 +142,7 @@
           "src/lib/auth.ts": "0 -> 3",
           "src/lib/dive-declaration.ts": "0 -> 1",
           "src/lib/dive-site-field-guide.ts": "0 -> 1",
-          "src/features/dive-sites/dive-site-import.rules.ts": "0 -> 1",
+          "src/features/sites/dive-sites/dive-site-import.rules.ts": "0 -> 1",
           "src/lib/dive-site-template-sync.ts": "0 -> 1"
         }
       },
@@ -175,34 +175,34 @@
           "src/app/shop/[shopSlug]/trips/[id]/party/[leadId]/waivers/actions.ts": "0 -> 1",
           "src/app/sign-in/page.tsx": "0 -> 1",
           "src/components/ImageFileInput.tsx": "0 -> 1",
-          "src/features/booking-cancelled-notice/store.ts": "0 -> 1",
-          "src/features/booking-handoff/store.ts": "0 -> 1",
-          "src/features/course-certified/store.ts": "0 -> 3",
+          "src/features/bookings/booking-cancelled-notice.ts": "0 -> 1",
+          "src/features/bookings/booking-handoff/store.ts": "0 -> 1",
+          "src/features/training/course-certified.ts": "0 -> 3",
           "src/db/departure-notes.ts": "0 -> 3",
           "src/db/erasure-coordinated-send.ts": "0 -> 1",
-          "src/features/find-my-booking/store.ts": "0 -> 1",
-          "src/features/lost-items/store.ts": "0 -> 3",
+          "src/features/bookings/find-my-booking.ts": "0 -> 1",
+          "src/features/day/lost-items/store.ts": "0 -> 3",
           "src/db/missing-diver-alerts.ts": "0 -> 1",
-          "src/features/monday-read/store.ts": "0 -> 1",
+          "src/features/reports/monday-read.ts": "0 -> 1",
           "src/db/notifications.ts": "0 -> 6",
           "src/db/push-subscriptions.ts": "0 -> 2",
-          "src/features/readiness-link-rescue/store.ts": "0 -> 2",
-          "src/features/reminders/store.ts": "0 -> 3",
-          "src/features/reply-keywords/store.ts": "0 -> 1",
-          "src/features/roll-call-alerts/store.ts": "0 -> 1",
-          "src/features/self-registration/store.ts": "0 -> 1",
+          "src/features/boarding/readiness-link-rescue.ts": "0 -> 2",
+          "src/features/messages/reminders.ts": "0 -> 3",
+          "src/features/messages/reply-keywords/store.ts": "0 -> 1",
+          "src/features/boarding/roll-call-alerts/store.ts": "0 -> 1",
+          "src/features/people/self-registration.ts": "0 -> 1",
           "src/db/sms-opt-outs.ts": "0 -> 1",
           "src/db/staff-reply.ts": "0 -> 1",
           "src/db/trip-rescheduled.ts": "0 -> 3",
-          "src/features/waiver-guardian-copy/store.ts": "0 -> 2",
+          "src/features/waivers/waiver-guardian-copy.ts": "0 -> 2",
           "src/db/waiver-issue.ts": "0 -> 2",
           "src/db/whatsapp-accounts.ts": "0 -> 2",
-          "src/features/your-days/store.ts": "0 -> 2",
-          "src/features/backup-export/s3-client.ts": "0 -> 2",
+          "src/features/bookings/your-days.ts": "0 -> 2",
+          "src/features/records/backup-export/s3-client.ts": "0 -> 2",
           "src/lib/auth.ts": "3 -> 4",
           "src/lib/dive-site-landmarks.ts": "0 -> 1",
           "src/lib/notifications/sender.ts": "0 -> 1",
-          "src/features/same-origin/rules.ts": "0 -> 1",
+          "src/features/platform/same-origin.ts": "0 -> 1",
           "src/lib/send-window.ts": "0 -> 1",
           "src/lib/setup-request-receipts.ts": "0 -> 1"
         }
@@ -237,34 +237,34 @@
           "src/app/shop/[shopSlug]/trips/[id]/party/[leadId]/waivers/actions.ts": "0 -> 1",
           "src/app/sign-in/page.tsx": "0 -> 1",
           "src/components/ImageFileInput.tsx": "0 -> 1",
-          "src/features/booking-cancelled-notice/store.ts": "0 -> 1",
-          "src/features/booking-handoff/store.ts": "0 -> 1",
-          "src/features/course-certified/store.ts": "0 -> 3",
+          "src/features/bookings/booking-cancelled-notice.ts": "0 -> 1",
+          "src/features/bookings/booking-handoff/store.ts": "0 -> 1",
+          "src/features/training/course-certified.ts": "0 -> 3",
           "src/db/departure-notes.ts": "0 -> 3",
           "src/db/erasure-coordinated-send.ts": "0 -> 1",
-          "src/features/find-my-booking/store.ts": "0 -> 1",
-          "src/features/lost-items/store.ts": "0 -> 3",
+          "src/features/bookings/find-my-booking.ts": "0 -> 1",
+          "src/features/day/lost-items/store.ts": "0 -> 3",
           "src/db/missing-diver-alerts.ts": "0 -> 1",
-          "src/features/monday-read/store.ts": "0 -> 1",
+          "src/features/reports/monday-read.ts": "0 -> 1",
           "src/db/notifications.ts": "0 -> 6",
           "src/db/push-subscriptions.ts": "0 -> 2",
-          "src/features/readiness-link-rescue/store.ts": "0 -> 2",
-          "src/features/reminders/store.ts": "0 -> 3",
-          "src/features/reply-keywords/store.ts": "0 -> 1",
-          "src/features/roll-call-alerts/store.ts": "0 -> 1",
-          "src/features/self-registration/store.ts": "0 -> 1",
+          "src/features/boarding/readiness-link-rescue.ts": "0 -> 2",
+          "src/features/messages/reminders.ts": "0 -> 3",
+          "src/features/messages/reply-keywords/store.ts": "0 -> 1",
+          "src/features/boarding/roll-call-alerts/store.ts": "0 -> 1",
+          "src/features/people/self-registration.ts": "0 -> 1",
           "src/db/sms-opt-outs.ts": "0 -> 1",
           "src/db/staff-reply.ts": "0 -> 1",
           "src/db/trip-rescheduled.ts": "0 -> 3",
-          "src/features/waiver-guardian-copy/store.ts": "0 -> 2",
+          "src/features/waivers/waiver-guardian-copy.ts": "0 -> 2",
           "src/db/waiver-issue.ts": "0 -> 2",
           "src/db/whatsapp-accounts.ts": "0 -> 2",
-          "src/features/your-days/store.ts": "0 -> 2",
-          "src/features/backup-export/s3-client.ts": "0 -> 2",
+          "src/features/bookings/your-days.ts": "0 -> 2",
+          "src/features/records/backup-export/s3-client.ts": "0 -> 2",
           "src/lib/auth.ts": "3 -> 4",
           "src/lib/dive-site-landmarks.ts": "0 -> 1",
           "src/lib/notifications/sender.ts": "0 -> 1",
-          "src/features/same-origin/rules.ts": "0 -> 1",
+          "src/features/platform/same-origin.ts": "0 -> 1",
           "src/lib/send-window.ts": "0 -> 1",
           "src/lib/setup-request-receipts.ts": "0 -> 1"
         }
@@ -275,7 +275,7 @@
           "src/lib/auth.ts": "0 -> 3",
           "src/lib/dive-declaration.ts": "0 -> 1",
           "src/lib/dive-site-field-guide.ts": "0 -> 1",
-          "src/features/dive-sites/dive-site-import.rules.ts": "0 -> 1",
+          "src/features/sites/dive-sites/dive-site-import.rules.ts": "0 -> 1",
           "src/lib/dive-site-template-sync.ts": "0 -> 1"
         }
       },
@@ -308,34 +308,34 @@
           "src/app/shop/[shopSlug]/trips/[id]/party/[leadId]/waivers/actions.ts": "0 -> 1",
           "src/app/sign-in/page.tsx": "0 -> 1",
           "src/components/ImageFileInput.tsx": "0 -> 1",
-          "src/features/booking-cancelled-notice/store.ts": "0 -> 1",
-          "src/features/booking-handoff/store.ts": "0 -> 1",
-          "src/features/course-certified/store.ts": "0 -> 3",
+          "src/features/bookings/booking-cancelled-notice.ts": "0 -> 1",
+          "src/features/bookings/booking-handoff/store.ts": "0 -> 1",
+          "src/features/training/course-certified.ts": "0 -> 3",
           "src/db/departure-notes.ts": "0 -> 3",
           "src/db/erasure-coordinated-send.ts": "0 -> 1",
-          "src/features/find-my-booking/store.ts": "0 -> 1",
-          "src/features/lost-items/store.ts": "0 -> 3",
+          "src/features/bookings/find-my-booking.ts": "0 -> 1",
+          "src/features/day/lost-items/store.ts": "0 -> 3",
           "src/db/missing-diver-alerts.ts": "0 -> 1",
-          "src/features/monday-read/store.ts": "0 -> 1",
+          "src/features/reports/monday-read.ts": "0 -> 1",
           "src/db/notifications.ts": "0 -> 6",
           "src/db/push-subscriptions.ts": "0 -> 2",
-          "src/features/readiness-link-rescue/store.ts": "0 -> 2",
-          "src/features/reminders/store.ts": "0 -> 3",
-          "src/features/reply-keywords/store.ts": "0 -> 1",
-          "src/features/roll-call-alerts/store.ts": "0 -> 1",
-          "src/features/self-registration/store.ts": "0 -> 1",
+          "src/features/boarding/readiness-link-rescue.ts": "0 -> 2",
+          "src/features/messages/reminders.ts": "0 -> 3",
+          "src/features/messages/reply-keywords/store.ts": "0 -> 1",
+          "src/features/boarding/roll-call-alerts/store.ts": "0 -> 1",
+          "src/features/people/self-registration.ts": "0 -> 1",
           "src/db/sms-opt-outs.ts": "0 -> 1",
           "src/db/staff-reply.ts": "0 -> 1",
           "src/db/trip-rescheduled.ts": "0 -> 3",
-          "src/features/waiver-guardian-copy/store.ts": "0 -> 2",
+          "src/features/waivers/waiver-guardian-copy.ts": "0 -> 2",
           "src/db/waiver-issue.ts": "0 -> 2",
           "src/db/whatsapp-accounts.ts": "0 -> 2",
-          "src/features/your-days/store.ts": "0 -> 2",
-          "src/features/backup-export/s3-client.ts": "0 -> 2",
+          "src/features/bookings/your-days.ts": "0 -> 2",
+          "src/features/records/backup-export/s3-client.ts": "0 -> 2",
           "src/lib/auth.ts": "3 -> 4",
           "src/lib/dive-site-landmarks.ts": "0 -> 1",
           "src/lib/notifications/sender.ts": "0 -> 1",
-          "src/features/same-origin/rules.ts": "0 -> 1",
+          "src/features/platform/same-origin.ts": "0 -> 1",
           "src/lib/send-window.ts": "0 -> 1",
           "src/lib/setup-request-receipts.ts": "0 -> 1"
         }
@@ -370,34 +370,34 @@
           "src/app/shop/[shopSlug]/trips/[id]/party/[leadId]/waivers/actions.ts": "0 -> 1",
           "src/app/sign-in/page.tsx": "0 -> 1",
           "src/components/ImageFileInput.tsx": "0 -> 1",
-          "src/features/booking-cancelled-notice/store.ts": "0 -> 1",
-          "src/features/booking-handoff/store.ts": "0 -> 1",
-          "src/features/course-certified/store.ts": "0 -> 3",
+          "src/features/bookings/booking-cancelled-notice.ts": "0 -> 1",
+          "src/features/bookings/booking-handoff/store.ts": "0 -> 1",
+          "src/features/training/course-certified.ts": "0 -> 3",
           "src/db/departure-notes.ts": "0 -> 3",
           "src/db/erasure-coordinated-send.ts": "0 -> 1",
-          "src/features/find-my-booking/store.ts": "0 -> 1",
-          "src/features/lost-items/store.ts": "0 -> 3",
+          "src/features/bookings/find-my-booking.ts": "0 -> 1",
+          "src/features/day/lost-items/store.ts": "0 -> 3",
           "src/db/missing-diver-alerts.ts": "0 -> 1",
-          "src/features/monday-read/store.ts": "0 -> 1",
+          "src/features/reports/monday-read.ts": "0 -> 1",
           "src/db/notifications.ts": "0 -> 6",
           "src/db/push-subscriptions.ts": "0 -> 2",
-          "src/features/readiness-link-rescue/store.ts": "0 -> 2",
-          "src/features/reminders/store.ts": "0 -> 3",
-          "src/features/reply-keywords/store.ts": "0 -> 1",
-          "src/features/roll-call-alerts/store.ts": "0 -> 1",
-          "src/features/self-registration/store.ts": "0 -> 1",
+          "src/features/boarding/readiness-link-rescue.ts": "0 -> 2",
+          "src/features/messages/reminders.ts": "0 -> 3",
+          "src/features/messages/reply-keywords/store.ts": "0 -> 1",
+          "src/features/boarding/roll-call-alerts/store.ts": "0 -> 1",
+          "src/features/people/self-registration.ts": "0 -> 1",
           "src/db/sms-opt-outs.ts": "0 -> 1",
           "src/db/staff-reply.ts": "0 -> 1",
           "src/db/trip-rescheduled.ts": "0 -> 3",
-          "src/features/waiver-guardian-copy/store.ts": "0 -> 2",
+          "src/features/waivers/waiver-guardian-copy.ts": "0 -> 2",
           "src/db/waiver-issue.ts": "0 -> 2",
           "src/db/whatsapp-accounts.ts": "0 -> 2",
-          "src/features/your-days/store.ts": "0 -> 2",
-          "src/features/backup-export/s3-client.ts": "0 -> 2",
+          "src/features/bookings/your-days.ts": "0 -> 2",
+          "src/features/records/backup-export/s3-client.ts": "0 -> 2",
           "src/lib/auth.ts": "3 -> 4",
           "src/lib/dive-site-landmarks.ts": "0 -> 1",
           "src/lib/notifications/sender.ts": "0 -> 1",
-          "src/features/same-origin/rules.ts": "0 -> 1",
+          "src/features/platform/same-origin.ts": "0 -> 1",
           "src/lib/send-window.ts": "0 -> 1",
           "src/lib/setup-request-receipts.ts": "0 -> 1"
         }
@@ -445,24 +445,24 @@
     "src/db/trip-rescheduled.ts": 3,
     "src/db/waiver-issue.ts": 2,
     "src/db/whatsapp-accounts.ts": 2,
-    "src/features/backup-export/s3-client.ts": 2,
-    "src/features/booking-cancelled-notice/store.ts": 1,
-    "src/features/booking-handoff/store.ts": 1,
-    "src/features/course-certified/store.ts": 3,
-    "src/features/dive-sites/dive-site-import.rules.ts": 1,
-    "src/features/find-my-booking/store.ts": 1,
-    "src/features/lost-items/store.ts": 3,
-    "src/features/monday-read/store.ts": 1,
-    "src/features/readiness-link-rescue/store.ts": 2,
-    "src/features/recap/store.ts": 2,
-    "src/features/reminders/store.ts": 3,
-    "src/features/reply-keywords/store.ts": 1,
-    "src/features/roll-call-alerts/store.ts": 1,
-    "src/features/same-origin/rules.ts": 1,
-    "src/features/self-registration/store.ts": 1,
-    "src/features/waiver-guardian-copy/store.ts": 2,
-    "src/features/work-order-follow-up/store.ts": 4,
-    "src/features/your-days/store.ts": 2,
+    "src/features/after-the-dive/recap/store.ts": 2,
+    "src/features/boarding/readiness-link-rescue.ts": 2,
+    "src/features/boarding/roll-call-alerts/store.ts": 1,
+    "src/features/bookings/booking-cancelled-notice.ts": 1,
+    "src/features/bookings/booking-handoff/store.ts": 1,
+    "src/features/bookings/find-my-booking.ts": 1,
+    "src/features/bookings/your-days.ts": 2,
+    "src/features/day/lost-items/store.ts": 3,
+    "src/features/gear/work-order-follow-up/store.ts": 4,
+    "src/features/messages/reminders.ts": 3,
+    "src/features/messages/reply-keywords/store.ts": 1,
+    "src/features/people/self-registration.ts": 1,
+    "src/features/platform/same-origin.ts": 1,
+    "src/features/records/backup-export/s3-client.ts": 2,
+    "src/features/reports/monday-read.ts": 1,
+    "src/features/sites/dive-sites/dive-site-import.rules.ts": 1,
+    "src/features/training/course-certified.ts": 3,
+    "src/features/waivers/waiver-guardian-copy.ts": 2,
     "src/lib/auth.ts": 4,
     "src/lib/dive-declaration.ts": 1,
     "src/lib/dive-site-field-guide.ts": 1,
@@ -473,7 +473,7 @@
     "src/lib/setup-request-receipts.ts": 1
   },
   "architecture-leaves": {
-    "//": "architecture-leaves: per-file architecture debt; node scripts/check-architecture.mjs --write banks a fall. See ADR 20261108-concept-leaves."
+    "//": "architecture-leaves: per-file architecture debt; node scripts/check-architecture.mjs --write banks a fall. See ADR 20261121-feature-areas."
   },
   "bundle-reach": {
     "//": "Message-bundle keys no string literal in src/ can reach, per bundle. Written by `node scripts/check-bundle-reach.mjs --write`. This number may only go down — see scripts/check-bundle-reach.mjs. An entry is a list to triage, not a list to delete on sight: some are a hole in the walk.",
@@ -722,15 +722,15 @@
           "src/db/bookings.test.ts": "3384 -> 3418",
           "src/db/checkouts.test.ts": "2839 -> 2912",
           "src/db/orders.test.ts": "3097 -> 3163",
-          "src/features/recap/store.test.ts": "2114 -> 2138",
-          "src/features/staffing-week/rules.test.ts": "979 -> 1115",
+          "src/features/after-the-dive/recap/store.test.ts": "2114 -> 2138",
+          "src/features/crew-and-boats/staffing-week/rules.test.ts": "979 -> 1115",
           "src/lib/waivers.test.ts": "1188 -> 1205"
         }
       },
       {
         "why": "merge of opportunities batch 6 (#2596, #2597) into the code review runtime layer: the Stripe webhook route and its test, the trip actions authz test and DetailsSection grew on that side",
         "files": {
-          "src/features/seat-claims/store.test.ts": "1004 -> 1047"
+          "src/features/bookings/seat-claims/store.test.ts": "1004 -> 1047"
         }
       },
       {
@@ -742,19 +742,19 @@
       {
         "why": "merge of the stack top into fourth-review layer r4-1: both sides added to these files",
         "files": {
-          "src/features/seat-claims/store.test.ts": "1047 -> 1478"
+          "src/features/bookings/seat-claims/store.test.ts": "1047 -> 1478"
         }
       },
       {
         "why": "merge of the pre-push-gate branch: the file-length half now counts test files, and the 2026-10-14 test review's safety cases (H-20261006-medical-holds-every-departure, S2, admission/readiness adversarial tests) grew these before it landed",
         "files": {
-          "src/features/seat-claims/store.test.ts": "1047 -> 1094"
+          "src/features/bookings/seat-claims/store.test.ts": "1047 -> 1094"
         }
       },
       {
         "why": "merge of batches 1-5 (#2058 #2129 #2145 #2225 #2226 #2265) into the safety stack top: the batch 2 seat, ratio and youth-form work grew these on that side; the three test files that grew most moved their new tests to siblings",
         "files": {
-          "src/features/staffing-week/rules.test.ts": "1115 -> 1125"
+          "src/features/crew-and-boats/staffing-week/rules.test.ts": "1115 -> 1125"
         }
       },
       {
@@ -764,8 +764,8 @@
           "src/db/bookings.test.ts": "3384 -> 3418",
           "src/db/checkouts.test.ts": "2839 -> 2912",
           "src/db/orders.test.ts": "3097 -> 3163",
-          "src/features/recap/store.test.ts": "2114 -> 2138",
-          "src/features/staffing-week/rules.test.ts": "979 -> 1115",
+          "src/features/after-the-dive/recap/store.test.ts": "2114 -> 2138",
+          "src/features/crew-and-boats/staffing-week/rules.test.ts": "979 -> 1115",
           "src/lib/waivers.test.ts": "1188 -> 1205"
         }
       },
@@ -776,8 +776,8 @@
           "src/db/bookings.test.ts": "3384 -> 3418",
           "src/db/checkouts.test.ts": "2839 -> 2912",
           "src/db/orders.test.ts": "3097 -> 3163",
-          "src/features/recap/store.test.ts": "2114 -> 2138",
-          "src/features/staffing-week/rules.test.ts": "979 -> 1115",
+          "src/features/after-the-dive/recap/store.test.ts": "2114 -> 2138",
+          "src/features/crew-and-boats/staffing-week/rules.test.ts": "979 -> 1115",
           "src/lib/waivers.test.ts": "1188 -> 1205"
         }
       },
@@ -788,57 +788,15 @@
           "src/db/bookings.test.ts": "3384 -> 3418",
           "src/db/checkouts.test.ts": "2839 -> 2912",
           "src/db/orders.test.ts": "3097 -> 3163",
-          "src/features/recap/store.test.ts": "2114 -> 2138",
-          "src/features/staffing-week/rules.test.ts": "979 -> 1115",
-          "src/lib/waivers.test.ts": "1188 -> 1205"
-        }
-      },
-      {
-        "why": "merge of the pre-push-gate branch: the file-length half now counts test files, and the 2026-10-14 test review's safety cases (H-20261006-medical-holds-every-departure, S2, admission/readiness adversarial tests) grew these before it landed",
-        "files": {
-          "src/features/seat-claims/store.test.ts": "1047 -> 1094"
-        }
-      },
-      {
-        "why": "Merge of main (#2547, #2575 to #2580) into the test-split layer: the widened guard (test files, code-line limit) meets files that grew on main after this layer forked",
-        "files": {
-          "src/app/shop/[shopSlug]/trips/[id]/actions.authz.test.ts": "961 -> 971",
-          "src/db/bookings.test.ts": "3384 -> 3418",
-          "src/db/checkouts.test.ts": "2839 -> 2912",
-          "src/db/orders.test.ts": "3097 -> 3163",
-          "src/features/recap/store.test.ts": "2114 -> 2138",
-          "src/features/staffing-week/rules.test.ts": "979 -> 1115",
-          "src/lib/waivers.test.ts": "1188 -> 1205"
-        }
-      },
-      {
-        "why": "Merge of main (#2547, #2575 to #2580) into the test-split layer: the widened guard (test files, code-line limit) meets files that grew on main after this layer forked",
-        "files": {
-          "src/app/shop/[shopSlug]/trips/[id]/actions.authz.test.ts": "961 -> 971",
-          "src/db/bookings.test.ts": "3384 -> 3418",
-          "src/db/checkouts.test.ts": "2839 -> 2912",
-          "src/db/orders.test.ts": "3097 -> 3163",
-          "src/features/recap/store.test.ts": "2114 -> 2138",
-          "src/features/staffing-week/rules.test.ts": "979 -> 1115",
-          "src/lib/waivers.test.ts": "1188 -> 1205"
-        }
-      },
-      {
-        "why": "Merge of main (#2547, #2575 to #2580) into the test-split layer: the widened guard (test files, code-line limit) meets files that grew on main after this layer forked",
-        "files": {
-          "src/app/shop/[shopSlug]/trips/[id]/actions.authz.test.ts": "961 -> 971",
-          "src/db/bookings.test.ts": "3384 -> 3418",
-          "src/db/checkouts.test.ts": "2839 -> 2912",
-          "src/db/orders.test.ts": "3097 -> 3163",
-          "src/features/recap/store.test.ts": "2114 -> 2138",
-          "src/features/staffing-week/rules.test.ts": "979 -> 1115",
+          "src/features/after-the-dive/recap/store.test.ts": "2114 -> 2138",
+          "src/features/crew-and-boats/staffing-week/rules.test.ts": "979 -> 1115",
           "src/lib/waivers.test.ts": "1188 -> 1205"
         }
       },
       {
         "why": "merge of the pre-push-gate branch: the file-length half now counts test files, and the 2026-10-14 test review's safety cases (H-20261006-medical-holds-every-departure, S2, admission/readiness adversarial tests) grew these before it landed",
         "files": {
-          "src/features/seat-claims/store.test.ts": "1047 -> 1094"
+          "src/features/bookings/seat-claims/store.test.ts": "1047 -> 1094"
         }
       },
       {
@@ -848,8 +806,8 @@
           "src/db/bookings.test.ts": "3384 -> 3418",
           "src/db/checkouts.test.ts": "2839 -> 2912",
           "src/db/orders.test.ts": "3097 -> 3163",
-          "src/features/recap/store.test.ts": "2114 -> 2138",
-          "src/features/staffing-week/rules.test.ts": "979 -> 1115",
+          "src/features/after-the-dive/recap/store.test.ts": "2114 -> 2138",
+          "src/features/crew-and-boats/staffing-week/rules.test.ts": "979 -> 1115",
           "src/lib/waivers.test.ts": "1188 -> 1205"
         }
       },
@@ -860,8 +818,8 @@
           "src/db/bookings.test.ts": "3384 -> 3418",
           "src/db/checkouts.test.ts": "2839 -> 2912",
           "src/db/orders.test.ts": "3097 -> 3163",
-          "src/features/recap/store.test.ts": "2114 -> 2138",
-          "src/features/staffing-week/rules.test.ts": "979 -> 1115",
+          "src/features/after-the-dive/recap/store.test.ts": "2114 -> 2138",
+          "src/features/crew-and-boats/staffing-week/rules.test.ts": "979 -> 1115",
           "src/lib/waivers.test.ts": "1188 -> 1205"
         }
       },
@@ -872,15 +830,15 @@
           "src/db/bookings.test.ts": "3384 -> 3418",
           "src/db/checkouts.test.ts": "2839 -> 2912",
           "src/db/orders.test.ts": "3097 -> 3163",
-          "src/features/recap/store.test.ts": "2114 -> 2138",
-          "src/features/staffing-week/rules.test.ts": "979 -> 1115",
+          "src/features/after-the-dive/recap/store.test.ts": "2114 -> 2138",
+          "src/features/crew-and-boats/staffing-week/rules.test.ts": "979 -> 1115",
           "src/lib/waivers.test.ts": "1188 -> 1205"
         }
       },
       {
         "why": "merge of the pre-push-gate branch: the file-length half now counts test files, and the 2026-10-14 test review's safety cases (H-20261006-medical-holds-every-departure, S2, admission/readiness adversarial tests) grew these before it landed",
         "files": {
-          "src/features/seat-claims/store.test.ts": "1047 -> 1094"
+          "src/features/bookings/seat-claims/store.test.ts": "1047 -> 1094"
         }
       },
       {
@@ -890,8 +848,8 @@
           "src/db/bookings.test.ts": "3384 -> 3418",
           "src/db/checkouts.test.ts": "2839 -> 2912",
           "src/db/orders.test.ts": "3097 -> 3163",
-          "src/features/recap/store.test.ts": "2114 -> 2138",
-          "src/features/staffing-week/rules.test.ts": "979 -> 1115",
+          "src/features/after-the-dive/recap/store.test.ts": "2114 -> 2138",
+          "src/features/crew-and-boats/staffing-week/rules.test.ts": "979 -> 1115",
           "src/lib/waivers.test.ts": "1188 -> 1205"
         }
       },
@@ -902,8 +860,50 @@
           "src/db/bookings.test.ts": "3384 -> 3418",
           "src/db/checkouts.test.ts": "2839 -> 2912",
           "src/db/orders.test.ts": "3097 -> 3163",
-          "src/features/recap/store.test.ts": "2114 -> 2138",
-          "src/features/staffing-week/rules.test.ts": "979 -> 1115",
+          "src/features/after-the-dive/recap/store.test.ts": "2114 -> 2138",
+          "src/features/crew-and-boats/staffing-week/rules.test.ts": "979 -> 1115",
+          "src/lib/waivers.test.ts": "1188 -> 1205"
+        }
+      },
+      {
+        "why": "Merge of main (#2547, #2575 to #2580) into the test-split layer: the widened guard (test files, code-line limit) meets files that grew on main after this layer forked",
+        "files": {
+          "src/app/shop/[shopSlug]/trips/[id]/actions.authz.test.ts": "961 -> 971",
+          "src/db/bookings.test.ts": "3384 -> 3418",
+          "src/db/checkouts.test.ts": "2839 -> 2912",
+          "src/db/orders.test.ts": "3097 -> 3163",
+          "src/features/after-the-dive/recap/store.test.ts": "2114 -> 2138",
+          "src/features/crew-and-boats/staffing-week/rules.test.ts": "979 -> 1115",
+          "src/lib/waivers.test.ts": "1188 -> 1205"
+        }
+      },
+      {
+        "why": "merge of the pre-push-gate branch: the file-length half now counts test files, and the 2026-10-14 test review's safety cases (H-20261006-medical-holds-every-departure, S2, admission/readiness adversarial tests) grew these before it landed",
+        "files": {
+          "src/features/bookings/seat-claims/store.test.ts": "1047 -> 1094"
+        }
+      },
+      {
+        "why": "Merge of main (#2547, #2575 to #2580) into the test-split layer: the widened guard (test files, code-line limit) meets files that grew on main after this layer forked",
+        "files": {
+          "src/app/shop/[shopSlug]/trips/[id]/actions.authz.test.ts": "961 -> 971",
+          "src/db/bookings.test.ts": "3384 -> 3418",
+          "src/db/checkouts.test.ts": "2839 -> 2912",
+          "src/db/orders.test.ts": "3097 -> 3163",
+          "src/features/after-the-dive/recap/store.test.ts": "2114 -> 2138",
+          "src/features/crew-and-boats/staffing-week/rules.test.ts": "979 -> 1115",
+          "src/lib/waivers.test.ts": "1188 -> 1205"
+        }
+      },
+      {
+        "why": "Merge of main (#2547, #2575 to #2580) into the test-split layer: the widened guard (test files, code-line limit) meets files that grew on main after this layer forked",
+        "files": {
+          "src/app/shop/[shopSlug]/trips/[id]/actions.authz.test.ts": "961 -> 971",
+          "src/db/bookings.test.ts": "3384 -> 3418",
+          "src/db/checkouts.test.ts": "2839 -> 2912",
+          "src/db/orders.test.ts": "3097 -> 3163",
+          "src/features/after-the-dive/recap/store.test.ts": "2114 -> 2138",
+          "src/features/crew-and-boats/staffing-week/rules.test.ts": "979 -> 1115",
           "src/lib/waivers.test.ts": "1188 -> 1205"
         }
       },
@@ -925,13 +925,13 @@
           "src/db/orders.test.ts": "3174 -> 3175",
           "src/db/refunds.test.ts": "1150 -> 1151",
           "src/db/waiver-issue.test.ts": "1079 -> 1080",
-          "src/features/check-in/store.test.ts": "1197 -> 1198",
-          "src/features/checkout-recovery/store.test.ts": "0 -> 901",
-          "src/features/recap/store.test.ts": "2138 -> 2139",
-          "src/features/retention/store.test.ts": "1024 -> 1025",
-          "src/features/reviews/store.test.ts": "997 -> 998",
-          "src/features/seat-claims/store.test.ts": "1524 -> 1525",
-          "src/features/staffing/store.test.ts": "939 -> 940"
+          "src/features/boarding/check-in/store.test.ts": "1197 -> 1198",
+          "src/features/money/checkout-recovery/store.test.ts": "0 -> 901",
+          "src/features/after-the-dive/recap/store.test.ts": "2138 -> 2139",
+          "src/features/records/retention/store.test.ts": "1024 -> 1025",
+          "src/features/after-the-dive/reviews/store.test.ts": "997 -> 998",
+          "src/features/bookings/seat-claims/store.test.ts": "1524 -> 1525",
+          "src/features/crew-and-boats/staffing/store.test.ts": "939 -> 940"
         }
       },
       {
@@ -939,7 +939,7 @@
         "files": {
           "src/db/checkouts.test.ts": "2965 -> 2966",
           "src/db/orders.test.ts": "3175 -> 3176",
-          "src/features/checkout-recovery/store.test.ts": "901 -> 902"
+          "src/features/money/checkout-recovery/store.test.ts": "901 -> 902"
         }
       },
       {
@@ -982,24 +982,24 @@
     "src/db/trips-series.test.ts": 1337,
     "src/db/waiver-issue.test.ts": 1080,
     "src/db/waivers-medical.test.ts": 1001,
-    "src/features/anonymize/store.test.ts": 1549,
-    "src/features/check-in/store.test.ts": 1198,
-    "src/features/checkout-recovery/store.test.ts": 902,
-    "src/features/courses/store.test.ts": 1676,
-    "src/features/divers/store.test.ts": 2759,
-    "src/features/import/store.test.ts": 1074,
-    "src/features/no-show/store.test.ts": 1151,
-    "src/features/recap/store.test.ts": 2139,
-    "src/features/reminders/store.test.ts": 931,
-    "src/features/reporting/store.test.ts": 1380,
-    "src/features/retention/store.test.ts": 1025,
-    "src/features/reviews/store.test.ts": 998,
-    "src/features/seat-claims/store.test.ts": 1525,
-    "src/features/staffing-week/rules.test.ts": 1125,
-    "src/features/staffing/store.test.ts": 940,
-    "src/features/today/today.test.ts": 1274,
-    "src/features/work-order-follow-up/store.test.ts": 1177,
-    "src/features/work-orders/store.test.ts": 1402,
+    "src/features/after-the-dive/recap/store.test.ts": 2139,
+    "src/features/after-the-dive/reviews/store.test.ts": 998,
+    "src/features/boarding/check-in/store.test.ts": 1198,
+    "src/features/boarding/no-show.test.ts": 1151,
+    "src/features/bookings/seat-claims/store.test.ts": 1525,
+    "src/features/crew-and-boats/staffing-week/rules.test.ts": 1125,
+    "src/features/crew-and-boats/staffing/store.test.ts": 940,
+    "src/features/day/today/today.test.ts": 1274,
+    "src/features/gear/work-order-follow-up/store.test.ts": 1177,
+    "src/features/gear/work-orders.test.ts": 1402,
+    "src/features/messages/reminders.test.ts": 931,
+    "src/features/money/checkout-recovery/store.test.ts": 902,
+    "src/features/people/divers/store.test.ts": 2759,
+    "src/features/records/anonymize.test.ts": 1549,
+    "src/features/records/import/store.test.ts": 1074,
+    "src/features/records/retention/store.test.ts": 1025,
+    "src/features/reports/reporting/store.test.ts": 1380,
+    "src/features/training/courses/store.test.ts": 1676,
     "src/i18n/label-maps.test.ts": 1236,
     "src/lib/agency-check.test.ts": 930,
     "src/lib/dive-prep.test.ts": 1935,
@@ -1070,16 +1070,23 @@
         "files": {
           "src/app/shop/[shopSlug]/gear/[id]/page.tsx": "576 -> 577"
         }
+      },
+      {
+        "why": "Feature-areas move: @/features imports gained an area segment and Biome wrapped two long import lines; no code added",
+        "files": {
+          "src/app/shop/[shopSlug]/orders/page.tsx": "422 -> 426",
+          "src/app/shop/[shopSlug]/settings/team/page.tsx": "514 -> 517"
+        }
       }
     ],
     "src/app/(token)/ready/[token]/page.tsx": 613,
     "src/app/s/[shopSlug]/page.tsx": 590,
     "src/app/shop/[shopSlug]/gear/[id]/page.tsx": 577,
-    "src/app/shop/[shopSlug]/orders/page.tsx": 422,
+    "src/app/shop/[shopSlug]/orders/page.tsx": 426,
     "src/app/shop/[shopSlug]/page.tsx": 576,
     "src/app/shop/[shopSlug]/promos/page.tsx": 407,
     "src/app/shop/[shopSlug]/reports/page.tsx": 412,
-    "src/app/shop/[shopSlug]/settings/team/page.tsx": 514
+    "src/app/shop/[shopSlug]/settings/team/page.tsx": 517
   },
   "tokens": {
     "//": "Non-token color values still in components, per file. Written by `node scripts/check-tokens.mjs --write`. This number may only go down — see scripts/check-tokens.mjs. The embed-snippet generator is here by design: its hex is pasted into third-party sites where our tokens do not exist."

@@ -1,6 +1,6 @@
 import type { upcomingSessionsByCourse } from "@/db/trips";
-import { type listShelfCourses, SHELF_COURSE_COUNT } from "@/features/courses";
-import type { listTripLenses } from "@/features/trip-lenses";
+import { type listShelfCourses, SHELF_COURSE_COUNT } from "@/features/training/courses";
+import type { listTripLenses } from "@/features/trips/trip-lenses";
 import type { DiverTranslator } from "@/i18n/messages";
 import { tripRequirementMarkers } from "@/i18n/readiness-labels";
 import { courseDepthFormat } from "@/i18n/unit-labels";

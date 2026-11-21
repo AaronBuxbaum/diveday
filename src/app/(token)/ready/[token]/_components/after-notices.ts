@@ -1,4 +1,4 @@
-import type { AfterStateProps } from "@/features/recap-after-state";
+import type { AfterStateProps } from "@/features/after-the-dive/recap-after-state";
 import type { DiverMessageKey } from "@/i18n/messages";
 import { noticeFromParam } from "@/lib/staff-notices";
 

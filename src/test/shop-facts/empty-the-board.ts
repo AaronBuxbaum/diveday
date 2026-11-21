@@ -19,7 +19,7 @@ export const offSeasonArgs = z
  * Two shapes, because the card has two and they say different things. Without
  * `opensInDays` every upcoming departure is deleted and the card names no date;
  * with it, the same clear-out and then one ordinary departure that far out,
- * whose date the card names (`src/features/off-season/rules.ts`).
+ * whose date the card names (`src/features/trips/off-season.ts`).
  *
  * The delete is the product's own soft delete (ADR 20260820-every-delete-is-soft),
  * since every read this exercises filters through `liveTrip()`. Departures

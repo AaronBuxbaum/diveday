@@ -9,8 +9,8 @@ import {
   personPurposesThatMerge,
 } from "@/lib/capabilities";
 import { fileScopedShopContext } from "@/test/db";
-import { anonymizeDiver } from "../features/anonymize/store";
-import { recordSetupRequest } from "../features/funnel/store";
+import { anonymizeDiver } from "../features/records/anonymize";
+import { recordSetupRequest } from "../features/reports/funnel";
 import {
   issueCapability,
   mintCapability,

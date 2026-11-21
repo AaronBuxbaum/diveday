@@ -8,7 +8,7 @@ import { FILE_ROW_INSET, WaiverStateRow } from "@/components/person/rows";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { InsetGroup } from "@/components/ui/ledger";
-import type { DiverStatusRow } from "@/features/diver-status";
+import type { DiverStatusRow } from "@/features/people/diver-status";
 import { guardianCoSignedText } from "@/i18n/guardian-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { type WaiverRowState, waiverRowStateText } from "@/i18n/waiver-labels";

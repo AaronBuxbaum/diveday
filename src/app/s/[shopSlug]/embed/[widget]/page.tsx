@@ -7,10 +7,13 @@ import { StarRating } from "@/components/StarRating";
 import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
 import { getTripWithBooked, pagedUpcomingTripsWithCounts } from "@/db/trips";
-import { listBoats } from "@/features/boats";
-import { activeCourseAgencies, listActiveCourses } from "@/features/courses";
-import { getShopReviewAggregate, listPublishedShopReviewsPage } from "@/features/reviews";
-import { shopBySlugCached } from "@/features/shops-cached";
+import {
+  getShopReviewAggregate,
+  listPublishedShopReviewsPage,
+} from "@/features/after-the-dive/reviews";
+import { listBoats } from "@/features/crew-and-boats/boats";
+import { shopBySlugCached } from "@/features/platform/shops-cached";
+import { activeCourseAgencies, listActiveCourses } from "@/features/training/courses";
 import { requestTranslator } from "@/i18n/request";
 import { courseDepthFormat } from "@/i18n/unit-labels";
 import { nowDate } from "@/lib/clock";

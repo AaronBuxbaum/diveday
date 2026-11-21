@@ -15,10 +15,10 @@ import {
 } from "@/db/crew-requests";
 import { getShopById } from "@/db/shops";
 import { changeTripCrew } from "@/db/trips";
-import { readForm, text } from "@/features/form-parse";
-import { revalidateAndRedirect } from "@/features/navigation";
-import { requireStaffSession } from "@/features/session";
-import { createStaffShift, deleteStaffShift } from "@/features/staffing";
+import { requireStaffSession } from "@/features/accounts/session";
+import { createStaffShift, deleteStaffShift } from "@/features/crew-and-boats/staffing";
+import { readForm, text } from "@/features/platform/form-parse";
+import { revalidateAndRedirect } from "@/features/platform/navigation";
 import { isValidCalendarDate } from "@/lib/calendar-date";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { WEEK_PARAM, weekStartOf } from "@/lib/week-board";

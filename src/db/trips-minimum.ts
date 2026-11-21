@@ -19,7 +19,7 @@ import { firstYardDayOn, seatNotCancelled, tripSellableSeatsSql } from "./trips-
  * has passed while it is still short (src/lib/minimum-seats.ts).
  *
  * One pass, cross-shop, run as the `minimum-seats` scan of the hourly shop tick
- * (`src/features/shop-tick`). It is the
+ * (`src/features/platform/shop-tick`). It is the
  * half of the feature a shop is actually buying — a minimum nobody enforces is
  * the sticky note the shop already had — and it is deliberately the *only*
  * thing that cancels for a minimum. Staff keep their ordinary cancel button,

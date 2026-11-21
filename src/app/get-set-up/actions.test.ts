@@ -7,7 +7,7 @@ import { ONBOARDING_EMAIL } from "@/lib/platform-mail";
 import { SETUP_REQUESTS_PER_HOUR } from "@/lib/setup-requests";
 import { fileScopedShopContext } from "@/test/db";
 import { nextHeadersStub } from "@/test/next-headers";
-import { recordSetupRequest } from "../../features/funnel/store";
+import { recordSetupRequest } from "../../features/reports/funnel";
 
 const ctx = fileScopedShopContext();
 
@@ -35,7 +35,7 @@ vi.mock("@/db/client", async (importOriginal) => {
   return { ...actual, getDb: vi.fn() };
 });
 vi.mock("@/lib/request-ip", () => ({ clientIp: vi.fn(async () => "203.0.113.9") }));
-vi.mock("@/features/pricing-offer", () => ({
+vi.mock("@/features/money/pricing-offer", () => ({
   requestPricingOffer: vi.fn(async () => ({
     plan: "flat_monthly",
     monthlyCents: 9900,
@@ -175,7 +175,7 @@ describe("submitSetupRequestAction", () => {
   });
 
   it("records the configured percentage plan", async () => {
-    const { requestPricingOffer } = await import("@/features/pricing-offer");
+    const { requestPricingOffer } = await import("@/features/money/pricing-offer");
     vi.mocked(requestPricingOffer).mockResolvedValueOnce({
       plan: "percent_of_volume",
       monthlyCents: 0,
@@ -218,7 +218,7 @@ describe("submitSetupRequestAction", () => {
    * request's answers. The reader of the thank-you page is never handed it.
    */
   it("mails onboarding a setup link that opens the form for this request, once", async () => {
-    const { openSetupLink, spendSetupLink } = await import("../../features/setup-links/store");
+    const { openSetupLink, spendSetupLink } = await import("../../features/shop-setup/setup-links");
     expect(await submit(setUpForm())).toEqual({ redirect: "/get-set-up/sent?uses=booking_system" });
     const sent = vi
       .mocked(notify)

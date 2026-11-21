@@ -1,9 +1,9 @@
 import { getDb } from "@/db/client";
 import { canPersonExportShopData, loadShopExportBundleInput } from "@/db/export";
 import { recordMedicalAnswersExported } from "@/db/operations";
-import { stepUpChallengeUrl } from "@/features/security-step-up";
-import { requireStaffSession } from "@/features/session";
-import { hasRequiredStepUp } from "@/features/step-up";
+import { stepUpChallengeUrl } from "@/features/accounts/security-step-up";
+import { requireStaffSession } from "@/features/accounts/session";
+import { hasRequiredStepUp } from "@/features/accounts/step-up";
 import { nowDate } from "@/lib/clock";
 import {
   buildExportBundle,

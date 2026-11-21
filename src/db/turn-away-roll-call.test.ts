@@ -2,7 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { HOUR_MS } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
-import { turnBookingAway } from "../features/turn-away/store";
+import { turnBookingAway } from "../features/boarding/turn-away";
 import { recordRollCall } from "./manifests";
 import { bookings, rollCallEvents } from "./schema";
 import { getTripRoster, listStaff } from "./trips";

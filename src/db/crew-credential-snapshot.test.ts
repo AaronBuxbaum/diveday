@@ -2,7 +2,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
-import { anonymizeDiver } from "../features/anonymize/store";
+import { anonymizeDiver } from "../features/records/anonymize";
 import { recordCrewRollCall } from "./manifests";
 import { people, personRoles, rollCallEvents, tripAssignments } from "./schema";
 import { changeStaffCredential, createStaffCredential } from "./staff-credentials";

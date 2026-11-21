@@ -109,7 +109,7 @@ Use these records instead:
   delight-and-experience brainstorm.
 - [../archive/diver-booking-delight-20260729.md](diver-booking-delight-20260729.md) is the
   completed diver-booking-delight follow-on brainstorm.
-- The nitrox maximum-depth calculator (`src/features/nitrox-mod`, shown on the diver's ready page),
+- The nitrox maximum-depth calculator (`src/features/safety/nitrox-mod.ts`, shown on the diver's ready page),
   the swipe-away undo toast, and expiring group holds with an organizer ledger (#4209) are built.
 - [ai-ml.md](../../engineering/claude-assists.md) holds AI-required ideas, including natural-language assistants and
   model-based evidence extraction.

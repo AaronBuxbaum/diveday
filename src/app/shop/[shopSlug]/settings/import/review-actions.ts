@@ -3,22 +3,26 @@
 import { revalidatePath } from "next/cache";
 import { getDb } from "@/db/client";
 import { diveSitePhotoUrlsHeldByShop } from "@/db/dive-site-photos";
+import { requireStaffSession } from "@/features/accounts/session";
 import {
-  commitDiveSiteImport,
-  DIVE_SITE_CREATURE_IMPORT_COLUMNS,
-  DIVE_SITE_IMPORT_COLUMNS,
-  prepareDiveSiteCreaturesImport,
-  prepareDiveSiteImport,
-} from "@/features/dive-sites";
-import { commitGearImport, GEAR_IMPORT_COLUMNS, prepareGearImport } from "@/features/gear-import";
+  commitGearImport,
+  GEAR_IMPORT_COLUMNS,
+  prepareGearImport,
+} from "@/features/gear/gear-import";
 import {
   canPersonImportShopData,
   type FileReviewRow,
   previewDiveSiteGuides,
   previewDiveSiteImport,
   previewGearImport,
-} from "@/features/import";
-import { requireStaffSession } from "@/features/session";
+} from "@/features/records/import";
+import {
+  commitDiveSiteImport,
+  DIVE_SITE_CREATURE_IMPORT_COLUMNS,
+  DIVE_SITE_IMPORT_COLUMNS,
+  prepareDiveSiteCreaturesImport,
+  prepareDiveSiteImport,
+} from "@/features/sites/dive-sites";
 import { MAX_IMPORT_BYTES } from "@/lib/import";
 import { mapImportColumns, parseImportColumnMapping } from "@/lib/import-column-mapping";
 import { shopPath } from "@/lib/staff-notices";

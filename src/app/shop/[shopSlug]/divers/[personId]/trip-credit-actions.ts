@@ -3,9 +3,13 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getDb } from "@/db/client";
-import { parseForm } from "@/features/form-parse";
-import { requireStaffSession } from "@/features/session";
-import { grantTripCredit, redeemTripCredit, type TripCreditResult } from "@/features/trip-credit";
+import { requireStaffSession } from "@/features/accounts/session";
+import {
+  grantTripCredit,
+  redeemTripCredit,
+  type TripCreditResult,
+} from "@/features/money/trip-credit";
+import { parseForm } from "@/features/platform/form-parse";
 import { currencyFractionDigits, majorToMinor } from "@/lib/money";
 import { TRIP_CREDIT_REASONS } from "@/lib/trip-credit";
 

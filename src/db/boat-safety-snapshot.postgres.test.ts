@@ -3,7 +3,7 @@ import { sql } from "drizzle-orm";
 import { expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { describePostgres, holdRowLock, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
-import { createBoat } from "../features/boats/store";
+import { createBoat } from "../features/crew-and-boats/boats/store";
 import { captureDepartureBoatSafety, departureBoatSafetySnapshot } from "./boat-safety";
 import { shops, trips } from "./schema";
 import { editTrip } from "./trips-record";

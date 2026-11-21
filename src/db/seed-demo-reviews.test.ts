@@ -1,6 +1,6 @@
 import { and, eq, isNotNull } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { getShopReviewAggregate } from "@/features/reviews/store";
+import { getShopReviewAggregate } from "@/features/after-the-dive/reviews/store";
 import { fileScopedShopContext } from "@/test/db";
 import { tripReviews } from "./schema";
 import { resetDemoSchedule } from "./seed";

@@ -3,9 +3,9 @@ import { describe, expect, it } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { unseededTestDb } from "@/test/db";
-import { recordSetupRequest } from "../features/funnel/store";
-import { issueSetupLink } from "../features/setup-links/store";
-import { createSignedUpShop } from "../features/shop-signup/store";
+import { recordSetupRequest } from "../features/reports/funnel";
+import { issueSetupLink } from "../features/shop-setup/setup-links";
+import { createSignedUpShop } from "../features/shop-setup/shop-signup";
 
 /**
  * **A new shop's starting units follow its timezone's country** (issue #2571,

@@ -1,8 +1,8 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
-import { recordCourseNextStep } from "../features/course-next-step/store";
-import { getRecapPageData } from "../features/recap/store";
+import { getRecapPageData } from "../features/after-the-dive/recap/store";
+import { recordCourseNextStep } from "../features/training/course-next-step";
 import { bookings, people, shops } from "./schema";
 import { getTripRoster, listStaff } from "./trips";
 import { upcomingTripsWithCounts } from "./trips-queries.test-support";

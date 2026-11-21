@@ -6,13 +6,13 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { GroupLabel } from "@/components/ui/group-label";
-import type { StaffReview } from "@/features/reviews";
+import { requireShopSurface } from "@/features/accounts/session";
+import type { StaffReview } from "@/features/after-the-dive/reviews";
 import {
   getReviewsPage,
   REVIEW_MODERATION_REASONS,
   staffReviewNarrow,
-} from "@/features/reviews-page";
-import { requireShopSurface } from "@/features/session";
+} from "@/features/after-the-dive/reviews-page";
 import { STAFF_PULSE_CATEGORY_KEYS } from "@/i18n/next-dive-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -100,7 +100,7 @@ export default async function ReviewsPage({
   // **The worklist is read whole, not paged.** It is the reason to open this
   // page, and a queue split across pages is a queue you cannot see the end
   // of. `MAX_BULK_PUBLISH` is the ceiling because it is also the ceiling on
-  // what one pass may release (`src/features/reviews/store.ts`) — the rows on screen and
+  // what one pass may release (`src/features/after-the-dive/reviews/store.ts`) — the rows on screen and
   // the rows the header act touches are the same set by construction.
   //
   // A non-numeric or missing `?page=` reads as page 1; the query clamps it
@@ -108,7 +108,7 @@ export default async function ReviewsPage({
   //
   // **What divers asked this shop to fix, privately** (D40, issue #1200).
   // Never a review and never public: nothing here reaches the aggregate,
-  // the public list, or the suppression share (src/features/recap/recap-pulses.store.ts).
+  // the public list, or the suppression share (src/features/after-the-dive/recap/recap-pulses.store.ts).
   // Owner/manager only, and unread rather than merely unrendered for
   // everybody else (issue #1410).
   const t = staffTranslator(locale);

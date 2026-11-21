@@ -330,7 +330,7 @@ below `xl` (1280px) until 2026-09-20; see the entry above.
 
 ### A past day — `/shop/[shopSlug]/schedule/day/[date]`
 
-**Shipped 2026-10-17, read-only** (issue #2662; [ADR 20261001-logbook](../architecture/decisions/20261001-logbook.md)'s noun navigation, so it sits under Schedule beside the board). "How did Saturday go": that day's departures as the home's evening closed them, the same `getDayCloseout` over the date and the same `ClosingStation`s, with nothing to do on them (no recap editor, no takings, no tomorrow). Today's date goes to the shop home; a day still to come has no page. A head count still open reads open however old the day is: the gaps are read for exactly that day's boats, with no lookback window and no stale gate (`listRollCallGaps` in historical mode, `src/features/today/closeout-reader.ts`, `pastDayCloseout`). A station adds what the evening could leave unsaid (`src/features/today/past-day-notes.ts`): crew not counted, a count closed on a later day by its date, and a diver once recorded not back after a dive and later found. These lines point at the record; they are not it. **The departure log is the record** of that day, and the roll call behind it. Rehearsals are left out. The first slice only: no door to it yet, no week of days.
+**Shipped 2026-10-17, read-only** (issue #2662; [ADR 20261001-logbook](../architecture/decisions/20261001-logbook.md)'s noun navigation, so it sits under Schedule beside the board). "How did Saturday go": that day's departures as the home's evening closed them, the same `getDayCloseout` over the date and the same `ClosingStation`s, with nothing to do on them (no recap editor, no takings, no tomorrow). Today's date goes to the shop home; a day still to come has no page. A head count still open reads open however old the day is: the gaps are read for exactly that day's boats, with no lookback window and no stale gate (`listRollCallGaps` in historical mode, `src/features/day/today/closeout-reader.ts`, `pastDayCloseout`). A station adds what the evening could leave unsaid (`src/features/day/today/past-day-notes.ts`): crew not counted, a count closed on a later day by its date, and a diver once recorded not back after a dive and later found. These lines point at the record; they are not it. **The departure log is the record** of that day, and the roll call behind it. Rehearsals are left out. The first slice only: no door to it yet, no week of days.
 
 ### Settings — `/shop/[shopSlug]/settings`
 
@@ -413,7 +413,7 @@ the instrument line's figures roll as a check-in lands, the sinking row's neighb
 
 The identity-band compositions below are historical.
 
-**Extended 2026-10-12** (UX review 2026-10-11, items 11 and 12). The board's last month no longer reads as the shop's last month: under it, each open-ended public run says it keeps going in its own cadence words ("Saturday Two-Tank runs every Saturday. Later dates open as the season goes.") and the date request stands open there, its collapsed row under "More ways" standing down. On an empty board, the off-season card can now name a date the shop typed in Settings ("Back on the water", beside Season start); a scheduled departure always outranks it, and it says nothing once the date has passed (`src/features/off-season/rules.ts`).
+**Extended 2026-10-12** (UX review 2026-10-11, items 11 and 12). The board's last month no longer reads as the shop's last month: under it, each open-ended public run says it keeps going in its own cadence words ("Saturday Two-Tank runs every Saturday. Later dates open as the season goes.") and the date request stands open there, its collapsed row under "More ways" standing down. On an empty board, the off-season card can now name a date the shop typed in Settings ("Back on the water", beside Season start); a scheduled departure always outranks it, and it says nothing once the date has passed (`src/features/trips/off-season.ts`).
 
 **Widened 2026-10-03.** From `lg` up the next boat with space (and any other band panel) stands in a 20rem column beside the photograph, as ADR 20260827-clearwater-surface-language decision 8 drew it. Stacked, the photograph, its name band and the card filled the first screen at 1280×900 and the schedule started 1,220px down; now it starts on the first screen. A shop with no panel keeps the full-width photograph, and a phone keeps the stack.
 
@@ -843,7 +843,7 @@ the card reader is not built and no photo capture is added; the certification fo
 [its canvas](canvases/20260827-people-not-lists/README.md), built as slice 8b. This entry replaces
 the "unanswered, and known to be" record that stood here since issue #780. Two rules are pinned in
 code: the status section renders nothing when `buildDiverStatus` is empty
-(`src/features/diver-status/rules.test.ts`, `_components/DiverStatusLedger.test.tsx`), and exactly one
+(`src/features/people/diver-status.test.ts`, `_components/DiverStatusLedger.test.tsx`), and exactly one
 primary-weight control lives on the page (`_lib/record-primaries.test.ts`).
 
 - **One idea:** this diver, ready or not — and the one fix if not.

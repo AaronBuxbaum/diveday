@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("./action-helpers", () => ({ contextFor: vi.fn() }));
-vi.mock("@/features/person-photo", () => ({ changePrivatePersonPhoto: vi.fn() }));
+vi.mock("@/features/people/person-photo", () => ({ changePrivatePersonPhoto: vi.fn() }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
-import { changePrivatePersonPhoto } from "@/features/person-photo";
+import { changePrivatePersonPhoto } from "@/features/people/person-photo";
 import { contextFor } from "./action-helpers";
 import { saveOwnPhotoAction } from "./person-photo-actions";
 

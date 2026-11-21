@@ -2,8 +2,8 @@ import type { ReactNode } from "react";
 import { GroupLabel } from "@/components/ui/group-label";
 import { ShopNotice } from "@/components/ui/outcome";
 import { noticeRole } from "@/components/ui/tone";
-import type { ConnectionState } from "@/features/connections";
-import type { requireShopSurface } from "@/features/session";
+import type { requireShopSurface } from "@/features/accounts/session";
+import type { ConnectionState } from "@/features/shop-setup/connections";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import type { NoticeMessage } from "@/lib/staff-notices";
 import { SETTINGS_GROUPS, type SectionId } from "../../settings-groups";
@@ -93,7 +93,7 @@ export function SectionNotice({
   );
 }
 
-/** The one state word, from `connectionState` (src/features/connections/rules.ts, issue #2741). */
+/** The one state word, from `connectionState` (src/features/shop-setup/connections/rules.ts, issue #2741). */
 export const CONNECTION_STATE_KEYS: Record<ConnectionState, StaffMessageKey> = {
   notConnected: "settings.main.connections.state.notConnected",
   connected: "settings.main.connections.state.connected",

@@ -63,9 +63,9 @@ Every name, number and time is demo-seed fiction. Nothing here is real customer 
 | Slice | Status | Lands in | Pinned by |
 | --- | --- | --- | --- |
 | 8a — the shared person-row vocabulary | shipped | `src/components/person/rows.tsx` | `src/components/person/rows.test.tsx` |
-| 8b — the diver record recomposition | shipped | `src/app/shop/[shopSlug]/divers/[personId]/page.tsx` | `src/features/diver-status/rules.test.ts`, `_lib/record-primaries.test.ts`, `_components/DiverStatusLedger.test.tsx`, `_components/DiverStory.test.tsx` |
-| 8c — the roster ledger | shipped | `src/app/shop/[shopSlug]/divers/_components/DiverList.tsx` | `_components/DiverList.test.tsx`, `src/lib/roster-rows.test.ts`, `src/features/roster-facts/store.test.ts` |
-| 8d — reviews as a worklist | shipped | `src/app/shop/[shopSlug]/(inbox-section)/reviews/page.tsx` | `_components/ReviewsAggregateLine.test.tsx`, `_components/ReviewLedgerRow.test.tsx`, `src/features/reviews/store.test.ts` |
+| 8b — the diver record recomposition | shipped | `src/app/shop/[shopSlug]/divers/[personId]/page.tsx` | `src/features/people/diver-status.test.ts`, `_lib/record-primaries.test.ts`, `_components/DiverStatusLedger.test.tsx`, `_components/DiverStory.test.tsx` |
+| 8c — the roster ledger | shipped | `src/app/shop/[shopSlug]/divers/_components/DiverList.tsx` | `_components/DiverList.test.tsx`, `src/lib/roster-rows.test.ts`, `src/features/boarding/roster-facts.test.ts` |
+| 8d — reviews as a worklist | shipped | `src/app/shop/[shopSlug]/(inbox-section)/reviews/page.tsx` | `_components/ReviewsAggregateLine.test.tsx`, `_components/ReviewLedgerRow.test.tsx`, `src/features/after-the-dive/reviews/store.test.ts` |
 | 8e — the waiver surface | shipped | `src/app/shop/[shopSlug]/settings/waivers/page.tsx` | `_components/PublishRelease.test.tsx`, `actions.authz.test.ts` |
 | 8f — requests in the language | shipped | `src/app/shop/[shopSlug]/requests/_components/RequestLedgerRow.tsx` | `_components/RequestLedgerRow.test.tsx`, `_components/RequestDayGroup.test.tsx` |
 

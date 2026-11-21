@@ -1,6 +1,6 @@
 import { type ReactNode, Suspense } from "react";
-import type { TripOverview } from "@/features/trip-overview";
-import type { GearToPack } from "@/features/trip-prep";
+import type { TripOverview } from "@/features/trips/trip-overview";
+import type { GearToPack } from "@/features/trips/trip-prep";
 import { compassText } from "@/i18n/compass-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { DepthUnit } from "@/lib/depth-units";

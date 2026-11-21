@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { canPersonManageShopSettings } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { getShopById } from "@/db/shops";
+import { requireStaffSession } from "@/features/accounts/session";
 import {
   consumeIntegrationOAuthState,
   exchangeQuickBooksCode,
@@ -10,8 +11,7 @@ import {
   integrationCallbackUrl,
   quickBooksConfigFromEnvironment,
   recordShopIntegration,
-} from "@/features/integrations";
-import { requireStaffSession } from "@/features/session";
+} from "@/features/shop-setup/integrations";
 import { publicAppUrl } from "@/lib/notifications";
 import { shopPath } from "@/lib/staff-notices";
 

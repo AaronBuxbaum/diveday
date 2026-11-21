@@ -11,26 +11,26 @@ vi.mock("@/db/trips", () => ({
   cancelDeparturesBelowMinimum: vi.fn(),
   listMinimumNotMetRecipients: vi.fn(),
 }));
-vi.mock("../../../../features/reminders/store", () => ({ sendDueReminders: vi.fn() }));
-vi.mock("../../../../features/checkout-recovery/store", () => ({
+vi.mock("../../../../features/messages/reminders", () => ({ sendDueReminders: vi.fn() }));
+vi.mock("../../../../features/money/checkout-recovery/store", () => ({
   sendDueCheckoutRecoveries: vi.fn(),
 }));
 vi.mock("@/db/notifications", () => ({ drainNotificationRetries: vi.fn() }));
-vi.mock("../../../../features/work-order-follow-up/store", () => ({
+vi.mock("../../../../features/gear/work-order-follow-up/store", () => ({
   sendDueServiceReminders: vi.fn(),
 }));
-vi.mock("../../../../features/recap/store", () => ({ sendDueRecaps: vi.fn() }));
+vi.mock("../../../../features/after-the-dive/recap/store", () => ({ sendDueRecaps: vi.fn() }));
 vi.mock("@/db/crew-notices", () => ({ sendDueCrewNotices: vi.fn() }));
-vi.mock("../../../../features/roll-call-alerts/store", () => ({
+vi.mock("../../../../features/boarding/roll-call-alerts/store", () => ({
   sendStaleRollCallAlerts: vi.fn(),
 }));
 vi.mock("@/db/missing-diver-alerts", () => ({ sendMissingDiverAlerts: vi.fn() }));
-vi.mock("../../../../features/desk-pings/store", () => ({ sendTrailingDeskPings: vi.fn() }));
-vi.mock("../../../../features/seat-sold-alerts/store", () => ({ sendSeatSoldAlerts: vi.fn() }));
+vi.mock("../../../../features/messages/desk-pings", () => ({ sendTrailingDeskPings: vi.fn() }));
+vi.mock("../../../../features/bookings/seat-sold-alerts", () => ({ sendSeatSoldAlerts: vi.fn() }));
 vi.mock("@/db/boarding-observations", () => ({ settleOpenBoardingObservations: vi.fn() }));
 vi.mock("@/db/package-gifts", () => ({ sendDuePackageGifts: vi.fn() }));
 // The routes report only where a DSN is configured; the suite runs without one.
-vi.mock("../../../../features/sentry-dsn/rules", () => ({
+vi.mock("../../../../features/platform/sentry-dsn", () => ({
   SENTRY_DSN: "https://key@sentry.invalid/1",
 }));
 vi.mock("@sentry/nextjs", () => ({
@@ -42,16 +42,22 @@ const { expireGroupHolds } = await import("@/db/bookings");
 const { getDb } = await import("@/db/client");
 const { bringDemoBoatsAtSeaHome } = await import("@/db/seed-boat-at-sea");
 const { cancelDeparturesBelowMinimum } = await import("@/db/trips");
-const { sendDueReminders } = await import("../../../../features/reminders/store");
-const { sendDueCheckoutRecoveries } = await import("../../../../features/checkout-recovery/store");
+const { sendDueReminders } = await import("../../../../features/messages/reminders");
+const { sendDueCheckoutRecoveries } = await import(
+  "../../../../features/money/checkout-recovery/store"
+);
 const { drainNotificationRetries } = await import("@/db/notifications");
-const { sendDueServiceReminders } = await import("../../../../features/work-order-follow-up/store");
-const { sendDueRecaps } = await import("../../../../features/recap/store");
+const { sendDueServiceReminders } = await import(
+  "../../../../features/gear/work-order-follow-up/store"
+);
+const { sendDueRecaps } = await import("../../../../features/after-the-dive/recap/store");
 const { sendDueCrewNotices } = await import("@/db/crew-notices");
-const { sendStaleRollCallAlerts } = await import("../../../../features/roll-call-alerts/store");
+const { sendStaleRollCallAlerts } = await import(
+  "../../../../features/boarding/roll-call-alerts/store"
+);
 const { sendMissingDiverAlerts } = await import("@/db/missing-diver-alerts");
-const { sendTrailingDeskPings } = await import("../../../../features/desk-pings/store");
-const { sendSeatSoldAlerts } = await import("../../../../features/seat-sold-alerts/store");
+const { sendTrailingDeskPings } = await import("../../../../features/messages/desk-pings");
+const { sendSeatSoldAlerts } = await import("../../../../features/bookings/seat-sold-alerts");
 const { settleOpenBoardingObservations } = await import("@/db/boarding-observations");
 const { sendDuePackageGifts } = await import("@/db/package-gifts");
 const Sentry = await import("@sentry/nextjs");

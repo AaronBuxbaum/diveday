@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { summarizeShopYear } from "../../../../../features/shop-year/rules";
+import { summarizeShopYear } from "../../../../../features/reports/shop-year";
 import { YearStrip } from "./YearStrip";
 
 afterEach(cleanup);

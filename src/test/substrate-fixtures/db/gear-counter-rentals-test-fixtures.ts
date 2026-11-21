@@ -10,7 +10,7 @@ import {
   shops,
   userAccounts,
 } from "../../../db/schema/index";
-import { createCounterRental } from "../../../features/gear-counter-rentals/store";
+import { createCounterRental } from "../../../features/gear/gear-counter-rentals";
 import { unseededTestDb } from "../../db";
 
 /** Shared by `gear-counter-rentals.test.ts` and `gear-counter-rentals.screens.test.ts`. */

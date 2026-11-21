@@ -1,4 +1,4 @@
-import { personWeekTotals, type StaffWeek } from "@/features/staffing-week";
+import { personWeekTotals, type StaffWeek } from "@/features/crew-and-boats/staffing-week";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 
 /**

@@ -5,7 +5,7 @@ import { boats, bookings, cards, people, trips } from "../../db/schema/index";
 import { liveTrip } from "../../db/trips-live";
 import { seatHeld } from "../../db/trips-queries";
 import { completeWaiver, issueWaiverRequest } from "../../db/waivers";
-import { markBookingNoShow } from "../../features/no-show/store";
+import { markBookingNoShow } from "../../features/boarding/no-show";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "../../lib/medical";
 import { anActiveStaffPerson } from "./active-staff";
 

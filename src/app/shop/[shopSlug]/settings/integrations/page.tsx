@@ -5,6 +5,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
+import { requireShopSurface } from "@/features/accounts/session";
 import {
   getIntegrationSettingsPage,
   INTEGRATION_SETTINGS_GATE,
@@ -12,8 +13,7 @@ import {
   shopifyConfigFromEnvironment,
   squareConfigFromEnvironment,
   squareLocationsForShop,
-} from "@/features/integrations";
-import { requireShopSurface } from "@/features/session";
+} from "@/features/shop-setup/integrations";
 import { requestLocale } from "@/i18n/request";
 import { ownerOrManagerWords, sayWords } from "@/i18n/shared-sentences";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";

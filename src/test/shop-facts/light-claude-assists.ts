@@ -3,7 +3,7 @@ import { z } from "zod";
 import type { AppDb } from "../../db/client";
 import { bookings, people, shops, tripReviews, trips } from "../../db/schema/index";
 import { seatNotCancelled } from "../../db/trips-queries";
-import { armClaudeFixtures } from "../../features/assists/e2e-fixtures";
+import { armClaudeFixtures } from "../../features/ai/assists/e2e-fixtures";
 
 export const claudeAssistsArgs = z.object({ review: z.boolean().optional() }).strict();
 
@@ -12,7 +12,7 @@ export const claudeAssistsArgs = z.object({ review: z.boolean().optional() }).st
  * 20261018-claude-assists), so the browser fleet can photograph an assist's
  * surface. Every shop the fleet mints is a demo, and a demo is dark by the
  * seam's own rule, so this clears the shop's `is_demo` and arms the canned
- * provider for it (`src/features/assists/e2e-fixtures.ts`): its assists answer from
+ * provider for it (`src/features/ai/assists/e2e-fixtures.ts`): its assists answer from
  * fixtures and nothing leaves the machine. The door's teardown disarms it and
  * drops the shop. A private shop's fact: the canonical fixture is shared.
  *

@@ -20,12 +20,12 @@ import {
   setShopTemperatureUnit,
   setShopTimezone,
 } from "@/db/shops";
-import { confirmContactLinkPath } from "@/features/contact-email-confirmation";
-import { formValue, trimmedText } from "@/features/form-parse";
-import { reopensOnTooFar } from "@/features/off-season";
-import { actionContext, arrive, defineAction, land } from "@/features/server-action";
-import { requireStaffSession } from "@/features/session";
-import { issueShopContactEmailConfirmation } from "@/features/shop-contact-email";
+import { requireStaffSession } from "@/features/accounts/session";
+import { confirmContactLinkPath } from "@/features/people/contact-email-confirmation";
+import { formValue, trimmedText } from "@/features/platform/form-parse";
+import { actionContext, arrive, defineAction, land } from "@/features/platform/server-action";
+import { issueShopContactEmailConfirmation } from "@/features/shop-setup/shop-contact-email";
+import { reopensOnTooFar } from "@/features/trips/off-season";
 import { toDiverLocale } from "@/i18n/settings";
 import {
   type AddressLookupResult,
@@ -480,6 +480,6 @@ export async function suggestAddressAction(query: string): Promise<AddressLookup
 
   // Imported here rather than at module scope so a deployment with no
   // credentials never loads the AWS SDK at all.
-  const { awsAddressLookupProvider } = await import("@/features/address-lookup-aws");
+  const { awsAddressLookupProvider } = await import("@/features/platform/address-lookup-aws");
   return awsAddressLookupProvider(config).suggest(query, { bias });
 }

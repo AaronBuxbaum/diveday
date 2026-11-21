@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, expect, it, vi } from "vitest";
-import { buildOfflineManifestCopies } from "@/features/offline-manifest-snapshots";
+import { buildOfflineManifestCopies } from "@/features/boarding/offline-manifest-snapshots";
 import { nowDate } from "@/lib/clock";
 import { describePostgres, postgresTestDb } from "@/test/postgres";
 import { getTripManifest, recordRollCall } from "./manifests";

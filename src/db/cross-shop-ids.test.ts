@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { deleteStaffShift } from "@/features/staffing/store";
+import { deleteStaffShift } from "@/features/crew-and-boats/staffing/store";
 import {
   insertShop,
   person,

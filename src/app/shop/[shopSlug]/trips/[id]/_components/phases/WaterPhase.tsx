@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { listTripIncidentReports } from "@/db/incident-reports";
-import type { requireShopSurface } from "@/features/session";
+import type { requireShopSurface } from "@/features/accounts/session";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { depthInUnit } from "@/lib/depth-units";
 import { shopPath } from "@/lib/staff-notices";

@@ -4,15 +4,15 @@ import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import { weatherCallsInWindow } from "@/db/blowouts";
 import type { DbExecutor } from "@/db/client";
-import { counterTaxIncluded } from "@/features/report-lines";
+import { counterTaxIncluded } from "@/features/reports/report-lines";
 import {
   certifiedHere,
   earliestReportedTripStart,
   getShopYear,
   getYearToDate,
   summarizeMonth,
-} from "@/features/reporting";
-import { summarizeShopYear } from "@/features/shop-year";
+} from "@/features/reports/reporting";
+import { summarizeShopYear } from "@/features/reports/shop-year";
 import { CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { Role } from "@/lib/authz";

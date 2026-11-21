@@ -11,7 +11,7 @@ import { LedgerRow } from "@/components/ui/ledger";
 import { ListItemActions } from "@/components/ui/list-item-actions";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { canPersonManageSafetyChecklist, listChecklistItems } from "@/db/pre-departure-check";
-import { requireShopSurface } from "@/features/session";
+import { requireShopSurface } from "@/features/accounts/session";
 import { requestLocale } from "@/i18n/request";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import type { NoticeMessages } from "@/lib/staff-notices";

@@ -1,4 +1,4 @@
-import type { TripOverview } from "@/features/trip-overview";
+import type { TripOverview } from "@/features/trips/trip-overview";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { DepartureConflicts } from "./DepartureConflicts";
 import { MinimumSeatsBand } from "./MinimumSeatsBand";

@@ -3,12 +3,12 @@ import Link from "next/link";
 import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
-import { requireShopSurface } from "@/features/session";
+import { requireShopSurface } from "@/features/accounts/session";
 import {
   canPersonManageWaiverTemplates,
   getSignedRecordsPage,
   signedRecordViewParam,
-} from "@/features/waivers-page";
+} from "@/features/waivers/waivers-page";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { shopPath } from "@/lib/staff-notices";

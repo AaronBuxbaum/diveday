@@ -4,7 +4,7 @@ import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { DAY_MS, nowDate } from "@/lib/clock";
 import { shopMonthBounds, utcToWallTime } from "@/lib/zoned";
 import { fileScopedShopContext, seededShopContext } from "@/test/db";
-import { getMonthlyReport, getShopYear } from "../features/reporting/store";
+import { getMonthlyReport, getShopYear } from "../features/reports/reporting/store";
 import { getTripManifest } from "./manifests";
 import {
   bookings,
@@ -238,7 +238,7 @@ describe("seeded history manifests", () => {
 describe("seeded history crew", () => {
   it("records current fictional credential evidence for every historical crew sailing", async () => {
     const { db, shop } = await seededShopContext({ history: true });
-    const { getSafetyMonth } = await import("@/features/safety-report/store");
+    const { getSafetyMonth } = await import("@/features/safety/safety-report/store");
     const now = nowDate();
     const report = await getSafetyMonth(
       db,

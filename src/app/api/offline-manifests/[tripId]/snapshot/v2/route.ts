@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { issueOfflineManifestSnapshotAtSchedule } from "@/features/offline-manifest-snapshots";
-import { isCrossSiteHeaders } from "@/features/same-origin";
+import { issueOfflineManifestSnapshotAtSchedule } from "@/features/boarding/offline-manifest-snapshots";
+import { isCrossSiteHeaders } from "@/features/platform/same-origin";
 import type {
   OfflineManifestSnapshotRequest,
   OfflineManifestSnapshotResponse,

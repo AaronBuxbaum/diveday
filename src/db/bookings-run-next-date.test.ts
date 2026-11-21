@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { weekdaySetFrom } from "@/lib/recurrence";
 import { similarDepartures } from "@/lib/similar-departures";
 import { fileScopedShopContext } from "@/test/db";
-import { createDiver } from "../features/divers/store";
+import { createDiver } from "../features/people/divers/store";
 import { createBooking } from "./bookings";
 import { cards, diveSites, tripDives } from "./schema";
 import { createTrip } from "./trips";

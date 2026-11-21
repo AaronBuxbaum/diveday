@@ -6,7 +6,7 @@ import { advanceClock } from "@/test/clock";
 import { fileScopedShopContext, seededShopContext } from "@/test/db";
 import { sendDeal } from "@/test/deal";
 import { fakeCheckout, fakeEmail, fakePromotions, recordingCheckout } from "@/test/fakes";
-import { getActiveTripPromoByCode } from "../features/trip-promos/store";
+import { getActiveTripPromoByCode } from "../features/money/trip-promos";
 import { cancelBooking, createBookingParty } from "./bookings";
 import {
   getLatestCheckoutForBooking,
@@ -523,7 +523,7 @@ describe("startBookingCheckout", () => {
     // What an erasure leaves behind: the row stays `pending` and unexpired, and
     // covers exactly this party, but its hosted page is gone because it was
     // minted with an address a diver asked to have destroyed
-    // (`anonymizeDiver`, src/features/anonymize/store.ts, issue #1722). Reuse must not
+    // (`anonymizeDiver`, src/features/records/anonymize.ts, issue #1722). Reuse must not
     // resurrect it — there is nothing to hand back — and must not refuse the
     // party either.
     await db

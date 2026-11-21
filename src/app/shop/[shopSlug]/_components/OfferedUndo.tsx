@@ -1,6 +1,6 @@
 import { undoAction } from "@/app/actions/undo";
 import { UndoToast } from "@/components/UndoToast";
-import type { UndoOffer } from "@/features/undo";
+import type { UndoOffer } from "@/features/platform/undo";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 
 /**

@@ -6,7 +6,7 @@ import { DAY_MS } from "@/lib/clock";
 import {
   CARD_PROCESSING_SINCE,
   type CardToProcess,
-} from "../../../../../features/agency-processing/store";
+} from "../../../../../features/certifications/agency-processing";
 import { CardsToProcess } from "./CardsToProcess";
 
 afterEach(cleanup);

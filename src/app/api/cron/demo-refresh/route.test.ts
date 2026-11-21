@@ -9,7 +9,7 @@ vi.mock("@/db/demo-refresh", async (importOriginal) => {
   return { ...actual, refreshCanonicalDemoSchedule: vi.fn() };
 });
 // The routes report only where a DSN is configured; the suite runs without one.
-vi.mock("../../../../features/sentry-dsn/rules", () => ({
+vi.mock("../../../../features/platform/sentry-dsn", () => ({
   SENTRY_DSN: "https://key@sentry.invalid/1",
 }));
 vi.mock("@sentry/nextjs", () => ({

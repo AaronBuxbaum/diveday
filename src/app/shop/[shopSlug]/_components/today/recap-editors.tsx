@@ -7,9 +7,9 @@ import {
   uploadCrewRecapPhotoAction,
 } from "@/app/shop/[shopSlug]/actions";
 import type { AppDb } from "@/db/client";
-import { assistsAvailable } from "@/features/assists";
-import { recapAutoSendAt } from "@/features/recap";
-import type { getDayCloseout } from "@/features/today";
+import { recapAutoSendAt } from "@/features/after-the-dive/recap";
+import { assistsAvailable } from "@/features/ai/assists";
+import type { getDayCloseout } from "@/features/day/today";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatDateTimeTz } from "@/lib/format";
 import { draftRecapLineAction } from "../../recap-assist-action";

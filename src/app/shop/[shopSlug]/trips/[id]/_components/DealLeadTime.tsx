@@ -1,6 +1,6 @@
 import { getDb } from "@/db/client";
-import { leadTimeForWeekday, wholePercent } from "@/features/lead-time";
-import { bookingLeadTimes } from "@/features/reporting";
+import { leadTimeForWeekday, wholePercent } from "@/features/reports/lead-time";
+import { bookingLeadTimes } from "@/features/reports/reporting";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { calendarDateInTimezone, calendarDateWeekday } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";

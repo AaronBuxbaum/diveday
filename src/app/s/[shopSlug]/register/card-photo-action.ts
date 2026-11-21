@@ -1,15 +1,15 @@
 "use server";
 
 import { getDb } from "@/db/client";
-import { runAssist } from "@/features/assists";
+import { runAssist } from "@/features/ai/assists";
 import {
   CERT_SCAN_FEATURE,
   certScanCall,
   certScanFields,
   parseCardImage,
   scanCard,
-} from "@/features/cert-scan";
-import { shopBySlugCached } from "@/features/shops-cached";
+} from "@/features/certifications/cert-scan";
+import { shopBySlugCached } from "@/features/platform/shops-cached";
 import { diverTranslator } from "@/i18n/messages";
 import { DIVER_CERT_LEVEL_KEYS } from "@/i18n/next-dive-labels";
 import { checkRateLimitFailClosed, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";

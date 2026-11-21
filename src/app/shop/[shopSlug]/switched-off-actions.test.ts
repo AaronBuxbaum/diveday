@@ -25,7 +25,7 @@ import {
   seededStaffPersonId,
   staffSession,
 } from "@/test/staff-session";
-import { recordLostItem } from "../../../features/lost-items/store";
+import { recordLostItem } from "../../../features/day/lost-items/store";
 
 /**
  * **A switched-off feature's actions write nothing** (the Features page).
@@ -47,13 +47,15 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
 });
-vi.mock("../../../features/session/rules", () => ({
+vi.mock("../../../features/accounts/session", () => ({
   requireStaffSession: vi.fn(),
   requireShopSurface: vi.fn(),
 }));
 
 const { getDb } = await import("@/db/client");
-const { requireStaffSession, requireShopSurface } = await import("../../../features/session/rules");
+const { requireStaffSession, requireShopSurface } = await import(
+  "../../../features/accounts/session"
+);
 const { createWorkOrderAction } = await import("./gear/work-orders/actions");
 const { resendReadyNoticeAction } = await import("./gear/work-orders/follow-up-actions");
 const { createPromoAction } = await import("./promos/actions");

@@ -3,14 +3,14 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
-import type { StaffReview } from "../../../../../features/reviews/store";
+import type { StaffReview } from "../../../../../features/after-the-dive/reviews/store";
 import { ReviewLedgerRow } from "./ReviewLedgerRow";
 import type { ReviewRowCopy } from "./ReviewRowActions";
 import { ReviewRowProvider } from "./ReviewRowActions";
 
 // The row mounts the client action bar, whose only job here is to render its
 // labels — the writes themselves are covered in `actions.test.ts` and against a
-// real database in `src/features/reviews/store.test.ts`.
+// real database in `src/features/after-the-dive/reviews/store.test.ts`.
 vi.mock("../actions", () => ({ reviewRowAction: vi.fn() }));
 
 afterEach(cleanup);
@@ -134,7 +134,7 @@ describe("a review row", () => {
   /**
    * A contract with two callers, not decoration: Today's row and the close-out
    * both deep-link one waiting review as `/reviews#review-<id>`
-   * (`src/features/today/today-reader.ts`).
+   * (`src/features/day/today/today-reader.ts`).
    */
   it("keeps the fragment Today and the close-out link to", () => {
     const { container } = row({});

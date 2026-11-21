@@ -2,8 +2,8 @@ import { type SQL, sql } from "drizzle-orm";
 import type { DbExecutor } from "./client";
 
 // What the catalog says about the public schema, read by the two modules that
-// copy a seeded demo: `src/features/demo-reset-snapshot` and
-// `src/features/demo-template`. Every name here comes from the catalog, never from a request.
+// copy a seeded demo: `src/features/demo/demo-reset-snapshot.ts` and
+// `src/features/demo/demo-template.ts`. Every name here comes from the catalog, never from a request.
 
 /** A foreign key, read off the catalog. */
 export type ForeignKey = {

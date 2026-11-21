@@ -8,7 +8,7 @@ import { fakeEmail } from "@/test/fakes";
 import { prepareContactImport } from "@/test/import-fixture";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
 import { commitContactImport } from "@/test/words-wiring";
-import { createDiver, editDiver } from "../features/divers/store";
+import { createDiver, editDiver } from "../features/people/divers/store";
 import {
   clearAnswers,
   draftsOf,

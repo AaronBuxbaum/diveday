@@ -3,7 +3,7 @@ import { StarRating } from "@/components/StarRating";
 import { StoredPhoto } from "@/components/StoredPhoto";
 import { buttonClass } from "@/components/ui/button";
 import { PAGE_TITLE_CLASS } from "@/components/ui/typography";
-import type { shopBySlugCached } from "@/features/shops-cached";
+import type { shopBySlugCached } from "@/features/platform/shops-cached";
 import type { DiverTranslator } from "@/i18n/messages";
 import { parseBrandBadges } from "@/lib/brand";
 import { cachedFormatter } from "@/lib/intl-cache";

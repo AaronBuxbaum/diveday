@@ -2,8 +2,8 @@ import Link from "next/link";
 import { EmptyState } from "@/components/EmptyState";
 import { buttonClass } from "@/components/ui/button";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
-import { payoutSentence } from "@/features/payouts";
-import type { MonthMoneyDetail as Detail, RevenueLine } from "@/features/report-lines";
+import { payoutSentence } from "@/features/money/payouts";
+import type { MonthMoneyDetail as Detail, RevenueLine } from "@/features/reports/report-lines";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { shopPath } from "@/lib/staff-notices";
 

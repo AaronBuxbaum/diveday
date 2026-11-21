@@ -1,7 +1,7 @@
 import { and, eq, gte, inArray, isNull, lt } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { seededShopContext } from "@/test/db";
-import { crewShiftCoverage } from "../features/staffing/store";
+import { crewShiftCoverage } from "../features/crew-and-boats/staffing/store";
 import { tripAssignments, trips } from "./schema";
 import { resetDemoSchedule } from "./seed";
 import { withDemoCrewEvidence } from "./seed-crew-evidence";
@@ -145,7 +145,7 @@ it("leaves early-morning room to add a separate fixture shift on each target wee
   const { db, shop } = await seededShopContext();
   const { people } = await import("./schema");
   const { at } = await import("./seed-clock");
-  const { createStaffShift } = await import("@/features/staffing/store");
+  const { createStaffShift } = await import("@/features/crew-and-boats/staffing/store");
   const [person] = await db
     .select()
     .from(people)
@@ -410,7 +410,7 @@ it("does not oversell a reset weekly boat when a standing guide has been deleted
 
 it("shows known credential history for the demo's completed crew sailings", async () => {
   const { db, shop } = await seededShopContext();
-  const { getSafetyMonth } = await import("@/features/safety-report/store");
+  const { getSafetyMonth } = await import("@/features/safety/safety-report/store");
   const { nowDate } = await import("@/lib/clock");
   const now = nowDate();
   const report = await getSafetyMonth(

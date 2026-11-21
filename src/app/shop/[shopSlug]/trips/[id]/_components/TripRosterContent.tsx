@@ -12,7 +12,7 @@ import { DisclosureRowList } from "@/components/ui/disclosure";
 import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
 import { groupLabelClass } from "@/components/ui/group-label";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
-import type { TripGuests } from "@/features/trip-guests";
+import type { TripGuests } from "@/features/trips/trip-guests";
 import { activityLine } from "@/i18n/activity-labels";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { cancellationDeadline } from "@/lib/deposits";

@@ -2,7 +2,7 @@
 
 import { getDb } from "@/db/client";
 import { type OrderableCustomer, searchOrderableCustomers } from "@/db/orders";
-import { requireStaffSession } from "@/features/session";
+import { requireStaffSession } from "@/features/accounts/session";
 
 /**
  * **The order forms' customer search** (issue #4601), asked as a staffer types.

@@ -10,7 +10,7 @@ import {
 import { EmptyState } from "@/components/EmptyState";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FormStatus } from "@/components/ui/form";
-import { browserSupportsPasskeys } from "@/features/passkeys";
+import { browserSupportsPasskeys } from "@/features/accounts/passkeys";
 
 export type PasskeyWords = Record<
   | "name"

@@ -6,10 +6,10 @@ import { issuePersonCourtesyEmailUnsubscribeToken } from "../../db/courtesy-emai
 import { issueInterestUnsubscribeToken } from "../../db/interests";
 import { issueMagicSignIn } from "../../db/magic-sign-in";
 import { interests, people, setupRequests, shops, userAccounts } from "../../db/schema/index";
-import { PREVIEW_TTL_MS } from "../../features/demo-preview/rules";
-import { issuePreview } from "../../features/demo-preview/store";
-import { issueSetupLink } from "../../features/setup-links/store";
-import { issueShopContactEmailConfirmation } from "../../features/shop-contact-email/store";
+import { PREVIEW_TTL_MS } from "../../features/demo/demo-preview/rules";
+import { issuePreview } from "../../features/demo/demo-preview/store";
+import { issueSetupLink } from "../../features/shop-setup/setup-links";
+import { issueShopContactEmailConfirmation } from "../../features/shop-setup/shop-contact-email";
 import { DEFAULT_DIVER_LOCALE } from "../../i18n/settings";
 import { setupLinkPath } from "../../lib/setup-links";
 import { holdOnboardFixture } from "../onboard-fixture";
@@ -22,7 +22,7 @@ import { FactRefused } from "./refusal";
  * otherwise readable only from inside the message, and hashed at rest. These
  * are the most sensitive facts in the registry (an account token is a password
  * reset for whoever holds it), which is why they are reachable only through the
- * test door's harness gate (`src/features/e2e-test-routes/rules.ts`).
+ * test door's harness gate (`src/features/platform/e2e-test-routes/rules.ts`).
  */
 
 export const accountTokenArgs = z

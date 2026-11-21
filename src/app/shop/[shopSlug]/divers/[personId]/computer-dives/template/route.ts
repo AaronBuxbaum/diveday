@@ -1,4 +1,4 @@
-import { requireShopSurface } from "@/features/session";
+import { requireShopSurface } from "@/features/accounts/session";
 import { COMPUTER_CSV_TEMPLATE } from "@/lib/computer-import";
 
 export async function GET(

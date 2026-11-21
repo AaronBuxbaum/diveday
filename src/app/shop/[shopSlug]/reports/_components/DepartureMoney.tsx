@@ -1,7 +1,7 @@
 import { GroupLabel } from "@/components/ui/group-label";
 import { LedgerRow } from "@/components/ui/ledger";
-import { type DayKind, moneyByBoat, moneyByKind } from "@/features/departure-money";
-import type { ReportTrip } from "@/features/reporting";
+import { type DayKind, moneyByBoat, moneyByKind } from "@/features/money/departure-money";
+import type { ReportTrip } from "@/features/reports/reporting";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { joinFacts } from "@/lib/format";
 

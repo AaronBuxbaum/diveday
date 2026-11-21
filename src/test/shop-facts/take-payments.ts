@@ -21,9 +21,9 @@ import {
   upsertShopStripeAccount,
 } from "../../db/stripe-accounts";
 import { seatNotCancelled } from "../../db/trips-queries";
-import { createDiver } from "../../features/divers/store";
-import { holdNonDemoFixture } from "../../features/e2e-test-routes/rules";
-import type { CheckoutProvider, InvoicingProvider } from "../../features/payments/index";
+import type { CheckoutProvider, InvoicingProvider } from "../../features/money/payments/index";
+import { createDiver } from "../../features/people/divers/store";
+import { holdNonDemoFixture } from "../../features/platform/e2e-test-routes/rules";
 import { DAY_MS } from "../../lib/clock";
 import { FactRefused } from "./refusal";
 

@@ -23,15 +23,15 @@ const OFF_SHOP = {
 };
 
 vi.mock("@/db/client", () => ({ getDb: vi.fn(async () => ({})) }));
-vi.mock("../../../../features/shops-cached/store", () => ({
+vi.mock("../../../../features/platform/shops-cached", () => ({
   shopBySlugCached: vi.fn(async () => OFF_SHOP),
 }));
 vi.mock("@/db/shops", () => ({ getShopBySlug: vi.fn(async () => OFF_SHOP) }));
-vi.mock("../../../../features/self-registration/store", () => ({
+vi.mock("../../../../features/people/self-registration", () => ({
   registerDiverAtShop: vi.fn(),
   deliverSelfRegistrationWaiver: vi.fn(),
 }));
-vi.mock("../../../../features/assists/store", () => ({
+vi.mock("../../../../features/ai/assists/store", () => ({
   assistsAvailable: vi.fn(async () => true),
   runAssist: vi.fn(),
 }));
@@ -49,9 +49,9 @@ vi.mock("@/lib/rate-limit", async (importOriginal) => {
   };
 });
 
-const { registerDiverAtShop } = await import("../../../../features/self-registration/store");
-const { runAssist } = await import("../../../../features/assists/store");
-const { shopBySlugCached } = await import("../../../../features/shops-cached/store");
+const { registerDiverAtShop } = await import("../../../../features/people/self-registration");
+const { runAssist } = await import("../../../../features/ai/assists/store");
+const { shopBySlugCached } = await import("../../../../features/platform/shops-cached");
 const { default: RegisterPage } = await import("./page");
 const { registerAtShopAction } = await import("./actions");
 const { readCardPhotoAtShopAction } = await import("./card-photo-action");

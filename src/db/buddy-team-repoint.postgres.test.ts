@@ -2,7 +2,7 @@ import { eq, sql } from "drizzle-orm";
 import { expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { describePostgres, holdRowLock, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
-import { repointHeldBooking } from "../features/identity-repoint/store";
+import { repointHeldBooking } from "../features/people/identity-repoint";
 import {
   addBuddyTeamMember,
   dissolveBuddyTeam,

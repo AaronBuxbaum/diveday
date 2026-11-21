@@ -1,4 +1,4 @@
-import { asksNoMoreThan, worthALook } from "@/features/worth-a-look";
+import { asksNoMoreThan, worthALook } from "@/features/bookings/worth-a-look";
 import type { DiverLocale } from "@/i18n/settings";
 import { embedTripPath } from "@/lib/embed-routes";
 import { formatDayParts, formatShortDate, formatTime } from "@/lib/format";

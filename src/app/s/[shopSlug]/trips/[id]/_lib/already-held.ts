@@ -4,7 +4,7 @@ import {
   heldSeatOnTrip,
   tellPartyNotBooked,
   tellSeatAlreadyHeld,
-} from "@/features/seat-already-held";
+} from "@/features/bookings/seat-already-held";
 import type { DiverLocale } from "@/i18n/settings";
 import { trackEvent } from "@/lib/analytics";
 import { log } from "@/lib/log";

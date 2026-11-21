@@ -17,8 +17,8 @@ import {
   SEEDED_OWNER_EMAIL,
   seededStaffPersonId,
 } from "@/test/staff-session";
-import { editCourse } from "../features/courses/store";
-import { recordStripeDispute } from "../features/payment-disputes/store";
+import { recordStripeDispute } from "../features/money/payment-disputes";
+import { editCourse } from "../features/training/courses/store";
 import { createBooking } from "./bookings";
 import { countSpendableDives, createDivePackage, deleteDivePackage } from "./dive-packages";
 import {

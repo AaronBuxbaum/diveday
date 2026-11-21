@@ -1,6 +1,6 @@
 import { and, eq, inArray, isNull, ne } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { diverCrewWithAway } from "@/features/crew-away-diver";
+import { diverCrewWithAway } from "@/features/crew-and-boats/crew-away-diver";
 import { inWaterCrewRole } from "@/lib/crew-roles";
 import { utcToWallTime } from "@/lib/zoned";
 import { seededShopContext } from "@/test/db";

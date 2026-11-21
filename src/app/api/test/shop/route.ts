@@ -12,12 +12,15 @@ import {
   requireDemoTenant,
   takeNonDemoFixture,
   testRouteRefused,
-} from "@/features/e2e-test-routes";
-import { expireShopRowsCaches } from "@/features/runtime-cache";
+} from "@/features/platform/e2e-test-routes";
+import { expireShopRowsCaches } from "@/features/platform/runtime-cache";
 import { nowDate } from "@/lib/clock";
 import { DEMO_BYPASS_PASSWORD } from "@/lib/demo-bypass";
 import { dropOnboardFixture } from "@/test/onboard-fixture";
-import { armClaudeFixtures, claudeFixturesArmed } from "../../../../features/assists/e2e-fixtures";
+import {
+  armClaudeFixtures,
+  claudeFixturesArmed,
+} from "../../../../features/ai/assists/e2e-fixtures";
 import {
   applyFacts,
   FactRefused,

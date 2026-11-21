@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { monthSightings } from "@/features/month-sightings";
+import { monthSightings } from "@/features/sites/month-sightings";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 

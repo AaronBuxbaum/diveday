@@ -2,14 +2,14 @@ import { NextResponse } from "next/server";
 import { canPersonManageShopSettings } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { getShopById } from "@/db/shops";
+import { requireStaffSession } from "@/features/accounts/session";
 import {
   consumeIntegrationOAuthState,
   exchangeSquareCode,
   integrationCallbackUrl,
   recordShopIntegration,
   squareConfigFromEnvironment,
-} from "@/features/integrations";
-import { requireStaffSession } from "@/features/session";
+} from "@/features/shop-setup/integrations";
 import { publicAppUrl } from "@/lib/notifications";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 

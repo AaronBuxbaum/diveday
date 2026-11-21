@@ -2,9 +2,9 @@
 
 import { z } from "zod";
 import { getShopById, recordShopRentals } from "@/db/shops";
-import { formValue } from "@/features/form-parse";
-import { parseRentalTerms } from "@/features/rental-terms";
-import { defineAction, land, type NoticeOf } from "@/features/server-action";
+import { parseRentalTerms } from "@/features/gear/rental-terms";
+import { formValue } from "@/features/platform/form-parse";
+import { defineAction, land, type NoticeOf } from "@/features/platform/server-action";
 import { majorToMinor, maxPriceMajor, toShopCurrency } from "@/lib/money";
 import { parseNitroxFillMethod } from "@/lib/nitrox-fill";
 import {

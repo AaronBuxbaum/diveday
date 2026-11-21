@@ -364,7 +364,7 @@ export async function listDepartureBoardedByTrip(
  * apart needs the result, not the count.
  *
  * `not_boarded` **at departure** means "never left the dock" — benign, and
- * genuinely accounted for. That is the narrow reading `src/features/today/today-reader.ts` sets
+ * genuinely accounted for. That is the narrow reading `src/features/day/today/today-reader.ts` sets
  * out at `isAccountedForAfterDive`, and it holds only because this query is
  * pinned to `checkpoint = "departure"`. The same status at an after-dive
  * checkpoint means the opposite and must never be read through this function.
@@ -484,7 +484,7 @@ export async function listBoardedAtAnyCheckpointByTrip(
  * drops the checkpoint out, the same supersession every reader here applies.
  *
  * **Two callers, and they are why it exists** (dive-domain-expert review, issue
- * #1704). `seatSailed` (src/features/seat-sailed/rules.ts) ranked the dock alone, so the
+ * #1704). `seatSailed` (src/features/bookings/seat-sailed.ts) ranked the dock alone, so the
  * evening said "0 out, 0 back" about a one-diver boat carrying a missing diver:
  * the desk's `no_show` stood, no dock result contradicted it, and the after-dive
  * `not_boarded` the day was raising a top-severity row about was invisible to
@@ -673,7 +673,7 @@ export async function readAfterDiveRollCallByTrip(
  * `not_boarded` ("did not come back") and no later after-dive checkpoint has
  * its newest word `boarded`. The latest checkpoint speaks, the rule
  * `homewardCheckpointGap` and Today's missing-diver row (`listRollCallGaps`,
- * `src/features/today/today-reader.ts`) keep too: a diver missing after dive 1 and counted aboard
+ * `src/features/day/today/today-reader.ts`) keep too: a diver missing after dive 1 and counted aboard
  * after dive 2 is back, and one missing after dive 1 whom nobody has counted
  * since is still not.
  *
@@ -812,7 +812,7 @@ export async function listCountedAboardBlockedByTrip(
  * nothing at all.
  *
  * It exists because the thread's after-state must never assert that somebody
- * dived on the strength of a clock (`isAfterTheDive`, src/features/seat-ladder/rules.ts).
+ * dived on the strength of a clock (`isAfterTheDive`, src/features/bookings/seat-ladder.ts).
  * A departure roll call is the only direct evidence DiveDay holds about who
  * actually got on the boat, and this is the narrowest possible read of it —
  * one booking, and only the answer, never the recorder, the note or the `seq`.
@@ -849,7 +849,7 @@ export async function departureRollCallForBooking(
  * shop record. Reading it here would make every walk-away permanently
  * un-markable, which is the failure direction that stops a shop doing its work
  * rather than the one that endangers a diver. The rule is the one
- * `src/features/today/today-reader.ts` already writes down at `isAccountedForAfterDive` and
+ * `src/features/day/today/today-reader.ts` already writes down at `isAccountedForAfterDive` and
  * `inAfterDivePopulation` (DOM-H3), consumed rather than restated: exactly the
  * population that reader counts as at risk in the water is the population the
  * desk may not call absent.
@@ -1843,7 +1843,7 @@ async function gateOfflineRollCallNote(
  * **The crew boarded somebody the counter had written off, so the seat is
  * theirs again.**
  *
- * `markBookingNoShow` (src/features/no-show/store.ts) releases a seat the instant a staffer
+ * `markBookingNoShow` (src/features/boarding/no-show.ts) releases a seat the instant a staffer
  * confirms the diver did not come: `no_show` stops holding the seat, the
  * boat reads one seat lighter, and a walk-in can buy it. Readiness never reads
  * booking status and `getTripRoster` drops only cancelled rows, so that released
@@ -1901,7 +1901,7 @@ async function reclaimReleasedSeat(
   },
 ): Promise<void> {
   // The seat comes back held, exactly as `undoBookingNoShow` puts it back
-  // (src/features/no-show/store.ts). Whether the desk saw the diver is the arrival trail's,
+  // (src/features/boarding/no-show.ts). Whether the desk saw the diver is the arrival trail's,
   // which the release never touched, so a diver the counter had checked in
   // reads as checked in again with nothing written here (issues #1838, #2702).
   const [updated] = await tx

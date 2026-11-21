@@ -11,7 +11,7 @@ import {
   seededStaffPersonId,
   staffSession,
 } from "@/test/staff-session";
-import { shopClock } from "../../../../../features/shop-clock/rules";
+import { shopClock } from "../../../../../features/day/shop-clock";
 
 // One seeded database for the file and a rolled-back transaction per test.
 const ctx = fileScopedShopContext();
@@ -28,7 +28,7 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
 });
-vi.mock("../../../../../features/session/rules", () => ({ requireShopSurface: vi.fn() }));
+vi.mock("../../../../../features/accounts/session", () => ({ requireShopSurface: vi.fn() }));
 vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn() }));
 vi.mock("@/db/refunds", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/refunds")>();
@@ -36,7 +36,7 @@ vi.mock("@/db/refunds", async (importOriginal) => {
 });
 
 const { getDb } = await import("@/db/client");
-const { requireShopSurface } = await import("../../../../../features/session/rules");
+const { requireShopSurface } = await import("../../../../../features/accounts/session");
 const { refundBookingOnCancellation } = await import("@/db/refunds");
 const { trackEvent } = await import("@/lib/analytics");
 const { removeBookingAction } = await import("./roster-seating-actions");

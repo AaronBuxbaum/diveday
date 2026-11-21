@@ -3,8 +3,8 @@ import { describe, expect, it } from "vitest";
 import { nowDate, nowMs } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { demoteOwnerToManager } from "@/test/staff-session";
-import { anonymizeDiver } from "../features/anonymize/store";
-import { pruneExpiredRecords } from "../features/retention/store";
+import { anonymizeDiver } from "../features/records/anonymize";
+import { pruneExpiredRecords } from "../features/records/retention/store";
 import {
   blank,
   complete,

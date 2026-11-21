@@ -1,5 +1,5 @@
 import { DisclosureRow as Disclosure } from "@/components/ui/disclosure";
-import type { getTripConservationPanel } from "@/features/conservation";
+import type { getTripConservationPanel } from "@/features/sites/conservation";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatDateTimeTz } from "@/lib/format";
 import { cachedFormatter } from "@/lib/intl-cache";

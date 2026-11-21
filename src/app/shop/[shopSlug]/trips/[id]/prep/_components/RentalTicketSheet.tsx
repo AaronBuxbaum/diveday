@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
-import { requireShopSurface } from "@/features/session";
-import { getRentalTicket } from "@/features/trip-prep";
+import { requireShopSurface } from "@/features/accounts/session";
+import { getRentalTicket } from "@/features/trips/trip-prep";
 import { gearItemKindLabel } from "@/i18n/gear-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";

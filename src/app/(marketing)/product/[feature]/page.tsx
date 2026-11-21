@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { MarketingFooter, MarketingFooterFallback } from "@/components/MarketingFooter";
-import { requestPricingOffer } from "@/features/pricing-offer";
+import { requestPricingOffer } from "@/features/money/pricing-offer";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { DEFAULT_DIVER_LOCALE } from "@/i18n/settings";
@@ -25,7 +25,7 @@ export const instant = true;
 // Only the registered pages are routes. `dynamicParams` is not compatible with
 // Cache Components, so an unregistered slug is refused in `src/proxy.ts`, which
 // judges the segment against this same list before anything streams
-// (`src/features/public-route-shape/rules.ts`); what this buys is the prerendered shell
+// (`src/features/public-site/public-route-shape.ts`); what this buys is the prerendered shell
 // of each page.
 export function generateStaticParams() {
   return FEATURE_PAGE_SLUGS.map((feature) => ({ feature }));

@@ -5,7 +5,7 @@ import { nowDate } from "@/lib/clock";
 import { seededShopContext } from "@/test/db";
 import { heldRows } from "@/test/held-sends";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
-import { getMonthlyReport } from "../features/reporting/store";
+import { getMonthlyReport } from "../features/reports/reporting/store";
 import type { AppDb } from "./client";
 import { commitCounterPaymentHold, holdCounterPayment } from "./counter-payment-hold";
 import { drainHeldQueueRows } from "./held-sends";

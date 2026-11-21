@@ -1,7 +1,7 @@
 import { and, eq, isNull } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
-import { listTripLenses } from "../features/trip-lenses/store";
+import { listTripLenses } from "../features/trips/trip-lenses";
 import { tripLenses, trips } from "./schema";
 import { seedLenses } from "./seed-lenses";
 

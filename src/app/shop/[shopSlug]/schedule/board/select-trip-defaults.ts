@@ -1,5 +1,5 @@
 import type { AppDb } from "@/db/client";
-import { getTripLens } from "@/features/trip-lenses";
+import { getTripLens } from "@/features/trips/trip-lenses";
 import { applyTripDefaults, EMPTY_TRIP_DEFAULTS, type TripDefaults } from "@/lib/trip-defaults";
 import type { TripDetailsPatch } from "@/lib/trip-details";
 import { hasTripDiveContent, tripDiveDraftsFromForm } from "@/lib/trip-dives";

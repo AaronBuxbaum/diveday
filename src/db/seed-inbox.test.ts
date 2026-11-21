@@ -1,7 +1,6 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { draftReplyToMessage } from "@/features/inbox-assists";
-import { replyFacts } from "@/features/inbox-assists/store";
+import { draftReplyToMessage, replyFacts } from "@/features/ai/inbox-assists";
 import { REPLY_NOTES_MAX_LENGTH } from "@/lib/assists/inbox";
 import { fileScopedShopContext } from "@/test/db";
 import { fakeClaude, fakeClaudeMessage } from "@/test/fakes";

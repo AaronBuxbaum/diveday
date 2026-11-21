@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   arrivalCardDocument,
   escapeHtml as arrivalCardEscapeHtml,
-} from "../features/arrival-card-document/rules";
+} from "../features/boarding/arrival-card-document";
 import { escapeHtml } from "./html";
 
 describe("escapeHtml", () => {

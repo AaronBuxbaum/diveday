@@ -20,14 +20,14 @@ schedule builder, date requests, site briefings, bearer-token routes). What they
   consumer (`src/components/ShopSectionNav.tsx`, `src/components/search/CommandPalette.tsx`).
 - **Bearer-token pages**: read [the capability runbook](../../docs/engineering/capability-telemetry-runbook.md)
   first; no structured data or telemetry carrying the token.
-- **A staff page opens with** `requireShopSurface` (`src/features/session/rules.ts`); every refusal throws, a
-  cross-tenant miss is `notFound()` (`src/features/session/rules.test.ts`).
+- **A staff page opens with** `requireShopSurface` (`src/features/accounts/session.ts`); every refusal throws, a
+  cross-tenant miss is `notFound()` (`src/features/accounts/session.test.ts`).
 - **A retired staff URL is deleted, not redirected** (H-20260815-no-legacy); the full rule is in
   [repo checks](../../docs/agents/repo-checks.md#there-is-no-legacy-delete-it).
 - **Server actions**: a sibling `*-actions.ts` with file-level `"use server"`, `src/app/actions/`
   when shared; inline is the exception and names why (ADR 20260803-invoicing-role-gate). A staff
-  mutation is a `defineAction` declaration (`src/features/server-action`) where its area moved;
-  an Undo is an undo offer (`src/features/undo/rules.ts`) with a registry inverse. Seating a diver: `src/app/actions/seat-diver.ts`.
+  mutation is a `defineAction` declaration (`src/features/platform/server-action.ts`) where its area moved;
+  an Undo is an undo offer (`src/features/platform/undo.ts`) with a registry inverse. Seating a diver: `src/app/actions/seat-diver.ts`.
 - **Adding one usually uses a panel on its object's index**, opened by `?add=`
   (`src/components/AddPanel.tsx`, `src/lib/add-panel.ts`). Long forms that warrant draft protection
   can use a create page; the dive-site editor is one.

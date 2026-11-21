@@ -3,7 +3,7 @@ import {
   OFFLINE_MANIFEST_NO_STORE,
 } from "@/app/api/offline-manifests/staff-context";
 import { getShopOfflineErasureEpoch } from "@/db/shops";
-import { verifyRosterConfirmation } from "@/features/offline-manifest-snapshots";
+import { verifyRosterConfirmation } from "@/features/boarding/offline-manifest-snapshots";
 import { uuidParam } from "@/lib/uuid";
 
 /** Verify the session for the roster already delivered, without returning roster data. */

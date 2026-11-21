@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
  *
  * What the write itself does — one live row per booking, withdrawal, the
  * cancelled-booking refusal — is pinned against a real database in
- * `src/features/recap/recap-pulses.store.test.ts`. What can only be seen here is the *order*: an
+ * `src/features/after-the-dive/recap/recap-pulses.store.test.ts`. What can only be seen here is the *order*: an
  * IP limit that runs after `openRecapLink` throttles abuse of a link
  * somebody already has and does nothing at all about somebody spraying guesses
  * at the signature (CR-013), and no database test can tell the two apart.
@@ -26,14 +26,17 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn(async () => ({}) as never) };
 });
-vi.mock("../../../../features/recap/recap-pulses.store", async (importOriginal) => {
+vi.mock("../../../../features/after-the-dive/recap/recap-pulses.store", async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import("../../../../features/recap/recap-pulses.store")>();
+    await importOriginal<
+      typeof import("../../../../features/after-the-dive/recap/recap-pulses.store")
+    >();
   return { ...actual, submitRecapPulse: vi.fn() };
 });
 vi.mock("@/db/people", () => ({ recordDiverOwnLocaleForBooking: vi.fn() }));
-vi.mock("../../../../features/recap/store", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../../../features/recap/store")>();
+vi.mock("../../../../features/after-the-dive/recap/store", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("../../../../features/after-the-dive/recap/store")>();
   return {
     ...actual,
     retireRejectedRecapPhoto,
@@ -43,7 +46,7 @@ vi.mock("../../../../features/recap/store", async (importOriginal) => {
     unshareRecapPhoto: vi.fn(async () => ({ ok: true })),
   };
 });
-vi.mock("../../../../features/reviews/store", () => ({ submitTripReview: vi.fn() }));
+vi.mock("../../../../features/after-the-dive/reviews/store", () => ({ submitTripReview: vi.fn() }));
 vi.mock("@/lib/storage", () => ({ storeRecapImage: vi.fn(), deleteStoredImage: vi.fn() }));
 vi.mock("@/db/tips", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/tips")>();
@@ -60,7 +63,7 @@ vi.mock("@/i18n/request", () => ({
 }));
 vi.mock("@/lib/request-ip", () => ({ clientIp: vi.fn(async () => "203.0.113.7") }));
 vi.mock("@/db/recap-links", () => ({ openRecapLink: vi.fn(async () => null) }));
-vi.mock("../../../../features/navigation/rules", () => ({
+vi.mock("../../../../features/platform/navigation", () => ({
   revalidateAndRedirect: vi.fn((_path: string, to: string) => {
     throw new Error(`REDIRECT:${to}`);
   }),
@@ -70,15 +73,17 @@ vi.mock("@/lib/rate-limit", async (importOriginal) => {
   return { ...actual, checkRateLimit: vi.fn(async () => ({ allowed: true, retryAfterMs: 0 })) };
 });
 
-const { submitRecapPulse } = await import("../../../../features/recap/recap-pulses.store");
+const { submitRecapPulse } = await import(
+  "../../../../features/after-the-dive/recap/recap-pulses.store"
+);
 const { openRecapLink } = await import("@/db/recap-links");
 const { checkRateLimit } = await import("@/lib/rate-limit");
 const { startTipCheckout } = await import("@/db/tips");
 const { addRecapPhoto, canAddRecapPhoto, isRecapOpen, unshareRecapPhoto } = await import(
-  "../../../../features/recap/store"
+  "../../../../features/after-the-dive/recap/store"
 );
 const { recordDiverOwnLocaleForBooking } = await import("@/db/people");
-const { submitTripReview } = await import("../../../../features/reviews/store");
+const { submitTripReview } = await import("../../../../features/after-the-dive/reviews/store");
 const { storeRecapImage } = await import("@/lib/storage");
 const {
   startTipAction,

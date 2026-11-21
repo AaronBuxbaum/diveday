@@ -6,7 +6,7 @@ import { THREAD_MEASURE_CLASS } from "@/components/thread/ThreadShell";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { SECTION_TITLE_CLASS, SHELL_TITLE_CLASS } from "@/components/ui/typography";
-import type { AfterStateProps } from "@/features/recap-after-state";
+import type { AfterStateProps } from "@/features/after-the-dive/recap-after-state";
 import { fieldGuideCards } from "@/i18n/marine-life-labels";
 import { flySafeMessageKey } from "@/lib/fly-safe";
 import { cachedFormatter } from "@/lib/intl-cache";
@@ -31,7 +31,7 @@ import { WhatsNextRow } from "./WhatsNextRow";
  * 20260827-the-divers-thread, decision 4 (slice 7d).
  *
  * Once the departure has ended and the standing one-hour buffer has run out
- * (`isAfterTheDive`, src/features/seat-ladder/rules.ts), the diver's own link stops
+ * (`isAfterTheDive`, src/features/bookings/seat-ladder.ts), the diver's own link stops
  * being a checklist and becomes the afterglow. `/recap/[token]` renders this
  * same component from its own signed token, which is what closes the
  * concept-model row's "folding recap into the same link" half: existing recap

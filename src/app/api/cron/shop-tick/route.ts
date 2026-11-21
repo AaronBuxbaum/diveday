@@ -1,13 +1,13 @@
 import { getDb } from "@/db/client";
-import { requireCronSecret } from "@/features/cron-auth";
-import { cronRoute } from "@/features/cron-route";
-import { flushLogs } from "@/features/log-shipping";
+import { requireCronSecret } from "@/features/platform/cron-auth";
+import { cronRoute } from "@/features/platform/cron-route";
+import { flushLogs } from "@/features/platform/log-shipping";
 import {
   isShopTickScan,
   runShopTick,
   SHOP_TICK_SCANS,
   shopTickIsHealthy,
-} from "@/features/shop-tick";
+} from "@/features/platform/shop-tick";
 import { nowDate } from "@/lib/clock";
 import { SHOP_TICK_CRONTAB } from "@/lib/cron-schedule";
 import { log } from "@/lib/log";
@@ -17,7 +17,7 @@ export const maxDuration = 300;
 
 /**
  * **Every shop cadence, hourly** (issue #2715): one route, one monitor, the
- * scans in `src/features/shop-tick`. Each scan is isolated, and a failed one
+ * scans in `src/features/platform/shop-tick`. Each scan is isolated, and a failed one
  * turns the check-in to error without costing the others their pass.
  */
 const tick = cronRoute({

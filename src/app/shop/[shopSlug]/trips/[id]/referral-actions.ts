@@ -3,11 +3,11 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getDb } from "@/db/client";
-import { readForm, text } from "@/features/form-parse";
-import { revalidateAndRedirect } from "@/features/navigation";
-import { parseReferralPaper } from "@/features/referral-student";
-import { markReferralStudent, recordReferralPaper } from "@/features/referral-students";
-import { requireShopSurface } from "@/features/session";
+import { requireShopSurface } from "@/features/accounts/session";
+import { readForm, text } from "@/features/platform/form-parse";
+import { revalidateAndRedirect } from "@/features/platform/navigation";
+import { parseReferralPaper } from "@/features/training/referral-student";
+import { markReferralStudent, recordReferralPaper } from "@/features/training/referral-students";
 import { noticeUrl } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { requireRosterBooking, tripPath } from "./roster-booking";

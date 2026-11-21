@@ -3,7 +3,7 @@ import {
   DEV_DEMO_QUIET_KEY,
   isQuietDemoDevice,
   QUIET_DEMO_COOKIE,
-} from "../../../../features/quiet-demo-device/rules";
+} from "../../../../features/demo/quiet-demo-device";
 import { GET } from "./route";
 
 function open(query: string) {

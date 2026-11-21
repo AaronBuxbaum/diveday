@@ -1,9 +1,9 @@
 "use server";
 
 import { getDb } from "@/db/client";
-import { importAssistFor } from "@/features/file-assists";
-import { canPersonImportShopData } from "@/features/import";
-import { requireStaffSession } from "@/features/session";
+import { requireStaffSession } from "@/features/accounts/session";
+import { importAssistFor } from "@/features/ai/file-assists";
+import { canPersonImportShopData } from "@/features/records/import";
 import { type ImportAssist, MAX_IMPORT_BYTES } from "@/lib/import";
 
 /**

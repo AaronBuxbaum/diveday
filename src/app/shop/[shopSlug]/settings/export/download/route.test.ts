@@ -18,8 +18,8 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
 });
-vi.mock("../../../../../../features/session/rules", () => ({ requireStaffSession: vi.fn() }));
-vi.mock("../../../../../../features/step-up/store", () => ({
+vi.mock("../../../../../../features/accounts/session", () => ({ requireStaffSession: vi.fn() }));
+vi.mock("../../../../../../features/accounts/step-up", () => ({
   hasRequiredStepUp: vi.fn(async () => true),
 }));
 vi.mock("@/db/operations", async (importOriginal) => {
@@ -39,7 +39,7 @@ vi.mock("@/lib/export", async (importOriginal) => {
 });
 
 const { getDb } = await import("@/db/client");
-const { requireStaffSession } = await import("../../../../../../features/session/rules");
+const { requireStaffSession } = await import("../../../../../../features/accounts/session");
 const { recordMedicalAnswersExported } = await import("@/db/operations");
 const { GET } = await import("./route");
 const { zipExportBundle, ExportResourceLimitError } = await import("@/lib/export");

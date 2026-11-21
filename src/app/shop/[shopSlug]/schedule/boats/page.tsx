@@ -7,8 +7,8 @@ import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import { LedgerGroup } from "@/components/ui/ledger";
 import { ShopNotice } from "@/components/ui/outcome";
-import { collisionsFor, getBoatDay } from "@/features/boat-day";
-import { requireShopSurface } from "@/features/session";
+import { requireShopSurface } from "@/features/accounts/session";
+import { collisionsFor, getBoatDay } from "@/features/crew-and-boats/boat-day";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import {

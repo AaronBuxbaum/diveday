@@ -1,5 +1,5 @@
 import type { listTripDives } from "@/db/trips";
-import type { listShopPickedSpecies, listTripSightings } from "@/features/trip-sightings";
+import type { listShopPickedSpecies, listTripSightings } from "@/features/sites/trip-sightings";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import type { RollCallCheckpoint } from "@/lib/manifests";

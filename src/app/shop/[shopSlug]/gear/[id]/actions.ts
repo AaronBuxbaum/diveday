@@ -12,9 +12,9 @@ import {
   setGearItemStatus,
 } from "@/db/gear";
 import { getShopById } from "@/db/shops";
-import { checkbox, parseForm, single } from "@/features/form-parse";
-import { revalidateAndRedirect } from "@/features/navigation";
-import { requireStaffSession } from "@/features/session";
+import { requireStaffSession } from "@/features/accounts/session";
+import { checkbox, parseForm, single } from "@/features/platform/form-parse";
+import { revalidateAndRedirect } from "@/features/platform/navigation";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import {

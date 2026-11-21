@@ -1,7 +1,7 @@
 import { z } from "zod";
 import type { AppDb } from "@/db/client";
 import { courseFormListRefusal, setCourseFormRequirements } from "@/db/course-forms";
-import { readForm, text, trimmedText } from "@/features/form-parse";
+import { readForm, text, trimmedText } from "@/features/platform/form-parse";
 
 /** Each form's place in the order is posted as `order-<formId>`. */
 const formOrderFields = z.object({}).catchall(text());

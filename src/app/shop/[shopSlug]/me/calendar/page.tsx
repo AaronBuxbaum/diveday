@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
+import { requireShopSurface } from "@/features/accounts/session";
 import {
   FEED_FUTURE_DAYS,
   FEED_PAST_DAYS,
   type FeedScope,
   listCalendarFeeds,
-} from "@/features/calendar-sync";
-import { requireShopSurface } from "@/features/session";
+} from "@/features/crew-and-boats/calendar-sync";
 import { requestLocale } from "@/i18n/request";
 import { StaffIntlProvider } from "@/i18n/StaffIntlProvider";
 import { staffTranslator } from "@/i18n/staff-messages";

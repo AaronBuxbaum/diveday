@@ -4,17 +4,17 @@ import { nowDate } from "@/lib/clock";
 import type { Notification } from "@/lib/notifications";
 import { fileScopedShopContext } from "@/test/db";
 import { fakeEmail, fakeSms } from "@/test/fakes";
-import { createDiver } from "../features/divers/store";
 import {
   sendDueServiceReminders,
   sendWorkOrderReadyNotice,
-} from "../features/work-order-follow-up/store";
+} from "../features/gear/work-order-follow-up/store";
 import {
   addCustomerGearItem,
   createWorkOrder,
   recordWorkOrder,
   setWorkOrderStatus,
-} from "../features/work-orders/store";
+} from "../features/gear/work-orders";
+import { createDiver } from "../features/people/divers/store";
 import { shops } from "./schema";
 
 /**

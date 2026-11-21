@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { unseededTestDb } from "@/test/db";
-import { lastMinuteDealOutcomes, tripIdsSuitedToADeal } from "../features/trip-promos/store";
+import { lastMinuteDealOutcomes, tripIdsSuitedToADeal } from "../features/money/trip-promos";
 import type { AppDb } from "./client";
 import {
   bookingCheckoutBookings,

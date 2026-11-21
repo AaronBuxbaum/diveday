@@ -77,7 +77,7 @@ test("the homepage hero offers one demo door without a price sentence", async ({
   // one destination, so it cannot grow into a second budget.
   // The line waits behind HOME_DIVER_DOOR until a shop is listed (#4313): an
   // owner who followed it read "No shops are listed yet" one click from the
-  // headline. `src/features/home-diver-door` holds the switch.
+  // headline. `src/features/public-site/home-diver-door.ts` holds the switch.
   const diverDoor = heroSection.getByRole("link", { name: "Find your booking", exact: true });
   await expect(diverDoor).toHaveCount(0);
   const shopLinks = heroSection.getByRole("link").filter({ hasNotText: "Find your booking" });
@@ -594,7 +594,7 @@ test("public marketing pages lead to the product and pricing details", async ({ 
     page.getByText("Today’s price, locked for one year for founding shops."),
   ).toBeVisible();
   // The trial's own terms, once, in the notes beside the price — free, three
-  // weeks, no card, and the soft expiry that src/features/trial/rules.ts actually
+  // weeks, no card, and the soft expiry that src/features/shop-setup/trial.ts actually
   // implements. The FAQ's trial row went with the visual review of 2026-10-24
   // (B11: the FAQ keeps only what the table and notes do not answer), and card
   // fees are the invoice's own row, nowhere else. The note also says how a
@@ -2095,7 +2095,7 @@ test("the legal pages are published, honest about what is unsettled, and reachab
   await expect(page.getByText("$99")).toHaveCount(0);
 
   // Both pages say who operates DiveDay, once, in the contact section (Aaron,
-  // 2026-11-11; #4323). The name and address come from src/features/company-identity.
+  // 2026-11-11; #4323). The name and address come from src/features/public-site/company-identity.ts.
   for (const route of ["/privacy", "/terms"]) {
     await page.goto(route);
     await expect(page.getByText(/operated by Pseudorandom LLC/)).toHaveCount(1);

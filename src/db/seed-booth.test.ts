@@ -3,18 +3,18 @@ import { describe, expect, it } from "vitest";
 import { DAY_MS, nowDate } from "@/lib/clock";
 import { sameMomentYearBefore, shopDayBounds, shopMonthBounds, utcToWallTime } from "@/lib/zoned";
 import { fileScopedShopContext } from "@/test/db";
-import { moneyByBoat, moneyByKind } from "../features/departure-money/rules";
-import { openLostItemsByPerson } from "../features/lost-items/store";
-import { getMonthMoneyDetail } from "../features/report-lines/store";
+import { listRollCallGaps } from "../features/boarding/roll-call-gaps";
+import { openLostItemsByPerson } from "../features/day/lost-items/store";
+import { moneyByBoat, moneyByKind } from "../features/money/departure-money";
+import { getMonthMoneyDetail } from "../features/reports/report-lines/store";
 import {
   bookingLeadTimes,
   certifiedHere,
   getMonthlyReport,
   getShopYear,
-} from "../features/reporting/store";
-import { listRollCallGaps } from "../features/roll-call-gaps";
-import { getSafetyMonth } from "../features/safety-report/store";
-import { summarizeShopYear } from "../features/shop-year/rules";
+} from "../features/reports/reporting/store";
+import { summarizeShopYear } from "../features/reports/shop-year";
+import { getSafetyMonth } from "../features/safety/safety-report/store";
 import { seatCheckedIn } from "./arrival-provenance";
 import { weatherCallsInWindow } from "./blowouts";
 import { diverPackageBalance } from "./dive-packages";

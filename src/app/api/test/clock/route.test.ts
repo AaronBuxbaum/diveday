@@ -5,7 +5,7 @@ import { trips } from "@/db/schema";
 import { AT_SEA_DAY_TITLE, AT_SEA_DUSK_TITLE } from "@/db/seed-boat-at-sea";
 import { DEPARTURE_BUFFER_MS } from "@/lib/departure-clock";
 import { fileScopedShopContext } from "@/test/db";
-import { listRollCallGaps } from "../../../../features/roll-call-gaps/store";
+import { listRollCallGaps } from "../../../../features/boarding/roll-call-gaps";
 
 vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();

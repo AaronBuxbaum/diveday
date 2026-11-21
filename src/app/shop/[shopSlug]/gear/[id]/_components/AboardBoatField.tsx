@@ -1,6 +1,6 @@
 import { controlClass, Field } from "@/components/ui/form";
 import type { AppDb } from "@/db/client";
-import { listBoats } from "@/features/boats";
+import { listBoats } from "@/features/crew-and-boats/boats";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { isSafetyKitKind } from "@/lib/boat-safety";
 import type { GearItemKind } from "@/lib/gear";

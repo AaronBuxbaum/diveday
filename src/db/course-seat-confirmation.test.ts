@@ -3,7 +3,7 @@ import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
 import { fakeEmail } from "@/test/fakes";
-import { seatDiver } from "../features/seat-diver/store";
+import { seatDiver } from "../features/bookings/seat-diver";
 import { createBooking } from "./bookings";
 import { recordCourseCodes } from "./course-codes";
 import { retryBookingConfirmation, sendCourseSeatConfirmation } from "./notifications";

@@ -270,7 +270,7 @@ const DUMP_PREFIX = "dumps/";
  * out is how the split stops being worth having.
  *
  * The keys themselves are built in the app, by `platformBackupObjectKey` and
- * `platformBackupCensusKey` (src/features/backup-export/period.ts). This
+ * `platformBackupCensusKey` (src/features/records/backup-export/period.ts). This
  * constant is the infrastructure half of that agreement, so
  * infra/lib/backup-freshness.test.ts asserts the two against each other rather
  * than trusting this string on its own -- a prefix that drifts from the app's
@@ -3751,7 +3751,7 @@ exports.handler = async () => {
   // credential is safe to keep in Vercel because no principal reachable from
   // the app can read a bundle back, and this weekly unattended function is
   // exactly the principal an attacker would want holding GetObject. The format
-  // is pinned to src/features/backup-export/period.ts by
+  // is pinned to src/features/records/backup-export/period.ts by
   // infra/lib/backup-freshness.test.ts -- change one and that test fails until
   // the other agrees.
   //
@@ -4467,7 +4467,7 @@ exports.handler = async () => {
         `mediaDomainName ${JSON.stringify(domainName)} is not a hostname. It is interpolated ` +
           "into MEDIA_PUBLIC_URL_BASE, which src/lib/storage/blob-host.ts turns into an origin " +
           "allowlist, next.config.ts turns into an image-optimizer allowlist, and " +
-          "src/features/content-security-policy/rules.ts turns into an img-src source.",
+          "src/features/platform/content-security-policy.ts turns into an img-src source.",
       );
     }
     return domainName;
@@ -4483,7 +4483,7 @@ exports.handler = async () => {
   ): cloudfront.Distribution {
     const mediaOrigin = origins.S3BucketOrigin.withOriginAccessControl(mediaBucket);
     // **The app's own security headers do not reach here.**
-    // `src/features/security-headers/rules.ts` is a Next `headers()` rule, so it applies to
+    // `src/features/platform/security-headers.ts` is a Next `headers()` rule, so it applies to
     // responses Next serves and to nothing CloudFront serves. This was the
     // AWS-managed `CORS_ALLOW_ALL_ORIGINS` policy alone, which adds
     // `Access-Control-Allow-Origin: *` and no `nosniff` at all.

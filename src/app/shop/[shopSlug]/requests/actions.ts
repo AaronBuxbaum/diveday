@@ -2,10 +2,10 @@
 
 import { z } from "zod";
 import { setDateInterestOutcome } from "@/db/interests";
-import { parseForm, single } from "@/features/form-parse";
-import { sendInterestReply } from "@/features/interest-replies";
-import { revalidateAndRedirect } from "@/features/navigation";
-import { requireShopSurface } from "@/features/session";
+import { requireShopSurface } from "@/features/accounts/session";
+import { sendInterestReply } from "@/features/bookings/interest-replies";
+import { parseForm, single } from "@/features/platform/form-parse";
+import { revalidateAndRedirect } from "@/features/platform/navigation";
 import { nowDate } from "@/lib/clock";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";

@@ -6,7 +6,7 @@ import type {
   SpecialtyCertification,
   TripRequirement,
 } from "@/db/schema";
-import { asksNoMoreThan } from "../features/worth-a-look/rules";
+import { asksNoMoreThan } from "../features/bookings/worth-a-look";
 import { ranksBelow } from "./interests";
 import { PARTICIPANT_TYPES, type ParticipantType } from "./participant-types";
 import { type CertificationLevel, calculateReadiness, combineSiteRequirements } from "./readiness";

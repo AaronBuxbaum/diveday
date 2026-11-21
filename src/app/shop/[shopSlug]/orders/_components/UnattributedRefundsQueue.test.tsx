@@ -21,7 +21,7 @@ vi.mock("../actions", () => ({
 }));
 
 const { UnattributedRefundsQueue } = await import("./OwedMoneyQueues");
-const { readBackOffice } = await import("../../../../../features/orders-index/store");
+const { readBackOffice } = await import("../../../../../features/money/orders-index");
 
 const ctx = fileScopedShopContext();
 const t = staffTranslator("en-US");

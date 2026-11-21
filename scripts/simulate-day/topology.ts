@@ -1,5 +1,5 @@
 import path from "node:path";
-import { E2E_WORKER_PORT_STRIDE } from "@/features/e2e-port";
+import { E2E_WORKER_PORT_STRIDE } from "@/features/platform/e2e-port";
 import { E2E_BASE_PORT } from "../../e2e/servers";
 
 /**

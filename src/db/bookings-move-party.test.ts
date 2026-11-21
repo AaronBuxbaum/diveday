@@ -4,7 +4,7 @@ import { nowMs } from "@/lib/clock";
 import { markArrived } from "@/test/arrivals";
 import { fileScopedShopContext } from "@/test/db";
 import { fakeEmail, fakeSms } from "@/test/fakes";
-import { moveParty as moveSeatParty } from "../features/seat-diver/store";
+import { moveParty as moveSeatParty } from "../features/bookings/seat-diver";
 import { createBooking, moveParty } from "./bookings";
 import { formBuddyTeam } from "./buddy-teams";
 import type { AppDb } from "./client";

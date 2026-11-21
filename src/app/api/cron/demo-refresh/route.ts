@@ -1,6 +1,6 @@
 import { getDb } from "@/db/client";
 import { DEMO_SCHEDULE_MIN_RUNWAY_DAYS, refreshCanonicalDemoSchedule } from "@/db/demo-refresh";
-import { cronRoute } from "@/features/cron-route";
+import { cronRoute } from "@/features/platform/cron-route";
 
 /**
  * Most passes are one indexed aggregate and no write at all. The pass that does

@@ -6,8 +6,11 @@ import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { tapTargetLinkClass } from "@/components/ui/button";
 import { FactLine } from "@/components/ui/FactLine";
 import type { ShopActivityLine } from "@/db/shop-activity";
-import { requireShopSurface } from "@/features/session";
-import { canPersonViewShopActivity, getShopActivityPage } from "@/features/shop-activity-page";
+import { requireShopSurface } from "@/features/accounts/session";
+import {
+  canPersonViewShopActivity,
+  getShopActivityPage,
+} from "@/features/shop-setup/shop-activity-page";
 import { SHOP_ACTIVITY_KIND_KEYS, shopActivityLineText } from "@/i18n/activity-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";

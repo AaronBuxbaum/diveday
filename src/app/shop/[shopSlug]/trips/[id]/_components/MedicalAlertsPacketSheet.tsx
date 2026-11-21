@@ -6,8 +6,8 @@ import {
   readMedicalAlertsForPrint,
   recordMedicalAlertsPrint,
 } from "@/db/medical-alerts";
-import { isCrossSiteHeaders } from "@/features/same-origin";
-import { requireShopSurface } from "@/features/session";
+import { requireShopSurface } from "@/features/accounts/session";
+import { isCrossSiteHeaders } from "@/features/platform/same-origin";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { formatDateTimeTz } from "@/lib/format";

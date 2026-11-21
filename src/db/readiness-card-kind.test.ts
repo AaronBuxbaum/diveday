@@ -2,7 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
-import { restoreCard } from "../features/card-restore/store";
+import { restoreCard } from "../features/certifications/card-restore";
 import type { AppDb } from "./client";
 import {
   deleteCertification,

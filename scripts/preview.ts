@@ -17,7 +17,7 @@
 import { desc } from "drizzle-orm";
 import { getDb } from "@/db/client";
 import { demoPreviews } from "@/db/schema";
-import { issuePreview, parsePreviewInput, previewPath } from "@/features/demo-preview";
+import { issuePreview, parsePreviewInput, previewPath } from "@/features/demo/demo-preview";
 import { publicAppUrl } from "@/lib/notifications/app-url";
 import { readShopSite, type SiteFacts } from "./preview-site";
 

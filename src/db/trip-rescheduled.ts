@@ -612,7 +612,7 @@ async function tellSeatWithinFence(
   } = input;
   const phone = smsRecipient(person.phone);
   // Nowhere to send it: recorded, and no readiness capability minted for a
-  // link nobody will receive (the order `src/features/reminders/store.ts` keeps).
+  // link nobody will receive (the order `src/features/messages/reminders.ts` keeps).
   if (!person.email && !phone) {
     await recordNotificationDelivery(db, {
       shopId: shop.id,

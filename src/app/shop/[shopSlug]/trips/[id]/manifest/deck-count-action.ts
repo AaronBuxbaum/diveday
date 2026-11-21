@@ -2,8 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { getDb } from "@/db/client";
-import { parseDeckCount, recordDeckCount } from "@/features/deck-counts";
-import { requireShopSurface } from "@/features/session";
+import { requireShopSurface } from "@/features/accounts/session";
+import { parseDeckCount, recordDeckCount } from "@/features/boarding/deck-counts";
 import { shopPath } from "@/lib/staff-notices";
 import type { ManifestActionContext } from "./actions";
 

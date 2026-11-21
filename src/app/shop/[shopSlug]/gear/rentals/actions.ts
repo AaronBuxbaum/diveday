@@ -8,8 +8,7 @@ import { createOrder, type NewOrderLineItem, recordCounterOrder } from "@/db/ord
 import { certificationAgency, certificationLevel } from "@/db/schema";
 import { getShopById } from "@/db/shops";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
-import { createDiver } from "@/features/divers";
-import { allValues, formValue, readForm, text } from "@/features/form-parse";
+import { requireStaffSession } from "@/features/accounts/session";
 import {
   checkOutCounterRental,
   correctCounterTankFill,
@@ -20,11 +19,12 @@ import {
   recordCounterRentalCardSighting,
   releaseCounterRental,
   returnCounterRental,
-} from "@/features/gear-counter-rentals";
-import { dispatchIntegrationsAfterResponse } from "@/features/integrations";
-import { revalidateAndRedirect } from "@/features/navigation";
-import { customerAddressFromForm } from "@/features/payments";
-import { requireStaffSession } from "@/features/session";
+} from "@/features/gear/gear-counter-rentals";
+import { customerAddressFromForm } from "@/features/money/payments";
+import { createDiver } from "@/features/people/divers";
+import { allValues, formValue, readForm, text } from "@/features/platform/form-parse";
+import { revalidateAndRedirect } from "@/features/platform/navigation";
+import { dispatchIntegrationsAfterResponse } from "@/features/shop-setup/integrations";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { calendarDateInTimezone } from "@/lib/calendar-date";

@@ -19,7 +19,7 @@ describe("substrate leaves", () => {
     const result = await leaves({
       "src/lib/leaf.ts": "export const leaf = 1;",
       "src/app/page.tsx": 'import { leaf } from "@/lib/leaf";',
-      "src/features/example/index.ts": 'export { leaf } from "@/lib/leaf";',
+      "src/features/trips/example.ts": 'export { leaf } from "@/lib/leaf";',
       "src/lib/leaf.test.ts": 'import { leaf } from "./leaf";',
       "src/db/leaf.spec.ts": 'import { leaf } from "../lib/leaf";',
       "src/test/fixture.ts": 'import { leaf } from "@/lib/leaf";',

@@ -51,7 +51,7 @@ Constraints a lower-context agent must not miss:
 ## Decision
 
 **DiveDay may call a third-party provider's API on a shop's behalf, when that shop has authorized
-it, for a provider on the register in `src/features/integrations/registry.ts` — and only through a
+it, for a provider on the register in `src/features/shop-setup/integrations/registry.ts` — and only through a
 private app that is never submitted to a public directory.**
 
 - **Private apps only.** No Shopify App Store submission, no public Zapier App Directory listing,

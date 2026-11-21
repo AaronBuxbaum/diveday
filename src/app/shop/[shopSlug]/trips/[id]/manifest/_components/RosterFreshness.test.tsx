@@ -1,5 +1,5 @@
 import { expect, it, vi } from "vitest";
-import { verifyRosterConfirmation } from "@/features/offline-manifest-snapshots";
+import { verifyRosterConfirmation } from "@/features/boarding/offline-manifest-snapshots";
 import { staffTranslator } from "@/i18n/staff-messages";
 import * as clock from "@/lib/clock";
 import { RosterFreshness } from "./RosterFreshness";

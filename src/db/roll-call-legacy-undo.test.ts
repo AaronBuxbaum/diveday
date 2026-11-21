@@ -3,7 +3,7 @@ import { expect, it } from "vitest";
 import {
   issueOfflineManifestSnapshot,
   readOfflineManifestRoster,
-} from "@/features/offline-manifest-snapshots";
+} from "@/features/boarding/offline-manifest-snapshots";
 import { nowDate } from "@/lib/clock";
 import { maxRecordedDiveNumber } from "@/lib/manifests";
 import { canonicalRollCallEvidenceId } from "@/lib/roll-call-causality";

@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
+import { requireShopSurface } from "@/features/accounts/session";
 import {
   canPersonManageRentalSettings,
   getRentalSettingsPage,
-} from "@/features/rental-settings-page";
-import { requireShopSurface } from "@/features/session";
+} from "@/features/gear/rental-settings-page";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { noticeFromParam } from "@/lib/staff-notices";

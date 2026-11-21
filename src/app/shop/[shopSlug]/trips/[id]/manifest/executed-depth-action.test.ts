@@ -14,10 +14,10 @@ vi.mock("@/db/executed-dives", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/db/executed-dives")>()),
   upsertExecutedDive: vi.fn(async () => ({ ok: true }) as const),
 }));
-vi.mock("../../../../../../features/session/rules", async () =>
+vi.mock("../../../../../../features/accounts/session", async () =>
   (await import("@/test/staff-session")).sessionMockOverStaffSession(),
 );
-const { requireStaffSession } = await import("../../../../../../features/session/rules");
+const { requireStaffSession } = await import("../../../../../../features/accounts/session");
 const { getShopById } = await import("@/db/shops");
 const { upsertExecutedDive } = await import("@/db/executed-dives");
 const { saveExecutedDiveAction } = await import("./actions");

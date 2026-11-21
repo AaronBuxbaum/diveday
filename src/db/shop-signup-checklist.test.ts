@@ -2,9 +2,9 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { unseededTestDb } from "@/test/db";
-import { recordSetupRequest } from "../features/funnel/store";
-import { issueSetupLink } from "../features/setup-links/store";
-import { createSignedUpShop } from "../features/shop-signup/store";
+import { recordSetupRequest } from "../features/reports/funnel";
+import { issueSetupLink } from "../features/shop-setup/setup-links";
+import { createSignedUpShop } from "../features/shop-setup/shop-signup";
 import { preDepartureChecklistItems } from "./schema";
 
 async function signUp(slug: string) {

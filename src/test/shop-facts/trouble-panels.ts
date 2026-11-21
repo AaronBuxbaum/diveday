@@ -13,7 +13,7 @@ import {
   processorErasureObligations,
   trips,
 } from "../../db/schema/index";
-import { recordProcessorErasureObligations } from "../../features/processor-erasure/store";
+import { recordProcessorErasureObligations } from "../../features/records/processor-erasure";
 import { ATTEMPT_RULES } from "../../lib/attempts";
 import { calendarDateInTimezone } from "../../lib/calendar-date";
 import { HOUR_MS } from "../../lib/clock";

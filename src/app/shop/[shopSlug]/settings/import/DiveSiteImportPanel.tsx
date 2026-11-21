@@ -1,7 +1,10 @@
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { SectionCard } from "@/components/ui/card";
 import type { NoticeTone } from "@/components/ui/tone";
-import { DIVE_SITE_CREATURE_IMPORT_COLUMNS, DIVE_SITE_IMPORT_COLUMNS } from "@/features/dive-sites";
+import {
+  DIVE_SITE_CREATURE_IMPORT_COLUMNS,
+  DIVE_SITE_IMPORT_COLUMNS,
+} from "@/features/sites/dive-sites";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import { noticeFromParam } from "@/lib/staff-notices";
 import { ExistingImportReview } from "./ExistingImportReview";

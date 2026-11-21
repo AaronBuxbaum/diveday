@@ -6,8 +6,8 @@ import {
   type DisputeEvent,
   listLostDisputes,
   recordStripeDispute,
-} from "../features/payment-disputes/store";
-import { getMonthMoneyDetail } from "../features/report-lines/store";
+} from "../features/money/payment-disputes";
+import { getMonthMoneyDetail } from "../features/reports/report-lines/store";
 import type { AppDb } from "./client";
 import { orders, people } from "./schema";
 

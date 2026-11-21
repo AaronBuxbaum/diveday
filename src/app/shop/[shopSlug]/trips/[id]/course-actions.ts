@@ -14,14 +14,14 @@ import {
   studentOnSeat,
 } from "@/db/readiness";
 import { diveSpecialty } from "@/db/schema";
-import { isCardKind, setCardProcessed } from "@/features/agency-processing";
-import { tellCourseCertified } from "@/features/course-certified";
-import { recordCourseMaterialsDone } from "@/features/course-materials";
-import { recordCourseNextStep } from "@/features/course-next-step";
-import { recordCourseStepDone } from "@/features/course-progress";
-import { formValue, readForm, text } from "@/features/form-parse";
-import { revalidateAndRedirect } from "@/features/navigation";
-import { requireShopSurface } from "@/features/session";
+import { requireShopSurface } from "@/features/accounts/session";
+import { isCardKind, setCardProcessed } from "@/features/certifications/agency-processing";
+import { formValue, readForm, text } from "@/features/platform/form-parse";
+import { revalidateAndRedirect } from "@/features/platform/navigation";
+import { tellCourseCertified } from "@/features/training/course-certified";
+import { recordCourseMaterialsDone } from "@/features/training/course-materials";
+import { recordCourseNextStep } from "@/features/training/course-next-step";
+import { recordCourseStepDone } from "@/features/training/course-progress";
 import { nowDate } from "@/lib/clock";
 import { DECLARABLE_CERTIFICATION_LEVELS } from "@/lib/dive-declaration";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";

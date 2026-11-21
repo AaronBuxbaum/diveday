@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { requireShopSurface } from "@/features/session";
+import { requireShopSurface } from "@/features/accounts/session";
 import { uuidParam } from "@/lib/uuid";
 import { DepartureLogPage } from "./DepartureLogPage";
 export const instant = true;

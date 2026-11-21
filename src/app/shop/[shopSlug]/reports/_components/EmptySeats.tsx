@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { tapTargetLinkClass } from "@/components/ui/button";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
-import type { departuresWithEmptySeats } from "@/features/open-seats";
+import type { departuresWithEmptySeats } from "@/features/bookings/open-seats";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatShortDate } from "@/lib/format";
 

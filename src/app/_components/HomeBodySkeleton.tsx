@@ -1,7 +1,7 @@
 import { SkeletonLineBars } from "@/components/ShopPageHeader";
 import { sectionCardClass } from "@/components/ui/card";
 import { BANNER_TITLE_CLASS, LEAD_TITLE_CLASS } from "@/components/ui/typography";
-import { homeDiverDoorEnabled } from "@/features/home-diver-door";
+import { homeDiverDoorEnabled } from "@/features/public-site/home-diver-door";
 
 /**
  * The hero's title, a line box per line: `text-5xl` / `sm:text-6xl` /

@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { prepareContactImport } from "@/test/import-fixture";
+import { prepareGearImport } from "../features/gear/gear-import/rules";
 import {
   DIVE_SITE_CREATURE_IMPORT_COLUMNS,
   prepareDiveSiteCreaturesImport,
   prepareDiveSiteImport,
-} from "../features/dive-sites/dive-site-import.rules";
-import { prepareGearImport } from "../features/gear-import/rules";
+} from "../features/sites/dive-sites/dive-site-import.rules";
 import { MAX_IMPORT_COLUMNS } from "./import";
 
 /**

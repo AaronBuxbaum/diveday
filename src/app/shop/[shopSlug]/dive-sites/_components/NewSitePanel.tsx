@@ -1,8 +1,8 @@
 import { UnsavedSections } from "@/components/editor/EditorRail";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { assistsAvailable } from "@/features/assists";
-import type { ShopSurface } from "@/features/session";
+import type { ShopSurface } from "@/features/accounts/session";
+import { assistsAvailable } from "@/features/ai/assists";
 import { diverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
 import type { StaffTranslator } from "@/i18n/staff-messages";

@@ -12,7 +12,7 @@ const SOURCE = routeSource(import.meta.dirname, "page.tsx");
 const CODE = SOURCE.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
 /** The page's one reader (issue #2757): where the ticket's reads now live. */
 const READER = readFileSync(
-  join(process.cwd(), "src/features/counter-rental-ticket-page/store.ts"),
+  join(process.cwd(), "src/features/gear/counter-rental-ticket-page.ts"),
   "utf8",
 );
 

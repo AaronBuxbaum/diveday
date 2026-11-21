@@ -1,7 +1,7 @@
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
-import type { InviteSuggestions } from "@/features/invite-suggestions";
+import type { InviteSuggestions } from "@/features/crew-and-boats/invite-suggestions";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { formatPastMonth } from "@/lib/format";

@@ -12,7 +12,7 @@ import { redirectedTo, staffSession } from "@/test/staff-session";
  */
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
-vi.mock("../../../../../features/navigation/rules", () => ({
+vi.mock("../../../../../features/platform/navigation", () => ({
   revalidateAndRedirect: vi.fn((_path: string, to: string) => {
     throw new Error(`REDIRECT:${to}`);
   }),
@@ -21,26 +21,27 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn(async () => ({}) as never) };
 });
-vi.mock("../../../../../features/import/store", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../../../../features/import/store")>();
+vi.mock("../../../../../features/records/import/store", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("../../../../../features/records/import/store")>();
   return {
     ...actual,
     canPersonImportShopData: vi.fn(async () => true),
     commitContactImport: vi.fn(),
   };
 });
-vi.mock("../../../../../features/gear-import/store", () => ({ commitGearImport: vi.fn() }));
-vi.mock("../../../../../features/dive-sites/dive-site-import.store", () => ({
+vi.mock("../../../../../features/gear/gear-import/store", () => ({ commitGearImport: vi.fn() }));
+vi.mock("../../../../../features/sites/dive-sites/dive-site-import.store", () => ({
   commitDiveSiteImport: vi.fn(),
 }));
-vi.mock("../../../../../features/session/rules", () => ({ requireStaffSession: vi.fn() }));
+vi.mock("../../../../../features/accounts/session", () => ({ requireStaffSession: vi.fn() }));
 vi.mock("@/db/shops", () => ({ getShopById: vi.fn() }));
 
-const { requireStaffSession } = await import("../../../../../features/session/rules");
-const { commitContactImport } = await import("../../../../../features/import/store");
-const { commitGearImport } = await import("../../../../../features/gear-import/store");
+const { requireStaffSession } = await import("../../../../../features/accounts/session");
+const { commitContactImport } = await import("../../../../../features/records/import/store");
+const { commitGearImport } = await import("../../../../../features/gear/gear-import/store");
 const { commitDiveSiteImport } = await import(
-  "../../../../../features/dive-sites/dive-site-import.store"
+  "../../../../../features/sites/dive-sites/dive-site-import.store"
 );
 const { getShopById } = await import("@/db/shops");
 const { importContactsAction } = await import("./actions");

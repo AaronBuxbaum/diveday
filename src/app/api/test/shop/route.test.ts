@@ -8,8 +8,8 @@ import { boats, bookings, people, shops, trips } from "@/db/schema";
 import { resetDemoSchedule } from "@/db/seed";
 import { liveTrip } from "@/db/trips-live";
 import { listUnfinished } from "@/db/unfinished";
-import { createSignedUpShop } from "@/features/shop-signup";
-import { getShopDayDepartures } from "@/features/today";
+import { getShopDayDepartures } from "@/features/day/today";
+import { createSignedUpShop } from "@/features/shop-setup/shop-signup";
 import { DEFAULT_PRICING_CONFIG } from "@/lib/billing/pricing-plans";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { HOUR_MS, nowDate } from "@/lib/clock";
@@ -18,8 +18,8 @@ import { benchReturnConcerns } from "@/lib/gear";
 import { markArrived } from "@/test/arrivals";
 import { seededShopContext, unseededTestDb } from "@/test/db";
 import { mintASetupLink } from "@/test/shop-facts/mint-tokens";
-import { inHorizonReadiness } from "../../../../features/blockers/store";
-import { listGearRentals } from "../../../../features/gear-rentals/store";
+import { inHorizonReadiness } from "../../../../features/boarding/blockers";
+import { listGearRentals } from "../../../../features/gear/gear-rentals/store";
 
 /**
  * **The one test door** (issue #2759): a shop's state is a list of named facts.

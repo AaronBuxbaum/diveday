@@ -10,7 +10,7 @@ import { SwitchingConcierge } from "@/components/SwitchingConcierge";
 import { SwitchingImportCta } from "@/components/SwitchingImportCta";
 import { groupLabelClass } from "@/components/ui/group-label";
 import { BANNER_TITLE_CLASS, ITEM_TITLE_CLASS } from "@/components/ui/typography";
-import { requestPricingOffer } from "@/features/pricing-offer";
+import { requestPricingOffer } from "@/features/money/pricing-offer";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { DEFAULT_DIVER_LOCALE, type DiverLocale } from "@/i18n/settings";

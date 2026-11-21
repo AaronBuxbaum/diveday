@@ -1,7 +1,7 @@
 import { SectionCard } from "@/components/ui/card";
 import type { AppDb } from "@/db/client";
-import { getDiverPhotoState } from "@/features/person-photo";
-import type { ReadyPageData } from "@/features/ready";
+import type { ReadyPageData } from "@/features/boarding/ready";
+import { getDiverPhotoState } from "@/features/people/person-photo";
 import type { DiverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
 import { MAX_IMAGE_MB } from "@/lib/storage";

@@ -3,8 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { queueAndAttemptMediaDeletion } from "@/db/media-deletions";
-import { ownStaffProfile, writeOwnStaffProfile } from "@/features/public-staff-profiles";
-import { requireShopSurface } from "@/features/session";
+import { requireShopSurface } from "@/features/accounts/session";
+import {
+  ownStaffProfile,
+  writeOwnStaffProfile,
+} from "@/features/public-site/public-staff-profiles";
 import { publicStaffProfileSchema } from "@/lib/public-staff-profile";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { storeStaffProfileImage } from "@/lib/storage";

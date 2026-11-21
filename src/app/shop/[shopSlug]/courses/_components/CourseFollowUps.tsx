@@ -1,8 +1,11 @@
 import { EmptyState } from "@/components/EmptyState";
 import type { AppDb } from "@/db/client";
 import { queryAll } from "@/db/query-helpers";
-import { listCardsToProcess, listCardsToValidate } from "@/features/agency-processing";
-import { getCourseLadder } from "@/features/course-ladder";
+import {
+  listCardsToProcess,
+  listCardsToValidate,
+} from "@/features/certifications/agency-processing";
+import { getCourseLadder } from "@/features/training/course-ladder";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { inviteToCourseSessionAction, markCardProcessedFromCoursesAction } from "../actions";

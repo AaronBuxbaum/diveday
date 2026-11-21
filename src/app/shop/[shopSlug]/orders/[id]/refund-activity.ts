@@ -1,6 +1,6 @@
 import type { AppDb } from "@/db/client";
 import { recordShopActivity } from "@/db/shop-activity";
-import { dispatchIntegrationsAfterResponse } from "@/features/integrations";
+import { dispatchIntegrationsAfterResponse } from "@/features/shop-setup/integrations";
 
 /**
  * What follows a staff refund that actually moved money.

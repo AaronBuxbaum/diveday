@@ -9,7 +9,7 @@ import { meetingWindowsByTrip } from "@/db/trip-meeting-windows";
 import {
   nextOfflineManifestSnapshotRevision,
   readOfflineManifestRoster,
-} from "@/features/offline-manifest-snapshots";
+} from "@/features/boarding/offline-manifest-snapshots";
 import type { DiveDaySession } from "@/lib/auth";
 import { signOfflineErasureEpoch } from "@/lib/offline-erasure-epoch";
 import {

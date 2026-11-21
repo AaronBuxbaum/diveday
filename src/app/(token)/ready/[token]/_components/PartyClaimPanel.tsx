@@ -3,7 +3,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
-import { partySeatAnchor } from "@/features/party-seat-anchor";
+import { partySeatAnchor } from "@/features/bookings/party-seat-anchor";
 import { diverTranslator } from "@/i18n/messages";
 import { formatPlannedDateTimeTz } from "@/lib/format";
 import { groupSeatSettled } from "@/lib/group-holds";

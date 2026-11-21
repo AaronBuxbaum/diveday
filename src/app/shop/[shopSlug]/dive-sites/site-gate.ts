@@ -1,7 +1,7 @@
 import { canPersonEditDiveSites } from "@/db/authz";
 import { getDb } from "@/db/client";
-import { revalidateAndRedirect } from "@/features/navigation";
-import type { requireStaffSession } from "@/features/session";
+import type { requireStaffSession } from "@/features/accounts/session";
+import { revalidateAndRedirect } from "@/features/platform/navigation";
 import { shopPath } from "@/lib/staff-notices";
 
 /**

@@ -4,8 +4,8 @@ import { HOUR_MS, MINUTE_MS, nowDate } from "@/lib/clock";
 import { DEFAULT_FLY_SAFE_HOURS, flySafeFrom } from "@/lib/fly-safe";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { fileScopedShopContext, seededShopContext } from "@/test/db";
-import { checkInBooking } from "../features/check-in/store";
-import { markBookingNoShow } from "../features/no-show/store";
+import { checkInBooking } from "../features/boarding/check-in/store";
+import { markBookingNoShow } from "../features/boarding/no-show";
 import { createBookingParty } from "./bookings";
 import type { AppDb } from "./client";
 import {

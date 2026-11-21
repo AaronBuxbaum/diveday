@@ -85,7 +85,7 @@ branch overrides is a trap.
 
 During ordinary reconnect, a witnessed seat or crew observation syncs automatically only while its meeting, assignment and causal context still match. An ambiguous observation remains on the device for review; it is not proof the server accepted it. Staff can review the current roster and explicitly record a new live mark, or use manual roll call. Checklist observations retain their existing status-aware sync; a vessel change is not currently checked for them, so staff must verify the current vessel's checklist. Independent observations can sync. The saved envelope and its pending grace still expire at the existing ceiling, after which only a loss notice remains.
 
-A meeting or seat generation is a random fingerprint, not a counter (`nextOfflineGeneration`, `src/db/offline-generation.ts`), so a restore that rewinds a meeting will not re-issue the number a lost branch used (a collision has about a one-in-two-billion chance per edit): a device that saved a copy of the lost edit sends a witness that no longer matches, and its mark stays on the device for review; staff work that review, and until then the dock uses manual roll call. The restore drill (`src/features/offline-manifest-snapshots/restore-drill.postgres.test.ts`, real PostgreSQL) puts every table back to its backup-instant rows (a row copy, not a Neon branch restore) and shows this, a lost receipt retried to a single stored row, and the operator pause leaving the queue and database untouched. It proves what the application does; it does not prove the external fence, which stays the stop above. A device that saved its copy before the backup instant still matches a restored meeting that really is identical, which is correct.
+A meeting or seat generation is a random fingerprint, not a counter (`nextOfflineGeneration`, `src/db/offline-generation.ts`), so a restore that rewinds a meeting will not re-issue the number a lost branch used (a collision has about a one-in-two-billion chance per edit): a device that saved a copy of the lost edit sends a witness that no longer matches, and its mark stays on the device for review; staff work that review, and until then the dock uses manual roll call. The restore drill (`src/features/boarding/offline-manifest-snapshots/restore-drill.postgres.test.ts`, real PostgreSQL) puts every table back to its backup-instant rows (a row copy, not a Neon branch restore) and shows this, a lost receipt retried to a single stored row, and the operator pause leaving the queue and database untouched. It proves what the application does; it does not prove the external fence, which stays the stop above. A device that saved its copy before the backup instant still matches a restored meeting that really is identical, which is correct.
 
 Sync requires protocol 3; an older client receives a whole-request refusal before any event is written or settled. Current snapshot, upcoming and medical readers continue to use their existing protocol. Keep the same stable `AUTH_SECRET` across serving revisions: changing it invalidates outstanding witnesses, which must remain for review. Roll back only to code that enforces the same witness and generation checks; an older writer can accept an unverified mark or change a meeting without invalidating it. The restore stop above remains in force: automatic replay after restore is unsupported.
 
@@ -210,7 +210,7 @@ AWS_PROFILE=diveday-admin aws secretsmanager get-secret-value \
 `GET /api/cron/platform-backup`, **Mondays 05:00 UTC** (`vercel.json`), decided in
 [ADR 20260812-platform-backup-runner](../architecture/decisions/20260812-platform-backup-runner.md).
 For every non-demo shop it builds the bundle above and PUTs it to `exports/<YYYY-MM-DD>/<slug>.zip`.
-Implementation is `src/features/backup-export/platform-backup.ts`; the bundle itself is assembled by
+Implementation is `src/features/records/backup-export/platform-backup.ts`; the bundle itself is assembled by
 that module's `bundle.ts`, shared byte for byte with the shop-owned pass in §2b.
 
 | Property | Reality |
@@ -268,7 +268,7 @@ carries the census is read for free, with no new IAM and no second call.
 The object *does* have a JSON body (`{shops, stored, failed, skipped, completedAt}`) for an operator
 who is already in the console and can open it. Nothing automated reads it — the key is the contract,
 the body is the courtesy. The format lives in `platformBackupCensusKey`
-(`src/features/backup-export/period.ts`) and is pinned to the Lambda's regex by a test that recovers
+(`src/features/records/backup-export/period.ts`) and is pinned to the Lambda's regex by a test that recovers
 that regex from the synthesized template, so the two cannot drift apart silently.
 
 A refused census never fails the pass: every bundle is already stored by then, and answering 500
@@ -309,7 +309,7 @@ The complementary layer a shop controls end to end
 bundle §2 describes — every CSV, the README, bundled photos — adds the shop-wide `trips.ics`
 calendar document, and PUTs it to the S3-compatible bucket the shop configured at
 `/shop/<slug>/settings/backups` (its own Settings page — ADR
-20260806-one-data-out-surface). Implementation lives in `src/features/backup-export/`.
+20260806-one-data-out-surface). Implementation lives in `src/features/records/backup-export/`.
 
 Operationally distinct from §2 in every way that matters during an incident:
 

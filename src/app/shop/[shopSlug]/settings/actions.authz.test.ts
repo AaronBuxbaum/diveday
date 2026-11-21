@@ -48,11 +48,11 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
 });
-vi.mock("../../../../features/session/rules", () => ({ requireStaffSession: vi.fn() }));
+vi.mock("../../../../features/accounts/session", () => ({ requireStaffSession: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
 const { revalidatePath } = await import("next/cache");
-const { requireStaffSession } = await import("../../../../features/session/rules");
+const { requireStaffSession } = await import("../../../../features/accounts/session");
 const { resendShoreAlertConfirmationAction, saveEmergencyReferenceAction } = await import(
   "./boat-actions"
 );
@@ -792,7 +792,7 @@ describe("saveProfileAction's pick", () => {
   it("saves a departure, and refuses one that is gone while keeping the rest of the form", async () => {
     const { db, shop, owner } = await context();
     signIn(shop, owner);
-    const { pickChoices } = await import("@/features/shop-pick");
+    const { pickChoices } = await import("@/features/public-site/shop-pick");
     const [trip] = (await pickChoices(db, shop, nowDate())).trips;
     if (!trip) throw new Error("the seeded shop has an upcoming trip");
 

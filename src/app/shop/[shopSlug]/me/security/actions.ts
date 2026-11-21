@@ -18,10 +18,10 @@ import {
   enableProtectedTotp,
 } from "@/db/passkeys";
 import { getAccountIdForPerson } from "@/db/user-accounts";
-import { parseForm, readForm, single, text } from "@/features/form-parse";
-import { revalidateAndRedirect } from "@/features/navigation";
-import { isStepUpPurpose, safeStepUpReturnPath } from "@/features/security-step-up";
-import { requireShopSurface } from "@/features/session";
+import { isStepUpPurpose, safeStepUpReturnPath } from "@/features/accounts/security-step-up";
+import { requireShopSurface } from "@/features/accounts/session";
+import { parseForm, readForm, single, text } from "@/features/platform/form-parse";
+import { revalidateAndRedirect } from "@/features/platform/navigation";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
 import { runtimeMode } from "@/lib/runtime-mode";

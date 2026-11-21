@@ -1,8 +1,8 @@
 import { inArray } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
-import { ACCOUNT_TOKEN_RETENTION_DAYS, RETENTION_DAYS } from "../features/retention/rules";
-import { pruneExpiredRecords } from "../features/retention/store";
+import { ACCOUNT_TOKEN_RETENTION_DAYS, RETENTION_DAYS } from "../features/records/retention/rules";
+import { pruneExpiredRecords } from "../features/records/retention/store";
 import * as schema from "./schema";
 import { userAccounts } from "./schema";
 

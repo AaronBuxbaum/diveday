@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { verifyWaiverIntegrity } from "@/lib/waiver-integrity";
 import { restoreDraftShopAnswers, type ShopQuestion } from "@/lib/waiver-questions";
 import { fileScopedShopContext } from "@/test/db";
-import { anonymizeDiver } from "../features/anonymize/store";
+import { anonymizeDiver } from "../features/records/anonymize";
 import {
   clearAnswers,
   draftsOf,

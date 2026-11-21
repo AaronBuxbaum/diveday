@@ -1,5 +1,5 @@
-import { boatWorkItems, boatWorkText } from "@/features/boat-work";
-import type { getTripOverview } from "@/features/trip-overview";
+import { boatWorkItems, boatWorkText } from "@/features/crew-and-boats/boat-work";
+import type { getTripOverview } from "@/features/trips/trip-overview";
 import { overRatioPulseKey } from "@/i18n/crew-gap-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { PREP_SECTION_ID } from "@/lib/element-id";

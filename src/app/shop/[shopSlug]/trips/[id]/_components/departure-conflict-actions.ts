@@ -2,8 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { dismissBoardingObservation } from "@/db/boarding-observations";
-import { settleDockObservations } from "@/features/no-show";
-import { requireShopSurface } from "@/features/session";
+import { requireShopSurface } from "@/features/accounts/session";
+import { settleDockObservations } from "@/features/boarding/no-show";
 import { shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 

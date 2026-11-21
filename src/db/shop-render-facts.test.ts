@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
-import { hasActiveCourses } from "../features/courses";
-import { countWorkOrders } from "../features/work-orders";
+import { countWorkOrders } from "../features/gear/work-orders";
+import { hasActiveCourses } from "../features/training/courses";
 import { fileScopedShopContext, unseededTestDb } from "../test/db";
 import { countGearItems } from "./gear";
 import { shopHasEverTakenAnOrder } from "./orders";

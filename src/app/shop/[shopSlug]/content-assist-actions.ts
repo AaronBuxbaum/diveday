@@ -3,17 +3,17 @@
 import { canPersonConfigureTrips, canPersonEditCourseTemplates } from "@/db/authz";
 import type { DiveSpecialty } from "@/db/schema";
 import { recordTranslation, translatableOriginal } from "@/db/shop-text-translations";
-import { runAssist } from "@/features/assists";
-import { BENCH_NOTE_FEATURE, benchNote, benchNoteCall } from "@/features/bench-note";
-import { courseWords, tripWords } from "@/features/content-assists";
+import { requireShopSurface } from "@/features/accounts/session";
+import { runAssist } from "@/features/ai/assists";
+import { courseWords, tripWords } from "@/features/ai/content-assists";
 import {
   DESCRIPTION_DRAFT_FEATURE,
   type DescriptionFacts,
   descriptionDraft,
   descriptionDraftCall,
-} from "@/features/description-draft";
-import { requireShopSurface } from "@/features/session";
-import { SITE_BRIEF_FEATURE, siteBrief, siteBriefCall } from "@/features/site-brief";
+} from "@/features/ai/description-draft";
+import { BENCH_NOTE_FEATURE, benchNote, benchNoteCall } from "@/features/gear/bench-note";
+import { SITE_BRIEF_FEATURE, siteBrief, siteBriefCall } from "@/features/sites/site-brief";
 import { CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-labels";
 import { staffTranslator } from "@/i18n/staff-messages";
 import {

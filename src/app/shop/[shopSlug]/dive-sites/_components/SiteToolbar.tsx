@@ -10,7 +10,7 @@ import {
   SITE_NEED_FILTERS,
   type SiteListFilters,
   siteListHref,
-} from "@/features/dive-sites";
+} from "@/features/sites/dive-sites";
 import { diveSiteDifficultyLabel } from "@/i18n/dive-site-labels";
 import type { DiverTranslator } from "@/i18n/messages";
 import { SPECIALTY_KEYS } from "@/i18n/readiness-labels";

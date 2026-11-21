@@ -7,11 +7,11 @@ import {
   upcomingScheduleRange,
   upcomingSessionsByCourse,
 } from "@/db/trips";
-import { listBoats } from "@/features/boats";
-import { listShelfCourses } from "@/features/courses";
-import { getShopReviewAggregate } from "@/features/reviews";
-import { listTripLenses } from "@/features/trip-lenses";
-import { siteSightings } from "@/features/trip-sightings";
+import { getShopReviewAggregate } from "@/features/after-the-dive/reviews";
+import { listBoats } from "@/features/crew-and-boats/boats";
+import { siteSightings } from "@/features/sites/trip-sightings";
+import { listShelfCourses } from "@/features/training/courses";
+import { listTripLenses } from "@/features/trips/trip-lenses";
 import { EMPTY_REVIEW_AGGREGATE } from "@/lib/reviews";
 import { resolveLens } from "@/lib/trip-lenses";
 import { seatsOnSale } from "@/lib/trips";

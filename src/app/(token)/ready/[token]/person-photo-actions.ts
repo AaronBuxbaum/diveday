@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { changePrivatePersonPhoto } from "@/features/person-photo";
+import { changePrivatePersonPhoto } from "@/features/people/person-photo";
 import { MAX_IMAGE_BYTES } from "@/lib/storage";
 import { contextFor } from "./action-helpers";
 

@@ -76,7 +76,7 @@ export type StartCheckoutInput = {
   gearLines?: Array<{ bookingId: string; description: string; amountCents: number }>;
   /**
    * A Stripe `PromotionCode` id, already resolved and scope-checked by the
-   * caller — `getActiveTripPromoByCode` (src/features/trip-promos/store.ts) for a
+   * caller — `getActiveTripPromoByCode` (src/features/money/trip-promos.ts) for a
    * trip-scoped last-minute deal, or `getRedeemableShopPromo`
    * (src/db/shop-promos.ts) for a shop-wide code — never a raw diver-typed
    * code. Only ever passed on a fresh checkout attempt, not a reuse (docs ADRs
@@ -93,7 +93,7 @@ export type StartCheckoutInput = {
   shopPromo?: CheckoutPromo;
   /**
    * The trip-scoped last-minute deal behind `promotionCode`, when *that's*
-   * where it came from (`getActiveTripPromoByCode`, src/features/trip-promos/store.ts).
+   * where it came from (`getActiveTripPromoByCode`, src/features/money/trip-promos.ts).
    * The counterpart to `shopPromo`; the caller resolves one or the other, never
    * both.
    *
@@ -368,7 +368,7 @@ export async function startBookingCheckout(
     // A pending row with no hosted page is not reusable, and the erasure path
     // depends on that: `anonymizeDiver` nulls `checkout_url` on every checkout
     // minted with an erased diver's address, including a party they paid for
-    // and hold no seat on (src/features/anonymize/store.ts, issue #1722). Dropping this
+    // and hold no seat on (src/features/records/anonymize.ts, issue #1722). Dropping this
     // clause would hand the next caller on those same bookings the page minted
     // for the diver we just told the shop had been erased.
     hasPageFor(existing, input.customerEmail) &&

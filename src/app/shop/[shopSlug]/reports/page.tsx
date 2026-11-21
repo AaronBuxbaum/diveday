@@ -7,19 +7,19 @@ import { PeriodNav } from "@/components/PeriodNav";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { tapTargetLinkClass } from "@/components/ui/button";
 import { ShopNotice } from "@/components/ui/outcome";
+import { requireShopSurface } from "@/features/accounts/session";
 import {
   compareMonthlyReports,
   formatReportMoney,
   type MonthComparison,
   monthHasActivity,
   summarizeMonth,
-} from "@/features/reporting";
+} from "@/features/reports/reporting";
 import {
   canPersonViewShopReports,
   getReportsFloor,
   getReportsMonth,
-} from "@/features/reports-page";
-import { requireShopSurface } from "@/features/session";
+} from "@/features/reports/reports-page";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import {

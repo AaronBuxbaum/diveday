@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { expect, it, vi } from "vitest";
 import { shops } from "@/db/schema";
-import { createTripLens } from "@/features/trip-lenses";
+import { createTripLens } from "@/features/trips/trip-lenses";
 import { fileScopedShopContext } from "@/test/db";
 import {
   redirectedTo,
@@ -22,9 +22,9 @@ vi.mock("@/db/client", async (original) => ({
   ...(await original<typeof import("@/db/client")>()),
   getDb: vi.fn(),
 }));
-vi.mock("../../../../../features/session/rules", () => ({ requireStaffSession: vi.fn() }));
+vi.mock("../../../../../features/accounts/session", () => ({ requireStaffSession: vi.fn() }));
 const { getDb } = await import("@/db/client");
-const { requireStaffSession } = await import("../../../../../features/session/rules");
+const { requireStaffSession } = await import("../../../../../features/accounts/session");
 const { saveTripDefaultsAction } = await import("./actions");
 
 async function signIn(email: string) {

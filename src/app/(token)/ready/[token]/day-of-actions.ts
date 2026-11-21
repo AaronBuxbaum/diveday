@@ -11,9 +11,9 @@ import {
 } from "@/db/bookings";
 import { recordRentalFitNote } from "@/db/rental-fit";
 import { setWelcomeConsent } from "@/db/welcome-cues";
-import { recordHelpRequest } from "@/features/help-requests";
-import { revalidateAndRedirect } from "@/features/navigation";
-import { clearBookingRunningLate, markBookingRunningLate } from "@/features/running-late";
+import { clearBookingRunningLate, markBookingRunningLate } from "@/features/boarding/running-late";
+import { recordHelpRequest } from "@/features/messages/help-requests";
+import { revalidateAndRedirect } from "@/features/platform/navigation";
 import { nowDate } from "@/lib/clock";
 import { DIVE_INTENTS } from "@/lib/dive-intent";
 import { DIVE_RECENCY_BANDS } from "@/lib/dive-recency";

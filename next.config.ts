@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { withSentryConfig } from "@sentry/nextjs/config";
 import type { NextConfig } from "next";
-import { securityHeaderRules } from "@/features/security-headers";
+import { securityHeaderRules } from "@/features/platform/security-headers";
 import { applyDevOrigin } from "./scripts/dev-origin.mjs";
 import { managedImageRemotePatterns } from "./src/lib/storage/blob-host";
 
@@ -32,7 +32,7 @@ const nextConfig: NextConfig = {
   generateBuildId: () => buildId,
   env: { NEXT_PUBLIC_DIVEDAY_BUILD_ID: buildId },
   // Baseline security headers (specialist-optimization-audit-20260731.md §5)
-  // — see src/features/security-headers/rules.ts for the header set and rationale.
+  // — see src/features/platform/security-headers.ts for the header set and rationale.
   async headers() {
     return securityHeaderRules();
   },
@@ -284,7 +284,7 @@ const nextConfig: NextConfig = {
     // with no `pathname` at all. Both are unset, and `src/test/next-config.test.ts`
     // is what keeps them that way.
     //
-    // The CSP's `img-src` (src/features/content-security-policy/rules.ts) stays wildcarded
+    // The CSP's `img-src` (src/features/platform/content-security-policy.ts) stays wildcarded
     // on purpose and is not the same decision: it is built in the edge layer,
     // which cannot read this configuration, and it is a backstop rather than an
     // allowlist.

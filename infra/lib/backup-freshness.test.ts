@@ -5,7 +5,7 @@ import {
   parsePlatformBackupCensusKey,
   platformBackupCensusKey,
   platformBackupObjectKey,
-} from "../../src/features/backup-export";
+} from "../../src/features/records/backup-export";
 import { InfraStack } from "./infra-stack";
 
 /**
@@ -440,7 +440,7 @@ describe("the dump watchdog, executed", () => {
  *
  * The counts ride in the object KEY rather than a JSON body so that reading
  * them costs no `s3:GetObject` -- see `platformBackupCensusKey` in
- * `src/features/backup-export/period.ts`, and the "can never read, write or
+ * `src/features/records/backup-export/period.ts`, and the "can never read, write or
  * delete an object" test above, which is the invariant that choice protects.
  *
  * The cost of that choice is two implementations of one format: the app's, and

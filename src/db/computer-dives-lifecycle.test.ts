@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { anonymizeDiver } from "@/features/anonymize/store";
+import { anonymizeDiver } from "@/features/records/anonymize";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { mergeDiverRecords } from "./diver-merge";

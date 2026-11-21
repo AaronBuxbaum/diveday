@@ -1,5 +1,5 @@
-import { oneWindowPerSite, tideWindowsForDeparture } from "@/features/departure-tides";
-import type { getTripOverview } from "@/features/trip-overview";
+import { oneWindowPerSite, tideWindowsForDeparture } from "@/features/sites/departure-tides";
+import type { getTripOverview } from "@/features/trips/trip-overview";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { staffTideStationText, staffTideWindowText } from "@/i18n/tide-labels";
 import { parseDockDayRhythm } from "@/lib/diver-planning";

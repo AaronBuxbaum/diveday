@@ -8,9 +8,9 @@ import {
   setShopProfile,
   setShopSearchListing,
 } from "@/db/shops";
-import { allValues, checkbox, formValue, text, trimmedText } from "@/features/form-parse";
-import { defineAction, land, type NoticeOf } from "@/features/server-action";
-import { type ShopPick, setShopPick } from "@/features/shop-pick";
+import { allValues, checkbox, formValue, text, trimmedText } from "@/features/platform/form-parse";
+import { defineAction, land, type NoticeOf } from "@/features/platform/server-action";
+import { type ShopPick, setShopPick } from "@/features/public-site/shop-pick";
 import { isBrandDisplayFontCode, parseBrandBadges, parseBrandColor } from "@/lib/brand";
 import { nowDate } from "@/lib/clock";
 import { publicSchedulePath } from "@/lib/public-routes";

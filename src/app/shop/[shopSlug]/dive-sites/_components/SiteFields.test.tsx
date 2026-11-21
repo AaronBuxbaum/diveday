@@ -3,7 +3,7 @@ import { cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
 import type { DepthUnit } from "@/lib/depth-units";
-import type { TideStationEcho } from "../../../../../features/tide-stations/rules";
+import type { TideStationEcho } from "../../../../../features/sites/tide-stations";
 import { routeEditorCopy } from "./route-editor-copy";
 import { SiteFields, type SiteFieldValues } from "./SiteFields";
 import { fieldGuideEditorCopy, landmarkEditorCopy } from "./site-editor-copy";

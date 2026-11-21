@@ -4,7 +4,7 @@ import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
 import { crewSubject } from "../../db/roll-call-subject";
 import { trips } from "../../db/schema/index";
 import { createTrip } from "../../db/trips";
-import { createBoat } from "../../features/boats/store";
+import { createBoat } from "../../features/crew-and-boats/boats/store";
 import { fileScopedShopContext } from "../db";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "../staff-session";
 import { slideOneDepartureOntoAnotherHull } from "./boat-clash";

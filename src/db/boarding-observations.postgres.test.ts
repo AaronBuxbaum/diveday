@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { and, eq } from "drizzle-orm";
 import { expect, it } from "vitest";
-import { settleDockObservations, undoBookingNoShow } from "@/features/no-show";
+import { settleDockObservations, undoBookingNoShow } from "@/features/boarding/no-show";
 import { HOUR_MS, MINUTE_MS } from "@/lib/clock";
 import { describePostgres, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
 import { lockBoardingCertificationEvidence } from "./boarding-certification-snapshot";

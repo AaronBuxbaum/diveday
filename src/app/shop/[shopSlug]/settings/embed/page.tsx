@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
-import { canPersonManageShopSettings, getEmbedSettingsPage } from "@/features/embed-settings-page";
-import { requireShopSurface } from "@/features/session";
+import { requireShopSurface } from "@/features/accounts/session";
+import {
+  canPersonManageShopSettings,
+  getEmbedSettingsPage,
+} from "@/features/shop-setup/embed-settings-page";
 import { localeEndonym } from "@/i18n/language-labels";
 import { requestLocale } from "@/i18n/request";
 import { DIVER_LOCALES } from "@/i18n/settings";

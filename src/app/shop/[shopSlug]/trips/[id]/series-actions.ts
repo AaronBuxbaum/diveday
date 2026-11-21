@@ -14,8 +14,8 @@ import {
   setSeriesRepeat,
   setSeriesStandingCrew,
 } from "@/db/trips";
-import { checkbox, formValue, readForm } from "@/features/form-parse";
-import { revalidateAndRedirect } from "@/features/navigation";
+import { checkbox, formValue, readForm } from "@/features/platform/form-parse";
+import { revalidateAndRedirect } from "@/features/platform/navigation";
 import { isValidCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";

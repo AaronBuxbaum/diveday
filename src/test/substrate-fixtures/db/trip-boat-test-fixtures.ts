@@ -1,6 +1,6 @@
 import type { AppDb } from "../../../db/client";
 import { createTrip } from "../../../db/trips";
-import { createBoat } from "../../../features/boats/store";
+import { createBoat } from "../../../features/crew-and-boats/boats/store";
 
 export async function boatTripFixture(db: AppDb, shop: { id: string }) {
   const hull = await createBoat(db, shop.id, "Reef Runner", 12);

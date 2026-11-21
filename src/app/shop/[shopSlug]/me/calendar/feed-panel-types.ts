@@ -1,4 +1,4 @@
-import type { FeedScope } from "@/features/calendar-sync";
+import type { FeedScope } from "@/features/crew-and-boats/calendar-sync";
 
 /**
  * Shapes for the calendar subscription panel, kept out of the `"use server"`

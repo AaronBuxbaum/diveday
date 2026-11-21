@@ -6,11 +6,11 @@ import { seatNewDiverAction, seatPartyAction } from "@/app/actions/seat-diver";
 import type { SeatSurfaceId } from "@/app/actions/seat-diver-surfaces";
 import { addToWaitlistAction } from "@/app/shop/[shopSlug]/trips/[id]/roster-seating-actions";
 import { getDb } from "@/db/client";
-import { createDiver, findSimilarDivers } from "@/features/divers";
-import { discardFormDraft } from "@/features/form-drafts";
-import { parseForm } from "@/features/form-parse";
-import { revalidateAndRedirect } from "@/features/navigation";
-import { requireStaffSession } from "@/features/session";
+import { requireStaffSession } from "@/features/accounts/session";
+import { createDiver, findSimilarDivers } from "@/features/people/divers";
+import { discardFormDraft } from "@/features/platform/form-drafts";
+import { parseForm } from "@/features/platform/form-parse";
+import { revalidateAndRedirect } from "@/features/platform/navigation";
 import { ADD_ONE, addPanelHref } from "@/lib/add-panel";
 import {
   blankableDiverEmailSchema,

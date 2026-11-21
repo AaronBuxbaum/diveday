@@ -4,7 +4,7 @@ import {
   getManifestReadCount,
   resetManifestReadCount,
   testRouteRefused,
-} from "@/features/e2e-test-routes";
+} from "@/features/platform/e2e-test-routes";
 import { isUuid } from "@/lib/uuid";
 
 /** Test-only observation of roster-read attempts in this E2E worker. */

@@ -3,7 +3,7 @@ import {
   e2eTestRouteAuthorized,
   releaseNavigationGate,
   testRouteRefused,
-} from "@/features/e2e-test-routes";
+} from "@/features/platform/e2e-test-routes";
 import { isUuid } from "@/lib/uuid";
 
 // E2E-only synchronization. The normal test-route guard refuses both a

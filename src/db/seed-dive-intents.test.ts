@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { diveIntentTally } from "@/lib/dive-intent.test-support";
 import { fileScopedShopContext, type seededShopContext } from "@/test/db";
-import { staffDiveIntentLine } from "../features/dive-intent/labels";
+import { staffDiveIntentLine } from "../features/trips/dive-intent/labels";
 import { bookings, trips } from "./schema";
 import { demoTodayDepartureStart } from "./seed-clock";
 

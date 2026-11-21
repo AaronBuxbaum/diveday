@@ -4,7 +4,7 @@ import { SectionCard } from "@/components/ui/card";
 import { LedgerGroup, ledgerRowRoomClass } from "@/components/ui/ledger";
 import { SettledCheck } from "@/components/ui/SettledCheck";
 import { FIGURE_CLASS, ITEM_TITLE_CLASS } from "@/components/ui/typography";
-import { CLOSEOUT_STATUS_TONES, type StationClose } from "@/features/today";
+import { CLOSEOUT_STATUS_TONES, type StationClose } from "@/features/day/today";
 import {
   CLOSEOUT_STATUS_KEYS,
   closeoutDepartureDetailText,
@@ -30,7 +30,7 @@ import { FormattedWords } from "./FormattedWords";
  * **A state, never a mode.** There is no phase control anywhere on this page
  * and nothing switches between two renderings of one moment. A station is
  * settled or it is not, one departure at a time, and the clock alone decides
- * (`assembleEveningClose`, `src/features/today/closeout.ts`). That is what lets an
+ * (`assembleEveningClose`, `src/features/day/today/closeout.ts`). That is what lets an
  * afternoon hold a settled dawn boat above a station still counting heads,
  * with no control anybody has to find.
  *

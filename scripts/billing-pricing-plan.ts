@@ -13,9 +13,9 @@
  * refuses the change when it cannot be.
  */
 import { getDb } from "@/db/client";
-import { billingProviderFromEnvironment } from "@/features/billing";
-import { pricingConfig } from "@/features/pricing-flags";
-import { setShopPricingPlan } from "@/features/shop-subscriptions";
+import { billingProviderFromEnvironment } from "@/features/money/billing";
+import { pricingConfig } from "@/features/money/pricing-flags";
+import { setShopPricingPlan } from "@/features/money/shop-subscriptions";
 import { type PlanTerms, parsePricingPlanArgs } from "@/lib/billing/pricing-plans";
 
 const USAGE =

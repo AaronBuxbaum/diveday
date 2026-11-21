@@ -1,4 +1,4 @@
-import type { SafetyMonth } from "@/features/safety-report";
+import type { SafetyMonth } from "@/features/safety/safety-report";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { MonthFigure } from "../../reports/_components/MonthFigures";
 import { crewSafetyValue } from "./crew-safety-value";

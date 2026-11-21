@@ -2,7 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
-import { createDiver, editDiver } from "../features/divers/store";
+import { createDiver, editDiver } from "../features/people/divers/store";
 import { createBooking } from "./bookings";
 import type { AppDb } from "./client";
 import { activityEvents, courses, people, trips } from "./schema";

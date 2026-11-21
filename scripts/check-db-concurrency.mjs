@@ -83,7 +83,7 @@ const FAN_OUT_MEMBERS = new Set(["all", "allSettled"]);
 
 /**
  * For a `Promise.all` that is genuinely not over queries on that executor.
- * Nothing in the tree needs it today — `src/features/import/store.ts`'s bounded fetch pool
+ * Nothing in the tree needs it today — `src/features/records/import/store.ts`'s bounded fetch pool
  * looked like the case for it, but `mapWithConcurrency` is generic and takes no
  * executor at all, so the rule never reaches it. Kept because the shape is real
  * (a fan-out over HTTP, or over an executor the function was handed twice), and
@@ -326,7 +326,8 @@ export function findParentUpdateLocks(contents) {
  * Returns `{ line, text }` for each use of either name outside that glob.
  * `src/test/postgres.ts` defines them and is the one other file allowed to.
  */
-export const REAL_SERVER_SUITE = /^src\/(?:db|features\/[^/]+)\/[^/]+\.postgres\.test\.ts$/;
+export const REAL_SERVER_SUITE =
+  /^src\/(?:db|features\/[^/]+(?:\/[^/]+)?)\/[^/]+\.postgres\.test\.ts$/;
 const REAL_SERVER_NAMES = /\b(describePostgres|postgresTestDb)\b/;
 const REAL_SERVER_HOME = "src/test/postgres.ts";
 // The real action race is listed explicitly in the real-postgres CI job.

@@ -4,12 +4,12 @@ import { canPersonDeleteDiver, canPersonErasePersonalData, canPersonMergeDiver }
 import { DIVER_MERGE_FIELDS, type DiverMergeChoices, mergeDiverRecords } from "@/db/diver-merge";
 import { getMergedIntoPersonId } from "@/db/people";
 import { countCrewDeparturesNotHome } from "@/db/trips";
-import { anonymizeDiver } from "@/features/anonymize";
-import { deleteDiver, getDiverProfile } from "@/features/divers";
-import { formValue, readForm, text, trimmedText } from "@/features/form-parse";
-import { eraseGuardianEmail } from "@/features/guardian-erasure";
-import { revalidateAndRedirect } from "@/features/navigation";
-import { undoParams } from "@/features/undo";
+import { deleteDiver, getDiverProfile } from "@/features/people/divers";
+import { formValue, readForm, text, trimmedText } from "@/features/platform/form-parse";
+import { revalidateAndRedirect } from "@/features/platform/navigation";
+import { undoParams } from "@/features/platform/undo";
+import { anonymizeDiver } from "@/features/records/anonymize";
+import { eraseGuardianEmail } from "@/features/records/guardian-erasure";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { backTo, requireDiverActionContext } from "./action-helpers";

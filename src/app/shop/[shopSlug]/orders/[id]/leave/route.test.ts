@@ -6,15 +6,17 @@ vi.mock("@/db/shops", () => ({
   getShopById: vi.fn(async () => ({ id: "shop-1", slug: "blue-mantis" })),
 }));
 vi.mock("@/db/counter-payment-hold", () => ({ commitCounterPaymentHold: vi.fn() }));
-vi.mock("@/features/integrations", () => ({ dispatchIntegrationsAfterResponse: vi.fn() }));
-vi.mock("../../../../../../features/step-up/store", () => ({ hasRequiredStepUp: vi.fn() }));
-vi.mock("../../../../../../features/session/rules", () => ({
+vi.mock("@/features/shop-setup/integrations", () => ({
+  dispatchIntegrationsAfterResponse: vi.fn(),
+}));
+vi.mock("../../../../../../features/accounts/step-up", () => ({ hasRequiredStepUp: vi.fn() }));
+vi.mock("../../../../../../features/accounts/session", () => ({
   requireStaffSession: vi.fn(async () => ({ user: { shopId: "shop-1", personId: "p-1" } })),
 }));
 
 const { commitCounterPaymentHold } = await import("@/db/counter-payment-hold");
-const { hasRequiredStepUp } = await import("../../../../../../features/step-up/store");
-const { dispatchIntegrationsAfterResponse } = await import("@/features/integrations");
+const { hasRequiredStepUp } = await import("../../../../../../features/accounts/step-up");
+const { dispatchIntegrationsAfterResponse } = await import("@/features/shop-setup/integrations");
 const { POST } = await import("./route");
 
 const HELD = "00000000-0000-4000-8000-000000000002";

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
 import { fakeEmail, fakeSms } from "@/test/fakes";
-import { sendDueReminders } from "../features/reminders/store";
+import { sendDueReminders } from "../features/messages/reminders";
 import { createBookingParty } from "./bookings";
 import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 

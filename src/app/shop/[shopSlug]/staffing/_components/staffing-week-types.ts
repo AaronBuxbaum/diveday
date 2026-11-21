@@ -1,4 +1,4 @@
-import type { StaffGapCode } from "@/features/staffing-week";
+import type { StaffGapCode } from "@/features/crew-and-boats/staffing-week";
 
 export type StaffingWeekWords = {
   /** Each person's week in one figure, by person id (`personTotalsWords`, item 52). */

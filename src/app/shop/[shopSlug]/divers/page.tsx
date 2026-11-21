@@ -9,9 +9,9 @@ import { Pager, staffPagerWords } from "@/components/Pager";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { ShopNotice } from "@/components/ui/outcome";
 import type { NoticeTone } from "@/components/ui/tone";
-import { getDiversPage } from "@/features/divers-page";
-import { requireShopSurface } from "@/features/session";
-import { readUndoOffer, UNDO_PARAMS } from "@/features/undo";
+import { requireShopSurface } from "@/features/accounts/session";
+import { getDiversPage } from "@/features/people/divers-page";
+import { readUndoOffer, UNDO_PARAMS } from "@/features/platform/undo";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { addPanelOpen } from "@/lib/add-panel";
@@ -72,7 +72,7 @@ export default async function DiversPage({
       /** `1`: the add-diver panel is open (`AddDiverPanel`). */
       add?: string;
       notice?: string;
-      /** The removal's Undo offer (`src/features/undo/rules.ts`). */
+      /** The removal's Undo offer (`src/features/platform/undo.ts`). */
       undo?: string;
       undoPerson?: string;
       undoFrom?: string;

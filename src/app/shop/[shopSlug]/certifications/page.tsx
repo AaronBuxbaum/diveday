@@ -1,5 +1,5 @@
 import { ShopPageHeader } from "@/components/ShopPageHeader";
-import { requireShopSurface } from "@/features/session";
+import { requireShopSurface } from "@/features/accounts/session";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { StaffPage } from "../_components/StaffPage";

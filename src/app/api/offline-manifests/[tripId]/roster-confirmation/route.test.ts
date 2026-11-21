@@ -1,5 +1,5 @@
 import { beforeEach, expect, it, vi } from "vitest";
-import { signRosterConfirmation } from "@/features/offline-manifest-snapshots";
+import { signRosterConfirmation } from "@/features/boarding/offline-manifest-snapshots";
 
 vi.mock("@/app/api/offline-manifests/staff-context", () => ({
   authorizeOfflineManifestStaff: vi.fn(),

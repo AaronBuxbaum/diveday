@@ -3,10 +3,10 @@
 import { z } from "zod";
 import { canPersonAddDiver } from "@/db/authz";
 import { getDb } from "@/db/client";
-import { createDiver, findLiveDiverIdByEmail } from "@/features/divers";
-import { parseForm } from "@/features/form-parse";
-import { revalidateAndRedirect } from "@/features/navigation";
-import { requireStaffSession } from "@/features/session";
+import { requireStaffSession } from "@/features/accounts/session";
+import { createDiver, findLiveDiverIdByEmail } from "@/features/people/divers";
+import { parseForm } from "@/features/platform/form-parse";
+import { revalidateAndRedirect } from "@/features/platform/navigation";
 import { diverSearchPrefill } from "@/lib/person-fields";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 

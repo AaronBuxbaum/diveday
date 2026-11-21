@@ -9,7 +9,7 @@ import type { DiveDaySession } from "@/lib/auth";
 import { fileScopedShopContext } from "@/test/db";
 import { findElements, inputNamesIn } from "@/test/jsx-inspect";
 import { nextHeadersStub } from "@/test/next-headers";
-import { listShopStaff } from "../../../../../features/staff-accounts/store";
+import { listShopStaff } from "../../../../../features/accounts/staff-accounts";
 
 const ctx = fileScopedShopContext();
 
@@ -33,7 +33,7 @@ const { InvoiceForm } = await import("./InvoiceForm");
 const { invoiceTargetKey } = await import("../_lib/order-form");
 const { NewOrderPanel } = await import("./NewOrderPanel");
 const { InvoiceAddressFields } = await import("./InvoiceAddressFields");
-const { requireShopSurface } = await import("../../../../../features/session/rules");
+const { requireShopSurface } = await import("../../../../../features/accounts/session");
 const { staffTranslator } = await import("@/i18n/staff-messages");
 
 const SHOP_SLUG = "blue-mantis";

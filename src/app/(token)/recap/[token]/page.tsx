@@ -8,10 +8,13 @@ import { RecapWaitingCard } from "@/components/RecapWaitingCard";
 import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
 import { openRecapLink } from "@/db/recap-links";
-import type { RecapSite } from "@/features/recap";
-import { recapPageStateCached } from "@/features/recap";
-import { buildAfterStateProps, recapBuddyLinkUrl } from "@/features/recap-after-state";
-import { connectionForRoute } from "@/features/render-connection";
+import type { RecapSite } from "@/features/after-the-dive/recap";
+import { recapPageStateCached } from "@/features/after-the-dive/recap";
+import {
+  buildAfterStateProps,
+  recapBuddyLinkUrl,
+} from "@/features/after-the-dive/recap-after-state";
+import { connectionForRoute } from "@/features/platform/render-connection";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale, requestTranslator } from "@/i18n/request";

@@ -8,8 +8,8 @@ import {
   ledgerRowOpenBoxClass,
 } from "@/components/ui/ledger";
 import { isMarineLifeSlug } from "@/db/marine-life-catalog";
-import { dayProfileRows } from "@/features/day-profile";
-import type { SiteReview } from "@/features/reviews";
+import type { SiteReview } from "@/features/after-the-dive/reviews";
+import { dayProfileRows } from "@/features/trips/day-profile";
 import { marineLifeCard } from "@/i18n/marine-life-labels";
 import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import { includedGearList, includesScubaUnitOnly } from "@/i18n/packing-labels";

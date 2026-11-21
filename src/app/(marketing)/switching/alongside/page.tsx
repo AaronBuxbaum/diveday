@@ -4,7 +4,7 @@ import { Suspense } from "react";
 import { MarketingFooter, MarketingFooterFallback } from "@/components/MarketingFooter";
 import { SwitchingConcierge } from "@/components/SwitchingConcierge";
 import { LEAD_TITLE_CLASS } from "@/components/ui/typography";
-import { requestPricingOffer } from "@/features/pricing-offer";
+import { requestPricingOffer } from "@/features/money/pricing-offer";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import type { DiverLocale } from "@/i18n/settings";

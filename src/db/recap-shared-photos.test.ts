@@ -9,7 +9,7 @@ import {
   getRecapPageState,
   listRecapPhotosForTrips,
   unshareRecapPhoto,
-} from "../features/recap/store";
+} from "../features/after-the-dive/recap/store";
 import { createBookingParty } from "./bookings";
 import { bookings, people } from "./schema";
 import { listStaff } from "./trips";

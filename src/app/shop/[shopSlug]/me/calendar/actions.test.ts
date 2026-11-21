@@ -15,15 +15,15 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
 });
-vi.mock("../../../../../features/session/rules", () => ({ requireStaffSession: vi.fn() }));
-vi.mock("@/features/calendar-sync", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/features/calendar-sync")>();
+vi.mock("../../../../../features/accounts/session", () => ({ requireStaffSession: vi.fn() }));
+vi.mock("@/features/crew-and-boats/calendar-sync", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/features/crew-and-boats/calendar-sync")>();
   return { ...actual, revokeCalendarFeeds: vi.fn(async () => undefined) };
 });
 
 const { getDb } = await import("@/db/client");
-const { requireStaffSession } = await import("../../../../../features/session/rules");
-const { revokeCalendarFeeds } = await import("@/features/calendar-sync");
+const { requireStaffSession } = await import("../../../../../features/accounts/session");
+const { revokeCalendarFeeds } = await import("@/features/crew-and-boats/calendar-sync");
 const { calendarFeedAction } = await import("./actions");
 
 function form(entries: Array<[string, string]>): FormData {

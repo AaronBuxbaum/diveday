@@ -2,7 +2,7 @@ import { randomBytes } from "node:crypto";
 import { and, eq, isNull, sql } from "drizzle-orm";
 import { expect, it } from "vitest";
 import { describePostgres, holdRowLock, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
-import { removeStaffMember } from "../features/staff-accounts/store";
+import { removeStaffMember } from "../features/accounts/staff-accounts";
 import { consumeAccountToken, issueAccountToken } from "./account-tokens";
 import type { AppDb } from "./client";
 import { capabilities, people, personRoles, shops, userAccounts } from "./schema";

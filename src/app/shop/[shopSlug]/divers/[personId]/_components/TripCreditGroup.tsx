@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { forgivingCopy } from "@/components/ui/forgiving-copy";
 import { getDb } from "@/db/client";
-import { readTripCredit, tripCreditBookingOptions } from "@/features/trip-credit";
+import { readTripCredit, tripCreditBookingOptions } from "@/features/money/trip-credit";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatDateTimeTz, formatMoneyCents } from "@/lib/format";
 import { DiverFileGroupDisclosure } from "./DiverFileGroupDisclosure";

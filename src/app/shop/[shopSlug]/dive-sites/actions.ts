@@ -1,8 +1,8 @@
 "use server";
 
 import { getDb } from "@/db/client";
-import { revalidateAndRedirect } from "@/features/navigation";
-import { requireStaffSession } from "@/features/session";
+import { requireStaffSession } from "@/features/accounts/session";
+import { revalidateAndRedirect } from "@/features/platform/navigation";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { importTemplateFromForm } from "./site-forms";
 import { requireSiteEditor } from "./site-gate";

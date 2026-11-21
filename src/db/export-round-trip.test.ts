@@ -6,8 +6,8 @@ import { commitContactImport } from "@/test/words-wiring";
 import {
   prepareDiveSiteCreaturesImport,
   prepareDiveSiteImport,
-} from "../features/dive-sites/dive-site-import.rules";
-import { commitDiveSiteImport } from "../features/dive-sites/dive-site-import.store";
+} from "../features/sites/dive-sites/dive-site-import.rules";
+import { commitDiveSiteImport } from "../features/sites/dive-sites/dive-site-import.store";
 import { loadShopExportBundleInput } from "./export";
 import { people, shops } from "./schema";
 

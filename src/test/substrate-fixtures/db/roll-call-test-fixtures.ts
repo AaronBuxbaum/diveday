@@ -16,7 +16,7 @@ import type { fileScopedShopContext } from "../../db";
  * The unclosed-roll-call suites' fixtures (DOM-H3): a boat that already tied
  * up and the boarding log it left. Shared by the manifest's and departure
  * counts' suites here and by Today's roll-call row suites
- * (`src/features/today/today-roll-call-test-fixtures.ts` adds the row finders).
+ * (`src/features/day/today/today-roll-call-test-fixtures.ts` adds the row finders).
  */
 export const HOUR = 60 * 60 * 1000;
 

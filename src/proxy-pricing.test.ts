@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 // the database away at the module boundary, and the auth cookie as a
 // signed-in owner.
 vi.mock("@/db/client", () => ({ getDb: async () => ({}) }));
-vi.mock("@/features/public-route-existence", () => ({
+vi.mock("@/features/public-site/public-route-existence", () => ({
   rememberedPublicRouteLookup: async () => ({ exists: true, shopExists: true, hidden: false }),
 }));
 vi.mock("better-auth/cookies", () => ({

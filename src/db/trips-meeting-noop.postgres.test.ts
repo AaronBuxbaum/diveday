@@ -2,7 +2,7 @@ import { and, eq, sql } from "drizzle-orm";
 import { expect, it } from "vitest";
 import { describePostgres, holdRowLock, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
 import { raceShop } from "@/test/postgres-shop";
-import { crewAwayByTrip } from "../features/crew-away/store";
+import { crewAwayByTrip } from "../features/crew-and-boats/crew-away";
 import { acknowledgeCrewAway } from "./crew-away-acknowledgements";
 import { createPerson } from "./people";
 import { crewAvailabilityBlocks, tripAssignments, tripScheduleDays } from "./schema";

@@ -6,7 +6,7 @@ import { SummaryCaret } from "@/components/ui/disclosure";
 import { controlClass, Field } from "@/components/ui/form";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { canPersonExportShopData, loadShopExportCounts } from "@/db/export";
-import { requireShopSurface } from "@/features/session";
+import { requireShopSurface } from "@/features/accounts/session";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { addMonths, type MonthRef, monthKey, monthLabel } from "@/lib/calendar";

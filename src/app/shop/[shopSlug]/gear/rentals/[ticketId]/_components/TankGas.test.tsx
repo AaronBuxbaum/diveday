@@ -3,7 +3,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
-import type { CounterRentalUnit } from "../../../../../../../features/gear-counter-rentals/store";
+import type { CounterRentalUnit } from "../../../../../../../features/gear/gear-counter-rentals";
 import { TankGas, TankGasCorrections } from "./TankGas";
 
 vi.mock("../../actions", () => ({ correctCounterTankFillAction: vi.fn() }));

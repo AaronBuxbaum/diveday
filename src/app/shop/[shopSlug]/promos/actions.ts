@@ -11,9 +11,9 @@ import {
   setShopPromoEnabled,
 } from "@/db/shop-promos";
 import { getShopById, shopHasFeatureOn } from "@/db/shops";
-import { checkbox, formValue, readForm, text } from "@/features/form-parse";
-import { revalidateAndRedirect } from "@/features/navigation";
-import { requireStaffSession } from "@/features/session";
+import { requireStaffSession } from "@/features/accounts/session";
+import { checkbox, formValue, readForm, text } from "@/features/platform/form-parse";
+import { revalidateAndRedirect } from "@/features/platform/navigation";
 import { majorToMinor, minorToMajor, toShopCurrency } from "@/lib/money";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { parseWallTime, wallTimeToUtc } from "@/lib/zoned";

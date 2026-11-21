@@ -11,8 +11,8 @@ import {
 } from "@/app/shop/[shopSlug]/trips/[id]/series-actions";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { sectionCardClass } from "@/components/ui/card";
-import { requireShopSurface } from "@/features/session";
-import { getSeriesPage } from "@/features/trip-page";
+import { requireShopSurface } from "@/features/accounts/session";
+import { getSeriesPage } from "@/features/trips/trip-page";
 import { requestLocale } from "@/i18n/request";
 import { repeatsRowText } from "@/i18n/series-sentences";
 import { staffTranslator } from "@/i18n/staff-messages";

@@ -5,7 +5,7 @@ import { nowDate } from "@/lib/clock";
 import { serializeManifests } from "@/lib/offline-manifests";
 import type { ParticipantType } from "@/lib/participant-types";
 import { fileScopedShopContext } from "@/test/db";
-import { getReadyPageData } from "../features/ready/store";
+import { getReadyPageData } from "../features/boarding/ready";
 import {
   cancelBooking,
   createBooking,

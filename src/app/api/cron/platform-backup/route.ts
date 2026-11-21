@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
+import { requireCronSecret } from "@/features/platform/cron-auth";
+import { flushLogs } from "@/features/platform/log-shipping";
+import { sentry } from "@/features/platform/sentry-server";
 import {
   backupRunDate,
   claimPlatformBackupShop,
@@ -8,10 +11,7 @@ import {
   platformBackupConfigFromEnvironment,
   runPlatformBackup,
   storePlatformBackupCensus,
-} from "@/features/backup-export";
-import { requireCronSecret } from "@/features/cron-auth";
-import { flushLogs } from "@/features/log-shipping";
-import { sentry } from "@/features/sentry-server";
+} from "@/features/records/backup-export";
 import { toDiverLocale } from "@/i18n/settings";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";

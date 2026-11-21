@@ -9,12 +9,12 @@ import {
 import { recordPreDepartureCheck } from "@/db/pre-departure-check";
 import { getShopById } from "@/db/shops";
 import { offlineSyncTripsBelongToShop } from "@/db/trips";
-import { checkInBooking, undoCheckInBooking } from "@/features/check-in";
+import { checkInBooking, undoCheckInBooking } from "@/features/boarding/check-in";
 import {
   buildOfflineManifestCopies,
   latestOfflineManifestSnapshotRevisions,
   offlineSyncInstants,
-} from "@/features/offline-manifest-snapshots";
+} from "@/features/boarding/offline-manifest-snapshots";
 import { auth } from "@/lib/auth";
 import { isStaff } from "@/lib/authz";
 import { log } from "@/lib/log";

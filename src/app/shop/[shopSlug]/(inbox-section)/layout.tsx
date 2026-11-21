@@ -2,7 +2,7 @@ import { type ReactNode, Suspense } from "react";
 import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { StaffSectionTabsSkeleton } from "@/app/shop/[shopSlug]/_components/StaffSectionTabs";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
-import { requireShopSurface } from "@/features/session";
+import { requireShopSurface } from "@/features/accounts/session";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { staffDestinationGates } from "@/lib/authz";

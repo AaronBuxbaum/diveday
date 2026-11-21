@@ -1,8 +1,8 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
-import { REDACTED_TEXT } from "../features/anonymization/rules";
-import { anonymizeDiver } from "../features/anonymize/store";
+import { REDACTED_TEXT } from "../features/records/anonymization";
+import { anonymizeDiver } from "../features/records/anonymize";
 import type { AppDb } from "./client";
 import {
   bookings,

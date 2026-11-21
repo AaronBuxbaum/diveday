@@ -24,8 +24,8 @@ import { EarnedMomentLine } from "@/components/EarnedMoment";
 import { EmptyState } from "@/components/EmptyState";
 import { buttonClass } from "@/components/ui/button";
 import { LedgerGroup, LedgerRow } from "@/components/ui/ledger";
-import type { FirstBooking } from "@/features/first-booking";
-import type { DayTakings as DayTakingsReading, EveningClose } from "@/features/today";
+import type { FirstBooking } from "@/features/bookings/first-booking";
+import type { DayTakings as DayTakingsReading, EveningClose } from "@/features/day/today";
 import {
   type DaySpine as DaySpineData,
   type DayStation as DayStationData,
@@ -37,7 +37,7 @@ import {
   spineJobCount,
   type TodayAction,
   weekCrewAway,
-} from "@/features/today";
+} from "@/features/day/today";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { ACTION_KIND_KEYS } from "@/i18n/today-labels";
 import { nowDate } from "@/lib/clock";
@@ -77,7 +77,7 @@ import { WeekHorizon } from "./WeekHorizon";
  * Three things this file is deliberately *not*:
  *
  * - **A second detector.** Every row here came out of `getTodayWork` and was
- *   ranked by `src/features/today/today.ts`; `assembleDaySpine` only decides which
+ *   ranked by `src/features/day/today/today.ts`; `assembleDaySpine` only decides which
  *   station it files under. There is no query, no blocker rule and no urgency
  *   arithmetic on this page.
  * - **A mode.** There is no view control and no phase switch — the ADR rejected
@@ -566,7 +566,7 @@ function Stations({
  * this component rendered before 6d.
  */
 export type EveningReading = {
-  /** The day's departures with their closing state (`src/features/today/closeout.ts`). */
+  /** The day's departures with their closing state (`src/features/day/today/closeout.ts`). */
   close: EveningClose;
   /** Per trip, who made the last roll-call mark and when. Absent for a trip with none. */
   headCountCloses: ReadonlyMap<string, { closedAt: Date; closedBy: string }>;

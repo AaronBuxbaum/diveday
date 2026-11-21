@@ -1,8 +1,8 @@
 import Link from "next/link";
-import type { listBoats } from "@/features/boats";
-import type { requireShopSurface } from "@/features/session";
-import type { listTripLenses } from "@/features/trip-lenses";
-import type { getTripOverview } from "@/features/trip-overview";
+import type { requireShopSurface } from "@/features/accounts/session";
+import type { listBoats } from "@/features/crew-and-boats/boats";
+import type { listTripLenses } from "@/features/trips/trip-lenses";
+import type { getTripOverview } from "@/features/trips/trip-overview";
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — this segment's `loading.tsx`, with no request read above it.
 // Since the staff shell became synchronous (issue 1446) that holds for a cold,

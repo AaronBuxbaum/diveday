@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
 import { canPersonExportShopData, loadDiverExportBundleInput } from "@/db/export";
 import { recordDiverActivity } from "@/db/operations";
-import { requireStaffSession } from "@/features/session";
+import { requireStaffSession } from "@/features/accounts/session";
 import { nowDate } from "@/lib/clock";
 import {
   buildDiverExportBundle,

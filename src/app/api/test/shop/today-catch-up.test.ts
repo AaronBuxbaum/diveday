@@ -5,7 +5,7 @@ import { createDemoShop } from "@/db/seed";
 import { getShopBySlug } from "@/db/shops";
 import { nowDate } from "@/lib/clock";
 import { seededShopContext } from "@/test/db";
-import { readTodayCatchUp } from "../../../../features/today-catch-up/store";
+import { readTodayCatchUp } from "../../../../features/day/today-catch-up";
 
 vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();

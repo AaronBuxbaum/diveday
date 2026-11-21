@@ -10,7 +10,7 @@ import {
   seededStaffPersonId,
   staffSession,
 } from "@/test/staff-session";
-import { createBoat } from "../../../../../features/boats/store";
+import { createBoat } from "../../../../../features/crew-and-boats/boats/store";
 
 const ctx = fileScopedShopContext();
 
@@ -32,11 +32,11 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
 });
-vi.mock("../../../../../features/session/rules", () => ({ requireShopSurface: vi.fn() }));
+vi.mock("../../../../../features/accounts/session", () => ({ requireShopSurface: vi.fn() }));
 vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
-const { requireShopSurface } = await import("../../../../../features/session/rules");
+const { requireShopSurface } = await import("../../../../../features/accounts/session");
 const { saveDetailsSection } = await import("./details-actions");
 
 async function hullInTheYard(name: string, from: string, until: string) {

@@ -2,8 +2,11 @@ import { readFileSync } from "node:fs";
 import { eq, sql } from "drizzle-orm";
 import { expect, it, onTestFinished } from "vitest";
 import type { DbExecutor } from "@/db/client";
-import { commitComputerFiles } from "@/features/computer-dives";
-import { computerFixture, selectedInput } from "@/features/computer-dives/test-support";
+import { commitComputerFiles } from "@/features/after-the-dive/computer-dives";
+import {
+  computerFixture,
+  selectedInput,
+} from "@/features/after-the-dive/computer-dives/test-support";
 import { describePostgres, holdRowLock, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
 import { computerDiveProfiles, computerDives, computerImportBatches, people } from "./schema";
 import { clearDemoSchedule, deleteDemoShopCascade } from "./seed";

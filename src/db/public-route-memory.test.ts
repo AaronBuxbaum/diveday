@@ -6,7 +6,7 @@ import {
   forgetPublicRouteLookups,
   PUBLIC_ROUTE_LOOKUP_TTL_MS,
   rememberedPublicRouteLookup,
-} from "../features/public-route-existence/store";
+} from "../features/public-site/public-route-existence";
 import type { AppDb } from "./client";
 import { courses, shops } from "./schema";
 
