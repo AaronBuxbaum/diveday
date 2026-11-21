@@ -562,6 +562,26 @@ describe("the rail keeps the current row in view", () => {
     expect(railScroller().scrollTop).toBe(194);
   });
 
+  it("centres an untouched phone bar's row even when it is already in view", () => {
+    // The horizontal bar had its own early return for a row in sight, so where
+    // it ended up was where the last width left it (#4703).
+    pathname = `${BASE}/settings/team`;
+    vi.spyOn(HTMLElement.prototype, "scrollWidth", "get").mockImplementation(() => 2000);
+    vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockImplementation(() => 390);
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (
+      this: HTMLElement,
+    ) {
+      const isRow = this.getAttribute("aria-current") === "true";
+      const left = isRow ? 250 : 0;
+      const width = isRow ? 100 : 390;
+      return { left, right: left + width, top: 100, bottom: 144, width, height: 44 } as DOMRect;
+    });
+    renderRail();
+
+    // The row (250 to 350) is inside the box (0 to 390) already; its centre, 300, goes to 195.
+    expect(railScroller().scrollLeft).toBe(105);
+  });
+
   it("treats a current row in the faded foot as out of sight", () => {
     // "Calendar subscriptions" sat in the last 3rem of the box while rows
     // went on below, and the fade washed it out to nearly nothing.

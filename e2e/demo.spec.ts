@@ -2,7 +2,7 @@ import { DEMO_SHOP_BRAND } from "../src/db/seed/shop-brand";
 import { diverTranslator } from "../src/i18n/messages";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import type { BrandBadgeCode } from "../src/lib/brand";
-import { expect, test } from "./fixtures";
+import { expect, settleStaffHydration, test } from "./fixtures";
 import { openSettingsRow, STAFF_DAY_HEADING } from "./helpers";
 import { mintOnboardFormPath } from "./setup-link";
 
@@ -12,6 +12,9 @@ test("landing demo CTA drops a visitor into the staff shop", async ({ page }) =>
 
   await expect(page).toHaveURL(/\/shop/);
   await expect(page.getByRole("heading", { level: 1, name: STAFF_DAY_HEADING })).toBeVisible();
+  // The CTA navigates by click, not goto, so nothing has waited for React yet;
+  // the dismiss click below is a no-op on a page that has not hydrated.
+  await settleStaffHydration(page);
   // The demo banner rides above every /shop surface.
   await expect(page.getByText("Demo shop")).toBeVisible();
 

@@ -302,7 +302,10 @@ function revealCurrentRow(scroller: HTMLElement, { recentre }: { recentre: boole
   if (box.height === 0) return;
   if (scroller.scrollWidth > scroller.clientWidth + 1) {
     const rect = row.getBoundingClientRect();
-    if (rect.left >= box.left && rect.right <= box.right) return;
+    // Untouched, the bar centres the row from the layout alone, as the desktop
+    // map does; a row "already in sight" would keep wherever an earlier width
+    // left it, so a capture taken after a resize differed by the old position.
+    if (!recentre && rect.left >= box.left && rect.right <= box.right) return;
     scroller.scrollLeft += rect.left + rect.width / 2 - (box.left + box.width / 2);
     return;
   }
