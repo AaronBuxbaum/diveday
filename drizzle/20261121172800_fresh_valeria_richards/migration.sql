@@ -1,1 +1,2 @@
+-- diveday:allow-destructive drop-default roll_call_events.subject_kind: every writer in this release names the kind, and no deployment serves older code
 ALTER TABLE "roll_call_events" ALTER COLUMN "subject_kind" DROP DEFAULT;

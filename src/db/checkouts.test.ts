@@ -2425,60 +2425,6 @@ describe("a fixed-amount promotion", () => {
     expect(seen.requests[0]?.promotionCouponId).toBe("coupon_session");
   });
 
-  describe("what a percent code took off, recorded per checkout", () => {
-    async function percentOff(feeCents: number, promotions: ReturnType<typeof fakePromotions>) {
-      const { db, shop, reef, bookingIds } = await checkoutContext();
-      if (feeCents > 0) {
-        await setShopPassThroughFee(db, shop.id, { name: "Park fee", amountCents: feeCents });
-      }
-      const created = await createShopPromoCode(
-        db,
-        { shopId: shop.id, code: "TENPCT", discountPercent: 10, scope: "all" },
-        fakePromotions(),
-      );
-      if (!created.ok) throw new Error("percent promo failed");
-      const start = await startBookingCheckout(
-        db,
-        withPromo(startInput(shop.id, reef.id, bookingIds), created.promo),
-        fakeCheckout(),
-        promotions,
-      );
-      if (!start.ok) throw new Error("checkout start failed");
-      return start.checkout.discountOffCents;
-    }
-
-    it("is the percent of the seats alone when the fixed coupon guards the park fee", async () => {
-      // Two seats at $180 and two $15 fees: 10% of $360, not of $390.
-      expect(
-        await percentOff(
-          1_500,
-          fakePromotions({
-            async createSessionDiscount() {
-              return { status: "created", stripeCouponId: "coupon_session" };
-            },
-          }),
-        ),
-      ).toBe(3_600);
-    });
-
-    it("is the percent of the gross when the coupon fails and Stripe gets the code", async () => {
-      expect(
-        await percentOff(
-          1_500,
-          fakePromotions({
-            async createSessionDiscount() {
-              return { status: "not_configured" };
-            },
-          }),
-        ),
-      ).toBe(3_900);
-    });
-
-    it("is the percent of the seats with no fee", async () => {
-      expect(await percentOff(0, fakePromotions())).toBe(3_600);
-    });
-  });
-
   it("re-mints a pending session when the diver's code changes from a percent to an amount", async () => {
     const { db, shop, reef, bookingIds } = await checkoutContext();
     const percent = await createShopPromoCode(

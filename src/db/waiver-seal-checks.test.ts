@@ -248,7 +248,7 @@ describe("recheckWaiverSeals", () => {
   });
 
   it("finds a signed native release with no seal and no verdict, but not an import", async () => {
-    const { db, shop, recordId } = await signedRelease();
+    const { db, recordId } = await signedRelease();
     const signedAt = new Date("2026-01-01T00:00:00.000Z");
     const stripped = {
       integrityHash: null,

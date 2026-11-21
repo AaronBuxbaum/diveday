@@ -518,8 +518,8 @@ export async function startBookingCheckout(
     ? discountOffCents(
         promotionCouponId ? discountableCents : totalCents,
         appliedPromo.promoDiscount,
-      ) || null
-    : null;
+      )
+    : 0;
 
   try {
     const session = await checkout.createCheckoutSession({
@@ -617,7 +617,7 @@ export async function startBookingCheckout(
           promoCode: appliedPromo?.code ?? input.shopPromo?.code ?? null,
           appliedDiscountPercent,
           appliedDiscountCents,
-          discountOffCents: discountOff,
+          discountOffCents: discountOff || null,
         })
         .returning();
       if (!row) throw new Error("startBookingCheckout: insert returned no row");
