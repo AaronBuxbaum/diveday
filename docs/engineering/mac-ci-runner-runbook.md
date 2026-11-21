@@ -13,7 +13,7 @@ The account is on GitHub Pro, which runs 40 GitHub-hosted jobs at once. A full C
 | Repository safeguards, Lint, Typecheck, Unit tests shards 1–4, Unit tests that read docs | The Mac when it is online, else GitHub |
 | Detect what changed | GitHub (it makes the choice) |
 | Build, Playwright, Plan the visual captures, Visual capture, reg-suit | GitHub. Screenshots are compared against GitHub-rendered baselines, and the build feeds them |
-| Real Postgres | GitHub (it needs a service container) |
+| Real Postgres (2 shards) | GitHub (it needs a service container) |
 
 The picker only sends this repository's own branches and pushes to `main` to the Mac. That is routing, not a security boundary: a pull request from a fork can rewrite the workflow and the picker, and ask for the Mac directly. **What keeps a stranger's code off the Mac is the repository setting in step 1 below**, which holds every outside contributor's run until someone approves it. Before approving one, read its changes to `.github/` and `scripts/`.
 
