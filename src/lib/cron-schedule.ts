@@ -34,7 +34,7 @@ export const DAILY_TICK_CRONTAB = `${DAILY_TICK_UTC_MINUTE} ${DAILY_TICK_UTC_HOU
 
 /**
  * **The shop tick: hourly, at `:00`** (`/api/cron/shop-tick`, issue #2715).
- * Every shop cadence is one of its scans (`src/features/shop-tick`), so this
+ * Every shop cadence is one of its scans (`src/features/platform/shop-tick`), so this
  * is the one schedule a shop's day is served on: platform cadences are UTC
  * routes of their own, shop cadences are this tick. `:00` because the
  * minimum-head-count decision is printed on the booking page to the minute,

@@ -1,8 +1,8 @@
 import { getDb } from "@/db/client";
 import { sendNotification } from "@/db/notifications";
 import { getShopBySlug } from "@/db/shops";
-import { recordPreviewActivity } from "@/features/demo-preview";
-import { recordDemoEntry } from "@/features/funnel";
+import { recordPreviewActivity } from "@/features/demo/demo-preview";
+import { recordDemoEntry } from "@/features/reports/funnel";
 import { trackEvent } from "@/lib/analytics";
 import type { DemoRoleId } from "@/lib/demo-roles";
 import type { FunnelSource } from "@/lib/funnel";

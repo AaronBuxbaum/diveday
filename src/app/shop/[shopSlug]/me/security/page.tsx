@@ -15,13 +15,13 @@ import {
   isCurrentAccountSession,
   sessionDeviceLabel,
   sessionUserAgentDetails,
-} from "@/features/account-session-device";
+} from "@/features/accounts/account-session-device";
 import {
   isStepUpPurpose,
   type StepUpPurpose,
   safeStepUpReturnPath,
-} from "@/features/security-step-up";
-import { requireShopSurface } from "@/features/session";
+} from "@/features/accounts/security-step-up";
+import { requireShopSurface } from "@/features/accounts/session";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";

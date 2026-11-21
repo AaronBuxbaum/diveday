@@ -4,7 +4,7 @@ import { recordSeatChange } from "../../db/operations";
 import { bookings, people, personRoles, trips } from "../../db/schema/index";
 import { liveTrip } from "../../db/trips-live";
 import { seatNotCancelled } from "../../db/trips-queries";
-import { initializeTodayCatchUp } from "../../features/today-catch-up/store";
+import { initializeTodayCatchUp } from "../../features/day/today-catch-up";
 import { shopDayBounds } from "../../lib/zoned";
 import { FactRefused } from "./refusal";
 

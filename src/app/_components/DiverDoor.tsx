@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ARROW_LINK_CLASS } from "@/components/ui/button";
-import { homeDiverDoorEnabled } from "@/features/home-diver-door";
+import { homeDiverDoorEnabled } from "@/features/public-site/home-diver-door";
 import type { DiverTranslator } from "@/i18n/messages";
 import { FIND_YOUR_BOOKING_PATH } from "@/lib/public-routes";
 

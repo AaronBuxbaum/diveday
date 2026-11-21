@@ -2,7 +2,7 @@ import { DiveDayIcon } from "@/components/DiveDayIcon";
 import { StaffDestinationIcon } from "@/components/StaffDestinationIcon";
 import type { LedgerRowKindTone } from "@/components/ui/ledger";
 import { StatusMark } from "@/components/ui/StatusMark";
-import type { ACTION_KIND_META, TodayAction } from "@/features/today";
+import type { ACTION_KIND_META, TodayAction } from "@/features/day/today";
 import type { StaffDestinationId } from "@/lib/staff-destinations";
 
 /*

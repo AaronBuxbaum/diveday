@@ -4,7 +4,7 @@ import { cleanup, fireEvent, render, screen, within } from "@testing-library/rea
 import { afterEach, describe, expect, it } from "vitest";
 import type { GearServiceState } from "@/lib/gear";
 import { rendersFlush } from "@/test/button-flush";
-import type { TripPrep } from "../../../../../../../features/trip-prep/store";
+import type { TripPrep } from "../../../../../../../features/trips/trip-prep/store";
 import { PrepAssignments } from "./PrepAssignments";
 import { everyPanelPrep, prepFor, t, tokens, viewOf } from "./prep-test-fixtures";
 

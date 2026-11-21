@@ -34,14 +34,14 @@ async function settleAfter() {
   await Promise.all(work);
 }
 // The routes report only where a DSN is configured; the suite runs without one.
-vi.mock("../../../../features/sentry-dsn/rules", () => ({
+vi.mock("../../../../features/platform/sentry-dsn", () => ({
   SENTRY_DSN: "https://key@sentry.invalid/1",
 }));
 vi.mock("@sentry/nextjs", () => ({ captureException: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
 const { stripePayouts } = await import("@/db/schema");
-const { latestShopPayouts } = await import("../../../../features/payouts/store");
+const { latestShopPayouts } = await import("../../../../features/money/payouts/store");
 const { setShopStripeAccountStatus, upsertShopStripeAccount } = await import(
   "@/db/stripe-accounts"
 );

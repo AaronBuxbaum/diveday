@@ -1,4 +1,4 @@
-import type { StaffMember } from "@/features/staff-accounts";
+import type { StaffMember } from "@/features/accounts/staff-accounts";
 
 /**
  * The name divers actually read for this person, or empty when they read none.

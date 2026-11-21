@@ -6,7 +6,7 @@ import { withErasureCoordinatedBookingSend } from "@/db/erasure-coordinated-send
 import { sendAndRecordNotification } from "@/db/notifications";
 import { getTripWithBooked } from "@/db/trips";
 import { issueWaiverOnJoin, openJoinSignStep, settleJoinWaiverDelivery } from "@/db/waiver-issue";
-import type { shopBySlugCached } from "@/features/shops-cached";
+import type { shopBySlugCached } from "@/features/platform/shops-cached";
 import type { DiverLocale } from "@/i18n/settings";
 import { readinessLinkPath, readinessWaiverLinkPath } from "@/lib/booking-capabilities";
 import { readLearningMaterials } from "@/lib/courses";

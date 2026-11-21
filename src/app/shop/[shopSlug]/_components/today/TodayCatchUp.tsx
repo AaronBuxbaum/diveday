@@ -1,8 +1,8 @@
 import { Suspense } from "react";
 import { CatchUpStrip } from "@/app/shop/[shopSlug]/trips/[id]/manifest/_components/CatchUpStrip";
-import { requireShopSurface } from "@/features/session";
-import { readTodayCatchUp } from "@/features/today-catch-up";
-import { signTodayCatchUp } from "@/features/today-catch-up-token";
+import { requireShopSurface } from "@/features/accounts/session";
+import { readTodayCatchUp } from "@/features/day/today-catch-up";
+import { signTodayCatchUp } from "@/features/day/today-catch-up-token";
 import { catchUpSentences } from "@/i18n/activity-labels";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { groupCatchUp } from "@/lib/catch-up";

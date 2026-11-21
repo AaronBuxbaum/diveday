@@ -1,7 +1,7 @@
 import { and, eq, ne } from "drizzle-orm";
 import { expect, it } from "vitest";
 import { seededShopContext } from "@/test/db";
-import { anonymizeDiver } from "../features/anonymize/store";
+import { anonymizeDiver } from "../features/records/anonymize";
 import { recordFlySafeTold } from "./fly-safe-correction";
 import { bookings, people, personRoles } from "./schema";
 

@@ -2,9 +2,9 @@ import type {
   ArrivalOfflineRefusal,
   CheckInOutcome,
   UndoCheckInOutcome,
-} from "@/features/check-in";
-import type { MarkNoShowOutcome, UndoNoShowOutcome } from "@/features/no-show";
-import type { TurnAwayOutcome } from "@/features/turn-away";
+} from "@/features/boarding/check-in";
+import type { MarkNoShowOutcome, UndoNoShowOutcome } from "@/features/boarding/no-show";
+import type { TurnAwayOutcome } from "@/features/boarding/turn-away";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import { type FormNotice, type NoticeCodeOf, noticeFromParam } from "@/lib/staff-notices";
 

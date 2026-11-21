@@ -27,7 +27,7 @@ import { filesUnder } from "./files-under.mjs";
  *
  * ## What is deliberately *not* guarded
  *
- * `src/db/export.ts`, whole. A CSV's row order is not something a person reads
+ * `src/db/export/index.ts`, whole. A CSV's row order is not something a person reads
  * as meaningful, stability within one database is all an export needs, and it
  * holds most of the matches in the tree, so a reason on each line would be
  * forty-odd copies of the same sentence. Tests are skipped too: a test's own
@@ -35,7 +35,7 @@ import { filesUnder } from "./files-under.mjs";
  *
  * A JavaScript comparator that ties on a timestamp has the same failure and no
  * mechanical signature this rule can read; it is left to review
- * (`src/features/staffing-week/rules.ts`'s `byStart` was one, issue #2176).
+ * (`src/features/crew-and-boats/staffing-week/rules.ts`'s `byStart` was one, issue #2176).
  *
  * ## Saying "nobody reads this order"
  *
@@ -48,7 +48,7 @@ import { filesUnder } from "./files-under.mjs";
 const ROOT = process.cwd();
 const GUARDED_ROOTS = ["src/db", "src/features", "src/app", "src/lib"];
 const SOURCE_EXTENSIONS = new Set([".ts", ".tsx"]);
-const EXEMPT_FILES = new Set([path.join("src", "db", "export.ts")]);
+const EXEMPT_FILES = new Set([path.join("src", "db", "export", "index.ts")]);
 const IS_TEST = /\.test\.tsx?$/;
 const COMMENT_LINE = /^(?:\/\/|\/\*|\*)/;
 // `:\s*\S`, as every other exemption in `scripts/` spells it: a marker with
@@ -181,7 +181,7 @@ async function main() {
   }
 
   console.log(
-    `time-id-order: no list among ${orders} orderBy calls is decided by a random id under a frozen clock (src/db/export.ts exempt)`,
+    `time-id-order: no list among ${orders} orderBy calls is decided by a random id under a frozen clock (src/db/export/index.ts exempt)`,
   );
 }
 

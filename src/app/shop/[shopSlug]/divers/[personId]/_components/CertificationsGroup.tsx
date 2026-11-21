@@ -3,7 +3,7 @@ import { CertificationCardRow } from "@/components/person/rows";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { InsetGroup } from "@/components/ui/ledger";
-import type { DiverStatusRow } from "@/features/diver-status";
+import type { DiverStatusRow } from "@/features/people/diver-status";
 import { CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import {

@@ -1,5 +1,5 @@
-import { staffDiveIntentLine } from "@/features/dive-intent";
-import type { requireShopSurface } from "@/features/session";
+import type { requireShopSurface } from "@/features/accounts/session";
+import { staffDiveIntentLine } from "@/features/trips/dive-intent";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { BuddyTeamsPanel } from "../../manifest/_components/BuddyTeamsPanel";
 import { readManifestView } from "../../manifest/_components/manifest-view";

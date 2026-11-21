@@ -1,5 +1,5 @@
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
-import { type SiteListFilters, siteListHref } from "@/features/dive-sites";
+import { type SiteListFilters, siteListHref } from "@/features/sites/dive-sites";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { shopPath } from "@/lib/staff-notices";
 

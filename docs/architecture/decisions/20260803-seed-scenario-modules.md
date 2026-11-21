@@ -5,7 +5,7 @@
 
 ## Context
 
-`src/db/seed.ts` had grown to 4,650 lines and was the repository's top merge-conflict magnet —
+`src/db/seed/index.ts` had grown to 4,650 lines and was the repository's top merge-conflict magnet —
 named as such in the 2026-08-02 comprehensive review (ARCH-3). Every parallel session that adds a
 feature also adds demo data for it, so every parallel session edits this one file, usually in the
 middle of it. Two sessions appending a scenario land in the same region and conflict on work that
@@ -32,7 +32,7 @@ Three things make the order load-bearing, and all three are easy to break by acc
 
 ## Decision
 
-`src/db/seed.ts` stays the module every caller imports and becomes an **orchestrator**: it holds
+`src/db/seed/index.ts` stays the module every caller imports and becomes an **orchestrator**: it holds
 `seedIfEmpty`, `seedDemo`, `createDemoShop`, `resetDemoSchedule`, and a `seedDemoSchedule` that is
 now a short, readable sequence of named steps. Each step is a `src/db/seed-<scenario>.ts` module
 named for the shop story it seeds, not for the tables it writes:
@@ -88,7 +88,7 @@ trust a code review.
 
 - **Leave it as one file** — rejected; it is the status quo whose cost the review measured, and it
   grows with every feature.
-- **A `src/db/seed/` directory with an `index.ts`** — rejected. `src/db/seed.ts` and `src/db/seed/`
+- **A `src/db/seed/` directory with an `index.ts`** — rejected. `src/db/seed/index.ts` and `src/db/seed/`
   would both answer `@/db/seed`, and which one wins is a module-resolution detail rather than
   something a reader can see. Flat `seed-*.ts` siblings sort together in a directory listing and
   leave the entry point unambiguous.

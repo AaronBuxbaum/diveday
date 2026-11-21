@@ -6,8 +6,8 @@ import { getDb } from "@/db/client";
 import { reserveGearUnit } from "@/db/gear";
 import { getShopById } from "@/db/shops";
 import { getTripWithBooked } from "@/db/trips";
-import { requireStaffSession } from "@/features/session";
-import { screenGearPicks } from "@/features/trip-prep";
+import { requireStaffSession } from "@/features/accounts/session";
+import { screenGearPicks } from "@/features/trips/trip-prep";
 import { tripReservationWindow } from "@/lib/gear";
 import { shopPath } from "@/lib/staff-notices";
 

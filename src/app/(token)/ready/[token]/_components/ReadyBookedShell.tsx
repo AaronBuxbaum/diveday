@@ -1,5 +1,5 @@
 import { type ReactNode, Suspense } from "react";
-import { walletUrlForToken } from "@/features/wallet-pass";
+import { walletUrlForToken } from "@/features/boarding/wallet-pass";
 import { ReadyBookedPage } from "./ReadyMasthead";
 import { ReadyThreadBodySkeleton } from "./ReadyThreadBodySkeleton";
 

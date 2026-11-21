@@ -14,7 +14,7 @@ import { expect, READ_ONLY, signedInAsOwner, test } from "./fixtures";
 // the query string it put in the address bar.
 signedInAsOwner();
 
-// Seeded divers on opposite sides of each view (src/db/seed.ts `customerDefs`,
+// Seeded divers on opposite sides of each view (src/db/seed/index.ts `customerDefs`,
 // whose order is load-bearing and documented as such):
 //
 // - Nadia Petrov is one of the divers deliberately left without an emergency

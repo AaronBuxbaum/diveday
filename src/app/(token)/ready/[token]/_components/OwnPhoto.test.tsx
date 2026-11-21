@@ -3,9 +3,9 @@ import type { AppDb } from "@/db/client";
 import { diverTranslator } from "@/i18n/messages";
 import { OwnPhoto } from "./OwnPhoto";
 
-vi.mock("@/features/person-photo", () => ({ getDiverPhotoState: vi.fn() }));
+vi.mock("@/features/people/person-photo", () => ({ getDiverPhotoState: vi.fn() }));
 
-import { getDiverPhotoState } from "@/features/person-photo";
+import { getDiverPhotoState } from "@/features/people/person-photo";
 
 const db = {} as AppDb;
 const base = { db, token: "token", t: diverTranslator("en-US") };

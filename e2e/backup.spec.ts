@@ -20,7 +20,7 @@ const backupSettingsFor = (shopSlug: string) => `/shop/${shopSlug}/settings/back
  * reserved-TLD host that can never resolve, so a triggered delivery fails
  * fast with a *recorded* failure row — which is exactly the failure-path
  * behavior under test; the upload happy path is pinned by unit tests against
- * an injected fetch (src/features/backup-export/run-backup.test.ts), since
+ * an injected fetch (src/features/records/backup-export/run-backup.test.ts), since
  * the fleet blocks external HTTP on purpose.
  *
  * **The mutating tests take a shop of their own** (`privateShop`, ADR

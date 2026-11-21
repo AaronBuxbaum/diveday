@@ -1,4 +1,4 @@
-import { stepUpChallengeUrl } from "../src/features/security-step-up";
+import { stepUpChallengeUrl } from "../src/features/accounts/security-step-up";
 import { diverTranslator } from "../src/i18n/messages";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, test } from "./fixtures";

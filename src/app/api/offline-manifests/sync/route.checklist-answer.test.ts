@@ -13,8 +13,8 @@ import { signOfflineErasureEpoch } from "@/lib/offline-erasure-epoch";
 import { ROLL_CALL_WITNESS_HEADERS } from "@/lib/roll-call-protocol";
 import { fileScopedShopContext } from "@/test/db";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
-import { createBoat } from "../../../../features/boats/store";
-import { getIncidentExport } from "../../../../features/incident-export/store";
+import { createBoat } from "../../../../features/crew-and-boats/boats/store";
+import { getIncidentExport } from "../../../../features/safety/incident-export";
 
 // One seeded database for the file and a rolled-back transaction per test
 // (src/test/db.ts, `fileScopedShopContext`). Mocks as in `route.test.ts`.

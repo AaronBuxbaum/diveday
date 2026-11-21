@@ -11,8 +11,8 @@ import type {
   GearRentalsPage,
   GearRentalUnit,
   OpenRentalPhase,
-} from "@/features/gear-rentals";
-import { rentalPhaseLapsed } from "@/features/gear-rentals";
+} from "@/features/gear/gear-rentals";
+import { rentalPhaseLapsed } from "@/features/gear/gear-rentals";
 import { gearItemKindLabel, gearPhaseLabel } from "@/i18n/gear-labels";
 import { ORDER_STATUS_KEYS, ORDER_STATUS_TONES } from "@/i18n/order-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";

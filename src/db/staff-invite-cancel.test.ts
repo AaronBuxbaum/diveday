@@ -6,7 +6,7 @@ import {
   inviteStaffMember,
   listShopStaff,
   restoreStaffMember,
-} from "../features/staff-accounts/store";
+} from "../features/accounts/staff-accounts";
 import { consumeAccountToken, issueAccountToken } from "./account-tokens";
 import { userAccounts } from "./schema";
 

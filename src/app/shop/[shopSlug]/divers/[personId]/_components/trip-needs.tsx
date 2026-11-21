@@ -1,5 +1,5 @@
 import { CompactDisclosureRow } from "@/components/ui/disclosure";
-import type { DiverStatusRow } from "@/features/diver-status";
+import type { DiverStatusRow } from "@/features/people/diver-status";
 import {
   CERTIFICATION_LEVEL_KEYS,
   readinessBlockerText,

@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 import { DEMO_SHOP_SLUG } from "../src/db/demo-shop";
-import { DEMO_TODAY_TRIP_ID } from "../src/db/seed-identifiers";
+import { DEMO_TODAY_TRIP_ID } from "../src/db/seed/identifiers";
 import { expect, READ_ONLY, signedInAs, test } from "./fixtures";
 import { openTripAbout, openTripAboutRow, openTripMore } from "./helpers";
 

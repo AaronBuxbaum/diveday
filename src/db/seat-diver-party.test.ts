@@ -3,7 +3,7 @@ import { and, eq, inArray, ne } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
-import { seatParty } from "../features/seat-diver/store";
+import { seatParty } from "../features/bookings/seat-diver";
 import { clearAnswers, now } from "../test/substrate-fixtures/db/waivers-test-fixtures";
 import type { AppDb } from "./client";
 import { getBookingReadiness } from "./readiness";

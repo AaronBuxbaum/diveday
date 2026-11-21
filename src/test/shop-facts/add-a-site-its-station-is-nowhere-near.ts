@@ -8,7 +8,7 @@ import { diveSites } from "../../db/schema/index";
  * dive-site editor's implausible-station advisory, and the box that answers
  * it, neither of which the Playwright fleet could reach.
  *
- * `fixtureTideStation` (`src/features/tide-stations/rules.ts`) answers **Carysfort Reef**
+ * `fixtureTideStation` (`src/features/sites/tide-stations.ts`) answers **Carysfort Reef**
  * for every seven-digit id, on purpose: one station for every id is what keeps
  * the fleet deterministic with NOAA unreachable. So the distance cannot come
  * from the station — it has to come from the *site*. This one sits on the

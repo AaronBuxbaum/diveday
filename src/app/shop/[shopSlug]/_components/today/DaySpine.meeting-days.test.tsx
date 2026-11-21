@@ -30,9 +30,9 @@ vi.mock("next/navigation", async (importOriginal) => ({
   useRouter: () => ({ refresh: vi.fn() }),
 }));
 
-import type { TodayAction } from "@/features/today/today";
-import { pushRollCallRows } from "@/features/today/today-roll-call-rows";
-import { rowsContext } from "@/features/today/today-rows-test-fixtures";
+import type { TodayAction } from "@/features/day/today/today";
+import { pushRollCallRows } from "@/features/day/today/today-roll-call-rows";
+import { rowsContext } from "@/features/day/today/today-rows-test-fixtures";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { renderSpine } from "./day-spine-test-fixtures";
 

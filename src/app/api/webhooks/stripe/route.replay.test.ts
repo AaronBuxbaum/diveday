@@ -48,7 +48,7 @@ vi.mock("@/db/client", async (importOriginal) => {
   return { ...actual, getDb: vi.fn() };
 });
 // The routes report only where a DSN is configured; the suite runs without one.
-vi.mock("../../../../features/sentry-dsn/rules", () => ({
+vi.mock("../../../../features/platform/sentry-dsn", () => ({
   SENTRY_DSN: "https://key@sentry.invalid/1",
 }));
 vi.mock("@sentry/nextjs", () => ({ captureException: vi.fn() }));
@@ -67,7 +67,7 @@ const { recordPaymentOperationStripeObject, resolvePaymentOperation, startPaymen
   await import("@/db/payment-operations");
 const { paymentOperationIntents } = await import("@/db/schema");
 const { refundBookingOnShopCancellation } = await import("@/db/refunds");
-const { listOpenPaymentDisputes } = await import("../../../../features/payment-disputes/store");
+const { listOpenPaymentDisputes } = await import("../../../../features/money/payment-disputes");
 const { getShopStripeAccount, setShopStripeAccountStatus, upsertShopStripeAccount } = await import(
   "@/db/stripe-accounts"
 );

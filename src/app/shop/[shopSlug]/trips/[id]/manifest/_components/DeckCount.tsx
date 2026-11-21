@@ -1,4 +1,4 @@
-import { DECK_COUNT_MAX, type DeckCountComparison } from "@/features/deck-counts";
+import { DECK_COUNT_MAX, type DeckCountComparison } from "@/features/boarding/deck-counts";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { type DeckCountAction, DeckCountForm } from "./DeckCountForm";
 

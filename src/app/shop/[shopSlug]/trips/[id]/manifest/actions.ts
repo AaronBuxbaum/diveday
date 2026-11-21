@@ -27,11 +27,11 @@ import {
 } from "@/db/push-subscriptions";
 import { getShopById, shopHasFeatureOn } from "@/db/shops";
 import { markTripCaughtUp } from "@/db/trip-read-marks";
-import { answerSnag, noteSnag } from "@/features/boat-snags";
-import { revalidateAndRedirect } from "@/features/navigation";
-import { requireShopSurface, requireStaffSession } from "@/features/session";
-import { deleteTripSighting, recordTripSighting } from "@/features/trip-sightings";
-import { recordTripStage } from "@/features/trip-stages";
+import { requireShopSurface, requireStaffSession } from "@/features/accounts/session";
+import { answerSnag, noteSnag } from "@/features/crew-and-boats/boat-snags";
+import { revalidateAndRedirect } from "@/features/platform/navigation";
+import { deleteTripSighting, recordTripSighting } from "@/features/sites/trip-sightings";
+import { recordTripStage } from "@/features/trips/trip-stages";
 import { trackEvent } from "@/lib/analytics";
 import { nowDate } from "@/lib/clock";
 import { depthToMeters, MAX_ENTERED_DEPTH_METERS } from "@/lib/depth-units";

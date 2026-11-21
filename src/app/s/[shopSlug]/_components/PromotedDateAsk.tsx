@@ -75,7 +75,7 @@ export function PromotedDateAsk({
   shopSlug: string;
   locale: string;
   timeZone: string;
-  /** The off-season card is up (`src/features/off-season/rules.ts`). */
+  /** The off-season card is up (`src/features/trips/off-season.ts`). */
   quiet: boolean;
   /**
    * The shop's own switches: date requests at all, and a private charter on

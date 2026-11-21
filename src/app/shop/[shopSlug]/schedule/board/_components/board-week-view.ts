@@ -1,8 +1,8 @@
 import type { listOpenDateInterestsForDates } from "@/db/interest-dates";
 import type { weekBoard } from "@/db/trips";
-import { maxConcurrentTrips, overlappingBoatIds } from "@/features/boats";
-import type { openAfterDiveRollCalls } from "@/features/roll-call-gaps";
-import type { LastYearWeek, WeekConflicts, WeekCrew } from "@/features/schedule-board-page";
+import type { openAfterDiveRollCalls } from "@/features/boarding/roll-call-gaps";
+import { maxConcurrentTrips, overlappingBoatIds } from "@/features/crew-and-boats/boats";
+import type { LastYearWeek, WeekConflicts, WeekCrew } from "@/features/trips/schedule-board-page";
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — this segment's `loading.tsx`, with no request read above it.
 // Since the staff shell became synchronous (issue 1446) that holds for a cold,

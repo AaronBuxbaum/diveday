@@ -1,5 +1,5 @@
 import { getDb } from "@/db/client";
-import { getDiverPhotoForCapability } from "@/features/person-photo";
+import { getDiverPhotoForCapability } from "@/features/people/person-photo";
 import { privatePersonPhotoNotFound, privatePersonPhotoResponse } from "@/lib/person-photo";
 import { mediaStorageConfigFromEnvironment, readS3Object } from "@/lib/storage";
 

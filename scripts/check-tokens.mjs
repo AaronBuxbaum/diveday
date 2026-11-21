@@ -92,11 +92,11 @@ const exemptPaths = new Set([
   "src/app/_brand/colors.ts",
   // Satori's year-card palette is composited into a standalone bitmap; its
   // contrast fixtures exercise literal brand colors without a stylesheet.
-  "src/features/year-card/rules.ts",
-  "src/features/year-card/rules.test.ts",
+  "src/features/reports/year-card.ts",
+  "src/features/reports/year-card.test.ts",
   // Real sharp raster fixtures prove SVG/raster loaders still work; their
   // sample pixels are bitmap inputs, not styles rendered by the app.
-  "src/features/og-rasterizer/rules.test.ts",
+  "src/features/public-site/og-rasterizer.test.ts",
 ]);
 
 /**

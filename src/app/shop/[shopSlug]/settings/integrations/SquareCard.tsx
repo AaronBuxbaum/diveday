@@ -2,7 +2,10 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
-import type { getIntegrationSettingsPage, squareLocationsForShop } from "@/features/integrations";
+import type {
+  getIntegrationSettingsPage,
+  squareLocationsForShop,
+} from "@/features/shop-setup/integrations";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { chooseSquareLocationAction, startSquareConnectionAction } from "./actions";
 import { DisconnectForm } from "./integration-parts";

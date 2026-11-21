@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { createBookingParty } from "@/db/bookings";
-import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
+import { seedRollCallEvidence } from "@/db/seed/roll-call-evidence";
 import { createTripSeries, getTripSeriesById } from "@/db/trips";
 import { calendarDateInTimezone, shiftCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
@@ -34,11 +34,11 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
 });
-vi.mock("../../../../../features/session/rules", () => ({ requireShopSurface: vi.fn() }));
+vi.mock("../../../../../features/accounts/session", () => ({ requireShopSurface: vi.fn() }));
 vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
-const { requireShopSurface } = await import("../../../../../features/session/rules");
+const { requireShopSurface } = await import("../../../../../features/accounts/session");
 const { cancelSeriesAction } = await import("./series-actions");
 
 describe("cancelling a run whose only upcoming date is underway", () => {

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { advanceClock } from "@/test/clock";
 import { fileScopedShopContext } from "@/test/db";
-import { readDepartureStage } from "../features/trip-stages/store";
+import { readDepartureStage } from "../features/trips/trip-stages";
 import {
   boardAtDeparture,
   returnedTrip,

@@ -1,5 +1,5 @@
 import { canPersonExportShopData } from "@/db/export";
-import { requireShopSurface } from "@/features/session";
+import { requireShopSurface } from "@/features/accounts/session";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { MonthEndSection } from "../../reports/_components/MonthEndSection";

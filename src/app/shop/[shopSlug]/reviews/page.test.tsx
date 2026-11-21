@@ -7,7 +7,7 @@ import type { DiveDaySession } from "@/lib/auth";
 import type { Role } from "@/lib/authz";
 import { fileScopedShopContext } from "@/test/db";
 import { nextHeadersStub } from "@/test/next-headers";
-import { listShopStaff } from "../../../../features/staff-accounts/store";
+import { listShopStaff } from "../../../../features/accounts/staff-accounts";
 
 /**
  * **Reviews switched off** (the Features page): the Inbox tab and ⌘K entry are
@@ -23,9 +23,11 @@ vi.mock("@/db/client", async (importOriginal) => {
 });
 vi.mock("@/lib/auth", () => ({ auth: vi.fn<() => Promise<DiveDaySession | null>>() }));
 vi.mock("next/headers", () => nextHeadersStub());
-vi.mock("../../../../features/recap/recap-pulses.store", async (importOriginal) => {
+vi.mock("../../../../features/after-the-dive/recap/recap-pulses.store", async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import("../../../../features/recap/recap-pulses.store")>();
+    await importOriginal<
+      typeof import("../../../../features/after-the-dive/recap/recap-pulses.store")
+    >();
   return { ...actual, listOpenRecapPulses: vi.fn(async () => []) };
 });
 
@@ -33,7 +35,9 @@ const { getDb } = await import("@/db/client");
 const authModule = (await import("@/lib/auth")) as unknown as {
   auth: ReturnType<typeof vi.fn<() => Promise<DiveDaySession | null>>>;
 };
-const { listOpenRecapPulses } = await import("../../../../features/recap/recap-pulses.store");
+const { listOpenRecapPulses } = await import(
+  "../../../../features/after-the-dive/recap/recap-pulses.store"
+);
 const ReviewsPage = (await import("../(inbox-section)/reviews/page")).default;
 
 async function open(role: Role, reviewsEnabled: boolean) {

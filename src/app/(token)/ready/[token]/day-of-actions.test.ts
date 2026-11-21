@@ -6,11 +6,11 @@ import { getTripCrewAssignments, listStaff } from "@/db/trips";
 import { DAY_MS, nowDate } from "@/lib/clock";
 import { DIETARY_NOTE_MAX } from "@/lib/lunch-aboard";
 import { fileScopedShopContext } from "@/test/db";
+import { getReadyPageData } from "../../../../features/boarding/ready";
 import {
   assignHelpRequestHelper,
   getHelpRequestForBooking,
-} from "../../../../features/help-requests/store";
-import { getReadyPageData } from "../../../../features/ready/store";
+} from "../../../../features/messages/help-requests/store";
 
 /**
  * **Day-of details, one Save** (third UX review, item 24), against a real

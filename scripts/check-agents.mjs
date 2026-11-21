@@ -262,12 +262,17 @@ for (const { file, token } of missingHandoff) {
   if (!ignoredHandoff.has(token)) problems.push(`${file}: path "${token}" does not exist`);
 }
 
-// 5d. A feature module's README is that module's map (issue #2755): it names its own files bare
-// (`registry.ts`), relative to the module, and anything else by repo path. A renamed file
-// misroutes the next session exactly as a stale handoff doc does.
+// 5d. A feature area's README, and a concept folder's, is that folder's map (issue #2755): it
+// names its own files bare (`registry.ts`), relative to the folder, and anything else by repo
+// path. A renamed file misroutes the next session exactly as a stale handoff doc does.
 let featureReadmeCount = 0;
-for (const feature of await listDirs(ROOT, "src/features")) {
-  const moduleDir = `src/features/${feature}`;
+const featureFolders = [];
+for (const area of await listDirs(ROOT, "src/features")) {
+  featureFolders.push(`src/features/${area}`);
+  for (const concept of await listDirs(ROOT, `src/features/${area}`))
+    featureFolders.push(`src/features/${area}/${concept}`);
+}
+for (const moduleDir of featureFolders) {
   const readme = `${moduleDir}/README.md`;
   if (!existsSync(path.join(ROOT, readme))) continue;
   featureReadmeCount += 1;

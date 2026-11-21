@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { offlineManifestTripExists } from "@/features/offline-manifest-snapshots";
-import { isCrossSiteHeaders } from "@/features/same-origin";
+import { offlineManifestTripExists } from "@/features/boarding/offline-manifest-snapshots";
+import { isCrossSiteHeaders } from "@/features/platform/same-origin";
 import { supportsCausalRollCall } from "@/lib/roll-call-protocol";
 import { uuidParam } from "@/lib/uuid";
 import { authorizeOfflineManifestStaff, OFFLINE_MANIFEST_NO_STORE } from "../../staff-context";

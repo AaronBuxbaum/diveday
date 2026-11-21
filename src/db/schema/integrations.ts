@@ -29,7 +29,7 @@ export const shopBackupDestinations = pgTable("shop_backup_destinations", {
   /**
    * The S3-compatible API origin the weekly bundle is PUT to — AWS S3, Cloudflare
    * R2, Backblaze B2, MinIO, anything speaking SigV4. HTTPS only, and never a
-   * loopback/private host; `src/features/backup-export` refuses those before a
+   * loopback/private host; `src/features/records/backup-export` refuses those before a
    * row is written (the server is the one making this request).
    */
   endpoint: text("endpoint").notNull(),

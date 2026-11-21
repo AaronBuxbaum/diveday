@@ -5,9 +5,12 @@ import { z } from "zod";
 import { canPersonErasePersonalData, canPersonManageShopSettings } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { retryMediaDeletion } from "@/db/media-deletions";
-import { parseForm, readForm, single, text } from "@/features/form-parse";
-import { dischargeProcessorErasure, retryProcessorErasure } from "@/features/processor-erasure";
-import { requireStaffSession } from "@/features/session";
+import { requireStaffSession } from "@/features/accounts/session";
+import { parseForm, readForm, single, text } from "@/features/platform/form-parse";
+import {
+  dischargeProcessorErasure,
+  retryProcessorErasure,
+} from "@/features/records/processor-erasure";
 import { shopPath } from "@/lib/staff-notices";
 
 /* -------------------------------------------------------------------------- *
@@ -39,7 +42,7 @@ import { shopPath } from "@/lib/staff-notices";
  * likes — so a bound slug would let a signed-in staffer of shop A invalidate
  * shop B's cached settings page. The writes above were never at risk (every
  * one is scoped by `session.user.shopId`); this closes the cache-invalidation
- * half, and matches how `defineAction` (`src/features/server-action`) and the rest of
+ * half, and matches how `defineAction` (`src/features/platform/server-action.ts`) and the rest of
  * this file already derive the slug.
  * -------------------------------------------------------------------------- */
 

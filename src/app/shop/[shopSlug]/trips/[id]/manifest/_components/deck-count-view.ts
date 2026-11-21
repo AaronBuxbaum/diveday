@@ -1,4 +1,4 @@
-import { compareDeckCount, type DeckCountComparison } from "@/features/deck-counts";
+import { compareDeckCount, type DeckCountComparison } from "@/features/boarding/deck-counts";
 import { physicalPeople } from "@/lib/manifest-person-counts";
 import { type RollCallCheckpoint, rollCallRowState, type TripManifest } from "@/lib/manifests";
 

@@ -29,7 +29,7 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
 });
-vi.mock("../../../../../features/session/rules", () => ({ requireStaffSession: vi.fn() }));
+vi.mock("../../../../../features/accounts/session", () => ({ requireStaffSession: vi.fn() }));
 const stored = vi.hoisted(() => ({ n: 0 }));
 vi.mock("@/lib/storage", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/storage")>();
@@ -43,7 +43,7 @@ vi.mock("@/lib/storage", async (importOriginal) => {
 });
 
 const { getDb } = await import("@/db/client");
-const { requireStaffSession } = await import("../../../../../features/session/rules");
+const { requireStaffSession } = await import("../../../../../features/accounts/session");
 const { saveDiveSiteAction } = await import("./actions");
 
 async function twoSites() {

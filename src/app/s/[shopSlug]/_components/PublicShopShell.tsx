@@ -1,4 +1,4 @@
-import { DEMO_STARTS, demoStartFrom } from "@/features/demo-starts";
+import { DEMO_STARTS, demoStartFrom } from "@/features/demo/demo-starts";
 /**
  * **The shop's chrome, as four components a route other than `layout.tsx` can
  * also render.**
@@ -36,11 +36,11 @@ import { getDb } from "@/db/client";
 import { DEMO_SHOP_SLUG } from "@/db/demo-shop";
 import { listPackagesOnSale } from "@/db/dive-packages";
 import { shopPublicWhatsAppNumber } from "@/db/whatsapp-accounts";
-import { hasActiveCourses } from "@/features/courses";
-import { isLiveShopStaff } from "@/features/session";
-import { listShopRolesPresent } from "@/features/shop-roles";
-import { shopBySlugCached } from "@/features/shops-cached";
-import { listShopSpokenLanguages } from "@/features/staff-accounts";
+import { isLiveShopStaff } from "@/features/accounts/session";
+import { listShopRolesPresent } from "@/features/accounts/shop-roles";
+import { listShopSpokenLanguages } from "@/features/accounts/staff-accounts";
+import { shopBySlugCached } from "@/features/platform/shops-cached";
+import { hasActiveCourses } from "@/features/training/courses";
 import { languageEndonym, localeEndonym } from "@/i18n/language-labels";
 import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import { requestLanguageFallback, requestLocale } from "@/i18n/request";

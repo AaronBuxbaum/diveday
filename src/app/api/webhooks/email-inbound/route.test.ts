@@ -9,16 +9,16 @@ vi.mock("@/db/inbound-messages", () => ({
   shopIdForInboundEmailToken: vi.fn(),
 }));
 // The keyword path is one call this route makes and a module with its own
-// tests (`src/features/reply-keywords/store.test.ts`), so it is stubbed here rather than
+// tests (`src/features/messages/reply-keywords/store.test.ts`), so it is stubbed here rather than
 // run: what this file owes is that the handoff happens for a message the route
 // actually filed, and not for one it did not (ADR 20260909-reply-keywords).
-vi.mock("../../../../features/reply-keywords/store", () => ({
+vi.mock("../../../../features/messages/reply-keywords/store", () => ({
   handleInboundReplyKeyword: vi.fn(),
 }));
-// The after-hours desk ping, likewise: its rule is `src/features/desk-pings/store.test.ts`.
-vi.mock("../../../../features/desk-pings/store", () => ({ pingDeskAfterHoursSafely: vi.fn() }));
-// Claude's inbox triage, likewise: its rule is `src/features/inbox-assists/store.test.ts`.
-vi.mock("../../../../features/inbox-assists/store", () => ({
+// The after-hours desk ping, likewise: its rule is `src/features/messages/desk-pings.test.ts`.
+vi.mock("../../../../features/messages/desk-pings", () => ({ pingDeskAfterHoursSafely: vi.fn() }));
+// Claude's inbox triage, likewise: its rule is `src/features/ai/inbox-assists.test.ts`.
+vi.mock("../../../../features/ai/inbox-assists", () => ({
   triageInboundMessagesSafely: vi.fn(),
 }));
 // The ping runs after the response (#2311); the test runs what was deferred.
@@ -26,19 +26,22 @@ vi.mock("next/server", async (importOriginal) => {
   const actual = await importOriginal<typeof import("next/server")>();
   return { ...actual, after: vi.fn() };
 });
-vi.mock("../../../../features/inbound-mail-store/rules", () => ({
+vi.mock("../../../../features/messages/inbound-mail-store", () => ({
   inboundMailStoreFromEnvironment: vi.fn(),
 }));
-vi.mock("../../../../features/sns-webhook/rules", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../../../features/sns-webhook/rules")>();
+vi.mock("../../../../features/messages/sns-webhook/rules", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("../../../../features/messages/sns-webhook/rules")>();
   return { ...actual, verifySnsMessage: vi.fn(), confirmSnsSubscription: vi.fn() };
 });
 
 const { getDb } = await import("@/db/client");
 const { recordInboundMessage, shopIdForInboundEmailToken } = await import("@/db/inbound-messages");
-const { handleInboundReplyKeyword } = await import("../../../../features/reply-keywords/store");
-const { pingDeskAfterHoursSafely } = await import("../../../../features/desk-pings/store");
-const { triageInboundMessagesSafely } = await import("../../../../features/inbox-assists/store");
+const { handleInboundReplyKeyword } = await import(
+  "../../../../features/messages/reply-keywords/store"
+);
+const { pingDeskAfterHoursSafely } = await import("../../../../features/messages/desk-pings");
+const { triageInboundMessagesSafely } = await import("../../../../features/ai/inbox-assists");
 const { after } = await import("next/server");
 
 /** Run whatever the route handed to `after()`, as Next does once it has answered. */
@@ -48,9 +51,9 @@ async function runDeferred() {
   }
 }
 const { inboundMailStoreFromEnvironment } = await import(
-  "../../../../features/inbound-mail-store/rules"
+  "../../../../features/messages/inbound-mail-store"
 );
-const sns = await import("../../../../features/sns-webhook/rules");
+const sns = await import("../../../../features/messages/sns-webhook/rules");
 const { verifySnsMessage, confirmSnsSubscription } = sns;
 const { POST } = await import("./route");
 
@@ -153,7 +156,7 @@ describe("email-inbound webhook — the envelope", () => {
     // without ever being fetched, which is the SSRF-and-forgery door in one.
     vi.mocked(verifySnsMessage).mockImplementation((payload, arn) =>
       vi
-        .importActual<typeof sns>("../../../../features/sns-webhook/rules")
+        .importActual<typeof sns>("../../../../features/messages/sns-webhook/rules")
         .then((actual) => actual.verifySnsMessage(payload, arn, vi.fn() as never)),
     );
     const forged = JSON.stringify({

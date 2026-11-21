@@ -10,7 +10,7 @@ import {
   type DiverProfile,
   firstOpenOrderId,
   unpaidBookingCount,
-} from "@/features/diver-profile";
+} from "@/features/people/diver-profile";
 import { ORDER_STATUS_KEYS, ORDER_STATUS_TONES } from "@/i18n/order-labels";
 import type { StaffMessageKey } from "@/i18n/staff-messages";
 

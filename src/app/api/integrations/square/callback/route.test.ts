@@ -1,7 +1,10 @@
 import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { integrationOauthStates, personRoles, shops } from "@/db/schema";
-import { createIntegrationOAuthState, getShopIntegration } from "@/features/integrations";
+import {
+  createIntegrationOAuthState,
+  getShopIntegration,
+} from "@/features/shop-setup/integrations";
 import { nowMs } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import {
@@ -15,9 +18,9 @@ vi.mock("@/db/client", async (original) => ({
   ...(await original<typeof import("@/db/client")>()),
   getDb: vi.fn(),
 }));
-vi.mock("@/features/session", () => ({ requireStaffSession: vi.fn() }));
+vi.mock("@/features/accounts/session", () => ({ requireStaffSession: vi.fn() }));
 const { getDb } = await import("@/db/client");
-const { requireStaffSession } = await import("@/features/session");
+const { requireStaffSession } = await import("@/features/accounts/session");
 const { GET } = await import("./route");
 const ctx = fileScopedShopContext({ realShop: true });
 const callback = (query: string) =>

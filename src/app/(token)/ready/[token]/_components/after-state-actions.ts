@@ -6,7 +6,10 @@ import {
   unshareRecapPhotoAction,
 } from "@/app/(token)/recap/[token]/actions";
 import { recapTokenFor } from "@/db/recap-links";
-import { type AfterStateProps, buildAfterStateProps } from "@/features/recap-after-state";
+import {
+  type AfterStateProps,
+  buildAfterStateProps,
+} from "@/features/after-the-dive/recap-after-state";
 
 /**
  * **The after-state's doors on `/ready`, bound.** All but one verify a recap

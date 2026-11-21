@@ -5,7 +5,7 @@ import { register } from "./instrumentation";
 
 const recordLogLine = vi.fn();
 
-vi.mock("./features/log-shipping/index", () => ({
+vi.mock("./features/platform/log-shipping/index", () => ({
   recordLogLine: (line: string, timestamp: number) => recordLogLine(line, timestamp),
   setFlushDeferrer: () => {},
 }));
@@ -105,7 +105,7 @@ describe("Sentry on the server", () => {
 
   afterEach(() => {
     vi.doUnmock("@sentry/nextjs");
-    vi.doUnmock("./features/sentry-dsn/rules");
+    vi.doUnmock("./features/platform/sentry-dsn");
     vi.resetModules();
   });
 
@@ -113,7 +113,7 @@ describe("Sentry on the server", () => {
     vi.resetModules();
     const fake = sdk();
     vi.doMock("@sentry/nextjs", () => fake);
-    vi.doMock("./features/sentry-dsn/rules", () => ({ SENTRY_DSN: dsn }));
+    vi.doMock("./features/platform/sentry-dsn", () => ({ SENTRY_DSN: dsn }));
     return { fake, module: await import("./instrumentation") };
   }
 

@@ -2,15 +2,15 @@
 
 import { getDb } from "@/db/client";
 import { diveSitePhotoUrlsHeldByShop } from "@/db/dive-site-photos";
+import { requireStaffSession } from "@/features/accounts/session";
+import { revalidateAndRedirect } from "@/features/platform/navigation";
+import { canPersonImportShopData } from "@/features/records/import";
 import {
   commitDiveSiteImport,
   isDiveSiteCreaturesCsv,
   prepareDiveSiteCreaturesImport,
   prepareDiveSiteImport,
-} from "@/features/dive-sites";
-import { canPersonImportShopData } from "@/features/import";
-import { revalidateAndRedirect } from "@/features/navigation";
-import { requireStaffSession } from "@/features/session";
+} from "@/features/sites/dive-sites";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 
 /**

@@ -31,7 +31,7 @@ import { YourWeek } from "@/app/shop/[shopSlug]/_components/today/YourWeek";
 import { FlashParams } from "@/components/FlashParams";
 import type { NoticeTone } from "@/components/ui/tone";
 import type { ConfirmRentalFitOutcome } from "@/db/rental-fit";
-import { requireStaffSession } from "@/features/session";
+import { requireStaffSession } from "@/features/accounts/session";
 import {
   assembleDaySpine,
   canAcceptPayments,
@@ -41,7 +41,7 @@ import {
   getShopHome,
   readNeedsYou,
   spineIsQuiet,
-} from "@/features/today";
+} from "@/features/day/today";
 import { orientationRoleFor } from "@/i18n/orientation-labels";
 import { requestLocale } from "@/i18n/request";
 import { sendLimitWords } from "@/i18n/shared-sentences";
@@ -202,7 +202,7 @@ async function TodayBody({
   const locale = await requestLocale(shop?.defaultLocale);
   // A session pointing at a shop row that is gone is a page that does not
   // exist, not a blank 200. Settled on `notFound()` app-wide alongside
-  // `requireShopSurface` (src/features/session/rules.ts); this body cannot use that helper
+  // `requireShopSurface` (src/features/accounts/session.ts); this body cannot use that helper
   // itself because it runs inside the page's `<Suspense>` boundary, with the
   // session already resolved above it.
   if (!shop) notFound();
@@ -282,7 +282,7 @@ async function TodayBody({
   );
   const firstBoatEver = eveningClose.allHome && !sailedBefore;
   // **First run is "never had a departure", not "none coming up"**: `nextDeparture` is null on
-  // any day nothing sails (`src/features/today/today-reader.ts`), so it is only the cheap prefilter and the count
+  // any day nothing sails (`src/features/day/today/today-reader.ts`), so it is only the cheap prefilter and the count
   // decides. A demo shop is excluded (issue #806): it arrives with every step done, and its count
   // is never read. The release step outlives first run (`ReleaseStillSample`, item 21).
   const showFirstRunChecklist = firstRun !== null;

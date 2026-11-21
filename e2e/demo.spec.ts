@@ -1,4 +1,4 @@
-import { DEMO_SHOP_BRAND } from "../src/db/seed-shop-brand";
+import { DEMO_SHOP_BRAND } from "../src/db/seed/shop-brand";
 import { diverTranslator } from "../src/i18n/messages";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import type { BrandBadgeCode } from "../src/lib/brand";

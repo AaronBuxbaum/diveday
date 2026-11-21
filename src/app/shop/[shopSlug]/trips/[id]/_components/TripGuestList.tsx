@@ -1,5 +1,5 @@
 import type { ComponentProps, ReactNode } from "react";
-import type { TripOverview } from "@/features/trip-overview";
+import type { TripOverview } from "@/features/trips/trip-overview";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { CoursePulse } from "./CoursePulse";
 import { DeskRefresh } from "./DeskRefresh";

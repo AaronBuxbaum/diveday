@@ -8,17 +8,20 @@ import { getDb } from "@/db/client";
 import { recordMoveAsk } from "@/db/inbound-messages";
 import { isLockWaitRefusal } from "@/db/lock-bounds";
 import { getShopById } from "@/db/shops";
-import { formValue, parseForm, readForm, single, text } from "@/features/form-parse";
-import { alertStaffToMoveAsk } from "@/features/move-ask-alerts";
-import { strandedMoveAsk } from "@/features/move-offer";
-import { revalidateAndRedirect } from "@/features/navigation";
-import { startPartySeatCheckout } from "@/features/party-seat-checkout";
 import {
   planReadinessLinkRescue,
   type ReadinessLinkRescue,
   sendPlannedReadinessLink,
-} from "@/features/readiness-link-rescue";
-import { settleReleasedPartySeats, settleSelfCancelledSeat } from "@/features/self-cancel-settle";
+} from "@/features/boarding/readiness-link-rescue";
+import { alertStaffToMoveAsk } from "@/features/bookings/move-ask-alerts";
+import { strandedMoveAsk } from "@/features/bookings/move-offer";
+import {
+  settleReleasedPartySeats,
+  settleSelfCancelledSeat,
+} from "@/features/bookings/self-cancel-settle";
+import { startPartySeatCheckout } from "@/features/money/party-seat-checkout";
+import { formValue, parseForm, readForm, single, text } from "@/features/platform/form-parse";
+import { revalidateAndRedirect } from "@/features/platform/navigation";
 import { diverTranslator } from "@/i18n/messages";
 import { describeCheckoutLine } from "@/i18n/participant-labels";
 import { trackEvent } from "@/lib/analytics";

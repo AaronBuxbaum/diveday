@@ -2,7 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { offlineManifestSnapshotRevisions, shops, trips } from "@/db/schema";
 import { meetingWindowsByTrip } from "@/db/trip-meeting-windows";
-import { nextOfflineManifestSnapshotRevision } from "@/features/offline-manifest-snapshots";
+import { nextOfflineManifestSnapshotRevision } from "@/features/boarding/offline-manifest-snapshots";
 import type { DiveDaySession } from "@/lib/auth";
 import type { Role } from "@/lib/authz";
 import { verifyOfflineErasureEpoch } from "@/lib/offline-erasure-epoch";

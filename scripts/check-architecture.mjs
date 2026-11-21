@@ -7,7 +7,7 @@ import { collectSubstrateLeaves } from "./substrate-leaves.mjs";
 import { isDataModule, surfaceReaders } from "./surface-readers.mjs";
 
 /**
- * Layout invariants (docs ADR 20260730-feature-module-contracts).
+ * Layout invariants (docs ADR 20260730-feature-module-contracts, ADR 20261121-feature-areas).
  *
  * 1. **Dependency direction.** Domain (`src/lib`) and data (`src/db`) code must
  *    never import from `src/app` or from `src/features`. They sit below both:
@@ -39,11 +39,14 @@ import { isDataModule, surfaceReaders } from "./surface-readers.mjs";
  *      (`reminder-text.ts`, `staff-push.ts`, `reply-keyword-text.ts`, …), which
  *      the db sender calls with a locale and the facts. Today's queue still
  *      words its rows and is banked until the Today move (issue #2756).
- *    - Anything outside `src/db` → `@/db/trips-*` or `@/db/seed-*`. The trips
- *      modules are reached through the `@/db/trips` barrel and the seed
- *      scenarios through `@/db/seed` (AGENTS.md route map), so a sibling can be
- *      split or merged without a repo-wide edit. A trip page's surface reader
- *      (`trip-overview.ts`, …) is not a trips sibling and is imported by name.
+ *    - Anything outside `src/db` → `@/db/trips-*`. The trips modules are
+ *      reached through the `@/db/trips` barrel (AGENTS.md route map), so a
+ *      sibling can be split or merged without a repo-wide edit. A trip page's
+ *      surface reader (`trip-overview.ts`, …) is not a trips sibling and is
+ *      imported by name. They stay flat beside the rest of `src/db` because
+ *      about a hundred db modules read `trips-live` and `trips-queries` by file,
+ *      which a folder's door (rule 5) would refuse. The seed scenarios are a
+ *      folder, `src/db/seed/`, and rule 5 keeps them behind its index.
  *    - `src/lib` and `src/db` → `src/i18n` *value* imports (issue #2772). Words are chosen
  *      in a renderer: the page, the message (`src/lib/notifications/**`) and the file.
  *      The rest returns codes and keys. A type is a shape and passes.
@@ -51,19 +54,23 @@ import { isDataModule, surfaceReaders } from "./surface-readers.mjs";
  *    fixture routes under `src/app/api/test/`): a test builds and inspects its
  *    own rows, and that is not a layering decision.
  *
- * 3. **Feature modules have a contract.** A `src/features/<feature>/` module
- *    publishes exactly one entry point — its `index.ts` — and documents itself
- *    in a `README.md`. Nothing outside the module may reach past the index.
- *    That is what makes the internals genuinely internal: a file can be split,
- *    renamed, or merged without a repo-wide edit, and the module's surface is
- *    reviewable in one file rather than inferred from every call site.
+ * 3. **Features live in areas, and a concept has one door** (ADR 20261121-feature-areas).
+ *    `src/features/<area>/` is a folder named for a part of the shop, with a `README.md`
+ *    saying what it owns; nothing else sits directly under `src/features`. A concept in an
+ *    area is either one file (`<area>/<concept>.ts`, its tests beside it as
+ *    `<concept>.test.ts` and `<concept>.<case>.test.ts`) or a folder with an `index.ts`.
+ *    From outside a concept, `@/features/<area>/<concept>` is the only importable form,
+ *    whether it names the file or the folder's index; nothing deeper. Inside one concept
+ *    folder any file may import any sibling. That is what makes the internals genuinely
+ *    internal: a file can be split, renamed, or merged without a repo-wide edit, and the
+ *    concept's surface is reviewable in one file rather than inferred from every call site.
  *
  * 5. **An index is a door** (issue #2754). A directory directly under `src/lib`
  *    or `src/db` that contains an `index.ts` is a module, and from outside it
  *    only the index is importable: a file beside it is the module's own, free
  *    to be split or merged without a repo-wide edit, and adding a function to
- *    a sibling does not publish it. (`src/features` modules say the same in
- *    rule 3, with a README.) Tests are exempt, like every seam.
+ *    a sibling does not publish it. (`src/features` concepts say the same in
+ *    rule 3.) Tests are exempt, like every seam.
  *
  * 6. **A staff page reads through one reader** (issue #2757). Every
  *    `page.tsx` under `src/app/shop` value-imports at most one `@/db/*` module:
@@ -89,9 +96,9 @@ import { isDataModule, surfaceReaders } from "./surface-readers.mjs";
  *    `"use server"` module (a Server Action file): a client file gets a call stub for it, and
  *    nothing it imports reaches the browser (issue #3635).
  *
- * 8. **Substrate leaves own a concept** (issue #2753, ADR 20261108-concept-leaves).
- *    A production file with no other production substrate importer belongs in a feature,
- *    unless its exact path explains a retained primitive in substrate-primitives.json.
+ * 8. **Substrate leaves own a concept** (issue #2753, ADR 20261121-feature-areas).
+ *    A production file with no other production substrate importer belongs in a feature
+ *    area, unless its exact path explains a retained primitive in substrate-primitives.json.
  *    Type-only, dynamic, nested and index imports count; tests and fixtures do not.
  *    The separate architecture-leaves ratchet cannot hide new boundary debt.
  *
@@ -166,7 +173,7 @@ export const seams = [
   {
     // Words are chosen in a renderer and nowhere else (issue #2772, ADR
     // 20260731-domain-layer-copy-leaks): the page, the message (the notification
-    // senders), the file (`src/db/export.ts`) and the palette's spoken answer (`src/lib/palette-answer.ts`). Everything else in `src/lib` and `src/db` hands back
+    // senders), the file (`src/db/export/index.ts`) and the palette's spoken answer (`src/lib/palette-answer.ts`). Everything else in `src/lib` and `src/db` hands back
     // codes and keys, so a translator defaulting to "en-US" cannot hide in a domain
     // function. A type (`StaffMessageKey`, `StaffTranslator`) is a shape and passes.
     roots: ["src/lib", "src/db"],
@@ -176,7 +183,7 @@ export const seams = [
       // The fourth is the palette answer: a sentence written for the asker, in the asker's language.
       return (
         normal.startsWith("src/lib/notifications/") ||
-        normal === "src/db/export.ts" ||
+        normal === "src/db/export/index.ts" ||
         normal === "src/lib/palette-answer.ts"
       );
     },
@@ -218,24 +225,22 @@ export const seams = [
       target !== null &&
       path.dirname(target) === "src/db" &&
       !/\.test-support$/.test(target) &&
-      /^(?:trips|seed)-/.test(path.basename(target)),
+      /^trips-/.test(path.basename(target)),
     typeOnlyAllowed: false,
     message: (file, specifier) =>
-      /\/seed-/.test(specifier)
-        ? `${file}: imports ${specifier} — reach the seed scenarios through the "@/db/seed" barrel`
-        : `${file}: imports ${specifier} — reach the trips modules through the "@/db/trips" barrel`,
+      `${file}: imports ${specifier} — reach the trips modules through the "@/db/trips" barrel`,
   },
 ];
 
 /** Modules a client bundle must never reach, by value import, at any depth. */
 export const SERVER_ONLY_MODULES = [
-  "src/features/logbook-connections/index.ts",
+  "src/features/after-the-dive/logbook-connections/index.ts",
   // CSV setup shares header grammar; the complete vendor decoders stay on the server.
   "src/lib/computer-import/index.ts",
-  "src/features/phone-line-type/rules.ts",
+  "src/features/messages/phone-line-type.ts",
   "src/lib/payments/stripe-keys.ts",
   "src/lib/payments/stripe-client.ts",
-  "src/features/payments/webhook.ts",
+  "src/features/money/payments/webhook.ts",
 ];
 const SERVER_ONLY_PACKAGE = /^libphonenumber-js(?:\/|$)/;
 
@@ -444,11 +449,32 @@ function isWithin(target, root) {
   return target === normalized || target.startsWith(`${normalized}${path.sep}`);
 }
 
-/** `src/features/calendar-sync/feed-store` → `calendar-sync`, else null. */
-function featureOf(target) {
+/**
+ * The concept a path belongs to, as `<area>/<concept>`, else null. A folder concept is
+ * its directory (`crew-and-boats/calendar-sync/feed-store` → `crew-and-boats/calendar-sync`);
+ * a one-file concept is its file stem up to the first dot, so its tests share it
+ * (`day/today-catch-up.postgres.test.ts` → `day/today-catch-up`).
+ */
+export function conceptOf(target) {
   const prefix = `${path.normalize(FEATURES_DIR)}${path.sep}`;
   if (!target.startsWith(prefix)) return null;
-  return target.slice(prefix.length).split(path.sep)[0] || null;
+  const [area, entry] = target.slice(prefix.length).split(path.sep);
+  if (!area || !entry) return null;
+  return `${area}/${entry.split(".")[0]}`;
+}
+
+/**
+ * True when `target` is a concept's door: the concept itself (`@/features/<area>/<concept>`,
+ * a file or a folder's index), its folder's `index`, or the one-file concept with its
+ * extension spelled out, which plain Node tooling needs.
+ */
+function isDoor(target, concept) {
+  const base = path.normalize(`${FEATURES_DIR}/${concept}`);
+  if (target === base) return true;
+  if (path.dirname(target) === base)
+    return /^index(?:\.[cm]?[jt]sx?)?$/.test(path.basename(target));
+  const extension = path.extname(target);
+  return sourceExtensions.has(extension) && target === `${base}${extension}`;
 }
 
 /**
@@ -555,57 +581,76 @@ export async function collectViolations(root = ROOT) {
   // 4. Server-only modules never reach a client bundle.
   await clientReachViolations(root, record);
 
-  // 3. Feature-module contract.
-  let features = [];
+  // 3. Feature areas and concept doors.
+  let areaEntries = [];
   try {
-    features = (await readdir(path.join(root, FEATURES_DIR), { withFileTypes: true }))
-      .filter((entry) => entry.isDirectory())
-      .map((entry) => entry.name);
+    areaEntries = await readdir(path.join(root, FEATURES_DIR), { withFileTypes: true });
   } catch (error) {
     if (error?.code !== "ENOENT") throw error;
   }
-
-  for (const feature of features) {
-    for (const required of ["index.ts", "README.md"]) {
-      const target = path.join(root, FEATURES_DIR, feature, required);
-      try {
-        await stat(target);
-      } catch {
+  const exists = async (file) => {
+    try {
+      await stat(path.join(root, file));
+      return true;
+    } catch {
+      return false;
+    }
+  };
+  for (const entry of areaEntries) {
+    const area = `${FEATURES_DIR}/${entry.name}`;
+    if (!entry.isDirectory()) {
+      record(
+        area,
+        `${area}: sits directly under ${FEATURES_DIR} — a concept lives in an area, ${FEATURES_DIR}/<area>/<concept>`,
+      );
+      continue;
+    }
+    if (!(await exists(`${area}/README.md`))) {
+      record(
+        area,
+        `${area}: missing README.md — every area says what it owns, what it does not, and its invariants`,
+      );
+    }
+    const concepts = await readdir(path.join(root, area), { withFileTypes: true });
+    for (const concept of concepts.filter((item) => item.isDirectory())) {
+      const folder = `${area}/${concept.name}`;
+      if (!(await exists(`${folder}/index.ts`)) && !(await exists(`${folder}/index.tsx`))) {
         record(
-          `${FEATURES_DIR}/${feature}`,
-          `${FEATURES_DIR}/${feature}: missing ${required} — every feature module publishes one entry point and documents itself`,
+          folder,
+          `${folder}: missing index.ts — a concept folder publishes one door; a concept with one source file is ${folder}.ts instead`,
         );
       }
     }
   }
 
-  // Nothing outside a feature module may reach past its index. Scanning whole
+  // Nothing outside a concept may reach past its door. Scanning whole
   // roots rather than a hand-listed set of subtrees: an enumerated list silently
   // stops covering `src/i18n`, `src/test`, and any directory added later, and a
   // boundary with unwatched gaps is not a boundary.
   for (const scanRoot of ["src", "e2e", "scripts"]) {
     for (const file of await walk(root, scanRoot)) {
       if (isTestFile(file)) continue;
-      const importerFeature = featureOf(path.normalize(file));
+      const importerConcept = conceptOf(path.normalize(file));
       const contents = await readFile(path.join(root, file), "utf8");
       for (const match of contents.matchAll(importPattern)) {
         const specifier = match[1] ?? match[2];
         const target = resolveSpecifier(file, specifier);
         if (!target) continue;
-        const targetFeature = featureOf(target);
-        if (!targetFeature) continue;
-        // Inside the same module, any internal file is fair game.
-        if (importerFeature === targetFeature) continue;
-        const index = path.normalize(`${FEATURES_DIR}/${targetFeature}`);
-        // Plain Node tooling names index.ts explicitly; it is the same public door.
-        const published =
-          target === index ||
-          (path.dirname(target) === index &&
-            /^index(?:\.[cm]?[jt]sx?)?$/.test(path.basename(target)));
-        if (!published) {
+        if (!isWithin(target, FEATURES_DIR)) continue;
+        const targetConcept = conceptOf(target);
+        if (!targetConcept) {
           record(
             file,
-            `${file}: deep-imports ${specifier} — import from "@/features/${targetFeature}" instead`,
+            `${file}: imports ${specifier} — an area has no door of its own; import a concept, "@/features/<area>/<concept>"`,
+          );
+          continue;
+        }
+        // Inside the same concept, any internal file is fair game.
+        if (importerConcept === targetConcept) continue;
+        if (!isDoor(target, targetConcept)) {
+          record(
+            file,
+            `${file}: deep-imports ${specifier} — go through its door, "@/features/${targetConcept}"`,
           );
         }
       }
@@ -672,7 +717,7 @@ async function main() {
         counts: violations,
         allowed: counts,
         exists,
-        note: `${guard}: per-file architecture debt; node scripts/check-architecture.mjs --write banks a fall. See ADR 20261108-concept-leaves.`,
+        note: `${guard}: per-file architecture debt; node scripts/check-architecture.mjs --write banks a fall. See ADR 20261121-feature-areas.`,
         refusal: "The ratchet only turns one way — fix ownership and imports instead",
         absorb,
         summary: (files, total) => `${files} files, ${total} violations still to unwind`,

@@ -394,7 +394,7 @@ for (const scheme of ["light", "dark"] as const) {
        * 20260919-one-idea, slice 23f).
        *
        * A week off the current one, because that is where the seeded interests
-       * are: `seed-date-requests.ts` places them twelve and thirteen days out,
+       * are: `seed/date-requests.ts` places them twelve and thirteen days out,
        * and the week board is seven days wide. Addressed by `?week=` rather
        * than by clicking the pager twice — the pager has its own coverage, and
        * a capture that has to navigate first is a capture that can fail for a
@@ -489,7 +489,7 @@ for (const scheme of ["light", "dark"] as const) {
        * `role="alert"` line per clashing person above the muted "If you move
        * it" list.
        *
-       * No seeding. `seed-trips.ts` puts the same captain and divemaster on
+       * No seeding. `seed/trips.ts` puts the same captain and divemaster on
        * every seeded charter, so landing one charter on another's hours is the
        * whole of it — the target below is the Christ of the Abyss window
        * (`at(7, 11, 30)` in the seed), and the wreck charter is the mover
@@ -541,7 +541,7 @@ for (const scheme of ["light", "dark"] as const) {
        * move will not happen at all.
        *
        * The issue proposed a charter whose window had already passed.
-       * `blockedReason` (`src/features/move-preflight/rules.ts`) does not read the clock:
+       * `blockedReason` (`src/features/bookings/move-preflight/rules.ts`) does not read the clock:
        * it refuses a cancelled departure as `not_scheduled` and one the crew
        * have counted heads against as `already_sailed`. So the seed records a
        * single boarding through `recordRollCall`, which is cheaper, is the

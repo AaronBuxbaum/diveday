@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { after } from "next/server";
 import { z } from "zod";
 import { getDb } from "@/db/client";
-import { sendMagicSignInMail } from "@/features/email-sign-in";
+import { sendMagicSignInMail } from "@/features/accounts/email-sign-in";
 import { getAuth } from "@/lib/auth";
 import { publicAppUrl } from "@/lib/notifications";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";

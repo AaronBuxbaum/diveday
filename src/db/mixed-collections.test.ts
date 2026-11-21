@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { recordStripeRefundFailure } from "@/features/refund-failures";
+import { recordStripeRefundFailure } from "@/features/money/refund-failures";
 import { heldAfterDepositReceipt } from "@/lib/payment-marks";
 import { advanceClock } from "@/test/clock";
 import { unseededTestDb } from "@/test/db";

@@ -3,7 +3,7 @@ import { StarRating } from "@/components/StarRating";
 import { Badge } from "@/components/ui/badge";
 import { tapTargetLinkClass } from "@/components/ui/button";
 import { LedgerRow } from "@/components/ui/ledger";
-import type { ReviewModerationReason, StaffReview } from "@/features/reviews";
+import type { ReviewModerationReason, StaffReview } from "@/features/after-the-dive/reviews";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import { formatDateTimeTz, formatShortDate } from "@/lib/format";
 import { ReviewReply } from "./ReviewReply";
@@ -35,7 +35,7 @@ import type { ReviewReplyContext } from "./review-reply-context";
  *
  * The `#review-<id>` fragment is a contract with two callers, not decoration:
  * Today's row and the close-out both deep-link a single waiting review by it
- * (`src/features/today/today-reader.ts`). It sits on the row's content block rather than on the
+ * (`src/features/day/today/today-reader.ts`). It sits on the row's content block rather than on the
  * `<li>` because `LedgerRow` owns the element and the hairline it carries; the
  * browser scrolls to whatever the fragment names either way.
  */

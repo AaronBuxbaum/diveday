@@ -1,5 +1,5 @@
-import { MINTED_DEMO_BRAND_COLOR } from "../src/db/seed-identifiers";
-import { DEMO_SHOP_BRAND } from "../src/db/seed-shop-brand";
+import { MINTED_DEMO_BRAND_COLOR } from "../src/db/seed/identifiers";
+import { DEMO_SHOP_BRAND } from "../src/db/seed/shop-brand";
 import { diverTranslator } from "../src/i18n/messages";
 import { deriveBrandTheme, deriveDarkBrandTheme } from "../src/lib/brand";
 import { expect, test } from "./fixtures";
@@ -7,9 +7,9 @@ import { expect, test } from "./fixtures";
 /**
  * Harbor (ADR 20260901-diveday-reimagined, decision 2): the storefront and the
  * embed wear the shop's brand. The canonical demo, Blue Mantis, wears a full
- * profile in its own blue (`src/db/seed-shop-brand.ts`), so the colour is
+ * profile in its own blue (`src/db/seed/shop-brand.ts`), so the colour is
  * proved on a minted shop dressed in a different one (`privateShopBrand`,
- * `MINTED_DEMO_BRAND` in `src/db/seed.ts`): mantis green and Bricolage, which
+ * `MINTED_DEMO_BRAND` in `src/db/seed/index.ts`): mantis green and Bricolage, which
  * only the shop's own choice can explain.
  *
  * The colour on screen is the derivation's, not the row's: `deriveBrandTheme`

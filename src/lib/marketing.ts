@@ -89,7 +89,7 @@ export const fullShopExport = {
  * 2026-10-07: "We can publish that exact promise"), so its words are not
  * edited without the product owner. It rests on mechanisms that ship: the
  * one-ZIP export above and the weekly scheduled backup to the shop's own
- * bucket (`src/features/backup-export/`). Rendered on `/pricing` (the
+ * bucket (`src/features/records/backup-export/`). Rendered on `/pricing` (the
  * `faq.shutdown` answer); `src/lib/marketing.test.ts`
  * pins the exact promise in every locale.
  */

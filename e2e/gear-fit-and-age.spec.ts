@@ -458,7 +458,7 @@ test.describe("the prep list's two groupings", () => {
     // The state only this grouping can express: a diver with nothing to pull.
     // The by-item view cannot show them at all — they contribute no line — so
     // "Own kit" beside a name is the whole reason the roster grouping exists.
-    // Ines brings her own (`src/db/seed-rental-fit.ts`).
+    // Ines brings her own (`src/db/seed/rental-fit.ts`).
     const ines = kit.getByRole("row").filter({ hasText: "Ines Costa" });
     await expect(ines).toContainText("Own kit");
     // And it is genuinely "asked and answered", not the "nobody asked" row

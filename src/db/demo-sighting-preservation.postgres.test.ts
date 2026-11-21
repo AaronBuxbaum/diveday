@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { expect, it, vi } from "vitest";
-import { resetDemoFromSnapshot } from "@/features/demo-reset-snapshot/store";
+import { resetDemoFromSnapshot } from "@/features/demo/demo-reset-snapshot";
 import { nowDate, nowMs } from "@/lib/clock";
 import { describePostgres, postgresTestDb } from "@/test/postgres";
 import type { AppDb } from "./client";
@@ -10,7 +10,7 @@ import {
   deleteDemoShopCascade,
   enforceMintedDemoCap,
   reapExpiredDemoShops,
-} from "./seed-demo-lifecycle";
+} from "./seed/demo-lifecycle";
 import { getShopBySlug } from "./shops";
 import { getTripRoster, listStaff } from "./trips";
 import { upcomingTripsWithCounts } from "./trips-queries.test-support";

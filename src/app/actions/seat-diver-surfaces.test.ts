@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { SeatDiverRefusal } from "../../features/seat-diver/store";
+import type { SeatDiverRefusal } from "../../features/bookings/seat-diver";
 import { SEAT_SURFACES, type SeatLanding, type SeatSurfaceId } from "./seat-diver-surfaces";
 
 /**

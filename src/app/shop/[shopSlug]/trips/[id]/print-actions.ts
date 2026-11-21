@@ -2,7 +2,7 @@
 
 import { getDb } from "@/db/client";
 import { getTripWithBooked } from "@/db/trips";
-import { requireShopSurface } from "@/features/session";
+import { requireShopSurface } from "@/features/accounts/session";
 import { trackEvent } from "@/lib/analytics";
 import { uuidParam } from "@/lib/uuid";
 

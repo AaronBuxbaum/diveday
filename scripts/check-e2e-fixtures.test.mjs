@@ -227,12 +227,12 @@ describe("test-route authorization import", () => {
   it("accepts only the published feature authorization contract", () => {
     expect(
       hasTestRouteGuardImport(
-        'import { e2eTestRouteAuthorized } from "@/features/e2e-test-routes";',
+        'import { e2eTestRouteAuthorized } from "@/features/platform/e2e-test-routes";',
       ),
     ).toBe(true);
     for (const module of [
       "@/lib/e2e-test-routes",
-      "@/features/e2e-test-routes/rules",
+      "@/features/platform/e2e-test-routes/rules",
       "@/features/unrelated",
     ]) {
       expect(hasTestRouteGuardImport(`import { e2eTestRouteAuthorized } from "${module}";`)).toBe(
@@ -243,7 +243,9 @@ describe("test-route authorization import", () => {
 
   it("rejects another export or a call without the trusted import", () => {
     expect(
-      hasTestRouteGuardImport('import { testRouteRefused } from "@/features/e2e-test-routes";'),
+      hasTestRouteGuardImport(
+        'import { testRouteRefused } from "@/features/platform/e2e-test-routes";',
+      ),
     ).toBe(false);
     expect(
       hasTestRouteGuardImport("if (!e2eTestRouteAuthorized(request)) return testRouteRefused();"),

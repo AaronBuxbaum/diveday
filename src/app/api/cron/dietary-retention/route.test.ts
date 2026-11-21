@@ -4,11 +4,11 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
 });
-vi.mock("../../../../features/retention/store", () => ({
+vi.mock("../../../../features/records/retention/store", () => ({
   drainExpiredClaudeCallContent: vi.fn(),
   drainExpiredDietaryNotes: vi.fn(),
 }));
-vi.mock("../../../../features/sentry-dsn/rules", () => ({
+vi.mock("../../../../features/platform/sentry-dsn", () => ({
   SENTRY_DSN: "https://key@sentry.invalid/1",
 }));
 vi.mock("@sentry/nextjs", () => ({
@@ -16,13 +16,13 @@ vi.mock("@sentry/nextjs", () => ({
   captureMessage: vi.fn(),
   captureException: vi.fn(),
 }));
-vi.mock("../../../../features/log-shipping/index", () => ({ flushLogs: vi.fn() }));
+vi.mock("../../../../features/platform/log-shipping/index", () => ({ flushLogs: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
 const { drainExpiredClaudeCallContent, drainExpiredDietaryNotes } = await import(
-  "../../../../features/retention/store"
+  "../../../../features/records/retention/store"
 );
-const { flushLogs } = await import("../../../../features/log-shipping/index");
+const { flushLogs } = await import("../../../../features/platform/log-shipping/index");
 const Sentry = await import("@sentry/nextjs");
 const { GET, maxDuration } = await import("./route");
 const secret = "dietary-cron-test-secret";

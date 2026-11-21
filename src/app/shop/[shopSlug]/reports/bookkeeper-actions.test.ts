@@ -11,7 +11,7 @@ import {
   issueBookkeeperConfirmation,
   readBookkeeper,
   setBookkeeper,
-} from "../../../../features/bookkeeper/store";
+} from "../../../../features/money/bookkeeper/store";
 
 const ctx = fileScopedShopContext();
 
@@ -31,11 +31,11 @@ vi.mock("next/navigation", () => ({
   }),
 }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
-vi.mock("../../../../features/session/rules", () => ({ requireShopSurface: vi.fn() }));
-vi.mock("../../../../features/step-up/store", () => ({
+vi.mock("../../../../features/accounts/session", () => ({ requireShopSurface: vi.fn() }));
+vi.mock("../../../../features/accounts/step-up", () => ({
   hasRequiredStepUp: vi.fn(async () => true),
 }));
-vi.mock("../../../../features/security-step-up/rules", () => ({
+vi.mock("../../../../features/accounts/security-step-up", () => ({
   stepUpChallengeUrl: vi.fn(() => "/step-up"),
 }));
 const sent = vi.hoisted(() => ({ list: [] as Notification[] }));
@@ -65,8 +65,8 @@ vi.mock("@/lib/notifications", async (importOriginal) => {
   return { ...actual, publicAppUrl: () => "https://diveday.example" };
 });
 
-const { requireShopSurface } = await import("../../../../features/session/rules");
-const { hasRequiredStepUp } = await import("../../../../features/step-up/store");
+const { requireShopSurface } = await import("../../../../features/accounts/session");
+const { hasRequiredStepUp } = await import("../../../../features/accounts/step-up");
 const { saveBookkeeperAction } = await import("./bookkeeper-actions");
 
 const idle = { status: "idle" } as const;

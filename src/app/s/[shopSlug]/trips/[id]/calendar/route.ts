@@ -2,7 +2,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/db/client";
 import { getShopBySlug } from "@/db/shops";
 import { getTripWithBooked, listTripScheduleDays } from "@/db/trips";
-import { courseCalendarFile, tripCalendarFile } from "@/features/trip-calendar";
+import { courseCalendarFile, tripCalendarFile } from "@/features/trips/trip-calendar";
 import { requestTranslator } from "@/i18n/request";
 import { courseDepthFormat } from "@/i18n/unit-labels";
 import { resolveCourseContentDepths } from "@/lib/courses";

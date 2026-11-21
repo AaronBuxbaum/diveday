@@ -1,8 +1,8 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
-import { restoreCard } from "../features/card-restore/store";
-import { getTripPrep } from "../features/trip-prep/store";
+import { restoreCard } from "../features/certifications/card-restore";
+import { getTripPrep } from "../features/trips/trip-prep/store";
 import { cancelBooking, createBooking } from "./bookings";
 import type { AppDb } from "./client";
 import {

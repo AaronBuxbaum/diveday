@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
 import { canPersonExportShopData, loadDiverExportBundleInput } from "@/db/export";
 import { recordDiverActivity } from "@/db/operations";
-import { requireStaffSession } from "@/features/session";
+import { requireStaffSession } from "@/features/accounts/session";
 import { nowDate } from "@/lib/clock";
 import {
   buildDiverExportBundle,
@@ -20,7 +20,7 @@ import { uuidParam } from "@/lib/uuid";
  * 20260722-full-shop-export), same gate (`canPersonExportShopData` — see that
  * function's own doc for why this is a database re-check rather than a role
  * read off the session token), scoped to one `person_id` instead of the whole
- * shop. See `loadDiverExportBundleInput` (src/db/export.ts) for what is
+ * shop. See `loadDiverExportBundleInput` (src/db/export/index.ts) for what is
  * included, what is deliberately withheld, and why.
  */
 export async function GET(

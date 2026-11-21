@@ -2,7 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { STAFF_ROLES } from "@/lib/authz";
 import { fileScopedShopContext } from "@/test/db";
-import { listShopStaff, setStaffAccountStatus } from "../features/staff-accounts/store";
+import { listShopStaff, setStaffAccountStatus } from "../features/accounts/staff-accounts";
 import { personRoles, pushSubscriptions, userAccounts } from "./schema";
 import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 

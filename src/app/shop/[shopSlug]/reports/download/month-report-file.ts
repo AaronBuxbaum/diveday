@@ -1,6 +1,6 @@
 import type { DbExecutor } from "@/db/client";
 import { queryAll } from "@/db/query-helpers";
-import { getMonthMoneyDetail } from "@/features/report-lines";
+import { getMonthMoneyDetail } from "@/features/reports/report-lines";
 import {
   crewCountsByTrip,
   formatPercent,
@@ -8,7 +8,7 @@ import {
   getMonthlyReport,
   summarizeMonth,
   tripFillRate,
-} from "@/features/reporting";
+} from "@/features/reports/reporting";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { type MonthRef, monthKey } from "@/lib/calendar";
 import { exportDateStamp } from "@/lib/export";

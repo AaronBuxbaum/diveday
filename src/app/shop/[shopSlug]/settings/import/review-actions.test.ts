@@ -7,23 +7,23 @@ vi.mock("@/db/client", () => ({ getDb: vi.fn(async () => ({})) }));
 vi.mock("@/db/dive-site-photos", () => ({
   diveSitePhotoUrlsHeldByShop: vi.fn(async () => new Set()),
 }));
-vi.mock("@/features/session", () => ({ requireStaffSession: vi.fn() }));
-vi.mock("@/features/import", async (original) => ({
-  previewDiveSiteGuides: (await original<typeof import("@/features/import")>())
+vi.mock("@/features/accounts/session", () => ({ requireStaffSession: vi.fn() }));
+vi.mock("@/features/records/import", async (original) => ({
+  previewDiveSiteGuides: (await original<typeof import("@/features/records/import")>())
     .previewDiveSiteGuides,
   canPersonImportShopData: vi.fn(async () => true),
   previewDiveSiteImport: vi.fn(async () => []),
   previewGearImport: vi.fn(async () => []),
 }));
-vi.mock("@/features/gear-import", async (original) => ({
-  ...(await original<typeof import("@/features/gear-import")>()),
+vi.mock("@/features/gear/gear-import", async (original) => ({
+  ...(await original<typeof import("@/features/gear/gear-import")>()),
   commitGearImport: vi.fn(async () => ({
     unitsCreated: 1,
     rowResults: [{ rowNumber: 2, issues: [] }],
   })),
 }));
-vi.mock("@/features/dive-sites", async (original) => ({
-  ...(await original<typeof import("@/features/dive-sites")>()),
+vi.mock("@/features/sites/dive-sites", async (original) => ({
+  ...(await original<typeof import("@/features/sites/dive-sites")>()),
   commitDiveSiteImport: vi.fn(async () => ({
     updated: 0,
     created: 1,
@@ -34,10 +34,10 @@ vi.mock("@/features/dive-sites", async (original) => ({
   })),
 }));
 
-import { commitDiveSiteImport } from "@/features/dive-sites";
-import { commitGearImport } from "@/features/gear-import";
-import { canPersonImportShopData, previewDiveSiteImport } from "@/features/import";
-import { requireStaffSession } from "@/features/session";
+import { requireStaffSession } from "@/features/accounts/session";
+import { commitGearImport } from "@/features/gear/gear-import";
+import { canPersonImportShopData, previewDiveSiteImport } from "@/features/records/import";
+import { commitDiveSiteImport } from "@/features/sites/dive-sites";
 import { reviewExistingImportAction } from "./review-actions";
 
 function form(kind: string, files: string[], mappings: string[][], types: string[]) {

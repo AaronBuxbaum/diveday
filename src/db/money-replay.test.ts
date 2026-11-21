@@ -4,7 +4,7 @@ import { nowDate } from "@/lib/clock";
 import type { CheckoutProvider } from "@/lib/payments/checkout";
 import { fileScopedShopContext, type seededShopContext } from "@/test/db";
 import { fakeCheckout, fakeEmail, recordingCheckout } from "@/test/fakes";
-import { sendDueCheckoutRecoveries } from "../features/checkout-recovery/store";
+import { sendDueCheckoutRecoveries } from "../features/money/checkout-recovery/store";
 import { createBooking, createBookingParty, selfCancelBooking } from "./bookings";
 import { markCheckoutPaidBySessionId, startBookingCheckout } from "./checkouts";
 import { getBookingPayment, listBookingPaymentEvents, setBookingPayment } from "./payments";

@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
+import { seedRollCallEvidence } from "@/db/seed/roll-call-evidence";
 import { fileScopedShopContext } from "@/test/db";
 import { fakeEmail, fakeSms } from "@/test/fakes";
 import { sendDueRecaps } from "@/test/words-wiring";
@@ -8,7 +8,7 @@ import {
   bookingsLeftAtTheDock,
   bookingsNeverCountedAtRollCall,
   getRecapPageData,
-} from "../features/recap/store";
+} from "../features/after-the-dive/recap/store";
 import { createBookingParty } from "./bookings";
 import { bookingArrivalEvents, notificationDeliveries } from "./schema";
 import { listStaff } from "./trips";

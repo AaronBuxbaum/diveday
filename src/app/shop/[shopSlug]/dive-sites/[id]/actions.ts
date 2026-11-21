@@ -14,17 +14,17 @@ import {
 } from "@/db/dive-sites";
 import { queueAndAttemptMediaDeletion } from "@/db/media-deletions";
 import { getShopById } from "@/db/shops";
-import { recordDiveSiteClosure } from "@/features/dive-site-closures";
-import { parseDiveSiteForm, submittedValues } from "@/features/dive-sites";
-import { revalidateAndRedirect } from "@/features/navigation";
-import { readRequiredSpecialties } from "@/features/requirement-form";
-import { requireStaffSession } from "@/features/session";
+import { requireStaffSession } from "@/features/accounts/session";
+import { revalidateAndRedirect } from "@/features/platform/navigation";
 import {
   abandonDiveSitePhotos,
   addedDiveSitePhotos,
   supersededDiveSitePhotos,
   uploadDiveSitePhotos,
-} from "@/features/storage";
+} from "@/features/platform/storage";
+import { recordDiveSiteClosure } from "@/features/sites/dive-site-closures";
+import { parseDiveSiteForm, submittedValues } from "@/features/sites/dive-sites";
+import { readRequiredSpecialties } from "@/features/waivers/requirement-form";
 import type { DiveSiteTemplateUpdateMode } from "@/lib/dive-site-template-sync";
 import { parseServiceWindow } from "@/lib/service-window";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";

@@ -2,7 +2,7 @@
 // i18n-exempt-file: test fixture names are seeded data.
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import type { GearToPack } from "@/features/trip-prep";
+import type { GearToPack } from "@/features/trips/trip-prep";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { CheckInQuietLine, GearToPackCard, TomorrowsWaterCard, TripFactsCard } from "./phase-cards";
 

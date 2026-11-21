@@ -24,7 +24,7 @@ import {
   tripPathByTitle,
 } from "../../e2e/helpers";
 import { E2E_CRON_SECRET, E2E_TEST_ROUTE_SECRET } from "../../e2e/servers";
-import { DEMO_SHOP_TIMEZONE, demoTodayDepartureStart } from "../../src/db/seed-clock";
+import { DEMO_SHOP_TIMEZONE, demoTodayDepartureStart } from "../../src/db/seed/clock";
 import { diverTranslator } from "../../src/i18n/messages";
 import { staffTranslator } from "../../src/i18n/staff-messages";
 import { DAY_STATES, dayTimeline, renderTranscript, screenshotName } from "./lib.mjs";
@@ -60,7 +60,7 @@ import {
  * so a surface that changes fails here the way it fails there.
  */
 
-/** The seeded departure's length: `seed-trips.ts` fixes it at 3.5 hours dock to dock. */
+/** The seeded departure's length: `seed/trips.ts` fixes it at 3.5 hours dock to dock. */
 const SEEDED_DEPARTURE_MS = 3.5 * 60 * 60 * 1000;
 const SEEDED_DEPARTURE_TITLE = "Two-Tank Reef — Molasses & French";
 const DIVER_NAME = "Sam Simulation";

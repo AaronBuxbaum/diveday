@@ -10,8 +10,8 @@ import {
   listChecklistItems,
   reorderChecklistItems,
 } from "@/db/pre-departure-check";
-import { revalidateAndRedirect } from "@/features/navigation";
-import { requireShopSurface } from "@/features/session";
+import { requireShopSurface } from "@/features/accounts/session";
+import { revalidateAndRedirect } from "@/features/platform/navigation";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { registerBlock } from "../register-block";
 

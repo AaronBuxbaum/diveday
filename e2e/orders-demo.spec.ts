@@ -31,7 +31,7 @@ const orderCount = (page: Page) => page.getByText(/^\d+ entr(?:y|ies)$/);
 // Refresh/Void/Refund on the order page, which is where money out lives since
 // ADR 20260827-people-not-lists took it off the diver record — are disabled on
 // a demo shop with a hover reason, and the actions refuse before any Stripe
-// call (ADR 20260723-owner-reporting; src/db/seed.ts).
+// call (ADR 20260723-owner-reporting; src/db/seed/index.ts).
 
 test.describe("demo billing history", () => {
   signedInAsOwner();
@@ -325,7 +325,7 @@ test.describe("demo billing history", () => {
     const pager = page.getByRole("navigation", { name: "Pages" });
     // Not "skip if there's nothing to page": the seeded demo carries a
     // trailing quarter of invoices and the paid slice is far past one page
-    // (src/db/seed-history.ts, src/db/seed-orders.ts), so a missing pager is
+    // (src/db/seed/history.ts, src/db/seed/orders.ts), so a missing pager is
     // the regression, not a reason to pass. The early return this replaces
     // meant a filter that silently returned one page of results — exactly what
     // a dropped `status` on the count query looks like — ended the test green.

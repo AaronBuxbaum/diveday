@@ -6,7 +6,7 @@ import {
   hasComparableBaseline,
   type MonthComparison,
   type MonthlyReport,
-} from "@/features/reporting";
+} from "@/features/reports/reporting";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatMoneyCents } from "@/lib/format";
 import type { MonthFigure } from "./MonthFigures";

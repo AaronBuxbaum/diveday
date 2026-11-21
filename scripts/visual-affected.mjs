@@ -15,7 +15,7 @@
 //
 // A pull request whose diff this cannot bound captures everything, so the narrowing only ever
 // removes captures nothing could have moved: the e2e harness and helpers, the visual plumbing in
-// `scripts/` and the CI workflow, the seed's orchestrator (`src/db/seed.ts`), the catalog seed
+// `scripts/` and the CI workflow, the seed's orchestrator (`src/db/seed/index.ts`), the catalog seed
 // and the dev credentials, a stylesheet, a root config that shapes the build, a renderer
 // dependency, and a module that runs for every page (the proxy, the service worker, what
 // `next.config.ts` imports).
@@ -36,7 +36,7 @@
 //   - a visual spec (`e2e/visual-*.spec.ts`, one per feature): the captures whose lines changed,
 //     and the captures that call a helper whose lines changed;
 //   - a schema module: its changed tables, followed name by name to the modules that read them
-//     and on to the pages (`dataReach`); a seed scenario (`src/db/seed-<scenario>.ts`): the
+//     and on to the pages (`dataReach`); a seed scenario (`src/db/seed/<scenario>.ts`): the
 //     tables its changed code writes, followed the same way. Neither walk passes through a seed
 //     module, since the demo action that runs the seed is imported by every public page
 //     (8 of the 9 merges before 2026-10-24 captured everything over a schema or seed edit);
@@ -112,18 +112,18 @@ const VISUAL_PLUMBING =
 
 /**
  * `src/` paths whose blast radius is every page: the data every capture shows. The orchestrator
- * `seed.ts` writes the demo shop's own row and its cast, which every page reads; the catalog
+ * `seed/index.ts` writes the demo shop's own row and its cast, which every page reads; the catalog
  * every agency and course card; the dev credentials every signed-in capture.
  */
-const EVERYWHERE = /^src\/db\/(?:seed\.ts|seed-catalog\.ts|dev-credentials)/;
+const EVERYWHERE = /^src\/db\/(?:seed\/index\.ts|seed\/catalog\.ts|dev-credentials)/;
 
 /**
- * A seed scenario (`src/db/seed-<scenario>.ts`) or the orchestrator: what they change is data,
+ * A seed scenario (`src/db/seed/<scenario>.ts`) or the orchestrator: what they change is data,
  * not a page. A scenario's edit reaches the pages that read the tables it writes; nothing reaches
  * a page *through* one (the demo actions and test routes that import the seed would otherwise
  * carry every scenario to every public page).
  */
-const SEED = /^src\/db\/seed(?:-[\w-]+)?\.ts$/;
+const SEED = /^src\/db\/seed\/[\w-]+\.ts$/;
 
 /** The schema: a table's edit reaches the modules that read that table, name by name. */
 const SCHEMA = /^src\/db\/schema(?:\/|\.ts$)/;
@@ -430,7 +430,7 @@ export function dataReach(
       reached.add(file);
       continue;
     }
-    if (EVERYWHERE.test(file) && file === "src/db/seed.ts") {
+    if (EVERYWHERE.test(file) && file === "src/db/seed/index.ts") {
       return { all: `the diff reaches ${file}, which builds the data every capture shows` };
     }
     if (scenarios.has(file)) continue;
@@ -444,7 +444,7 @@ export function dataReach(
     }
   }
   // Scenario to scenario only: the orchestrator imports every one and writes nothing of theirs.
-  const amongSeeds = sealed(modules, (from) => SEED.test(from) && from !== "src/db/seed.ts");
+  const amongSeeds = sealed(modules, (from) => SEED.test(from) && from !== "src/db/seed/index.ts");
   const tables = new Map(schema);
   const touched = symbolReach(amongSeeds, scenarios, { before });
   for (const [file, exports] of touched) {

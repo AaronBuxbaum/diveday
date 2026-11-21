@@ -2,7 +2,7 @@ import path from "node:path";
 import type { Page, Request } from "@playwright/test";
 import { test as base, expect } from "@playwright/test";
 import { DEV_STAFF_LOGINS } from "../src/db/dev-credentials";
-import { DEMO_SHOP_TIMEZONE } from "../src/db/seed-clock";
+import { DEMO_SHOP_TIMEZONE } from "../src/db/seed/clock";
 import { BASEMAP_TILE_HOSTS } from "../src/lib/basemap";
 import { ARRIVAL_MAP_PROBES, MAP_REACHABILITY_PROBES } from "../src/lib/maps";
 import { shopDayBounds } from "../src/lib/zoned";
@@ -383,7 +383,7 @@ export const test = base.extend<
       // Fail *here*, naming the reset, rather than letting the test run on a
       // half-wrecked shop. (A replay from the server's copy that cannot finish
       // rolls back and runs the real reset instead, so the failure below is
-      // still the real reset's: src/features/demo-reset-snapshot/store.ts.)
+      // still the real reset's: src/features/demo/demo-reset-snapshot.ts.)
       // `resetDemoSchedule` is a hand-maintained topological
       // delete, so a new table with a shop-scoped FK that nobody added to the
       // ordering makes it throw 23503 partway: the deletes before the violation
@@ -393,7 +393,7 @@ export const test = base.extend<
       // whichever spec read the wreckage next — which is how it took a
       // 25-spec-wide failure to notice the blow-out cascade's two tables were
       // missing from the ordering, and why the same bug class went unnoticed
-      // once before (see the last-minute-unsubscribe comments in src/db/seed.ts).
+      // once before (see the last-minute-unsubscribe comments in src/db/seed/index.ts).
       assertDemoReset(response, "demo reset failed");
       await use(undefined);
     },

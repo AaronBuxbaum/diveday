@@ -12,7 +12,7 @@ import {
 import { upcomingTripsWithCounts } from "@/db/trips-queries.test-support";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
-import { getBookableDiver } from "../../../../../../features/divers/store";
+import { getBookableDiver } from "../../../../../../features/people/divers/store";
 import { addBandFor } from "../_components/seat-request-band";
 import { readSeatRequest } from "./seat-request";
 

@@ -1,8 +1,8 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { setupRequests, shops } from "@/db/schema";
-import { issueSetupLink } from "@/features/setup-links";
-import { createSignedUpShop } from "@/features/shop-signup";
+import { issueSetupLink } from "@/features/shop-setup/setup-links";
+import { createSignedUpShop } from "@/features/shop-setup/shop-signup";
 import { DEFAULT_PRICING_CONFIG } from "@/lib/billing/pricing-plans";
 import { unseededTestDb } from "./db";
 import { dropOnboardFixture } from "./onboard-fixture";

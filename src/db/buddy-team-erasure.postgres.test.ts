@@ -1,7 +1,7 @@
 import { eq, sql } from "drizzle-orm";
 import { expect, it } from "vitest";
 import { describePostgres, holdRowLock, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
-import { anonymizeDiver } from "../features/anonymize/store";
+import { anonymizeDiver } from "../features/records/anonymize";
 import {
   addBuddyTeamMember,
   dissolveBuddyTeam,

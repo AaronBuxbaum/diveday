@@ -3,7 +3,10 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { addDepartureHref } from "@/lib/date-requests";
-import { adviseRequests, type DepartureShape } from "../../../../../features/request-advisor/rules";
+import {
+  adviseRequests,
+  type DepartureShape,
+} from "../../../../../features/bookings/request-advisor";
 import { RequestDayGroup, requestAdviceLines } from "./RequestDayGroup";
 
 afterEach(cleanup);

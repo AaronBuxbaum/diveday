@@ -2,7 +2,7 @@ import Link from "next/link";
 import { EmptyState } from "@/components/EmptyState";
 import { Pager, staffPagerWords } from "@/components/Pager";
 import { buttonClass } from "@/components/ui/button";
-import type { DeparturePickerWindow } from "@/features/departure-picker-window";
+import type { DeparturePickerWindow } from "@/features/trips/departure-picker-window";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { type CalendarDate, formatCalendarDate } from "@/lib/calendar-date";
 import { shopPath } from "@/lib/staff-notices";

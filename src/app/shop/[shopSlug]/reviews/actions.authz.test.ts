@@ -11,10 +11,13 @@ import {
   seededStaffPersonId,
   staffSession,
 } from "@/test/staff-session";
-import { crewThanksChoice } from "../../../../features/crew-thanks-choice/rules";
-import { submitRecapPulse } from "../../../../features/recap/recap-pulses.store";
-import { liveReviewReply } from "../../../../features/review-replies/store";
-import { setReviewPublished, submitTripReview } from "../../../../features/reviews/store";
+import { crewThanksChoice } from "../../../../features/after-the-dive/crew-thanks-choice";
+import { submitRecapPulse } from "../../../../features/after-the-dive/recap/recap-pulses.store";
+import { liveReviewReply } from "../../../../features/after-the-dive/review-replies";
+import {
+  setReviewPublished,
+  submitTripReview,
+} from "../../../../features/after-the-dive/reviews/store";
 
 const ctx = fileScopedShopContext();
 
@@ -51,10 +54,10 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
 });
-vi.mock("../../../../features/session/rules", () => ({ requireStaffSession: vi.fn() }));
+vi.mock("../../../../features/accounts/session", () => ({ requireStaffSession: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
-const { requireStaffSession } = await import("../../../../features/session/rules");
+const { requireStaffSession } = await import("../../../../features/accounts/session");
 const { markPulseAddressedAction, reviewReplyAction, reviewRowAction } = await import("./actions");
 
 /** The pulse row as the shop's panel would find it: open, or answered. */

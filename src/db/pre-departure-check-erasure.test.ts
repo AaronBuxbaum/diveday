@@ -3,11 +3,11 @@ import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { signOfflineErasureEpoch } from "@/lib/offline-erasure-epoch";
 import { fileScopedShopContext } from "@/test/db";
-import { anonymizeDiver } from "../features/anonymize/store";
 import {
   issueOfflineManifestSnapshot,
   readOfflineManifestRoster,
-} from "../features/offline-manifest-snapshots/store";
+} from "../features/boarding/offline-manifest-snapshots/store";
+import { anonymizeDiver } from "../features/records/anonymize";
 import { listChecklistItems, recordPreDepartureCheck } from "./pre-departure-check";
 import { preDepartureCheckEvents } from "./schema";
 import { getTripRoster, listStaff } from "./trips";

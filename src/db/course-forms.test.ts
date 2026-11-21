@@ -9,13 +9,13 @@ import {
 import { nowDate } from "@/lib/clock";
 import { verifyCourseFormIntegrity } from "@/lib/course-form-integrity";
 import { fileScopedShopContext } from "@/test/db";
-import { anonymizeDiver } from "../features/anonymize/store";
+import { anonymizeDiver } from "../features/records/anonymize";
 import {
   coursesAwaitingFormText,
   getCourseBySlug,
   pagedCourses,
   pullCourseTemplateUpdates,
-} from "../features/courses/store";
+} from "../features/training/courses/store";
 import type { AppDb } from "./client";
 import {
   attachStandardCourseForms,

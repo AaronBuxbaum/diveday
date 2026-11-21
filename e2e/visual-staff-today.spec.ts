@@ -755,7 +755,7 @@ for (const scheme of ["light", "dark"] as const) {
         const tripId = await seededTripId(page, "blue-mantis", title);
 
         // Odile Marchand is seeded carded and booked on nothing
-        // (`src/db/seed-cert-gates.ts`), so she clears this trip's Open Water
+        // (`src/db/seed/cert-gates.ts`), so she clears this trip's Open Water
         // baseline and arrives blocked on the release alone.
         await seatFromRoster(page, tripId, "Odile Marchand");
 
@@ -934,7 +934,7 @@ for (const scheme of ["light", "dark"] as const) {
       // Staffing as a week (ADR 20260827-the-shops-shelves, decision 3):
       // people down the side, seven shop-local days across the top, shifts as
       // quiet chips, credentials as a ledger beneath. The demo's own week,
-      // which carries no gap row: the DOM-M3 charter (`seed-trips.ts`) sails
+      // which carries no gap row: the DOM-M3 charter (`seed/trips.ts`) sails
       // the week after, and the gap is photographed below on purpose.
       // Its 390 image is the day list, which is what the week collapses to
       // below `lg` (the same call H-20260827-clearwater-week-board-roadmap made for the board).
@@ -977,7 +977,7 @@ for (const scheme of ["light", "dark"] as const) {
        * has, rendering in its own day cell with the warning word and the
        * Assign door beside it. It is not seeded into blue-mantis — a demo
        * permanently short-handed is a worse demo, the same call
-       * `seed-front-desk.ts` makes about its `succeeded` payment — so it comes
+       * `seed/front-desk.ts` makes about its `succeeded` payment — so it comes
        * from `the `crewGap` fact (`/api/test/shop`)`, opt-in because pulling
        * a crew off a boat moves Today's queue and every crew count in the
        * fleet.

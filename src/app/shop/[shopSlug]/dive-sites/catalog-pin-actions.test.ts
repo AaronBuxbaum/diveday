@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({ gate: vi.fn(), read: vi.fn() }));
-vi.mock("@/features/session", () => ({ requireShopSurface: mocks.gate }));
+vi.mock("@/features/accounts/session", () => ({ requireShopSurface: mocks.gate }));
 vi.mock("@/db/dive-sites", () => ({ getGlobalDiveSiteTemplate: mocks.read }));
 vi.mock("@/i18n/request", () => ({ requestLocale: async () => "en-US" }));
 

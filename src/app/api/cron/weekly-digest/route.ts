@@ -1,6 +1,6 @@
 import { getDb } from "@/db/client";
-import { cronRoute } from "@/features/cron-route";
-import { sendDueWeeklyDigests } from "@/features/weekly-digest";
+import { cronRoute } from "@/features/platform/cron-route";
+import { sendDueWeeklyDigests } from "@/features/reports/weekly-digest";
 import { nowDate } from "@/lib/clock";
 import { WEEKLY_DIGEST_CRON_CRONTAB, weeklyDigestMayBeDueSomewhere } from "@/lib/weekly-digest";
 

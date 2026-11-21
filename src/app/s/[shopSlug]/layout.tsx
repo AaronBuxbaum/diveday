@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import { RetryReturningDiverMemory } from "@/app/_components/RetryReturningDiverMemory";
-import { connectionForRoute } from "@/features/render-connection";
+import { connectionForRoute } from "@/features/platform/render-connection";
 import { ErrorBoundaryIntlProvider } from "@/i18n/ErrorBoundaryIntlProvider";
 import { ERROR_BOUNDARY_MESSAGES_BY_LOCALE } from "@/i18n/error-boundary-messages";
 import { diverTranslator } from "@/i18n/messages";

@@ -14,8 +14,8 @@ import {
 } from "../../db/schema/index";
 import { DEMO_RECAP_BOOKING_ID } from "../../db/seed";
 import { listStaff } from "../../db/trips";
-import { recordTripConservation } from "../../features/conservation/trip-conservation.store";
-import { submitRecapPulse } from "../../features/recap/recap-pulses.store";
+import { submitRecapPulse } from "../../features/after-the-dive/recap/recap-pulses.store";
+import { recordTripConservation } from "../../features/sites/conservation";
 import { MINUTE_MS } from "../../lib/clock";
 import { FactRefused } from "./refusal";
 import { sendADepartureOut } from "./send-a-departure-out";

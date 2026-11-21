@@ -1,7 +1,7 @@
 import Image from "next/image";
 import { DiveProfileChart } from "@/components/DiveProfileChart";
 import { groupLabelClass } from "@/components/ui/group-label";
-import type { AfterStateProps } from "@/features/recap-after-state";
+import type { AfterStateProps } from "@/features/after-the-dive/recap-after-state";
 import { depthText, temperatureText } from "@/i18n/unit-labels";
 import { AFTER_STATE_TEST_IDS } from "./after-state-test-ids";
 

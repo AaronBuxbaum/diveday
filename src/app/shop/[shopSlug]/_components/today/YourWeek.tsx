@@ -1,8 +1,8 @@
 import { staffingGapWords } from "@/app/shop/[shopSlug]/staffing/_components/gap-words";
 import { LedgerGroup, LedgerRow } from "@/components/ui/ledger";
 import type { AppDb } from "@/db/client";
-import { type CrewWeekLine, crewWeekFor } from "@/features/crew-week";
-import { GAP_TONE } from "@/features/staffing-week";
+import { type CrewWeekLine, crewWeekFor } from "@/features/crew-and-boats/crew-week";
+import { GAP_TONE } from "@/features/crew-and-boats/staffing-week";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { staffRoleLabel } from "@/i18n/staff-role-labels";
 import { formatShortDate, formatTime, formatWeekdayTime, isSameCalendarDay } from "@/lib/format";

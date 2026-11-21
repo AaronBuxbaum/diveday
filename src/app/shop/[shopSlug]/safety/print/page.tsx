@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { CREDENTIAL_KIND_KEYS } from "@/app/shop/[shopSlug]/settings/team/credential-kinds";
-import { canPersonViewShopReports } from "@/features/safety-report";
-import { requireShopSurface } from "@/features/session";
+import { requireShopSurface } from "@/features/accounts/session";
+import { canPersonViewShopReports } from "@/features/safety/safety-report";
 import { monthKey, monthLabel } from "@/lib/calendar";
 import { PACKET_PAPER } from "@/lib/print-sheets";
 import { shopPath } from "@/lib/staff-notices";

@@ -1,4 +1,4 @@
-import { rosterRowIsBlocked } from "@/features/roster-filters";
+import { rosterRowIsBlocked } from "@/features/boarding/roster-filters";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { dockCallAt } from "@/lib/dock-call";
 import { isSameCalendarDay } from "@/lib/format";

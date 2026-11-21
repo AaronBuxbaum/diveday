@@ -15,7 +15,7 @@ vi.mock("next/navigation", () => ({
 vi.mock("@/db/bookings", () => ({ addPartySeat: vi.fn(), selfCancelBooking: vi.fn() }));
 vi.mock("@/db/refunds", () => ({ refundBookingOnCancellation: vi.fn() }));
 vi.mock("@/db/operations", () => ({ recordDiverSelfCancel: vi.fn(async () => ({ id: "e1" })) }));
-vi.mock("../../../../features/booking-cancelled-notice/store", () => ({
+vi.mock("../../../../features/bookings/booking-cancelled-notice", () => ({
   sendBookingCancelledNotice: vi.fn(),
 }));
 vi.mock("@/lib/request-ip", () => ({ clientIp: vi.fn(async () => "203.0.113.7") }));
@@ -33,7 +33,7 @@ const { selfCancelBooking } = await import("@/db/bookings");
 const { refundBookingOnCancellation } = await import("@/db/refunds");
 const { recordDiverSelfCancel } = await import("@/db/operations");
 const { sendBookingCancelledNotice } = await import(
-  "../../../../features/booking-cancelled-notice/store"
+  "../../../../features/bookings/booking-cancelled-notice"
 );
 const { contextFor } = await import("./action-helpers");
 const { cancelMyBookingAction } = await import("./booking-actions");

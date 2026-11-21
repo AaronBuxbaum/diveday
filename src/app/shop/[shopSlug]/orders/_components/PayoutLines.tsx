@@ -1,7 +1,7 @@
 import { ShopNotice } from "@/components/ui/outcome";
-import type { ShopPayout } from "@/features/payouts";
-import { payoutSentence } from "@/features/payouts";
-import type { RoomChargeTotal } from "@/features/room-charges";
+import type { ShopPayout } from "@/features/money/payouts";
+import { payoutSentence } from "@/features/money/payouts";
+import type { RoomChargeTotal } from "@/features/money/room-charges";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { monthNames } from "@/lib/format";
 import { RoomChargesLine } from "./RoomChargesLine";

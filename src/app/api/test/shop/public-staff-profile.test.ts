@@ -4,7 +4,7 @@ import { shops, trips } from "@/db/schema";
 import {
   assignedPublicStaffProfiles,
   listPublicStaffProfiles,
-} from "@/features/public-staff-profiles";
+} from "@/features/public-site/public-staff-profiles";
 import { fileScopedShopContext } from "@/test/db";
 
 vi.mock("@/db/client", async (importOriginal) => {

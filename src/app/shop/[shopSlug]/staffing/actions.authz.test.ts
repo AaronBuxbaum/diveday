@@ -20,11 +20,11 @@ vi.mock("@/db/authz", () => ({
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/db/client", () => ({ getDb: mocks.getDb }));
 vi.mock("@/db/shops", () => ({ getShopById: mocks.getShopById }));
-vi.mock("../../../../features/staffing/store", () => ({
+vi.mock("../../../../features/crew-and-boats/staffing/store", () => ({
   createStaffShift: mocks.createStaffShift,
   deleteStaffShift: vi.fn(),
 }));
-vi.mock("../../../../features/session/rules", () => ({
+vi.mock("../../../../features/accounts/session", () => ({
   requireStaffSession: mocks.requireStaffSession,
 }));
 

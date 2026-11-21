@@ -139,9 +139,9 @@ describe("leading-wildcard ILIKE search is indexed (DATA-L6)", () => {
     const [arm] = columnsInSource('ilike(people.id, "%needle%")', "src/features/example/store.ts");
     expect(arm?.file).toBe("src/features/example/store.ts");
     expect(indexed.has(`${arm?.table}.${arm?.column}`)).toBe(false);
-    expect(searchedColumns().some((entry) => entry.file === "src/features/search/store.ts")).toBe(
-      true,
-    );
+    expect(
+      searchedColumns().some((entry) => entry.file === "src/features/platform/search.ts"),
+    ).toBe(true);
   });
 
   it("resolves imported aliases and refuses unknown aliases and dynamic expressions", () => {

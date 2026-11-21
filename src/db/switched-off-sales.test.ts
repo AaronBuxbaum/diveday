@@ -4,7 +4,7 @@ import type { InvoicingProvider } from "@/lib/payments/invoicing";
 import { fileScopedShopContext } from "@/test/db";
 import { sendDeal } from "@/test/deal";
 import { fakePromotions } from "@/test/fakes";
-import { getActiveTripPromoByCode } from "../features/trip-promos/store";
+import { getActiveTripPromoByCode } from "../features/money/trip-promos";
 import { createDivePackage } from "./dive-packages";
 import { askAnytime } from "./interests";
 import { createDiverPackageOrder } from "./orders";

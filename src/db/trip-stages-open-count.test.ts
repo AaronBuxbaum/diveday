@@ -1,13 +1,13 @@
 import { and, desc, eq, lt } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
+import { seedRollCallEvidence } from "@/db/seed/roll-call-evidence";
 import { nowDate, nowMs } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import {
   latestTripStage,
   readDepartureStage,
   recordTripStage,
-} from "../features/trip-stages/store";
+} from "../features/trips/trip-stages";
 import {
   boardAtDeparture,
   HOUR,

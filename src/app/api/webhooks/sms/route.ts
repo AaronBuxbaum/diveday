@@ -1,10 +1,10 @@
 import { getDb } from "@/db/client";
 import { applyProviderEmailEvent } from "@/db/notifications";
 import { recordSmsKeyword } from "@/db/sms-opt-outs";
-import { markPhoneRunningLate } from "@/features/running-late";
-import { shopForSmsSender } from "@/features/sms-sender";
-import { parseSmsDeliveryEvent, parseSmsReply } from "@/features/sms-webhook";
-import { gateSnsWebhook } from "@/features/sns-webhook";
+import { markPhoneRunningLate } from "@/features/boarding/running-late";
+import { shopForSmsSender } from "@/features/messages/sms-sender";
+import { parseSmsDeliveryEvent, parseSmsReply } from "@/features/messages/sms-webhook";
+import { gateSnsWebhook } from "@/features/messages/sns-webhook";
 import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
 

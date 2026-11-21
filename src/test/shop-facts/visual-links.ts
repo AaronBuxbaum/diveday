@@ -7,18 +7,18 @@ import { setShopShoreAlertContact } from "../../db/shops";
 import {
   BOOKKEEPER_CONFIRMATION_TTL_MS,
   bookkeeperMonthOnSet,
-} from "../../features/bookkeeper/rules";
+} from "../../features/money/bookkeeper/rules";
 import {
   claimBookkeeperMonth,
   consumeBookkeeperConfirmation,
   issueBookkeeperConfirmation,
   setBookkeeper,
-} from "../../features/bookkeeper/store";
+} from "../../features/money/bookkeeper/store";
+import { issueWeeklyDigestUnsubscribeToken } from "../../features/reports/weekly-digest/store";
 import {
   issueShoreAlertConfirmation,
   issueShoreAlertStopToken,
-} from "../../features/shore-alert-tokens/store";
-import { issueWeeklyDigestUnsubscribeToken } from "../../features/weekly-digest/store";
+} from "../../features/safety/shore-alert-tokens";
 import { addMonths, monthKey, parseMonthKey } from "../../lib/calendar";
 import { CAPABILITY_POLICY } from "../../lib/capabilities";
 import { digestWeeks } from "../../lib/weekly-digest";

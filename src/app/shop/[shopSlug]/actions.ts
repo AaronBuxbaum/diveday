@@ -9,13 +9,7 @@ import { fitAdjustedReturnTeaching } from "@/db/gear";
 import { queueAndAttemptMediaDeletion } from "@/db/media-deletions";
 import { confirmRentalFitSize } from "@/db/rental-fit";
 import { dismissOrientation } from "@/db/user-accounts";
-import { parseForm } from "@/features/form-parse";
-import {
-  assignHelpRequestHelper,
-  completeHelpRequest,
-  undoHelpRequestCompletion,
-} from "@/features/help-requests";
-import { revalidateAndRedirect } from "@/features/navigation";
+import { requireStaffSession } from "@/features/accounts/session";
 import {
   addCrewRecapPhoto,
   canAddCrewRecapPhoto,
@@ -26,8 +20,14 @@ import {
   sendTripRecaps,
   setTripRecapShoutout,
   unpauseTripRecapAutoSend,
-} from "@/features/recap";
-import { requireStaffSession } from "@/features/session";
+} from "@/features/after-the-dive/recap";
+import {
+  assignHelpRequestHelper,
+  completeHelpRequest,
+  undoHelpRequestCompletion,
+} from "@/features/messages/help-requests";
+import { parseForm } from "@/features/platform/form-parse";
+import { revalidateAndRedirect } from "@/features/platform/navigation";
 import { marineLifeNamesIn } from "@/i18n/marine-life-labels";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";

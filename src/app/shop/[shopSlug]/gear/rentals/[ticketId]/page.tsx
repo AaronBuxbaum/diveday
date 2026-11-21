@@ -8,8 +8,8 @@ import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
 import { controlClass, Field } from "@/components/ui/form";
 import type { NoticeTone } from "@/components/ui/tone";
-import { getCounterRentalTicketPage } from "@/features/counter-rental-ticket-page";
-import { requireShopSurface } from "@/features/session";
+import { requireShopSurface } from "@/features/accounts/session";
+import { getCounterRentalTicketPage } from "@/features/gear/counter-rental-ticket-page";
 import {
   gearItemKindLabel,
   gearPhaseLabel,

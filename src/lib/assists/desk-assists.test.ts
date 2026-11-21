@@ -5,8 +5,8 @@ import {
   RENTAL_NOTE_SYSTEM,
   rentalNoteCall,
   rentalNoteFields,
-} from "../../features/rental-note/rules";
-import { samePersonCall, samePersonRead } from "../../features/same-person/rules";
+} from "../../features/gear/rental-note";
+import { samePersonCall, samePersonRead } from "../../features/people/same-person";
 
 function answering(value: unknown) {
   return fakeClaude({ reply: () => fakeClaudeMessage({ text: JSON.stringify(value) }) });

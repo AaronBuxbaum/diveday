@@ -14,13 +14,13 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
 });
-vi.mock("../../../../../features/session/rules", () => ({
+vi.mock("../../../../../features/accounts/session", () => ({
   requireStaffSession: vi.fn<() => Promise<DiveDaySession>>(),
 }));
 
 const { getDb } = await import("@/db/client");
 const { requireStaffSession } = (await import(
-  "../../../../../features/session/rules"
+  "../../../../../features/accounts/session"
 )) as unknown as {
   requireStaffSession: ReturnType<typeof vi.fn<() => Promise<DiveDaySession>>>;
 };

@@ -1,7 +1,10 @@
 import { getDb } from "@/db/client";
-import { billingProviderFromEnvironment, percentBillingFromEnvironment } from "@/features/billing";
-import { cronRoute } from "@/features/cron-route";
-import { pricingConfig } from "@/features/pricing-flags";
+import {
+  billingProviderFromEnvironment,
+  percentBillingFromEnvironment,
+} from "@/features/money/billing";
+import { pricingConfig } from "@/features/money/pricing-flags";
+import { cronRoute } from "@/features/platform/cron-route";
 import { PRICING_CLOSE_CRONTAB } from "@/lib/billing/pricing-plans";
 import { nowDate } from "@/lib/clock";
 import { closePercentMonths } from "./close-pass";

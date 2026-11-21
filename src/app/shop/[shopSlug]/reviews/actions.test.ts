@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
  * The moderation actions' own job, isolated from the writes they wrap: read the
  * form, refuse what cannot be acted on, and **return** what happened rather
  * than redirecting to a `?notice=`. What "matched nothing in this shop" means
- * is covered against a real database in `src/features/reviews/store.test.ts` (every query
+ * is covered against a real database in `src/features/after-the-dive/reviews/store.test.ts` (every query
  * here is shop-scoped), so nothing below re-tests the query.
  *
  * `revalidatePath` is mocked to a no-op: outside a request scope the real one
@@ -16,19 +16,19 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn(async () => ({}) as never) };
 });
-vi.mock("../../../../features/reviews/store", () => ({
+vi.mock("../../../../features/after-the-dive/reviews/store", () => ({
   REVIEW_MODERATION_REASONS: ["abusive", "names_a_person", "wrong_subject", "spam", "other"],
   setReviewPublished: vi.fn(),
   setReviewStandout: vi.fn(),
   setReviewsPublished: vi.fn(),
 }));
-vi.mock("../../../../features/session/rules", () => ({ requireStaffSession: vi.fn() }));
+vi.mock("../../../../features/accounts/session", () => ({ requireStaffSession: vi.fn() }));
 
 const { revalidatePath } = await import("next/cache");
 const { setReviewPublished, setReviewStandout, setReviewsPublished } = await import(
-  "../../../../features/reviews/store"
+  "../../../../features/after-the-dive/reviews/store"
 );
-const { requireStaffSession } = await import("../../../../features/session/rules");
+const { requireStaffSession } = await import("../../../../features/accounts/session");
 const { publishReviewsAction, reviewRowAction } = await import("./actions");
 
 const SHOP_ID = "3f4b1a2c-1111-4222-8333-444444444444";
@@ -72,7 +72,7 @@ describe("publishReviewsAction", () => {
     expect(setReviewsPublished).toHaveBeenCalledWith({}, SHOP_ID, [REVIEW_A, REVIEW_B], STAFF_ID);
     // The list still has to re-read, or the rows that just moved would render
     // from the cached segment — the half of `revalidateAndRedirect` that
-    // survives losing the redirect (src/features/navigation/rules.ts).
+    // survives losing the redirect (src/features/platform/navigation.ts).
     expect(revalidatePath).toHaveBeenCalledWith(REVIEWS_PATH);
   });
 

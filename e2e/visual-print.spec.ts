@@ -5,8 +5,8 @@
  * `e2e/visual-harness.ts`, and the procedure is the e2e-and-visual skill.
  */
 
-import { DEMO_RECAP_BOOKING_ID, DEMO_TODAY_TRIP_ID } from "../src/db/seed-identifiers";
-import { DEMO_MEDICAL_ALERT, DEMO_MEDICAL_ALERT_TRIP } from "../src/db/seed-medical-alert";
+import { DEMO_RECAP_BOOKING_ID, DEMO_TODAY_TRIP_ID } from "../src/db/seed/identifiers";
+import { DEMO_MEDICAL_ALERT, DEMO_MEDICAL_ALERT_TRIP } from "../src/db/seed/medical-alert";
 import { diverTranslator } from "../src/i18n/messages";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { MAP_REACHABILITY_PROBES } from "../src/lib/maps";

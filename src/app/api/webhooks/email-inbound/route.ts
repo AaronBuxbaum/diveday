@@ -1,13 +1,13 @@
 import { after } from "next/server";
 import { getDb } from "@/db/client";
 import { recordInboundMessage, shopIdForInboundEmailToken } from "@/db/inbound-messages";
-import { pingDeskAfterHoursSafely } from "@/features/desk-pings";
-import { parseSesInboundNotification } from "@/features/email-events";
-import { parseInboundEmail } from "@/features/inbound-email";
-import { inboundMailStoreFromEnvironment } from "@/features/inbound-mail-store";
-import { triageInboundMessagesSafely } from "@/features/inbox-assists";
-import { handleInboundReplyKeyword } from "@/features/reply-keywords";
-import { gateSnsWebhook } from "@/features/sns-webhook";
+import { triageInboundMessagesSafely } from "@/features/ai/inbox-assists";
+import { pingDeskAfterHoursSafely } from "@/features/messages/desk-pings";
+import { parseSesInboundNotification } from "@/features/messages/email-events";
+import { parseInboundEmail } from "@/features/messages/inbound-email";
+import { inboundMailStoreFromEnvironment } from "@/features/messages/inbound-mail-store";
+import { handleInboundReplyKeyword } from "@/features/messages/reply-keywords";
+import { gateSnsWebhook } from "@/features/messages/sns-webhook";
 import { nowDate } from "@/lib/clock";
 import { normalizeEmailAddress, parseInboundReplyToken, sesMessageIdFromHeader } from "@/lib/inbox";
 import { log } from "@/lib/log";
@@ -17,7 +17,7 @@ import { inboundEmailDomain } from "@/lib/notifications/inbound-address";
  * Mail a diver sent back (ADR 20260907-two-way-inbox). SES's receipt rule
  * stores the raw message in the inbound bucket and publishes a `Received`
  * notification to its own SNS topic; SNS delivers that here, inside the same
- * signed envelope the delivery webhook verifies (`src/features/sns-webhook/rules.ts`).
+ * signed envelope the delivery webhook verifies (`src/features/messages/sns-webhook/rules.ts`).
  *
  * The order of refusals is the order of trust: the envelope's signature and
  * topic first, then the bucket the notification names against the one the
@@ -159,7 +159,7 @@ export async function POST(request: Request) {
     if (outcome !== "not_a_keyword") {
       log("email_inbound.reply_keyword", "info", { shopId, outcome });
     }
-    // The desk's after-hours ping (src/features/desk-pings/store.ts): only for a message
+    // The desk's after-hours ping (src/features/messages/desk-pings.ts): only for a message
     // actually filed from a sender whose domain checks passed (a spoofed burst
     // to the reply-to address must not page the owner) and that SES did not
     // flag as spam, and never able to fail this webhook. After the response

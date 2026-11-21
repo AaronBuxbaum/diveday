@@ -20,26 +20,26 @@ vi.mock("@/app/shop/[shopSlug]/trips/[id]/roster-seating-actions", () => ({
   addToWaitlistAction: vi.fn(),
 }));
 vi.mock("@/db/client", () => ({ getDb: vi.fn(async () => ({ db: "handle" })) }));
-vi.mock("../../../../features/divers/store", () => ({
+vi.mock("../../../../features/people/divers/store", () => ({
   createDiver: vi.fn(),
   findSimilarDivers: vi.fn(),
 }));
-vi.mock("../../../../features/form-drafts/store", () => ({ discardFormDraft: vi.fn() }));
-vi.mock("../../../../features/navigation/rules", () => ({
+vi.mock("../../../../features/platform/form-drafts", () => ({ discardFormDraft: vi.fn() }));
+vi.mock("../../../../features/platform/navigation", () => ({
   revalidateAndRedirect: vi.fn((_path: string, to: string) => {
     throw new Error(`REDIRECT:${to}`);
   }),
 }));
-vi.mock("../../../../features/session/rules", () => ({ requireStaffSession: vi.fn() }));
+vi.mock("../../../../features/accounts/session", () => ({ requireStaffSession: vi.fn() }));
 
 const { seatNewDiverAction, seatPartyAction } = await import("@/app/actions/seat-diver");
 const { addToWaitlistAction } = await import(
   "@/app/shop/[shopSlug]/trips/[id]/roster-seating-actions"
 );
-const { createDiver, findSimilarDivers } = await import("../../../../features/divers/store");
-const { discardFormDraft } = await import("../../../../features/form-drafts/store");
-const { revalidateAndRedirect } = await import("../../../../features/navigation/rules");
-const { requireStaffSession } = await import("../../../../features/session/rules");
+const { createDiver, findSimilarDivers } = await import("../../../../features/people/divers/store");
+const { discardFormDraft } = await import("../../../../features/platform/form-drafts");
+const { revalidateAndRedirect } = await import("../../../../features/platform/navigation");
+const { requireStaffSession } = await import("../../../../features/accounts/session");
 const { createDiverFormAction } = await import("./add-diver-actions");
 
 const SHOP_ID = "22222222-2222-4222-8222-222222222222";

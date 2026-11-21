@@ -1,13 +1,15 @@
 import { describe, expect, it, vi } from "vitest";
 
-vi.mock("../../../../../../../../features/session/rules", () => ({ requireShopSurface: vi.fn() }));
+vi.mock("../../../../../../../../features/accounts/session", () => ({
+  requireShopSurface: vi.fn(),
+}));
 vi.mock("@/lib/notifications/app-url", () => ({ publicAppUrl: () => "https://diveday.test" }));
-vi.mock("../../../../../../../../features/party-waiver-queue/store", () => ({
+vi.mock("../../../../../../../../features/waivers/party-waiver-queue", () => ({
   issuePartyWaiver: vi.fn(),
 }));
-const { requireShopSurface } = await import("../../../../../../../../features/session/rules");
+const { requireShopSurface } = await import("../../../../../../../../features/accounts/session");
 const { issuePartyWaiver } = await import(
-  "../../../../../../../../features/party-waiver-queue/store"
+  "../../../../../../../../features/waivers/party-waiver-queue"
 );
 const { issuePartyWaiverQrAction } = await import("./actions");
 const tripId = "33333333-3333-4333-8333-333333333333";

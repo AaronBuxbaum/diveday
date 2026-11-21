@@ -1179,8 +1179,15 @@ export function oxfordCommas(value, key = "") {
  * to the model, the data dictionary of what erasure keeps, and the support
  * files tests read. Their lists are written for a machine or a maintainer.
  */
-export const OXFORD_EXEMPT_FILES =
-  /^src\/(?:features\/[^/]+\/rules\.ts|lib\/assists\/|db\/person-columns\.ts)|\.test-support\.ts$/;
+export const OXFORD_EXEMPT_FILES = new RegExp(
+  [
+    "^src/(?:",
+    // A concept folder's rules, and the one-file prompt concepts (the instructions themselves).
+    "features/[^/]+/[^/]+/rules\\.ts",
+    "|features/[^/]+/(?:bench-note|booking-request|cert-scan|description-draft|monday-summary|recap-line|rental-note|review-flags|review-themes|same-person|site-brief|waiver-draft|website-reading)\\.ts$",
+    "|lib/assists/|db/person-columns\\.ts)|\\.test-support\\.ts$",
+  ].join(""),
+);
 
 /** The value with every Oxford comma the rule names put back. */
 export function addOxfordCommas(value, key = "") {

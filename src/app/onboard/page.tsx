@@ -11,7 +11,7 @@ import { buttonClass } from "@/components/ui/button";
 import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
 import { controlClass, DateField, Field, FieldGrid, FormStatus } from "@/components/ui/form";
 import { GroupLabel } from "@/components/ui/group-label";
-import { MAX_FIRST_DAY_NAME, parseFirstDayFields } from "@/features/first-day";
+import { MAX_FIRST_DAY_NAME, parseFirstDayFields } from "@/features/shop-setup/first-day";
 import { type DiverMessageKey, diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { setUpHref } from "@/lib/funnel";
@@ -284,7 +284,7 @@ export default async function OnboardPage({
             </FieldGrid>
             {/* Optional. Filled, they become a real hull and a real departure
                 on tomorrow's board, so the first Today has a boat on it
-                (`src/features/first-day/store.ts`). */}
+                (`src/features/shop-setup/first-day/store.ts`). */}
             <FieldGrid columns={2}>
               <Field label={t("account.onboard.boatLabel")} hint={t("common.optional")}>
                 <input
@@ -358,7 +358,7 @@ export default async function OnboardPage({
               needs one fact, and the review that named it
               (docs/product/marketing-review-20260827.md) named the missing
               half too: the old line said "free for 3 weeks" and never answered
-              day 22. It does now, and soft expiry is real — `src/features/trial/rules.ts`
+              day 22. It does now, and soft expiry is real — `src/features/shop-setup/trial.ts`
               switches nothing off. The other three claims are shipped and
               checkable, and they keep their paragraphs on the marketing pages
               the visitor came from; a door repeats none of them. */}

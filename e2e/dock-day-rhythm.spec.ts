@@ -235,7 +235,7 @@ test("a departure's own legs are the day the diver reads", async ({ page, privat
  * Both tests above build their fixture through the real forms, which is the
  * right way to prove the *code* path and says nothing about the demo. Every
  * seeded `trip_dives` row left `travel_minutes` null until
- * `src/db/seed-trip-legs.ts`, so every departure a shop owner clicked through
+ * `src/db/seed/trip-legs.ts`, so every departure a shop owner clicked through
  * fell back to the shop's single twenty-minute figure and the feature was
  * invisible in the product's own shop window.
  *

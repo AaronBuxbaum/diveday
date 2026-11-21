@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
-import { getTripPrep } from "../features/trip-prep/store";
+import { getTripPrep } from "../features/trips/trip-prep/store";
 import { getBookingPickupTime } from "./bookings";
 import { getTripManifest } from "./manifests";
 import { bookings, shops } from "./schema";

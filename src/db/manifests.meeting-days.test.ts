@@ -1,8 +1,8 @@
 import { and, eq } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
+import { seedRollCallEvidence } from "@/db/seed/roll-call-evidence";
 import { fileScopedShopContext } from "@/test/db";
-import { departureCounts } from "../features/departure-counts/store";
+import { departureCounts } from "../features/trips/departure-counts";
 import {
   getTripManifest,
   listBoardedAtAnyCheckpointByTrip,

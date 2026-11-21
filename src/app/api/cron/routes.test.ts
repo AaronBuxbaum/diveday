@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
  * **Every `/api/cron/*` route, by behaviour rather than by source text**
  * (issue #2780).
  *
- * `src/features/cron-auth/rules.test.ts` reads each route's source for a gate call, which
+ * `src/features/platform/cron-auth.test.ts` reads each route's source for a gate call, which
  * a contrived file can satisfy (a call in a dead branch, work in a wrapper's
  * arguments). This file imports every route the directory holds and asks it:
  *
@@ -26,7 +26,7 @@ vi.mock("@/db/client", async (importOriginal) => {
   return { ...actual, getDb: vi.fn() };
 });
 // The routes report only where a DSN is configured; the suite runs without one.
-vi.mock("../../../features/sentry-dsn/rules", () => ({
+vi.mock("../../../features/platform/sentry-dsn", () => ({
   SENTRY_DSN: "https://key@sentry.invalid/1",
 }));
 vi.mock("@sentry/nextjs", () => ({
@@ -36,11 +36,11 @@ vi.mock("@sentry/nextjs", () => ({
 }));
 
 // Native Wallet has an intentional credential preflight, like platform backup.
-vi.mock("@/features/wallet-pass", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/features/wallet-pass")>();
+vi.mock("@/features/boarding/wallet-pass", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/features/boarding/wallet-pass")>();
   return { ...actual, configuredWalletPlatforms: vi.fn() };
 });
-const { configuredWalletPlatforms } = await import("@/features/wallet-pass");
+const { configuredWalletPlatforms } = await import("@/features/boarding/wallet-pass");
 
 const { getDb } = await import("@/db/client");
 const Sentry = await import("@sentry/nextjs");

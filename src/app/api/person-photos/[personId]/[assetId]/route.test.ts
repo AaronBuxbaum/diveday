@@ -2,16 +2,16 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/auth", () => ({ auth: vi.fn() }));
 vi.mock("@/db/client", () => ({ getDb: vi.fn() }));
-vi.mock("@/features/session", () => ({ isLiveShopStaff: vi.fn() }));
-vi.mock("@/features/person-photo", () => ({ currentPrivatePersonPhoto: vi.fn() }));
+vi.mock("@/features/accounts/session", () => ({ isLiveShopStaff: vi.fn() }));
+vi.mock("@/features/people/person-photo", () => ({ currentPrivatePersonPhoto: vi.fn() }));
 vi.mock("@/lib/storage", () => ({
   mediaStorageConfigFromEnvironment: vi.fn(),
   readS3Object: vi.fn(),
 }));
 
 import { getDb } from "@/db/client";
-import { currentPrivatePersonPhoto } from "@/features/person-photo";
-import { isLiveShopStaff } from "@/features/session";
+import { isLiveShopStaff } from "@/features/accounts/session";
+import { currentPrivatePersonPhoto } from "@/features/people/person-photo";
 import { auth } from "@/lib/auth";
 import { mediaStorageConfigFromEnvironment, readS3Object } from "@/lib/storage";
 import { GET } from "./route";

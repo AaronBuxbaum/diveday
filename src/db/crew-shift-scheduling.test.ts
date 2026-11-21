@@ -99,7 +99,7 @@ it("does not auto-seat standing crew until every meeting has shift coverage", as
 
 it("keeps assigned crew and exposes the gap after their last shift is deleted", async () => {
   const { db, shop, personId, trip } = await fixture();
-  const { crewShiftCoverage } = await import("@/features/staffing/store");
+  const { crewShiftCoverage } = await import("@/features/crew-and-boats/staffing/store");
   await db
     .insert(staffShifts)
     .values({ shopId: shop.id, personId, startsAt: trip.startsAt, endsAt: trip.endsAt });

@@ -1,6 +1,6 @@
 import { getDb } from "@/db/client";
-import { currentPrivatePersonPhoto } from "@/features/person-photo";
-import { isLiveShopStaff } from "@/features/session";
+import { isLiveShopStaff } from "@/features/accounts/session";
+import { currentPrivatePersonPhoto } from "@/features/people/person-photo";
 import { auth } from "@/lib/auth";
 import {
   PRIVATE_PERSON_PHOTO_PREFIX,

@@ -7,7 +7,7 @@ import {
   listAgencyCheckableCards,
   listedCardForAgencyCheck,
   undoAgencyCheck,
-} from "../features/agency-check/store";
+} from "../features/certifications/agency-check";
 import type { AppDb } from "./client";
 import { reviewNitroxCertification, unreviewNitroxCertification } from "./nitrox";
 import { reviewSpecialtyCertification, unreviewSpecialtyCertification } from "./readiness";

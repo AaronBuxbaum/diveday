@@ -5,8 +5,8 @@ import {
   paletteAnswerFacts,
   paletteAnswerView,
   paletteQueryNames,
-} from "@/features/palette-answer";
-import { EMPTY_RESULTS, resolveRecentRecords, searchShop } from "@/features/search";
+} from "@/features/ai/palette-answer";
+import { EMPTY_RESULTS, resolveRecentRecords, searchShop } from "@/features/platform/search";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { auth } from "@/lib/auth";

@@ -89,7 +89,7 @@ test.describe("schedule builder", () => {
    * nothing by saying it** (issue #1203, D43).
    *
    * The boundary is the feature: the panel reads, and the move that follows is
-   * not conditioned on what it read. `src/features/move-preflight/store.test.ts` proves that
+   * not conditioned on what it read. `src/features/bookings/move-preflight/store.test.ts` proves that
    * at the row level — the departure, its seats, its gear reservations and its
    * whole delivery log are byte-identical across a preflight. What this covers
    * is the flow a staff member actually runs: open Move, read the consequences,
@@ -119,7 +119,7 @@ test.describe("schedule builder", () => {
     await expect(page.getByText(/divers? (?:has|have) already been told this date/)).toBeVisible();
     await expect(page.getByText(/reserved units? travels? with it/)).toBeVisible();
 
-    // The seed boards one diver on this wreck trip (`src/db/seed-front-desk.ts`),
+    // The seed boards one diver on this wreck trip (`src/db/seed/front-desk.ts`),
     // which is the evidence `moveTrip` refuses on — so the panel says up front
     // what the redirect would have said afterwards, in the notice bar's own
     // words. The button stays live regardless: `moveTrip` is what decides, and

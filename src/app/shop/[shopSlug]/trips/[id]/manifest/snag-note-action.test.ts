@@ -14,16 +14,16 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn(async () => ({})) };
 });
-vi.mock("../../../../../../features/boat-snags/store", async (importOriginal) => {
+vi.mock("../../../../../../features/crew-and-boats/boat-snags", async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import("../../../../../../features/boat-snags/store")>();
+    await importOriginal<typeof import("../../../../../../features/crew-and-boats/boat-snags")>();
   return { ...actual, noteSnag: vi.fn(async () => ({ ok: true }) as const) };
 });
-vi.mock("../../../../../../features/session/rules", async () =>
+vi.mock("../../../../../../features/accounts/session", async () =>
   (await import("@/test/staff-session")).sessionMockOverStaffSession(),
 );
-const { requireStaffSession } = await import("../../../../../../features/session/rules");
-const { noteSnag } = await import("../../../../../../features/boat-snags/store");
+const { requireStaffSession } = await import("../../../../../../features/accounts/session");
+const { noteSnag } = await import("../../../../../../features/crew-and-boats/boat-snags");
 const { noteSnagAction } = await import("./actions");
 
 const SHOP = { id: "00000000-0000-4000-8000-000000000001", slug: "blue-mantis" };

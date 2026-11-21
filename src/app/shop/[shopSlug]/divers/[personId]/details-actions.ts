@@ -3,9 +3,9 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { sendStaffReply, sendWhatsAppReopen } from "@/db/staff-reply";
-import { editDiver, isDiverRemoved } from "@/features/divers";
-import { readForm, text } from "@/features/form-parse";
-import { revalidateAndRedirect } from "@/features/navigation";
+import { editDiver, isDiverRemoved } from "@/features/people/divers";
+import { readForm, text } from "@/features/platform/form-parse";
+import { revalidateAndRedirect } from "@/features/platform/navigation";
 import { isPlausibleDateOfBirth } from "@/lib/age";
 import { isValidCalendarDate } from "@/lib/calendar-date";
 import { WHATSAPP_REOPEN_MESSAGES } from "@/lib/inbox";

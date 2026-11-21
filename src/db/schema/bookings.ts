@@ -294,7 +294,7 @@ export const bookings = pgTable(
      * re-pointed at another person (an identity repoint or split). A tap
      * queued on a copy saved before it is about a seat that has changed since,
      * and the sync refuses it (`offlineTapAboutAnotherSeatOrDay`,
-     * src/features/check-in/store.ts). An instant beside the sequence, because the device
+     * src/features/boarding/check-in/store.ts). An instant beside the sequence, because the device
      * knows only when it saved its copy. Null on a row that has only ever been
      * one seat.
      */
@@ -302,7 +302,7 @@ export const bookings = pgTable(
     /**
      * **The desk saw this diver and turned them away**, and why: one category
      * from the seat's own blockers (`turnAwayReasons`, src/lib/turn-away.ts).
-     * Set with `status = 'no_show'` by `turnBookingAway` (src/features/turn-away/store.ts),
+     * Set with `status = 'no_show'` by `turnBookingAway` (src/features/boarding/turn-away.ts),
      * which frees the seat exactly as a no-show does; null on a plain "Not
      * here", which records that the diver did not arrive.
      *
@@ -324,7 +324,7 @@ export const bookings = pgTable(
     /**
      * **The diver said they are running late** (J3): the instant they tapped
      * "Running late" on `/ready` or replied LATE to a shop message
-     * (`src/features/running-late/store.ts`). Null is the ordinary state. The first
+     * (`src/features/boarding/running-late.ts`). Null is the ordinary state. The first
      * statement stands — a second tap or a redelivered reply changes nothing —
      * and the counter's check-in clears it, because an arrived diver is no
      * longer late. Gates nothing: the arrivals list says it instead of a
@@ -944,7 +944,7 @@ export type Booking = typeof bookings.$inferSelect;
  *
  * The recap's "Bring a buddy next time" is a link to the shop carrying a
  * non-secret id derived from the recapping diver's own booking
- * (`src/features/buddy-links/rules.ts`). When a booking arrives behind one and the id
+ * (`src/features/bookings/buddy-links.ts`). When a booking arrives behind one and the id
  * resolves, this row records it; when it does not, the seat books exactly as an
  * unreferred one does and nothing is written.
  *

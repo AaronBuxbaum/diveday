@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { getShopBackupDestination } from "@/features/backup-export";
+import { getShopBackupDestination } from "@/features/records/backup-export";
 import { fileScopedShopContext } from "@/test/db";
 import {
   redirectedTo,
@@ -32,10 +32,10 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
 });
-vi.mock("../../../../../features/session/rules", () => ({ requireStaffSession: vi.fn() }));
+vi.mock("../../../../../features/accounts/session", () => ({ requireStaffSession: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
-const { requireStaffSession } = await import("../../../../../features/session/rules");
+const { requireStaffSession } = await import("../../../../../features/accounts/session");
 const { saveBackupDestinationAction, testBackupAction, disconnectBackupAction } = await import(
   "./actions"
 );

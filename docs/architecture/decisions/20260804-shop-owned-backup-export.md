@@ -17,7 +17,7 @@ must never become a retry storm or take the pass down for other shops.
 
 ## Decision
 
-A `backup-export` feature module (`src/features/backup-export/`, ADR
+A `backup-export` feature module (`src/features/records/backup-export/`, ADR
 20260730-feature-module-contracts) that reuses the tested export seam byte for byte
 (`loadShopExportBundleInput` → `buildExportBundle` → `zipExportBundle`, photos included) and adds
 the shop-wide `trips.ics` from `calendar-sync` — never a second bundle format to drift.
@@ -69,7 +69,7 @@ streaming assembly or per-shop fan-out to queued invocations, changing only the 
 internals; the export's known silent-photo-drop gap (see the backup-and-restore runbook) now also
 applies to shop-owned copies and is worth fixing at `fetchExportPhotos` for both consumers.
 Delivery history is append-only with no prune arm yet — if HD-11 ever sets a window for it, it
-joins `src/features/retention/rules.ts` like every other append-only table. Sealed credentials share
+joins `src/features/records/retention/rules.ts` like every other append-only table. Sealed credentials share
 `SECRET_ENCRYPTION_KEY`'s rotation story: rotating the key orphans stored secrets, which surface
 as `credential_unreadable` delivery rows until re-entered. Revisit if a real shop needs
 non-S3-compatible storage or per-shop schedules; both fit behind the module's `index.ts`.

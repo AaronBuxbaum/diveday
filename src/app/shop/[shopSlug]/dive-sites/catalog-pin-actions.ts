@@ -2,7 +2,7 @@
 
 import type { MapPinDetails } from "@/components/map/SiteMap";
 import { getGlobalDiveSiteTemplate } from "@/db/dive-sites";
-import { requireShopSurface } from "@/features/session";
+import { requireShopSurface } from "@/features/accounts/session";
 import { staffDiveSiteDepthText } from "@/i18n/depth-labels";
 import { diveSiteDifficultyLabel } from "@/i18n/dive-site-labels";
 import { diverTranslator } from "@/i18n/messages";

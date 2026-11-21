@@ -35,7 +35,7 @@ async function firstDiver(db: Awaited<ReturnType<typeof seededShopContext>>["db"
       and(
         eq(people.shopId, shopId),
         eq(personRoles.role, "diver"),
-        // The seed's first customer (seed-cast.ts), who carries both an email
+        // The seed's first customer (seed/cast.ts), who carries both an email
         // and a phone; the earliest-created diver does not always.
         eq(people.fullName, "Priya Sharma"),
       ),

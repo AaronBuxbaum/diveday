@@ -5,9 +5,9 @@ import { fileScopedShopContext } from "@/test/db";
 import type { AppDb } from "./client";
 import { ensureDemoSailsToday } from "./demo-refresh";
 import { staffShifts, tripAssignments, trips } from "./schema";
-import { AT_SEA_DAY_TITLE, AT_SEA_DUSK_TITLE } from "./seed-boat-at-sea";
-import { demoTodayDepartureStart } from "./seed-clock";
-import { DEMO_COMPLETED_TRIP_TITLE } from "./seed-more-trips";
+import { AT_SEA_DAY_TITLE, AT_SEA_DUSK_TITLE } from "./seed/boat-at-sea";
+import { demoTodayDepartureStart } from "./seed/clock";
+import { DEMO_COMPLETED_TRIP_TITLE } from "./seed/more-trips";
 
 const historyCtx = fileScopedShopContext({ history: true });
 

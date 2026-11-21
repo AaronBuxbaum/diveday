@@ -8,8 +8,8 @@ import { recordTripActivity } from "@/db/operations";
 import { getShopPersonName } from "@/db/people";
 import { personClashesAfterMove } from "@/db/person-clashes";
 import { changeTripCrewOutcome, moveTripCrewMember, type TripCrewChange } from "@/db/trips";
-import { revalidateAndRedirect } from "@/features/navigation";
-import { requireShopSurface } from "@/features/session";
+import { requireShopSurface } from "@/features/accounts/session";
+import { revalidateAndRedirect } from "@/features/platform/navigation";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 

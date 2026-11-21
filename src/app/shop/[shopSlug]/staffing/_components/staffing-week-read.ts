@@ -1,6 +1,10 @@
-import type { requireShopSurface } from "@/features/session";
-import { getStaffingPage } from "@/features/staffing";
-import { filterStaffWeek, staffSchedulePerson, staffWeek } from "@/features/staffing-week";
+import type { requireShopSurface } from "@/features/accounts/session";
+import { getStaffingPage } from "@/features/crew-and-boats/staffing";
+import {
+  filterStaffWeek,
+  staffSchedulePerson,
+  staffWeek,
+} from "@/features/crew-and-boats/staffing-week";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { staffRoleLabels } from "@/i18n/staff-role-labels";
 import { calendarDateInTimezone, shiftCalendarDate } from "@/lib/calendar-date";

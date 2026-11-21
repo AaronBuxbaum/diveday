@@ -140,7 +140,7 @@ The honest part. Read this before trusting a quiet inbox.
   `unobservable` and never becomes `ok` without a measurement. This code has no Sentry stats
   collector.
 - **WhatsApp delivery evidence is not a bill.** `readWhatsAppDeliveredUsage(db, { shopId, start, end })`
-  from `@/features/whatsapp-webhook` returns counts of verified delivered callbacks by sending
+  from `@/features/messages/whatsapp-webhook` returns counts of verified delivered callbacks by sending
   WABA/phone and provider pricing classification, inclusive start/exclusive end. Shop export
   includes `whatsapp_delivered_usage.csv`. Deduplicated observations cover only callbacks received
   since deployment, not complete historical/account usage. `recipientMarket`, `rateVersion`,

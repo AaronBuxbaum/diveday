@@ -2,7 +2,7 @@ import { and, eq, inArray } from "drizzle-orm";
 import { expect, it } from "vitest";
 import { people, processorErasureObligations } from "../../db/schema/index";
 import { resetDemoSchedule } from "../../db/seed";
-import { recordProcessorErasureObligations } from "../../features/processor-erasure/store";
+import { recordProcessorErasureObligations } from "../../features/records/processor-erasure";
 import { nowDate } from "../../lib/clock";
 import { fileScopedShopContext } from "../db";
 import { oweStripeTwoErasures } from "./trouble-panels";

@@ -12,8 +12,8 @@ import {
   certificationForAgencyOffer,
   listedCardForAgencyCheck,
   undoAgencyCheck,
-} from "@/features/agency-check";
-import { readForm } from "@/features/form-parse";
+} from "@/features/certifications/agency-check";
+import { readForm } from "@/features/platform/form-parse";
 import {
   type AgencyListedKind,
   agencyListedCards,

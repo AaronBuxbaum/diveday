@@ -6,8 +6,8 @@ import { bookings, people, personRoles, shops, trips } from "@/db/schema";
 import { liveTrip } from "@/db/trips-live";
 import { nowDate } from "@/lib/clock";
 import { countingShopContext } from "@/test/query-count";
-import { getDiverRecord } from "../features/diver-record/store";
-import { getTripDetails, getTripManifest } from "../features/trip-page/store";
+import { getDiverRecord } from "../features/people/diver-record";
+import { getTripDetails, getTripManifest } from "../features/trips/trip-page";
 
 /** The seeded shop's owner: the reader whose gates open every door on these pages. */
 async function seededOwner(ctx: Awaited<ReturnType<typeof countingShopContext>>) {

@@ -7,8 +7,8 @@ import { hashPendingHandle } from "@/lib/pending-sign-in";
 import { totpCode } from "@/lib/totp";
 import { advanceClock } from "@/test/clock";
 import { fileScopedShopContext } from "@/test/db";
-import { anonymizeDiver } from "../features/anonymize/store";
-import { removeStaffMember, setStaffAccountStatus } from "../features/staff-accounts/store";
+import { removeStaffMember, setStaffAccountStatus } from "../features/accounts/staff-accounts";
+import { anonymizeDiver } from "../features/records/anonymize";
 import {
   beginTotpEnrollment,
   disableTotp,

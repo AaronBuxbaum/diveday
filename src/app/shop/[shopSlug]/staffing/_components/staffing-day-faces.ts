@@ -1,4 +1,4 @@
-import type { StaffWeekDay } from "@/features/staffing-week";
+import type { StaffWeekDay } from "@/features/crew-and-boats/staffing-week";
 import { calendarDateToUtcMidnight } from "@/lib/calendar-date";
 import { formatDayParts, formatShortDate } from "@/lib/format";
 

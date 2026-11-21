@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { hashBearerToken } from "@/lib/bearer-tokens";
 import { DAY_MS, MINUTE_MS, nowDate, nowMs } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
-import { anonymizeDiver } from "../features/anonymize/store";
+import { anonymizeDiver } from "../features/records/anonymize";
 import {
   clearAnswers,
   issueCounterLink,

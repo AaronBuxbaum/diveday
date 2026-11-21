@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { tapTargetLinkClass } from "@/components/ui/button";
 import { LedgerGroup } from "@/components/ui/ledger";
-import { groupByDeparture, type NeedsYouReading, type TodayAction } from "@/features/today";
+import { groupByDeparture, type NeedsYouReading, type TodayAction } from "@/features/day/today";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatTime } from "@/lib/format";
 import { shopPath } from "@/lib/staff-notices";

@@ -2,7 +2,10 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { controlClass, Field, FieldActions, FieldGrid, FormStatus } from "@/components/ui/form";
-import type { getSquareReceiptState, SquareReceiptResult } from "@/features/integrations";
+import type {
+  getSquareReceiptState,
+  SquareReceiptResult,
+} from "@/features/shop-setup/integrations";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatDateTimeTz } from "@/lib/format";
 import { linkSquareReceiptAction, releaseSquareReceiptAction } from "../square-actions";

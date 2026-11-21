@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const recapPageStateCached = vi.fn();
 const checkRateLimit = vi.fn();
 
-vi.mock("../../../../../features/recap/recap-cached.store", () => ({
+vi.mock("../../../../../features/after-the-dive/recap/recap-cached.store", () => ({
   recapPageStateCached: (...args: unknown[]) => recapPageStateCached(...args),
 }));
 vi.mock("@/lib/rate-limit", () => ({

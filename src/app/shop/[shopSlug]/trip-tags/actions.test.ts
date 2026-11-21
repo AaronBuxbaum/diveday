@@ -7,7 +7,7 @@ import {
   seededStaffPersonId,
   staffSession,
 } from "@/test/staff-session";
-import { listTripLenses } from "../../../../features/trip-lenses/store";
+import { listTripLenses } from "../../../../features/trips/trip-lenses";
 
 const ctx = fileScopedShopContext();
 
@@ -21,10 +21,10 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
 });
-vi.mock("../../../../features/session/rules", () => ({ requireStaffSession: vi.fn() }));
+vi.mock("../../../../features/accounts/session", () => ({ requireStaffSession: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
-const { requireStaffSession } = await import("../../../../features/session/rules");
+const { requireStaffSession } = await import("../../../../features/accounts/session");
 const { createTripLensAction, updateTripLensAction } = await import("./actions");
 
 async function signedInAs(email: string) {

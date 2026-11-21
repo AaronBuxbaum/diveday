@@ -5,7 +5,7 @@
  * `e2e/visual-harness.ts`, and the procedure is the e2e-and-visual skill.
  */
 import type { Page } from "@playwright/test";
-import { LISTED_SHOP_SLUGS } from "../src/db/seed-identifiers";
+import { LISTED_SHOP_SLUGS } from "../src/db/seed/identifiers";
 import { diverTranslator } from "../src/i18n/messages";
 import { type FeaturePageSlug, featurePagePath } from "../src/lib/feature-pages";
 import { publicFindMyBookingPath } from "../src/lib/public-routes";
@@ -1093,7 +1093,7 @@ for (const scheme of ["light", "dark"] as const) {
         // so no other capture in this suite can render the line.
         //
         // One hand-entered diver is enough: seating owes a waiver on join
-        // (src/features/seat-diver/store.ts), the departure is inside the operational
+        // (src/features/bookings/seat-diver.ts), the departure is inside the operational
         // horizon, so Today gains a waiver row.
         await page.goto(`/shop/${unique}?call=1`);
         // The departure card is one big link to its add band; its title is a

@@ -88,7 +88,7 @@ gear_reservations
   (The sketch here originally said "new feature module, per
   [20260730-feature-module-contracts](20260730-feature-module-contracts.md)" — superseded by the
   build amendment below: the shipped boundary is `src/lib/gear.ts` + `src/db/gear.ts`, no
-  `src/features/gear`, because Today's gear rows live in `src/features/today/today-reader.ts` and `src/db` may not
+  `src/features/gear`, because Today's gear rows live in `src/features/day/today/today-reader.ts` and `src/db` may not
   import `src/features`.)
 - **Payments** — no new payment machinery. A reservation attaches to the same
   `order_line_items` row (`kind: "rental"`) the booking already creates; the reservation is a
@@ -99,7 +99,7 @@ gear_reservations
   equipment-specific liability addendum, that's a separate decision (a second template type,
   against the CR-015 invariant) and is out of scope here, not silently solved by inventing one.
 - **What's out and when it's due back** — a Today-queue row for "due back today," reusing
-  `src/features/today/today.ts`'s existing assembly pattern, plus the `/gear` list's own filter.
+  `src/features/day/today/today.ts`'s existing assembly pattern, plus the `/gear` list's own filter.
 - **Avoid double booking** — the `EXCLUDE USING gist` constraint above, enforced at the database
   layer. Ships with its own real-Postgres CI coverage racing two concurrent reservation attempts
   for the same unit, mirroring the existing `FOR UPDATE` seat-oversell test.
@@ -170,7 +170,7 @@ schema sketch above, each for a reason worth keeping:
   carries it (tenancy + the delete-path coverage tests force the decision anyway).
 - **No feature module.** The sketch said `src/features/gear`; the shipped shape is
   `src/lib/gear.ts` + `src/db/gear.ts`, because the Today queue's gear rows live in
-  `src/features/today/today-reader.ts`, and `src/db` may not import `src/features` (the one-way layering
+  `src/features/day/today/today-reader.ts`, and `src/db` may not import `src/features` (the one-way layering
   `pnpm check:architecture` enforces). The surface is ordinary app routes at
   `/shop/[shopSlug]/gear`, like every other pillar's.
 - **Reservations cascade from bookings and items** (`ON DELETE CASCADE`) rather than blocking
@@ -349,7 +349,7 @@ The product owner asked for the deferred flow (2026-10-08): renting units at the
 somebody who is not on a boat, end to end. The 2026-08-25 holder shape is unchanged; this
 amendment records what was built on it and the calls the build made.
 
-- **The writer** is `createCounterRental` in `src/features/gear-counter-rentals/store.ts`. It takes the same
+- **The writer** is `createCounterRental` in `src/features/gear/gear-counter-rentals.ts`. It takes the same
   per-unit advisory lock as `reserveGearUnit`, refuses a unit that is deleted or not in service,
   and leaves the double booking to `gear_reservations_no_overlap` (23P01, naming the unit that
   lost). A rental may not start before the shop's today and runs 31 days at most
@@ -432,7 +432,7 @@ first 2026-10-08 amendment gave the counter ticket; the reason for that absence 
 line is built.
 
 - **One column: `shops.rental_terms`**, nullable plain text, at most 1,500 characters
-  (`src/features/rental-terms/rules.ts`). It is the shop's own words, set in Settings beside the rental
+  (`src/features/gear/rental-terms.ts`). It is the shop's own words, set in Settings beside the rental
   prices; an empty box stores `null` and prints nothing, and DiveDay supplies no default text. The
   shop export carries it in `shop.csv`.
 - **Both tickets end the same way** (`RentalTicketReceipt`): the trip slip at

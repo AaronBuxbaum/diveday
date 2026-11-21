@@ -7,8 +7,8 @@ import {
   FormStatus,
   StickyFormActions,
 } from "@/components/ui/form";
-import { requireShopSurface } from "@/features/session";
-import { canPersonManageShopSettings, listTripLenses } from "@/features/trip-defaults-page";
+import { requireShopSurface } from "@/features/accounts/session";
+import { canPersonManageShopSettings, listTripLenses } from "@/features/trips/trip-defaults-page";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { MINIMUM_SEATS_DECISION_HOURS_DEFAULT } from "@/lib/minimum-seats";

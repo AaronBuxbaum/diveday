@@ -9,8 +9,8 @@ import {
   restoreGearItem,
   returnGearReservation,
 } from "@/db/gear";
-import { revalidateAndRedirect } from "@/features/navigation";
-import { requireStaffSession } from "@/features/session";
+import { requireStaffSession } from "@/features/accounts/session";
+import { revalidateAndRedirect } from "@/features/platform/navigation";
 import { GEAR_KIND_ORDER, type GearItemKind } from "@/lib/gear";
 import { RENTAL_FIT_TEXT_LIMITS } from "@/lib/rentals";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";

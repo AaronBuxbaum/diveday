@@ -55,8 +55,8 @@ surface that groups by them.**
 
 ## Alternatives considered
 
-- **A second table for dive requests** — duplicates the erasure path (`src/features/anonymize/store.ts`), the
-  export column set (`src/db/export.ts`) and the staff list, to express a difference that is one
+- **A second table for dive requests** — duplicates the erasure path (`src/features/records/anonymize.ts`), the
+  export column set (`src/db/export/index.ts`) and the staff list, to express a difference that is one
   nullable foreign key.
 - **Re-adding `preferred_date` on its own** — exactly what the 2026-08-12 migration undid. A date
   nobody groups by is a field; a date something groups by is a departure waiting to be scheduled.

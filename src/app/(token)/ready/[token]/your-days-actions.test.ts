@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { ReadyPageData } from "../../../../features/ready/store";
+import type { ReadyPageData } from "../../../../features/boarding/ready";
 
 /**
  * The server's half of the Your days gate (security review of layer r5-4,
@@ -9,7 +9,7 @@ import type { ReadyPageData } from "../../../../features/ready/store";
  */
 
 const openYourDay = vi.fn();
-vi.mock("../../../../features/your-days/store", () => ({ openYourDay }));
+vi.mock("../../../../features/bookings/your-days", () => ({ openYourDay }));
 vi.mock("next/navigation", () => ({
   redirect: (to: string) => {
     throw new Error(`REDIRECT:${to}`);

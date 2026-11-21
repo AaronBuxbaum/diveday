@@ -16,7 +16,7 @@ import {
 } from "@/db/schema";
 import { DEFAULT_PRICING_CONFIG } from "@/lib/billing/pricing-plans";
 import { unseededTestDb } from "@/test/db";
-import { latestPricingStatement } from "../../../../features/pricing-volume/store";
+import { latestPricingStatement } from "../../../../features/money/pricing-volume";
 import { closePercentMonths, lastClosedMonth } from "./close-pass";
 
 /**

@@ -13,7 +13,7 @@ vi.mock("next/og", () => ({
 
 const mocks = vi.hoisted(() => ({ allowSvgRasterization: vi.fn() }));
 
-vi.mock("../../features/og-rasterizer/rules", () => ({
+vi.mock("../../features/public-site/og-rasterizer", () => ({
   allowSvgRasterization: mocks.allowSvgRasterization,
 }));
 

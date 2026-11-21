@@ -3,7 +3,7 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import type { GearServiceState } from "@/lib/gear";
-import type { TripPrep } from "../../../../../../../features/trip-prep/store";
+import type { TripPrep } from "../../../../../../../features/trips/trip-prep/store";
 import { PrepAssignments } from "./PrepAssignments";
 import { assignmentRowIsSettled } from "./prep-lines";
 import { prepFor, t, viewOf } from "./prep-test-fixtures";

@@ -15,7 +15,7 @@ yet accepted or declined. Filing straight into the roadmap would break that fold
 holds sequenced work rather than an inbox.
 
 Two constraints shape the format. Many short-lived sessions run in parallel, so a single
-append-to-me file becomes the repo's next conflict magnet (the same failure `src/db/seed.ts` hit,
+append-to-me file becomes the repo's next conflict magnet (the same failure `src/db/seed/index.ts` hit,
 ADR 20260803-seed-scenario-modules). And the reader is the human, cold, weeks later — an entry that
 requires re-deriving the finding before it can be judged gets skipped, and the register rots into a
 graveyard.

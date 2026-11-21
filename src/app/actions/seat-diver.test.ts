@@ -9,19 +9,19 @@ import { levelShort, NO_NITROX, noSpecialty } from "@/test/admission-refusals";
  */
 
 vi.mock("@/db/client", () => ({ getDb: vi.fn(async () => ({ db: "handle" })) }));
-vi.mock("../../features/divers/store", () => ({ findSimilarDivers: vi.fn(async () => []) }));
-vi.mock("../../features/seat-diver/store", () => ({ seatDiver: vi.fn() }));
-vi.mock("../../features/navigation/rules", () => ({
+vi.mock("../../features/people/divers/store", () => ({ findSimilarDivers: vi.fn(async () => []) }));
+vi.mock("../../features/bookings/seat-diver", () => ({ seatDiver: vi.fn() }));
+vi.mock("../../features/platform/navigation", () => ({
   revalidateAndRedirect: vi.fn((_path: string, to: string) => {
     throw new Error(`REDIRECT:${to}`);
   }),
 }));
-vi.mock("../../features/session/rules", () => ({ requireShopSurface: vi.fn() }));
+vi.mock("../../features/accounts/session", () => ({ requireShopSurface: vi.fn() }));
 
-const { seatDiver } = await import("../../features/seat-diver/store");
-const { findSimilarDivers } = await import("../../features/divers/store");
+const { seatDiver } = await import("../../features/bookings/seat-diver");
+const { findSimilarDivers } = await import("../../features/people/divers/store");
 const { verifyTripAdmissionGate } = await import("@/lib/trip-admission-gate");
-const { requireShopSurface } = await import("../../features/session/rules");
+const { requireShopSurface } = await import("../../features/accounts/session");
 const { seatExistingDiverAction, seatNewDiverAction } = await import("./seat-diver");
 
 const SHOP_ID = "22222222-2222-4222-8222-222222222222";

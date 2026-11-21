@@ -94,3 +94,9 @@ next candidate.
 
 [Concept leaves](20261108-concept-leaves.md) adds resolved importer-first ownership checks and
 focused hand-written graph helpers. Existing layer direction and public feature contracts remain.
+
+## Amendment, 2026-11-21
+
+[Feature areas](20261121-feature-areas.md) amends rules 1 and 2: modules live in area folders
+under `src/features/`, each area has a README, a concept is one file or a folder with an
+`index.ts`, and `@/features/<area>/<concept>` is the only importable form from outside it.

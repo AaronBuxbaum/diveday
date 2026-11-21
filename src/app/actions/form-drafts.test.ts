@@ -4,16 +4,16 @@ import { people, shops } from "@/db/schema";
 import type { DiveDaySession } from "@/lib/auth";
 import { fileScopedShopContext } from "@/test/db";
 import { staffSession } from "@/test/staff-session";
-import { readFormDraft, recordFormDraft } from "../../features/form-drafts/store";
+import { readFormDraft, recordFormDraft } from "../../features/platform/form-drafts";
 
-vi.mock("../../features/session/rules", () => ({ requireStaffSession: vi.fn() }));
+vi.mock("../../features/accounts/session", () => ({ requireStaffSession: vi.fn() }));
 vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
 });
 
 const { getDb } = await import("@/db/client");
-const { requireStaffSession } = await import("../../features/session/rules");
+const { requireStaffSession } = await import("../../features/accounts/session");
 const { bindFormDraft } = await import("./form-draft-props");
 const ctx = fileScopedShopContext();
 let currentSession: DiveDaySession;

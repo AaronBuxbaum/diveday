@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { afterAll, beforeAll, expect, it, vi } from "vitest";
-import { readOfflineManifestRosterWithWindows } from "@/features/offline-manifest-snapshots";
+import { readOfflineManifestRosterWithWindows } from "@/features/boarding/offline-manifest-snapshots";
 import { nowDate } from "@/lib/clock";
 import { describePostgres, postgresTestDb } from "@/test/postgres";
 import {
@@ -12,7 +12,7 @@ import {
 import { effectiveCausalRowsForDb } from "./roll-call-causal-store";
 import { boats, rollCallEvents, tripAssignments, trips } from "./schema";
 import { seedDemo } from "./seed";
-import { seedRollCallEvidence } from "./seed-roll-call-evidence";
+import { seedRollCallEvidence } from "./seed/roll-call-evidence";
 import { getShopBySlug } from "./shops";
 import { editTripSection, getTripRoster, listStaff } from "./trips";
 import { upcomingTripsWithCounts } from "./trips-queries.test-support";

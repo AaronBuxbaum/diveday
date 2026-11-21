@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { SectionCard } from "@/components/ui/card";
 import type { IncidentReportLine } from "@/db/incident-reports";
-import type { SafetyMonth } from "@/features/safety-report";
+import type { SafetyMonth } from "@/features/safety/safety-report";
 import { INCIDENT_KIND_KEYS, INCIDENT_SEVERITY_KEYS } from "@/i18n/incident-labels";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import { formatDateTimeTz, formatEvidenceDateTimeTz, formatShortDate } from "@/lib/format";

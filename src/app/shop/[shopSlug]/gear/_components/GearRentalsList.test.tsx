@@ -4,8 +4,11 @@ import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
 import type { CounterRentalWaiverStanding } from "@/lib/counter-rentals";
-import { groupGearRentals } from "../../../../../features/gear-rentals/rules";
-import type { GearRentalsPage, GearRentalUnit } from "../../../../../features/gear-rentals/store";
+import { groupGearRentals } from "../../../../../features/gear/gear-rentals/rules";
+import type {
+  GearRentalsPage,
+  GearRentalUnit,
+} from "../../../../../features/gear/gear-rentals/store";
 import { GearRentalsList } from "./GearRentalsList";
 
 afterEach(cleanup);
@@ -16,7 +19,7 @@ const TODAY = "2026-10-08";
 /**
  * Rows built here and folded by the pure rule, rather than read through
  * `listGearRentals`, which would drag PGlite into a jsdom render. The reader's
- * own pins are in `src/features/gear-rentals/store.test.ts`.
+ * own pins are in `src/features/gear/gear-rentals/store.test.ts`.
  */
 function row(overrides: Partial<GearRentalUnit> & { reservationId: string }): GearRentalUnit {
   return {

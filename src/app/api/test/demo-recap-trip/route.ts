@@ -9,7 +9,7 @@ import {
   e2eTestRouteAuthorized,
   requireDemoTenant,
   testRouteRefused,
-} from "@/features/e2e-test-routes";
+} from "@/features/platform/e2e-test-routes";
 
 /**
  * Returns the one demo recap fixture's trip id so the browser fleet can reach

@@ -4,7 +4,7 @@ import { sectionCardClass } from "@/components/ui/card";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { FIGURE_INLINE_CLASS } from "@/components/ui/typography";
 import type { DateInterestRow, DepartureOnTheBoard } from "@/db/interest-dates";
-import { summarizeRequestDay } from "@/features/requests-page";
+import { summarizeRequestDay } from "@/features/bookings/requests-page";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { CalendarDate } from "@/lib/calendar-date";
 import type { DateRequestEntry } from "@/lib/date-requests";

@@ -9,14 +9,14 @@ import {
   personRoles,
   shops,
 } from "@/db/schema";
-import { DEMO_SHOP_BRAND } from "@/db/seed-shop-brand";
-import { findPreview, issuePreview, type PreviewInput } from "@/features/demo-preview";
+import { DEMO_SHOP_BRAND } from "@/db/seed/shop-brand";
+import { findPreview, issuePreview, type PreviewInput } from "@/features/demo/demo-preview";
 import { nowDate } from "@/lib/clock";
 import { DEMO_BYPASS_PASSWORD } from "@/lib/demo-bypass";
 import { ALERT_EMAIL } from "@/lib/platform-mail";
 import { fileScopedShopContext } from "@/test/db";
 import { nextHeadersStub } from "@/test/next-headers";
-import { QUIET_DEMO_COOKIE, quietDemoToken } from "../../features/quiet-demo-device/rules";
+import { QUIET_DEMO_COOKIE, quietDemoToken } from "../../features/demo/quiet-demo-device";
 
 /** Any real brand colour; the canonical demo's own, so no hex is typed here. */
 const BLUE = DEMO_SHOP_BRAND.brandColor as string;

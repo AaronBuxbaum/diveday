@@ -3,7 +3,7 @@ import {
   type AppleRouteParams,
   appleServiceResponse,
   configuredWalletPlatforms,
-} from "@/features/wallet-pass";
+} from "@/features/boarding/wallet-pass";
 
 export async function POST(request: Request, { params }: { params: Promise<AppleRouteParams> }) {
   if (!configuredWalletPlatforms().includes("apple")) return new Response(null, { status: 404 });

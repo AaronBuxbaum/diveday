@@ -11,7 +11,7 @@ import {
   verifyCourseFormsLink,
 } from "@/db/course-forms";
 import { recordBookingEmergencyContact } from "@/db/waivers";
-import { revalidateAndRedirect } from "@/features/navigation";
+import { revalidateAndRedirect } from "@/features/platform/navigation";
 import { emergencyContactSchema, readEmergencyContact } from "@/lib/contact";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";

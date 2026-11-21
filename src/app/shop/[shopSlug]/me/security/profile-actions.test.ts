@@ -13,8 +13,8 @@ vi.mock("next/navigation", () => ({
 }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("next/headers", () => nextHeadersStub());
-vi.mock("../../../../../features/session/rules", () => ({ requireShopSurface: vi.fn() }));
-const { requireShopSurface } = await import("../../../../../features/session/rules");
+vi.mock("../../../../../features/accounts/session", () => ({ requireShopSurface: vi.fn() }));
+const { requireShopSurface } = await import("../../../../../features/accounts/session");
 const { saveStaffProfileAction } = await import("./staff-profile-actions");
 const { saveCrewPublicConsentAction } = await import("./profile-actions");
 const ctx = fileScopedShopContext();

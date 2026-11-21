@@ -7,7 +7,7 @@ import type { DiveDaySession } from "@/lib/auth";
 import { fileScopedShopContext } from "@/test/db";
 import { nextHeadersStub } from "@/test/next-headers";
 import { redirectedTo } from "@/test/staff-session";
-import { listShopStaff } from "../../../features/staff-accounts/store";
+import { listShopStaff } from "../../../features/accounts/staff-accounts";
 
 /**
  * **No dead ends** (Aaron, 2026-10-23): a direct URL to a staff page whose

@@ -31,10 +31,10 @@ erasure-versus-signed-evidence question and has not been through counsel. What s
 
 **One prune pass, one window per table, one file a human edits.**
 
-- **`src/features/retention/rules.ts`** holds `RETENTION_DAYS` — the whole policy, one entry per table, each
+- **`src/features/records/retention/rules.ts`** holds `RETENTION_DAYS` — the whole policy, one entry per table, each
   with the reasoning for its number in a docblock beside it. Framework-free; it knows nothing about
   the database. Changing a window is an edit to this one table and nothing else moves.
-- **`src/features/retention/store.ts`** knows only *which column* each window is measured against, and deletes.
+- **`src/features/records/retention/store.ts`** knows only *which column* each window is measured against, and deletes.
   Every arm is bounded (`PRUNE_BATCH_LIMIT`, 5 000 rows per table per pass — a backlog converges
   over successive passes instead of trying to delete a decade inside one function invocation) and
   independent (one arm throwing is reported with its table code; the rest still run).
@@ -50,7 +50,7 @@ erasure-versus-signed-evidence question and has not been through counsel. What s
 
 ### The windows, and why
 
-`RETENTION_DAYS` in `src/features/retention/rules.ts` is the one list of pruned tables and their windows, each
+`RETENTION_DAYS` in `src/features/records/retention/rules.ts` is the one list of pruned tables and their windows, each
 with its reason beside it. The table below is the set this record argued for, not the current list;
 see the [2026-10-12 amendment](#amendment-2026-10-12--retention_days-is-the-list).
 
@@ -58,7 +58,7 @@ see the [2026-10-12 amendment](#amendment-2026-10-12--retention_days-is-the-list
 | --- | --- | --- |
 | `stripe_webhook_events` | 400 | ~133× Stripe's own ~3-day live retry window. Chronological evidence for `hasNewerAccountUpdate`, so this is a correctness bound, not a convenience one. Holds no diver data — event ids, types, account ids, timestamps. |
 | `notification_delivery_attempts` | 400 | The durable proof a shop did or did not reach a diver. A season plus a year, so last year's incident is answerable during this year's same week. |
-| `activity_events` | 1095 | Staff-facing operational narrative; small rows, and the thing a shop reconstructs an old season from. **The longest personal-data window in the app**: `params` holds the actor's and the diver's names as rendered words (`src/lib/activity.ts`), so three years of name-bearing lines is the price of the narrative. Erasure redacts them by id and by name on request (`src/features/anonymize/store.ts`); the window only bounds what nobody asked to erase. |
+| `activity_events` | 1095 | Staff-facing operational narrative; small rows, and the thing a shop reconstructs an old season from. **The longest personal-data window in the app**: `params` holds the actor's and the diver's names as rendered words (`src/lib/activity.ts`), so three years of name-bearing lines is the price of the narrative. Erasure redacts them by id and by name on request (`src/features/records/anonymize.ts`); the window only bounds what nobody asked to erase. |
 | `account_tokens` | 90 **past each token's own expiry** | Hashed bearer credentials over account takeover, so the conservative direction is the *opposite*: long enough for an incident review, no longer. A live token is never eligible at any age. |
 | `account_sessions` | 90 **past each session's own expiry** | Added 2026-10-10 (code review item 38). One row per device sign-in, carrying its IP address and user agent, deleted before only by sign-out, revocation or erasure, so a staffer who never signed out kept them for ever. Same incident-review argument and same clock as `account_tokens`; every use slides `expires_at` forward, so a session still honoured is never eligible. |
 | `account_passkey_challenges` | 0 **past expiry** | Single-use WebAuthn ceremony machinery, valid for five minutes; consumed immediately, removed on later issuance or the retention sweep. Credential rows themselves live with their account, outside time-based retention. |
@@ -70,7 +70,7 @@ see the [2026-10-12 amendment](#amendment-2026-10-12--retention_days-is-the-list
 
 ### Kept for ever, by decision
 
-Every event-like trail without a window, one line each (the same list heads `src/features/retention/rules.ts`):
+Every event-like trail without a window, one line each (the same list heads `src/features/records/retention/rules.ts`):
 
 - `roll_call_events`, `roll_call_crew_events`, `booking_arrival_events`, `buddy_team_events`: safety records of who was on a boat and with whom ([20260804-buddy-teams](20260804-buddy-teams.md)).
 - `trip_stage_events`: the crew's taps through a departure's day, kept as incident evidence (product owner, 2026-09-10, issue #1397).
@@ -143,7 +143,7 @@ daily; both are one-line changes. Disabling the mechanism entirely is removing o
 
 The windows table above grew stale: by 2026-10-10 `RetainedTable` held twenty tables, and the table
 here six. It is kept as the set this record argued for, and no longer answers "how long is X kept?".
-`RETENTION_DAYS` does, with each window's reason in a docblock beside it, and `src/features/retention/store.ts`
+`RETENTION_DAYS` does, with each window's reason in a docblock beside it, and `src/features/records/retention/store.ts`
 holds the column each window is measured against. A table joins or leaves there, not here.
 
 Two additions carry the argument of a row above. `shop_contact_email_confirmation_tokens` and

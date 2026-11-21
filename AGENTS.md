@@ -47,7 +47,7 @@ Core rows; every other area (auth, DB client, domain logic, glossary, ADRs) is i
 | A shop's diver pages (schedule, booking, courses) | `src/app/s/[shopSlug]/**` — no auth in it; paths from `src/lib/public-routes.ts`. `/shop/**` is staff, always |
 | Staff surfaces (`/shop/**`, auth) | `src/app/shop/` |
 | DB schema (source of truth; never read `drizzle/`) | `src/db/schema/`, by Grep and range |
-| Queries and seed data | `src/db/shops.ts`; barrels `src/db/trips.ts` and `src/db/seed.ts` — import the barrel, edit the sibling; demo data is a new `src/db/seed-<scenario>.ts` |
+| Queries and seed data | `src/db/shops.ts`; barrels `src/db/trips.ts` and `src/db/seed/` — import the barrel, edit the sibling; demo data is a new `src/db/seed/<scenario>.ts` |
 | Whether a diver may *buy* a seat vs. *board* | two gates: `src/lib/trip-admission.ts` (booking-time, weaker) and `src/lib/readiness.ts` (boarding-time); admission never refuses someone readiness would clear |
 | The booking transaction (capacity) | `src/db/bookings.ts` — tests first |
 | Copy and languages | `src/i18n/` — `locales/<locale>/diver.json` and `staff/<namespace>.json`, composed by `staff-messages.ts`; resolution order and switcher: `.claude/rules/i18n.md`; Spanish: `src/i18n/locales/es-ES/README.md` first |

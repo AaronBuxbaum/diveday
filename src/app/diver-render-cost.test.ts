@@ -10,15 +10,15 @@ import { bookings, trips } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
 import { createTripSeries, listRunningPublicSeries } from "@/db/trips";
 import { liveTrip } from "@/db/trips-live";
-import { buildAfterStateProps } from "@/features/recap-after-state";
+import { buildAfterStateProps } from "@/features/after-the-dive/recap-after-state";
 import { diverTranslator } from "@/i18n/messages";
 import { HOUR_MS, nowDate } from "@/lib/clock";
 import { queryTimingLogger, withQueryStats } from "@/lib/observability/query-timing";
 import { EVERY_WEEKDAY } from "@/lib/recurrence";
 import { seededShopContext } from "@/test/db";
 import { phaseCountingDb, report } from "@/test/render-phases";
-import { getReadyPageData } from "../features/ready/store";
-import { getRecapPageState } from "../features/recap/store";
+import { getRecapPageState } from "../features/after-the-dive/recap/store";
+import { getReadyPageData } from "../features/boarding/ready";
 
 vi.mock("next/server", () => ({ after: vi.fn() }));
 

@@ -20,7 +20,7 @@ import {
   paymentForm,
   unpaidSeatAt120,
 } from "@/test/substrate-fixtures/db/roster-payment-action.test-support";
-import { shopClock } from "../../../../../features/shop-clock/rules";
+import { shopClock } from "../../../../../features/day/shop-clock";
 import { TRIP_CONFIG_ACTIONS } from "./action-gate-test-fixtures";
 
 // One seeded database for the file and a rolled-back transaction per test
@@ -51,7 +51,7 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
 });
-vi.mock("../../../../../features/session/rules", () => ({ requireShopSurface: vi.fn() }));
+vi.mock("../../../../../features/accounts/session", () => ({ requireShopSurface: vi.fn() }));
 vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn() }));
 // The money seam. Mocked so a refusal can be checked where the refund would
 // actually have been issued, rather than inferred from a notice string.
@@ -61,7 +61,7 @@ vi.mock("@/db/refunds", async (importOriginal) => {
 });
 
 const { getDb } = await import("@/db/client");
-const { requireShopSurface } = await import("../../../../../features/session/rules");
+const { requireShopSurface } = await import("../../../../../features/accounts/session");
 const { refundBookingOnCancellation } = await import("@/db/refunds");
 const { markPaymentAction } = await import("./roster-payment-actions");
 const { removeBookingAction, setParticipantTypeAction } = await import("./roster-seating-actions");

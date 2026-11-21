@@ -14,7 +14,7 @@ import type { Role } from "@/lib/authz";
  * primitives faked — delete a gate line from an action and the matching test
  * goes red.
  *
- * The staff below are the demo shop's own seeded people (`src/db/seed.ts`), each
+ * The staff below are the demo shop's own seeded people (`src/db/seed/index.ts`), each
  * with real `person_roles` rows and an active `user_accounts` row, because the
  * gates re-read live roles from the database (`loadActiveStaffRoles`) rather
  * than trusting the session. A made-up person id would fail every gate for the
@@ -45,7 +45,7 @@ export async function seededStaffPersonId(
  * Take the `owner` role off a seeded person, leaving whatever else they hold.
  *
  * The seed's only manager is Dana, who is also the owner
- * (`src/db/seed-cast.ts`), so "owner" and "manager" are the same person and a
+ * (`src/db/seed/cast.ts`), so "owner" and "manager" are the same person and a
  * test that wants to prove an owner-only control is hidden from a *manager*
  * would otherwise prove nothing. Every gate that matters is checked against the
  * database rather than the session's role list, so this demotion is what the

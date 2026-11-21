@@ -1,5 +1,5 @@
-import { earliestReportedTripStart, getSafetyPage } from "@/features/safety-report";
-import type { ShopSurface } from "@/features/session";
+import type { ShopSurface } from "@/features/accounts/session";
+import { earliestReportedTripStart, getSafetyPage } from "@/features/safety/safety-report";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import {

@@ -3,7 +3,7 @@ import { afterEach, expect, it, onTestFinished, vi } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { describePostgres, holdRowLock, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
 import { raceShop } from "@/test/postgres-shop";
-import { issuePartyWaiver } from "../features/party-waiver-queue/store";
+import { issuePartyWaiver } from "../features/waivers/party-waiver-queue";
 import { clearAnswers, draftsOf } from "../test/substrate-fixtures/db/waivers-test-fixtures";
 import { lockBoardingCertificationEvidence } from "./boarding-certification-snapshot";
 import { bookings, people, tripRequirements, trips, waiverRecords } from "./schema";

@@ -106,7 +106,7 @@ describe("staff activity endpoint", () => {
     expect(announcePreviewActivity).toHaveBeenCalledExactlyOnceWith(ctx.shop.id);
 
     vi.mocked(announcePreviewActivity).mockClear();
-    const { QUIET_DEMO_COOKIE, quietDemoToken } = await import("@/features/quiet-demo-device");
+    const { QUIET_DEMO_COOKIE, quietDemoToken } = await import("@/features/demo/quiet-demo-device");
     const quiet = request("https://diveday.example", row.id);
     quiet.headers.set("cookie", `other=1; ${QUIET_DEMO_COOKIE}=${quietDemoToken() ?? ""}`);
     expect((await POST(quiet)).status).toBe(204);

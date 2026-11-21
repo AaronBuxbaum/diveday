@@ -1,8 +1,8 @@
 import { and, asc, eq, gt, isNull } from "drizzle-orm";
 import { courses, people, tripAssignments, trips, userAccounts } from "../../db/schema";
 import { livePublicTripForShop, notRehearsal } from "../../db/trips";
-import { crewAwayByTrip } from "../../features/crew-away";
-import { writeOwnStaffProfile } from "../../features/public-staff-profiles";
+import { crewAwayByTrip } from "../../features/crew-and-boats/crew-away";
+import { writeOwnStaffProfile } from "../../features/public-site/public-staff-profiles";
 import type { FactContext } from "./index";
 
 /** A private fixture's fictional instructor explicitly authors their own introduction. */

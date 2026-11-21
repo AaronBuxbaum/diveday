@@ -14,12 +14,12 @@ Each rule names what enforces it; the reasoning, incidents and the longer form o
 AGENTS.md and [the route map](../../docs/agents/route-map.md) say where (schema, queries and
 barrels, bookings, seating, retention, integrations). What they do not say:
 
-- **Demo data** is a new `src/db/seed-<scenario>.ts` plus one entry in `THE_DAY`
-  (`src/db/seed-schedule.ts`) in the `demo` or `history` set, never rows wedged into an existing
+- **Demo data** is a new `src/db/seed/<scenario>.ts` plus one entry in `THE_DAY`
+  (`src/db/seed/schedule.ts`) in the `demo` or `history` set, never rows wedged into an existing
   scenario (ADR 20261104-seed-is-one-context-and-named-sets), and never a failure state
   in blue-mantis. Seed crew goes into `trip_assignments` with direct inserts, not through
   `setTripCrew`: that writer accepted every seeded crew unchanged, but it also queues crew notices
-  and manifest pushes that a fixture should not hold. Instead, `seed-trips.test.ts` replays every
+  and manifest pushes that a fixture should not hold. Instead, `src/db/seed/trips.test.ts` replays every
   seeded roster through `setTripCrew` and expects each one to be accepted (issue #1813).
 - **Recurring trips**: every instance is an ordinary `trips` row, a deleted one leaves a skip row,
   and narrowing a cadence cancels nothing (ADR 20260810-open-ended-recurring-trips).
@@ -41,7 +41,7 @@ barrels, bookings, seating, retention, integrations). What they do not say:
 - **A table module** (`src/db/<table>.ts`) holds a table's rows and the transitions on them, named
   by the transition (`record`, `mark`, `issue`, `claim`, `release`, `consume`, `restore`,
   `cancel`, `edit`), never `update` or `save` (`check-architecture.mjs` rule 7).
-- **A surface reader** (`src/db/<surface>.ts`, e.g. `recap.ts`; Today's are in `src/features/today`) answers one page's
+- **A surface reader** (`src/db/<surface>.ts`, e.g. `recap.ts`; Today's are in `src/features/day/today`) answers one page's
   question in one call. Every staff `page.tsx` reads through `requireShopSurface` plus exactly one
   `@/db/*` module, its reader; permissions and constants the page needs come back from it
   (`check-architecture.mjs` rule 6). The trip page's readers (`trip-page.ts`, over `trip-overview.ts` and
@@ -87,7 +87,7 @@ barrels, bookings, seating, retention, integrations). What they do not say:
   a `subject` states it, a withheld `crew` row says why; reads by booking id are outside it). A plain `delete` needs no statement in `anonymize.ts`: the registry runs it.
   `person-columns.test.ts` fails with the column's name until it has a row,
   `erasure-registry.test.ts` until its fate matches the sweep it names, and
-  `export-registry.test.ts` until the diver export reads exactly its `own` columns (issue #2724). **A person is minted only by `createPerson`** (`src/db/people.ts`), which writes
+  `export/registry.test.ts` until the diver export reads exactly its `own` columns (issue #2724). **A person is minted only by `createPerson`** (`src/db/people.ts`), which writes
   `people.origin` and the roles: person-door guard (`scripts/check-person-door.mjs`, issue #2726).
   **A reader of `bookings.status` says `seatHeld` or `seatNotCancelled`**, never a hand-typed
   `ne(..., "cancelled")`: seat-status guard (`scripts/check-seat-status.mjs`, issue #2758).

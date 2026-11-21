@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
-import { listThinBoats } from "@/features/thin-boats";
+import { listThinBoats } from "@/features/trips/thin-boats";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { formatShortDate, formatTime, formatWeekdayShortTime } from "@/lib/format";

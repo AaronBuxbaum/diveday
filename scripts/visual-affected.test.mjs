@@ -150,7 +150,7 @@ describe("what a pull request captures", () => {
       ["e2e/fixtures.ts"],
       ["src/app/globals.css"],
       ["src/i18n/locales/en-US/diver.json"],
-      ["src/db/seed-trips.ts"],
+      ["src/db/seed/trips.ts"],
       ["src/db/schema/trips.ts"],
       ["public/marine-life/turtle.jpg"],
       ["package.json"],
@@ -175,7 +175,7 @@ describe("what a pull request captures", () => {
         ".github/workflows/durations-refresh.yml",
         "drizzle/20261014024814_date-request-handled/migration.sql",
         "drizzle/meta/_journal.json",
-        "src/db/__snapshots__/export-bundle.shop.snap",
+        "src/db/export/__snapshots__/bundle.shop.snap",
         ".gitignore",
         ".env.example",
         "pnpm-lock.yaml",
@@ -242,10 +242,10 @@ const tree = new Map([
   ["src/i18n/index.ts", "export function t(key) {\n  return key;\n}"],
   ["src/proxy.ts", 'import { courseTitle } from "@/lib/courses";\nexport const x = courseTitle;'],
   [
-    "src/db/seed.ts",
+    "src/db/seed/index.ts",
     [
       'import { slugify } from "@/lib/text";',
-      'import { seedRentals } from "./seed-rentals";',
+      'import { seedRentals } from "./rentals";',
       "export const seed = slugify;",
       "export async function seedDemo(db) {",
       "  await seedRentals(db);",
@@ -270,9 +270,9 @@ const tree = new Map([
     'import { rentals } from "./schema";\nexport function listRentals(db) {\n  return db.select().from(rentals);\n}',
   ],
   [
-    "src/db/seed-rentals.ts",
+    "src/db/seed/rentals.ts",
     [
-      'import { rentals, sizes } from "./schema";', // 1
+      'import { rentals, sizes } from "../schema";', // 1
       "export async function seedRentals(db) {", // 2
       "  await db.insert(rentals).values({});", // 3
       "  return db.select().from(sizes);", // 4
@@ -399,7 +399,7 @@ describe("following an edit name by name", () => {
   it("captures everything when an edit reaches the proxy or the seed", () => {
     expect(bySymbol(["src/lib/courses.ts"]).all).toMatch(/src\/proxy\.ts/);
     const lines = new Map([["src/lib/text.ts", new Set([2])]]);
-    expect(bySymbol(["src/lib/text.ts"], { lines }).all).toMatch(/src\/db\/seed\.ts/);
+    expect(bySymbol(["src/lib/text.ts"], { lines }).all).toMatch(/src\/db\/seed\/index\.ts/);
   });
 
   it("follows a schema edit to the pages that read the table, never through the seed", () => {
@@ -415,22 +415,22 @@ describe("following an edit name by name", () => {
   });
 
   it("follows a seed scenario's edit to the readers of the tables it writes", () => {
-    const write = new Map([["src/db/seed-rentals.ts", new Set([3])]]);
-    expect(bySymbol(["src/db/seed-rentals.ts"], { lines: write }).routes).toEqual([
+    const write = new Map([["src/db/seed/rentals.ts", new Set([3])]]);
+    expect(bySymbol(["src/db/seed/rentals.ts"], { lines: write }).routes).toEqual([
       { route: "/shop/[shopSlug]/rentals", broad: false },
       { route: "/s/[shopSlug]/rentals", broad: false },
     ]);
     // The landing page imports the demo action that runs the seed: not a reader of rentals.
     expect(
-      bySymbol(["src/db/seed-rentals.ts"], { lines: write }).routes.map((r) => r.route),
+      bySymbol(["src/db/seed/rentals.ts"], { lines: write }).routes.map((r) => r.route),
     ).not.toContain("/");
   });
 
   it("captures everything for the orchestrator, the catalog, or a module the graph lacks", () => {
-    const lines = new Map([["src/db/seed.ts", new Set([5])]]);
-    expect(bySymbol(["src/db/seed.ts"], { lines }).all).toMatch(/data every capture shows/);
-    expect(bySymbol(["src/db/seed-catalog.ts"]).all).toMatch(/data every capture shows/);
-    expect(bySymbol(["src/db/seed-unknown.ts"]).all).toMatch(/import graph does not hold/);
+    const lines = new Map([["src/db/seed/index.ts", new Set([5])]]);
+    expect(bySymbol(["src/db/seed/index.ts"], { lines }).all).toMatch(/data every capture shows/);
+    expect(bySymbol(["src/db/seed/catalog.ts"]).all).toMatch(/data every capture shows/);
+    expect(bySymbol(["src/db/seed/unknown.ts"]).all).toMatch(/import graph does not hold/);
     expect(bySymbol(["src/db/schema/unknown.ts"]).all).toMatch(/import graph does not hold/);
   });
 

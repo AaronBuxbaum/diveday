@@ -1,12 +1,12 @@
 import { getDb } from "@/db/client";
 import { getShopById } from "@/db/shops";
+import { requireStaffSession } from "@/features/accounts/session";
 import {
   canPersonViewShopReports,
   formatReportMoney,
   getYearMonthInputs,
   summarizeMonth,
-} from "@/features/reporting";
-import { requireStaffSession } from "@/features/session";
+} from "@/features/reports/reporting";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { type MonthRef, parseMonthKey } from "@/lib/calendar";

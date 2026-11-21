@@ -6,7 +6,7 @@ import { createNitroxCertification } from "@/db/nitrox";
 import { createCertification, createSpecialtyCertification } from "@/db/readiness";
 import { certificationAgency, certificationLevel, diveSpecialty } from "@/db/schema";
 import { recordSelfDeclaredCards } from "@/db/self-declared-cards";
-import { revalidateAndRedirect } from "@/features/navigation";
+import { revalidateAndRedirect } from "@/features/platform/navigation";
 import { nowDate } from "@/lib/clock";
 import { isDiver } from "@/lib/participant-types";
 import { base, bounceTarget, contextFor, refuseWhileHeld } from "./action-helpers";

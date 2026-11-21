@@ -42,7 +42,7 @@ export async function listTripDiverContacts(db: AppDb, shopId: string, tripId: s
  * and for e2e, so **every booking the app writes during a test run carries one
  * instant** — two divers seated in a spec, or a party booked in a single
  * `createBookingParty` transaction, tie *by construction* rather than by bad
- * luck. (Most seeded bookings do not: `nextCreatedAt` in `seed-clock.ts`
+ * luck. (Most seeded bookings do not: `nextCreatedAt` in `seed/clock.ts`
  * exists to give them distinct stamps, and the seeds use it.) A roster is read at the
  * rail; it does not get to be nondeterministic.
  *
@@ -106,7 +106,7 @@ export async function listTripDiverContacts(db: AppDb, shopId: string, tripId: s
  * keeps this a total order for two identically-named divers seated in one
  * instant — the one case where no meaningful key is left.
  *
- * `export.ts`, `seat-claims.ts`, `season-scale.ts`, `first-booking.ts` and
+ * `export/index.ts`, `seat-claims.ts`, `season-scale.ts`, `first-booking.ts` and
  * `waivers.ts` still break this tie on `bookings.id`; #1720 left them where
  * they were rather than reordering a CSV and five surfaces in a change about
  * the manifest.

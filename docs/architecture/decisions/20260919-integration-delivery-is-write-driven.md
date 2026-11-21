@@ -25,7 +25,7 @@ The row is already durable and already due the moment it is written — `next_at
 
 **The request that enqueues a delivery also drains it, after its own response has been sent.**
 
-- `dispatchIntegrationsAfterResponse()` (`src/features/integrations/dispatch-on-write.ts`) wraps
+- `dispatchIntegrationsAfterResponse()` (`src/features/shop-setup/integrations/dispatch-on-write.ts`) wraps
   Next's `after()` around the existing `dispatchDueIntegrationDeliveries`. It is called from the
   app-layer writes that can enqueue an event: the new-order action (`order.created`), the
   Stripe `invoice.paid` webhook, the refund and refresh actions (`order.paid` /
@@ -63,7 +63,7 @@ The row is already durable and already due the moment it is written — `next_at
 - **It never throws into its caller.** The order is written and committed before this runs; a
   failure to tell Xero about it must not surface as a failed action, and cannot lose the delivery,
   because the row outlives the request. Both the scheduling and the drain are guarded, and
-  `src/features/integrations/dispatch-on-write.test.ts` asserts a rejecting drain resolves quietly.
+  `src/features/shop-setup/integrations/dispatch-on-write.test.ts` asserts a rejecting drain resolves quietly.
 
 ## Alternatives considered
 

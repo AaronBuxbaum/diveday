@@ -7,16 +7,16 @@ import { canPersonManageBoats } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { queueAndAttemptMediaDeletion } from "@/db/media-deletions";
 import { getShopById } from "@/db/shops";
+import { requireStaffSession } from "@/features/accounts/session";
 import {
   type BoatPapersInput,
   createBoat,
   deleteBoat,
   editBoatWithinCertificate,
   replaceBoatPhoto,
-} from "@/features/boats";
-import { formValue, readForm, trimmedText } from "@/features/form-parse";
-import { revalidateAndRedirect } from "@/features/navigation";
-import { requireStaffSession } from "@/features/session";
+} from "@/features/crew-and-boats/boats";
+import { formValue, readForm, trimmedText } from "@/features/platform/form-parse";
+import { revalidateAndRedirect } from "@/features/platform/navigation";
 import { type BoatSeatsRefusal, boatSeatsRefusal } from "@/lib/boat-safety";
 import { isValidCalendarDate } from "@/lib/calendar-date";
 import {

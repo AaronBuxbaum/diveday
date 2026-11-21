@@ -1,7 +1,7 @@
 import { PhotoLightbox } from "@/components/PhotoLightbox";
 import { sectionCardClass } from "@/components/ui/card";
 import { ITEM_TITLE_CLASS, SECTION_TITLE_CLASS } from "@/components/ui/typography";
-import type { Boat } from "@/features/boats";
+import type { Boat } from "@/features/crew-and-boats/boats";
 import type { DiverTranslator } from "@/i18n/messages";
 
 /**

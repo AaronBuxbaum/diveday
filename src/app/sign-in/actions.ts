@@ -4,7 +4,7 @@ import { APIError } from "better-auth/api";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { parseForm } from "@/features/form-parse";
+import { parseForm } from "@/features/platform/form-parse";
 import { getAuth } from "@/lib/auth";
 import { safeShopReturnPath, shopPath } from "@/lib/staff-notices";
 

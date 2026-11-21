@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { DEMO_TODAY_TRIP_ID } from "../src/db/seed-identifiers";
+import { DEMO_TODAY_TRIP_ID } from "../src/db/seed/identifiers";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
 import {

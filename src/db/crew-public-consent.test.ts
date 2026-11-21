@@ -8,7 +8,7 @@ import {
   setCrewPublicConsent,
   setStaffAccountStatus,
   setStaffLanguages,
-} from "../features/staff-accounts/store";
+} from "../features/accounts/staff-accounts";
 import { people, personRoles, shops, tripAssignments } from "./schema";
 import { listStaff, setTripCrew, tripCrewSpokenLanguages, tripPublicCrew } from "./trips";
 import { upcomingTripsWithCounts } from "./trips-queries.test-support";

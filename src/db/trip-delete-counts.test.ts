@@ -1,9 +1,9 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
+import { seedRollCallEvidence } from "@/db/seed/roll-call-evidence";
 import { fileScopedShopContext } from "@/test/db";
-import { countDeparturesByBoat, createBoat } from "../features/boats/store";
-import { countDeparturesByTripLens, createTripLens } from "../features/trip-lenses/store";
+import { countDeparturesByBoat, createBoat } from "../features/crew-and-boats/boats/store";
+import { countDeparturesByTripLens, createTripLens } from "../features/trips/trip-lenses";
 import { createBooking } from "./bookings";
 import { crewSubject } from "./roll-call-subject";
 import { bookings, tripAssignments, trips } from "./schema";

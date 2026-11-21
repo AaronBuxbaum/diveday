@@ -4,7 +4,7 @@ import { EarnedMoment } from "@/components/EarnedMoment";
 import { StoredPhoto } from "@/components/StoredPhoto";
 import { ThreadShell } from "@/components/thread/ThreadShell";
 import { isMarineLifeSlug } from "@/db/marine-life-catalog";
-import type { ReadyPageData } from "@/features/ready";
+import type { ReadyPageData } from "@/features/boarding/ready";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
 import { marineLifeCard } from "@/i18n/marine-life-labels";
 import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
@@ -33,7 +33,7 @@ import { TicketMark } from "./TicketMark";
  * which departure, when, and when to be there. Both of the page's openings
  * read them, the ordinary masthead and the "You've got a seat" card a booking
  * lands on, and both can be built from one narrow row (`getBookedCard`,
- * src/features/ready/store.ts) as well as from the full loader, which is what lets the
+ * src/features/boarding/ready.ts) as well as from the full loader, which is what lets the
  * booked card paint before the thread's reads have finished (UX review
  * 2026-10-10, item 7).
  */

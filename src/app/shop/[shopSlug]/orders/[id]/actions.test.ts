@@ -29,11 +29,11 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
 });
-vi.mock("../../../../../features/session/rules", () => ({ requireStaffSession: vi.fn() }));
-vi.mock("../../../../../features/step-up/store", () => ({
+vi.mock("../../../../../features/accounts/session", () => ({ requireStaffSession: vi.fn() }));
+vi.mock("../../../../../features/accounts/step-up", () => ({
   hasRequiredStepUp: vi.fn(async () => true),
 }));
-vi.mock("../../../../../features/security-step-up/rules", () => ({
+vi.mock("../../../../../features/accounts/security-step-up", () => ({
   stepUpChallengeUrl: vi.fn(() => "/step-up"),
 }));
 vi.mock("@/db/orders", async (importOriginal) => {
@@ -47,9 +47,9 @@ vi.mock("@/db/orders", async (importOriginal) => {
 });
 
 const { getDb } = await import("@/db/client");
-const { hasRequiredStepUp } = await import("../../../../../features/step-up/store");
-const { stepUpChallengeUrl } = await import("../../../../../features/security-step-up/rules");
-const { requireStaffSession } = await import("../../../../../features/session/rules");
+const { hasRequiredStepUp } = await import("../../../../../features/accounts/step-up");
+const { stepUpChallengeUrl } = await import("../../../../../features/accounts/security-step-up");
+const { requireStaffSession } = await import("../../../../../features/accounts/session");
 const { refreshOrderStatus, refundOrder, voidOrder } = await import("@/db/orders");
 const { refreshAction, refundAction, voidAction } = await import("./actions");
 

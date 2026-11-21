@@ -47,7 +47,7 @@ decision 3.
 
 Issue #4257. On a quiet day (`spineIsQuiet`), Today lists at most two departures of the week past
 the queue's one-week horizon that already have a blocked diver, soonest first, each linking to its
-guests (`src/features/today/quiet-day-suggestions.ts`). Nothing shows when nothing is blocked, so
+guests (`src/features/day/today/quiet-day-suggestions.ts`). Nothing shows when nothing is blocked, so
 the quiet pair stays the whole message. Course inquiries are not suggested here: an open one is an
 unanswered-messages row, so the day is not quiet while it waits.
 
@@ -185,7 +185,7 @@ transaction moves everything, keeps every signed release and medical answer, and
 so old links land on the kept record (glossary "Merge (two diver records)"; `diver-merge.test.ts`
 asks the catalog for every foreign key to `people`). A card waiting for a check carries **Check
 with <agency>**, a link to that agency's own lookup (SSI, NAUI, SDI, TDI, GUE; "Search the CMAS
-portal"; "Check with PADI (member sign-in)"), from `src/features/agency-verification/rules.ts` (H-20261007-request-supported-c-card amendment in
+portal"; "Check with PADI (member sign-in)"), from `src/features/certifications/agency-verification.ts` (H-20261007-request-supported-c-card amendment in
 [20260721-manual-certification](../architecture/decisions/20260721-manual-certification.md)).
 
 ## Participants who are not divers (delivered 2026-10-07)
@@ -299,7 +299,7 @@ its own organisation. Xero has no SalesReceipt entity, so each one is written as
 in: nothing DiveDay reports ever lands in accounts receivable. Scopes are `offline_access
 accounting.transactions accounting.contacts` and nothing more, the organisation is read once at
 connect time into `external_account_id`, and the refund guard is keyed per refund so a sliced refund
-posts every slice. One adapter (`src/features/integrations/xero.ts`), one callback, one card, one
+posts every slice. One adapter (`src/features/shop-setup/integrations/xero.ts`), one callback, one card, one
 enum value, two environment variables; the connection rows, sealed credentials, one-time OAuth
 state, outbox and retry ladder are the register's, unchanged. ADR
 [20260907-xero-beside-quickbooks](../architecture/decisions/20260907-xero-beside-quickbooks.md).
@@ -383,7 +383,7 @@ the browser canary that renders a real shop's schedule stays open, waiting on a 
 N-06 from the 2026-09-07 improvement-ideas decision sheet (issue #1479). "The day" on the public
 departure page now states each dive's planned time in the water and the gap on the surface between
 two of them — the shop's own rhythm and any per-site or per-leg override, derived by
-`src/features/day-profile/rules.ts` off the dock-day timeline's own arithmetic, so the figures a diver reads
+`src/features/trips/day-profile.ts` off the dock-day timeline's own arithmetic, so the figures a diver reads
 before booking match the ones their thread reads after. No clock: durations promise no schedule, and
 the beat stays time-neutral. The "See these depths against your card" picker that once sat under it was
 cut on 2026-10-05 at the owner's request: the depths stay on each dive's row, and the booking form
@@ -409,7 +409,7 @@ N-01 of the improvement-ideas sheet, owner decision 2026-09-07. A dive site name
 tide station and when it dives best (`any` / `slack` / `flood` / `ebb`); the staff site briefing,
 the board's add panel and the departure page then say one line — "Next high water at 9:40 AM; this
 departure reaches the site on the flood" — read at the boat's own arrival there (`src/lib/tides.ts` for the
-window, `src/features/departure-tides/rules.ts` for the composition, `src/features/tide-predictions/rules.ts` for the
+window, `src/features/sites/departure-tides.ts` for the composition, `src/features/sites/tide-predictions.ts` for the
 seam). Staff only: the diver-facing line and its Settings switch were cut by ADR
 [20261001-logbook](../architecture/decisions/20261001-logbook.md). Informs; gates nothing. The demo reads both Key
 Largo sites against Carysfort Reef (8723583). ADR
@@ -436,16 +436,16 @@ dive" described a day DiveDay sees only as far as its own bookings. Informs, nev
 
 Owner decision 2026-09-07 (improvement-ideas decision sheet, N-50; issue #1427). An AI travel agent
 can now find a departure and hand its reader to the booking page, which still does the booking.
-**`/llms.txt`** (`src/app/llms.txt/route.ts`, words in `src/features/llms-txt/rules.ts`) says what DiveDay
+**`/llms.txt`** (`src/app/llms.txt/route.ts`, words in `src/features/public-site/llms-txt.ts`) says what DiveDay
 is, the public URL shapes, where availability lives, the codes it uses, that bookings happen on
 the booking page, and lists the shops the sitemap lists. **`/s/<slug>/availability.json`**
-(`src/features/availability/rules.ts` for the shape, `src/features/availability/store.ts` for the rows, composed from the
+(`src/features/bookings/availability/rules.ts` for the shape, `src/features/bookings/availability/store.ts` for the rows, composed from the
 schedule page's own readers) is the next 14 days of public departures with a seat open — id,
 `starts_at` as the shop's wall clock with its offset (`zonedIsoString`), sites, price and
 currency, certification codes, `seats_open`, `booking_url` — and nothing about a person. A shop
 that opted out of search (ADR 20260813-search-listing-is-a-choice) gets a 404 there, not an empty
 list, and its schedule JSON-LD stops naming the document (`subjectOf` → `DataFeed`). `robots.txt`
-moved from Next's metadata convention to `src/app/robots.txt/route.ts` over `src/features/robots/rules.ts` for
+moved from Next's metadata convention to `src/app/robots.txt/route.ts` over `src/features/public-site/robots.ts` for
 the one comment line that points an agent at `/llms.txt`. See
 [marketing.md](marketing.md)'s SEO section.
 
@@ -582,7 +582,7 @@ The suppression floor's arithmetic is untouched (ADR 20260813-review-moderation-
 hidden review still counts against the share that decides whether DiveDay vouches for the shop's
 average, and the withheld banner is still the one tone panel on the page. Pinned by
 `_components/ReviewsAggregateLine.test.tsx`, `_components/ReviewLedgerRow.test.tsx`, the new
-`moderated scope` and `countStaffReviewGroups` suites in `src/features/reviews/store.test.ts`, and
+`moderated scope` and `countStaffReviewGroups` suites in `src/features/after-the-dive/reviews/store.test.ts`, and
 `e2e/reviews.spec.ts`.
 
 ## The first morning is a state of the day spine (delivered 2026-08-28)
@@ -618,7 +618,7 @@ replacing it.
 
 And the shop's **first booking ever carries the coral mark** — the staff side's once-in-a-shop's-life
 entry in the coral budget ([20260827-clearwater-surface-language](../architecture/decisions/20260827-clearwater-surface-language.md),
-decision 11, which already carries its row). `shopFirstBooking` (`src/features/first-booking/store.ts`) is one
+decision 11, which already carries its row). `shopFirstBooking` (`src/features/bookings/first-booking.ts`) is one
 `limit 2` read and three clauses: exactly one booking has ever existed for this shop (the whole row
 set, cancellations included — a shop on its third diver after two cancellations has one *live*
 booking and nothing to celebrate), that booking is still live, and its departure has not gone under
@@ -631,7 +631,7 @@ round on a good Tuesday, and whichever loses renders nothing at all. Its line is
 the seat is booked and the boat is Saturday, so this is a state the owner arrives holding, and
 replaying the entrance for four days is how a celebration stops meaning anything.
 
-Pinned by `src/features/first-booking/store.test.ts` (the moment's four exits, the walk-in, and the imported
+Pinned by `src/features/bookings/first-booking.test.ts` (the moment's four exits, the walk-in, and the imported
 history that must not false-fire), `DaySpine.test.tsx` (the group leads, the queue's good-news state
 stands down, the coral resolution both ways), `FirstRunChecklist.test.tsx` (one primary, the rest are
 doors, Stripe's anchor is not one, a settled step offers nothing) and `today.test.ts` (a first-run
@@ -646,7 +646,7 @@ re-rendered Today's own evidence in a different order; it is now a **state the h
 into**, and `/close-out` is a 308. Nothing about `day_closeouts`, the recorded act or the departure
 log changed underneath — only where they render, which was the whole finding.
 
-**A station settles, one at a time.** `assembleEveningClose` (`src/features/today/closeout.ts`) joins the
+**A station settles, one at a time.** `assembleEveningClose` (`src/features/day/today/closeout.ts`) joins the
 day's departures to the clock: a station settles when its head count closed or its scheduled return
 is an hour behind it, and a settled one renders as `ClosingStation` — the time, the title, a drawn
 `SettledCheck` beside the state in words, "10 of 10 back by 10:26 AM · head count closed by Keiko
@@ -695,7 +695,7 @@ the headline and the parting-glance card they existed for.
 
 Pinned rather than remembered: `DaySpine.test.tsx` holds the closing block back while a boat is
 still out, refuses an acknowledgement control at every leftover count, hides the log door from a
-non-owner, and proves at most one coral element renders; `src/features/today/closeout.test.ts` pins the
+non-owner, and proves at most one coral element renders; `src/features/day/today/closeout.test.ts` pins the
 late-arrival buffer on both sides of the hour and the once-ever wording's condition;
 `staff-destinations.test.ts` pins four primary tabs and no `/close-out` suffix anywhere in the
 registry; `e2e/day-close.spec.ts` runs J4 end to end and checks the 308, the dock and the palette
@@ -828,8 +828,8 @@ a photo grid. It is redrawn as what a buyer will actually see — the dive recor
 the one review ask — with both callers' `aria-label`s rewritten in both locales to name it.
 
 Pinned rather than remembered: `src/lib/thread-steps.test.ts` holds the clock's own limit and the
-three answers the evidence produces above it; `src/features/recap/store.test.ts` holds that a cancelled
-departure has no recap and counts as no dive day, and `src/features/ready/store.test.ts` that a cancelled
+three answers the evidence produces above it; `src/features/after-the-dive/recap/store.test.ts` holds that a cancelled
+departure has no recap and counts as no dive day, and `src/features/boarding/ready.test.ts` that a cancelled
 departure is a different fact from a cancelled booking; `AfterState.test.tsx` renders the real
 surface and fails on a second conditions element, a second primary, a coral greeting after a review,
 a stamp outside the named set, a print-only block that renders on screen, or any dive count or depth
@@ -945,7 +945,7 @@ diver's row carries no pill at all**, and that silence is the slice's pin, asser
 suite where the row's own facts are the fixture and again in `roster-views.spec.ts` as membership
 rather than as a badge.
 
-The row's facts came from a new reader, `src/features/roster-facts/store.ts`, because nothing existing supplied
+The row's facts came from a new reader, `src/features/boarding/roster-facts.ts`, because nothing existing supplied
 them: the latest departure a diver sailed, the soonest one still ahead (split on the standing
 one-hour late-arrival buffer, the same hour the record's story uses), whether their whole history
 came across from another system, whether an invoice against them stands open, and — from the same
@@ -1079,7 +1079,7 @@ required-specialty counts, `diveDayTemplateVersion` and `catalog.preview`. Pinne
 `SiteLibraryLedger.test.tsx` (the level word only above Open Water, the specialty words regardless,
 the fit reading only where it cuts, no badge on a site at its published version, and the tail door's
 two halves — renders only when the catalog has entries, never when the library is empty),
-`src/features/dive-sites/rules.test.ts` (the full requirement and fit tables), and `src/db/dive-sites.test.ts`
+`src/features/sites/dive-sites/rules.test.ts` (the full requirement and fit tables), and `src/db/dive-sites.test.ts`
 (group-major paging, easiest first with unrated last, and the door's count sharing the catalog's
 join).
 
@@ -1277,7 +1277,7 @@ one spelling, two surfaces, and the pair of steps that reads it is now one compo
 week. **Every bucket is a shop-local day**, and that is the assembly's whole reason for existing:
 on a UTC box a 9:00 PM Key Largo shift is stored on tomorrow's date, so a host-zone read would move
 a shop's evening work a column right and no test on a UTC runner could see it. `staffWeek`
-(`src/features/staffing-week/rules.ts`) is pure, reads no clock of its own, and is pinned on exactly that.
+(`src/features/crew-and-boats/staffing-week/rules.ts`) is pure, reads no clock of its own, and is pinned on exactly that.
 
 The badges went with the composition. `capabilitiesForRoles` derived "Can teach" / "Can crew" /
 "Captain" from the roles printed beside them — the same fact one step further from its source, worn
@@ -1385,7 +1385,7 @@ the departures ledger keeps the Pager it already wore with the count still shari
 exact scope. The count moved to the group header, where a shared fact belongs: the Pager renders
 nothing at all on a single-page month, so a total that lived only there was invisible on most
 months a real shop opens. The one fork the page takes before it draws anything is now a named rule
-in `src/features/reporting/rules.ts` — `monthHasActivity`, which counts an imported-history-only month as
+in `src/features/reports/reporting/rules.ts` — `monthHasActivity`, which counts an imported-history-only month as
 activity, because a shop's first month after a migration has real money in it and no departure.
 
 ## The last three shelves stop inventing furniture (delivered 2026-08-28)
@@ -1518,7 +1518,7 @@ group taps the URL from the chat, and the page tells each of them their seat is 
 the one person the page cannot, and asserts nothing it has not read.
 
 The distinction is the whole security question, so it is one reader rather than a branch on a page:
-`getClaimPageState` in `src/features/seat-claims/store.ts` answers `claimable` · `dead` · `unknown`, and the
+`getClaimPageState` in `src/features/bookings/seat-claims/store.ts` answers `claimable` · `dead` · `unknown`, and the
 `dead` arm carries four shop columns and no booking, no diver and no trip — the narrow return type
 is the guard, the same argument `staleBookingCapabilityForToken`'s `{ shopId }`-only shape makes one
 file over. What the resolver relaxes is only *when* the token was valid, never *whether* it was
@@ -1532,7 +1532,7 @@ The form and its privacy footnote became the thread's terminal card, the same `S
 waiver signs in, so the last hand-rolled panel on the page is gone. The five `?error=` refusals,
 the requirement sentence with the shop's contact, the rate limit and the landing on
 `/ready/<token>?saved=claimed` are all untouched. Pinned by
-`src/features/seat-claims/store.test.ts` — a spent link, an expired one, a sailed boat, a cancelled seat and a
+`src/features/bookings/seat-claims/store.test.ts` — a spent link, an expired one, a sailed boat, a cancelled seat and a
 called-off departure each name the shop, and none of the last three has a link left to mint; a
 garbage token and a readiness token each answer `{ kind: "unknown" }` whole, so no shop reaches the
 caller by any route — by `src/app/(token)/claim/[token]/copy.test.ts`, which holds both halves of what the
@@ -1671,7 +1671,7 @@ second finding — the terms never stand at the doors. `/pricing` asked for a tr
 points and named no terms at either: the demo note beside the hero pair answers for the demo alone
 and must not promise "no sign-up" on the trial's behalf, so the higher-friction door stood bare.
 `marketing.pricing.trialNote` now sits under both pairs — free, three weeks, no card, and the soft
-expiry `src/features/trial/rules.ts` genuinely implements (expiry blocks no route and no mutation). It is a
+expiry `src/features/shop-setup/trial.ts` genuinely implements (expiry blocks no route and no mutation). It is a
 sentence at both positions, never a third door; the deliberate divergence from "the demo's cost is
 stated once per page" is recorded in [marketing.md](marketing.md) beside that rule. It is set in
 `font-medium` at both, matching the demo note rather than sitting a weight beneath it: they are two
@@ -1789,7 +1789,7 @@ collapses to **one** — *"Free for 3 weeks, no card — and nothing switches of
 ends."* That sentence is also the marketing review's day-22 answer
 ([marketing-review-20260827.md](archive/marketing-review-20260827.md), the `/onboard` half of slice 12c):
 the old line said "free for 3 weeks" and never said what happens on the 22nd day, which a burned
-buyer reads as a card wall. Soft expiry is real — `src/features/trial/rules.ts` switches nothing off.
+buyer reads as a card wall. Soft expiry is real — `src/features/shop-setup/trial.ts` switches nothing off.
 
 The shop-link field's description is no longer a sentence about what the field is for; it is the
 **storefront address the box produces, written live as the owner types** — "Your schedule will live
@@ -2028,7 +2028,7 @@ pools under **At the desk**; tomorrow is a collapsed disclosure whose body reuse
 renderer, and the rest of the week is one link to the board. A day with no boats and nothing waiting
 collapses to a heading, one sentence and the one act.
 
-Nothing about *what counts as work* moved: `assembleDaySpine` (`src/features/today/today.ts`) is a pure
+Nothing about *what counts as work* moved: `assembleDaySpine` (`src/features/day/today/today.ts`) is a pure
 re-filing of the queue `getTodayWork` already ranked — a `tripId` picks the station, its absence
 picks the desk — and tomorrow comes from a second bounded read of the next shop-day sharing the same
 readiness pass, never a widened window. `DepartureSummary` gained the station's three meta facts
@@ -2672,7 +2672,7 @@ claims-policy violations at P0-1, which are owner decisions under HD-25 and not 
   marked paid or waived.
   See [20260803-async-payment-failed](../architecture/decisions/20260803-async-payment-failed.md).
 - **Append-only tables are pruned** (PAY-L2/DATA-M4). One `RETENTION_DAYS` table in
-  `src/features/retention/rules.ts` is the only place a human edits, on a weekly cron with the same fail-closed
+  `src/features/records/retention/rules.ts` is the only place a human edits, on a weekly cron with the same fail-closed
   auth as the reminders cron. The `stripe_webhook_events` window is **asserted, not commented**:
   those rows are load-bearing evidence now that `hasNewerAccountUpdate` reads their `occurred_at`,
   so `retentionWindowsOutlastStripeRetries()` fails a test if anyone shortens it toward Stripe's own
@@ -2702,7 +2702,7 @@ own carded regulars to hold a line it could not hold was the worse trade. The we
 invariant above still holds and its property test now covers declarations too. See
 [20260820-attested-at-booking-verified-at-boarding](../architecture/decisions/20260820-attested-at-booking-verified-at-boarding.md).
 
-**Architecture.** The four files every feature touched are split (ARCH-3): `src/db/seed.ts`
+**Architecture.** The four files every feature touched are split (ARCH-3): `src/db/seed/index.ts`
 4,650 → a 740-line orchestrator over 14 scenario modules, `src/db/trips.ts` 2,003 → a 94-line barrel
 over six, `notifications/index.ts` 731 → a 77-line surface over five, and `SettingsPage.tsx`'s
 inline `"use server"` closures extracted to a sibling `actions.ts`. Every public export is
@@ -2814,7 +2814,7 @@ the owner can retract. The assessment was pruned again the same day.
   the `security-reviewer` pass caught it, and the ADR now says so. `account.application.deauthorized`
   additionally orders itself against the shop's own `connected_at`, so a redelivery landing after
   the owner reconnected cannot re-disconnect a live account (`src/app/api/webhooks/stripe/route.ts`,
-  `src/features/webhook-events/store.ts`, `src/db/stripe-accounts.ts`).
+  `src/features/platform/webhook-events.ts`, `src/db/stripe-accounts.ts`).
 - **The applied discount is snapshotted, so an unsettled party splits correctly** (PAY-M3), for
   **every** discount class rather than only shop-wide codes. `booking_checkouts` records
   `applied_discount_percent` and its source (`promo_code_id` *or* `trip_promo_id`, at most one) at
@@ -2980,7 +2980,7 @@ is focus-ring only (HD-17 unchanged), and visual diffs warn loudly rather than b
 - **A settled-amount ledger** (PAY-H1/H2): `booking_checkouts` records the session's actual
   `amount_total` at completion, per-booking paid amounts are derived from it post-discount with gear
   included, and refunds and the monthly report are based on that instead of the quoted list price
-  (`src/lib/payments/settlement.ts`, `src/db/checkouts.ts`, `src/features/reporting/store.ts`). A shop no longer
+  (`src/lib/payments/settlement.ts`, `src/db/checkouts.ts`, `src/features/reports/reporting/store.ts`). A shop no longer
   loses money on every within-window promo cancellation, and gear money is no longer invisible.
 
 **Data and privacy.**
@@ -2991,7 +2991,7 @@ is focus-ring only (HD-17 unchanged), and visual diffs warn loudly rather than b
   `medicalAnswers`, so stripping medical answers would have flipped every erased record to `invalid`
   — "strip medical" and "preserve verifiable evidence" were mutually exclusive as the code stood.
   Resolved with a **waiver integrity v2** seal over the surviving fields, dispatched per record
-  (`src/features/anonymize/store.ts`, `src/lib/waiver-integrity.ts`), with the erased-diver markers carried into
+  (`src/features/records/anonymize.ts`, `src/lib/waiver-integrity.ts`), with the erased-diver markers carried into
   the CSV export so a destination system can tell an erased record from an incomplete one.
   [20260802-diver-data-erasure](../architecture/decisions/20260802-diver-data-erasure.md) — **Status:
   Proposed on purpose**: HD-10/HD-11 (counsel on erasure vs signed evidence, and retention windows)
@@ -3130,12 +3130,12 @@ shipped, each with a `security-reviewer` pass per the repo's hard rules.
   live on a public unauthenticated host where URL unguessability is the only access control.
 - **Stripe webhook events are checked against the secret that verified them.** A live-secret-verified
   event must carry `livemode: true` and a test-secret-verified event `livemode: false`
-  (`src/features/payments/webhook.ts`, `src/app/api/webhooks/stripe/route.ts`); a mismatch is refused
+  (`src/features/money/payments/webhook.ts`, `src/app/api/webhooks/stripe/route.ts`); a mismatch is refused
   with 200-and-ignore (a non-2xx would make Stripe retry forever) rather than mutating live payment
   state. Closes the gap where a correctly-signed test-mode event could reach the handlers that flip
   live orders to paid, if both secrets were ever configured together.
 - **Baseline security headers ship beyond frame protection** — `next.config.ts`'s `headers()`
-  (`src/features/security-headers/rules.ts`) adds HSTS, `X-Content-Type-Options: nosniff`,
+  (`src/features/platform/security-headers.ts`) adds HSTS, `X-Content-Type-Options: nosniff`,
   `Referrer-Policy: strict-origin-when-cross-origin` (tightened to `no-referrer` on every
   bearer-token route — waivers, ready, recap, verify, reset-password, invite, unsubscribe,
   calendar), and a `Permissions-Policy` disabling camera/microphone/geolocation. Covers `/api` and
@@ -3154,7 +3154,7 @@ shipped, each with a `security-reviewer` pass per the repo's hard rules.
   `UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN` aren't both set, so dev/e2e/CI stay zero-setup.
   See [20260801-distributed-rate-limit-store](../architecture/decisions/20260801-distributed-rate-limit-store.md).
 - **The `/api/test/*` seed endpoints require a bearer secret, not just env-var configuration.**
-  `e2eTestRouteAuthorized` (`src/features/e2e-test-routes/rules.ts`) fails closed on a missing/wrong
+  `e2eTestRouteAuthorized` (`src/features/platform/e2e-test-routes/rules.ts`) fails closed on a missing/wrong
   `DIVEDAY_E2E_SECRET`, exactly like `CRON_SECRET` on the reminders cron route — a misconfigured
   staging deployment (production build, `DIVEDAY_E2E=1` left set, PGlite fallback) can no longer
   reach a route that mints password-reset tokens or wipes data on the env-var predicate alone.
@@ -3575,7 +3575,7 @@ archived.
   reporting, and the amounts are display text nothing sums. A visit with no readable date is declined
   rather than dated by guess, and re-running the same export doesn't double anyone's history
   ([import-prior-visits](../architecture/decisions/20260725-import-prior-visits.md)). Pure
-  prepare/validate in `src/lib/import.ts`, the write in `src/features/import/store.ts`
+  prepare/validate in `src/lib/import.ts`, the write in `src/features/records/import/store.ts`
   ([contact-importer](../architecture/decisions/20260723-contact-importer.md)).
 - **Public migration guides** — a `/switching` hub plus a live marketing page per named incumbent
   (EVE, DiveShop360, Smartwaiver): each states how to export the shop's own data from
@@ -3696,8 +3696,8 @@ The roadmap's §7 smaller follow-ons and the whole open Delight backlog shipped:
 - **"How's your month" dashboard** at `/shop/[shopSlug]/reports` — revenue collected, bookings, seat
   fill, and waiver completion for the trips that sailed, with a per-trip breakdown and month
   navigation. Anchored to trip-departure month; revenue is the `paid`/`deposit_paid` booking
-  payments. Pure `summarizeMonth` (`src/features/reporting/rules.ts`) over three aggregate queries
-  (`src/features/reporting/store.ts`); owner/manager only (`canViewShopReports`). Answers the recurring buyer
+  payments. Pure `summarizeMonth` (`src/features/reports/reporting/rules.ts`) over three aggregate queries
+  (`src/features/reports/reporting/store.ts`); owner/manager only (`canViewShopReports`). Answers the recurring buyer
   objection #5 ([owner-reporting](../architecture/decisions/20260723-owner-reporting.md)).
 - **Seeded trailing quarter** — the demo shop back-fills already-sailed trips (this month, last, and
   the one before) with bookings, payments, signed waivers, and paid invoices, deterministically so

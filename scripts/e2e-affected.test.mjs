@@ -75,7 +75,7 @@ describe("removed text a spec still quotes", () => {
     expect(textOf("src/components/X.tsx", "  <p>Nothing on the boat yet today</p>")).toEqual([
       "Nothing on the boat yet today",
     ]);
-    expect(textOf("src/db/seed-trips.ts", `  name: "Molasses Reef morning",`)).toEqual([
+    expect(textOf("src/db/seed/trips.ts", `  name: "Molasses Reef morning",`)).toEqual([
       "Molasses Reef morning",
     ]);
     expect(textOf("src/lib/format.ts", `  return "a sentence in a helper";`)).toEqual([]);
@@ -182,15 +182,15 @@ describe("edited specs and helpers", () => {
 describe("reach through imports", () => {
   const graph = new Map([
     ["src/app/shop/[shopSlug]/staffing/page.tsx", new Set(["src/lib/shifts.ts"])],
-    ["src/lib/shifts.ts", new Set(["src/db/seed-clock.ts"])],
-    ["src/db/seed-clock.ts", new Set()],
+    ["src/lib/shifts.ts", new Set(["src/db/seed/clock.ts"])],
+    ["src/db/seed/clock.ts", new Set()],
     ["src/app/s/[shopSlug]/page.tsx", new Set()],
   ]);
 
   it("follows importers up to a route's entry file", () => {
-    expect(importersOf(graph, ["src/db/seed-clock.ts"])).toEqual(
+    expect(importersOf(graph, ["src/db/seed/clock.ts"])).toEqual(
       new Set([
-        "src/db/seed-clock.ts",
+        "src/db/seed/clock.ts",
         "src/lib/shifts.ts",
         "src/app/shop/[shopSlug]/staffing/page.tsx",
       ]),
@@ -200,7 +200,7 @@ describe("reach through imports", () => {
       ["e2e/booking.spec.ts", `goto("/s/blue-mantis")`],
     ]);
     const { strong, reach } = selectSpecs({
-      changed: ["src/db/seed-clock.ts"],
+      changed: ["src/db/seed/clock.ts"],
       diff: new Map(),
       specs,
       graph,
@@ -230,9 +230,9 @@ describe("ranking the reach tier by what the diff says", () => {
   it("puts the spec that names the diff's own words first, and words every spec says count for nothing", () => {
     const diff = parseDiff(
       [
-        "diff --git a/src/db/seed-staff.ts b/src/db/seed-staff.ts",
-        "--- a/src/db/seed-staff.ts",
-        "+++ b/src/db/seed-staff.ts",
+        "diff --git a/src/db/seed/staff.ts b/src/db/seed/staff.ts",
+        "--- a/src/db/seed/staff.ts",
+        "+++ b/src/db/seed/staff.ts",
         "@@ -1 +1 @@",
         '-  { name: "Dana Reyes", shift: "07:00" },',
         '+  { name: "Dana Reyes", shift: "06:30" },',
@@ -612,13 +612,13 @@ describe("a locale value a spec reads by its key", () => {
 describe("a seed edit that moves what a spec names or counts", () => {
   it("reads a removed seeded name too short for prose but two capitalised words", () => {
     expect(
-      textOf("src/db/seed-cast.ts", 'export const LEAD_INSTRUCTOR_NAME = "Marcus Webb";'),
+      textOf("src/db/seed/cast.ts", 'export const LEAD_INSTRUCTOR_NAME = "Marcus Webb";'),
     ).toEqual(["Marcus Webb"]);
-    expect(textOf("src/db/seed-cast.ts", '  status: "on hold",')).toEqual([]);
+    expect(textOf("src/db/seed/cast.ts", '  status: "on hold",')).toEqual([]);
     expect(textOf("src/content/guides.ts", '  name: "Marcus Webb",')).toEqual([]);
     const diff = parseDiff(
       diffOf(
-        "src/db/seed-cast.ts",
+        "src/db/seed/cast.ts",
         ['export const LEAD_INSTRUCTOR_NAME = "Marcus Webb";'],
         ['export const LEAD_INSTRUCTOR_NAME = "Marcus Webber";'],
       ),
@@ -634,7 +634,7 @@ describe("a seed edit that moves what a spec names or counts", () => {
   it("selects the specs naming a record a changed seed line touches, by literal or by constant", () => {
     const diff = parseDiff(
       diffOf(
-        "src/db/seed-booth.ts",
+        "src/db/seed/booth.ts",
         [],
         [
           '  await addSeat(db, { hull: "Mantis II", diver: divers[3] });',
@@ -645,7 +645,7 @@ describe("a seed edit that moves what a spec names or counts", () => {
     const seedValues = seedConstantValues(
       new Map([
         [
-          "src/db/seed-booth.ts",
+          "src/db/seed/booth.ts",
           'export const SHOP_CERTIFIED_TITLE = "Rescue Diver — weekend course";',
         ],
       ]),
@@ -671,17 +671,17 @@ describe("a seed edit that moves what a spec names or counts", () => {
 
   it("selects a spec importing a seed constant a changed line uses, and ignores import lines", () => {
     const source =
-      'import { LOST_MASK, type Seeded as S } from "../src/db/seed-booth";\nawait expect(row.filter({ hasText: LOST_MASK })).toBeVisible();';
+      'import { LOST_MASK, type Seeded as S } from "../src/db/seed/booth";\nawait expect(row.filter({ hasText: LOST_MASK })).toBeVisible();';
     expect([...seedImports(source)]).toEqual(["LOST_MASK", "Seeded"]);
     const specs = new Map([["e2e/departure-desk.spec.ts", source]]);
     const used = parseDiff(
-      diffOf("src/db/seed-booth.ts", [], ["  await seedLostMask(db, LOST_MASK, tomorrow);"]),
+      diffOf("src/db/seed/booth.ts", [], ["  await seedLostMask(db, LOST_MASK, tomorrow);"]),
     );
     expect([...selectSpecs({ changed: [], diff: used, specs, graph: null }).strong.keys()]).toEqual(
       ["e2e/departure-desk.spec.ts"],
     );
     const imported = parseDiff(
-      diffOf("src/db/seed-trips.ts", [], ['import { LOST_MASK } from "./seed-booth";']),
+      diffOf("src/db/seed/trips.ts", [], ['import { LOST_MASK } from "./booth";']),
     );
     expect(selectSpecs({ changed: [], diff: imported, specs, graph: null }).strong.size).toBe(0);
   });
@@ -694,11 +694,11 @@ describe("a seed edit that moves what a spec names or counts", () => {
       ]),
     );
     const line = '  trip: "Two-Tank Reef — Molasses & French", seats: 8,';
-    const shared = parseDiff(diffOf("src/db/seed-trips.ts", [], [line]));
+    const shared = parseDiff(diffOf("src/db/seed/trips.ts", [], [line]));
     const { strong, reach } = selectSpecs({ changed: [], diff: shared, specs, graph: null });
     expect(strong.size).toBe(0);
     expect(reach.size).toBe(SEED_STRONG_SPECS + 1);
-    const tested = parseDiff(diffOf("src/db/seed-trips.test.ts", [line]));
+    const tested = parseDiff(diffOf("src/db/seed/trips.test.ts", [line]));
     expect(seedTouches(tested).names.size).toBe(0);
   });
 
@@ -711,7 +711,7 @@ describe("a seed edit that moves what a spec names or counts", () => {
       '    await page.goto("/");',
       "  });",
     ].join("\n");
-    const diff = parseDiff(diffOf("src/db/seed-booth.ts", [], ['  hull: "Mantis II",']));
+    const diff = parseDiff(diffOf("src/db/seed/booth.ts", [], ['  hull: "Mantis II",']));
     const picked = selectCaptures({ changed: [], diff, source });
     expect([...picked.keys()]).toEqual(["the lost-and-found renders true to the design"]);
   });

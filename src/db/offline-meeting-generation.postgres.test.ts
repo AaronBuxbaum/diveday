@@ -1,10 +1,10 @@
 import { and, eq, sql } from "drizzle-orm";
 import { afterAll, beforeAll, expect, it, vi } from "vitest";
-import { departureCounts } from "@/features/departure-counts/store";
-import { buildOfflineManifestCopies } from "@/features/offline-manifest-snapshots";
-import { nextOfflineManifestSnapshotWithWindows } from "@/features/offline-manifest-snapshots/store";
-import { getDayCloseout } from "@/features/today/closeout-reader";
-import { recordTripStage } from "@/features/trip-stages";
+import { buildOfflineManifestCopies } from "@/features/boarding/offline-manifest-snapshots";
+import { nextOfflineManifestSnapshotWithWindows } from "@/features/boarding/offline-manifest-snapshots/store";
+import { getDayCloseout } from "@/features/day/today/closeout-reader";
+import { departureCounts } from "@/features/trips/departure-counts";
+import { recordTripStage } from "@/features/trips/trip-stages";
 import { nowDate } from "@/lib/clock";
 import { describePostgres, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
 import { aboardAtSeaBookingIds } from "./aboard-at-sea";
@@ -22,7 +22,7 @@ import {
   trips,
 } from "./schema";
 import { seedDemo } from "./seed";
-import { seedRollCallEvidence } from "./seed-roll-call-evidence";
+import { seedRollCallEvidence } from "./seed/roll-call-evidence";
 import { getShopBySlug } from "./shops";
 import { editTripSection, getTripRoster, listStaff, moveTrip } from "./trips";
 import { upcomingTripsWithCounts } from "./trips-queries.test-support";

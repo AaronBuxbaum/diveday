@@ -3,8 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getDb } from "@/db/client";
-import { type ConservationResult, recordTripConservation } from "@/features/conservation";
-import { requireStaffSession } from "@/features/session";
+import { requireStaffSession } from "@/features/accounts/session";
+import { type ConservationResult, recordTripConservation } from "@/features/sites/conservation";
 import { shopPath } from "@/lib/staff-notices";
 
 export type ConservationActionResult = ConservationResult & {

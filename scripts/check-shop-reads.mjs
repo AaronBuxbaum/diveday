@@ -14,7 +14,7 @@ import process from "node:process";
  * for a row that cannot have changed between the first read and the last.
  *
  * They share one memoized read now, `shopBySlugCached`
- * (`src/features/shops-cached/store.ts`). None of these components can hand the row to the
+ * (`src/features/platform/shops-cached.ts`). None of these components can hand the row to the
  * next, so the only thing keeping the count down is that every render-path
  * caller asks the same reader: a convention on a hot path, held here. Moved
  * from `src/app/s/shop-read-coverage.test.ts` (test review 2026-10-14, L2c).

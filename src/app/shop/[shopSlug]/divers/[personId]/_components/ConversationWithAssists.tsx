@@ -2,12 +2,12 @@ import { after } from "next/server";
 import type { ComponentProps } from "react";
 import { languageName } from "@/components/assists/language-name";
 import { getDb } from "@/db/client";
-import { assistsAvailable } from "@/features/assists";
+import { assistsAvailable } from "@/features/ai/assists";
 import {
   awaitsTriage,
   diverReplyLanguage,
   triageInboundMessagesSafely,
-} from "@/features/inbox-assists";
+} from "@/features/ai/inbox-assists";
 import { assistConversationAction, translateReplyAction } from "../assist-actions";
 import { ConversationSection } from "./ConversationSection";
 

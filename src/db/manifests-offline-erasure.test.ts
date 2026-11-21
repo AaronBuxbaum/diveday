@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { signOfflineErasureEpoch } from "@/lib/offline-erasure-epoch";
 import { fileScopedShopContext } from "@/test/db";
-import { anonymizeDiver } from "../features/anonymize/store";
+import { anonymizeDiver } from "../features/records/anonymize";
 import {
   getTripManifest,
   recordCrewRollCall,

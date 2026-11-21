@@ -4,7 +4,7 @@ import { readPlannedFlySafe } from "@/db/fly-safe-plan";
 import { getShopBySlug } from "@/db/shops";
 import { listTripChangeEvents } from "@/db/trip-change-events";
 import { listTripDives } from "@/db/trips";
-import { getReadyPageData } from "@/features/ready";
+import { getReadyPageData } from "@/features/boarding/ready";
 import { requestLocale } from "@/i18n/request";
 import { nowMs } from "@/lib/clock";
 import { courseDaysForMeetings } from "@/lib/courses";

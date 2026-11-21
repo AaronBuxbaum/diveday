@@ -1,13 +1,13 @@
 import { and, eq, gte, isNull, notInArray } from "drizzle-orm";
-import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
+import { seedRollCallEvidence } from "@/db/seed/roll-call-evidence";
 import type { AppDb } from "../../db/client";
 import { getBookingReadiness } from "../../db/readiness";
 import { seatMarks } from "../../db/roll-call-subject";
 import { bookings, people, rollCallEvents, trips, waiverRecords } from "../../db/schema/index";
-import { seedArrivals } from "../../db/seed-arrivals";
-import { DEMO_COMPLETED_TRIP_TITLE } from "../../db/seed-more-trips";
+import { seedArrivals } from "../../db/seed/arrivals";
+import { DEMO_COMPLETED_TRIP_TITLE } from "../../db/seed/more-trips";
 import { livePerson, liveTrip } from "../../db/trips-live";
-import { checkInBooking } from "../../features/check-in/store";
+import { checkInBooking } from "../../features/boarding/check-in/store";
 import { HOUR_MS } from "../../lib/clock";
 import { anActiveStaffPerson } from "./active-staff";
 

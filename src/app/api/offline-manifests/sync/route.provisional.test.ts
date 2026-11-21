@@ -12,8 +12,8 @@ import {
 } from "@/db/schema";
 import { editTripSection, getTripRoster } from "@/db/trips";
 import { upcomingTripsWithCounts } from "@/db/trips-queries.test-support";
-import { anonymizeDiver } from "@/features/anonymize";
-import { buildOfflineManifestCopies } from "@/features/offline-manifest-snapshots";
+import { buildOfflineManifestCopies } from "@/features/boarding/offline-manifest-snapshots";
+import { anonymizeDiver } from "@/features/records/anonymize";
 import type { DiveDaySession } from "@/lib/auth";
 import { nowDate } from "@/lib/clock";
 import { signRollCallWitness, verifyRollCallWitness } from "@/lib/offline-roll-call-witness";

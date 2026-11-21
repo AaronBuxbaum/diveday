@@ -5,7 +5,7 @@ const { gate, getSite, getTemplate } = vi.hoisted(() => ({
   getSite: vi.fn(),
   getTemplate: vi.fn(),
 }));
-vi.mock("../../../../features/session/rules", () => ({ requireShopSurface: gate }));
+vi.mock("../../../../features/accounts/session", () => ({ requireShopSurface: gate }));
 vi.mock("@/i18n/request", () => ({ requestLocale: () => Promise.resolve("en-US") }));
 vi.mock("@/db/dive-sites", () => ({
   getDiveSite: getSite,

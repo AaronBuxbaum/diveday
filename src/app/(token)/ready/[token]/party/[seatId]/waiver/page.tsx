@@ -6,7 +6,7 @@ import { getDb } from "@/db/client";
 import { getShopById } from "@/db/shops";
 import { getTripDiveSitesPeek } from "@/db/trips";
 import { doctorPageOpen, getWaiverForToken } from "@/db/waivers";
-import { partySeatWaiverKey } from "@/features/seat-claims";
+import { partySeatWaiverKey } from "@/features/bookings/seat-claims";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { uuidParam } from "@/lib/uuid";

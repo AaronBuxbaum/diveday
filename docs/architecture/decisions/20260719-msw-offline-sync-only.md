@@ -72,7 +72,7 @@ Next's own guidance recommends for this shape of app. Fix the suite instead of r
   order of magnitude faster in practice (no more retry pileup from cross-spec pollution).
 - The reset endpoint is one more piece of test-only surface in `src/app/api/`; it's inert by
   construction outside a `DATABASE_URL`-less, non-production run, but a future agent adding a new
-  mutable demo-schedule table must remember `resetDemoSchedule` (`src/db/seed.ts`) needs to cover it
+  mutable demo-schedule table must remember `resetDemoSchedule` (`src/db/seed/index.ts`) needs to cover it
   too, or reset-based isolation silently stops being complete.
 - True parallel e2e execution (`fullyParallel`, `workers > 1`) still isn't safe — all specs share one
   dev-server process and one database. Revisit if e2e wall-clock becomes a problem again; the fix

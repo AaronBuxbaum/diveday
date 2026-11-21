@@ -4,13 +4,13 @@ import { Suspense } from "react";
 import { LegalDocument, LegalSection, LegalTermList } from "@/components/LegalDocument";
 import { MarketingFooter, MarketingFooterFallback } from "@/components/MarketingFooter";
 import { proseLinkClass } from "@/components/ui/button";
-import { planCopyParams } from "@/features/billing";
+import { planCopyParams } from "@/features/money/billing";
+import { pricingConfig } from "@/features/money/pricing-flags";
 import {
   COMPANY_GOVERNING_LAW,
   COMPANY_LEGAL_NAME,
   COMPANY_POSTAL_ADDRESS,
-} from "@/features/company-identity";
-import { pricingConfig } from "@/features/pricing-flags";
+} from "@/features/public-site/company-identity";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import type { DiverLocale } from "@/i18n/settings";
@@ -47,7 +47,7 @@ export const metadata: Metadata = {
  *
  * Written under the same two constraints as its sibling, for the same reasons:
  * **the operating company is named once, in the contact section** (Aaron,
- * 2026-11-11; `src/features/company-identity`), with Massachusetts law as confirmed on #4323.
+ * 2026-11-11; `src/features/public-site/company-identity.ts`), with Massachusetts law as confirmed on #4323.
  * Every promise is one the
  * product already keeps. That second rule is why the "what we do not promise"
  * section exists and says there is no uptime guarantee — printing an SLA

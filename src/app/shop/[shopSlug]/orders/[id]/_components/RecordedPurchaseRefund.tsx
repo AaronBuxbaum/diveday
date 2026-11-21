@@ -3,7 +3,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import type { Order } from "@/db/schema";
-import type { purchaseRefundHistory } from "@/features/recorded-purchases";
+import type { purchaseRefundHistory } from "@/features/money/recorded-purchases";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatMoneyCents, formatShortDate } from "@/lib/format";
 import { currencyFractionDigits, minorToMajor } from "@/lib/money";

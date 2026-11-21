@@ -24,13 +24,20 @@ import { seatClashesAfterMove } from "@/db/person-clashes";
 import { refundBookingOnCancellation } from "@/db/refunds";
 import { recordShopActivity } from "@/db/shop-activity";
 import { shopHasFeatureOn } from "@/db/shops";
-import { sendBookingCancelledNotice } from "@/features/booking-cancelled-notice";
-import { blankAsAbsent, formValue, parseForm, readForm, single, text } from "@/features/form-parse";
-import { carryInterests } from "@/features/interest-roll";
-import { createInvitationUnderCooldown } from "@/features/invite-suggestions";
-import { revalidateAndRedirect } from "@/features/navigation";
-import { type MoveSeatRefusal, moveParty, moveSeat } from "@/features/seat-diver";
-import { requireShopSurface } from "@/features/session";
+import { requireShopSurface } from "@/features/accounts/session";
+import { sendBookingCancelledNotice } from "@/features/bookings/booking-cancelled-notice";
+import { carryInterests } from "@/features/bookings/interest-roll";
+import { type MoveSeatRefusal, moveParty, moveSeat } from "@/features/bookings/seat-diver";
+import { createInvitationUnderCooldown } from "@/features/crew-and-boats/invite-suggestions";
+import {
+  blankAsAbsent,
+  formValue,
+  parseForm,
+  readForm,
+  single,
+  text,
+} from "@/features/platform/form-parse";
+import { revalidateAndRedirect } from "@/features/platform/navigation";
 import { trackEvent } from "@/lib/analytics";
 import { nowDate } from "@/lib/clock";
 import { DIETARY_NOTE_MAX } from "@/lib/lunch-aboard";

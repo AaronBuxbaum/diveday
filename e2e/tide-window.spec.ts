@@ -39,7 +39,7 @@ test.describe("the tide window", () => {
     const forecast = () =>
       openIfClosed(page.locator("details#briefing-forecast").filter({ visible: true }));
     await forecast();
-    // The demo's Key Largo reef reads Carysfort Reef's table (seed-tides.ts).
+    // The demo's Key Largo reef reads Carysfort Reef's table (seed/tides.ts).
     await expect(page.getByLabel("NOAA tide station")).toHaveValue("8723583");
     await expect(page.getByLabel("Dives best")).toHaveValue("any");
     // Upcoming use opens on demand; the form's station stays visible above it.

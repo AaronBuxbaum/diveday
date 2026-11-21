@@ -6,7 +6,7 @@ import type { AppDb } from "@/db/client";
 import { getBookingPayment, setBookingPayment } from "@/db/payments";
 import { activityEvents, collectionEntries, shops } from "@/db/schema";
 import { upcomingTripsWithCounts } from "@/db/trips-queries.test-support";
-import { closePricingMonth } from "@/features/pricing-volume";
+import { closePricingMonth } from "@/features/money/pricing-volume";
 import { fileScopedShopContext, type seededShopContext } from "@/test/db";
 import {
   redirectedTo,
@@ -19,7 +19,7 @@ import {
   paymentForm,
   unpaidSeatAt120,
 } from "@/test/substrate-fixtures/db/roster-payment-action.test-support";
-import { shopClock } from "../../../../../features/shop-clock/rules";
+import { shopClock } from "../../../../../features/day/shop-clock";
 
 // One seeded database for the file and a rolled-back transaction per test.
 const ctx = fileScopedShopContext();
@@ -34,10 +34,10 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
 });
-vi.mock("../../../../../features/session/rules", () => ({ requireShopSurface: vi.fn() }));
+vi.mock("../../../../../features/accounts/session", () => ({ requireShopSurface: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
-const { requireShopSurface } = await import("../../../../../features/session/rules");
+const { requireShopSurface } = await import("../../../../../features/accounts/session");
 const { markPaymentAction } = await import("./roster-payment-actions");
 const { markPartyPaidAction, previewPartyPaymentAction } = await import("./party-payment-actions");
 
@@ -777,7 +777,7 @@ describe("promotional credit remains a source-owned payment", () => {
       const { db, shop, tripId, owner } = await context();
       const bookingId = await unpaidSeatAt120(db, shop.id, tripId);
       const { bookings, tripCreditEntries } = await import("@/db/schema");
-      const { grantTripCredit, redeemTripCredit } = await import("@/features/trip-credit");
+      const { grantTripCredit, redeemTripCredit } = await import("@/features/money/trip-credit");
       const [booking] = await db.select().from(bookings).where(eq(bookings.id, bookingId));
       await db
         .update(shops)

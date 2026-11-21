@@ -1,15 +1,15 @@
 import { after } from "next/server";
 import { GroupLabel } from "@/components/ui/group-label";
 import type { AppDb } from "@/db/client";
-import { assistsAvailable } from "@/features/assists";
+import type { ReviewFlag } from "@/features/after-the-dive/review-flags";
+import { assistsAvailable } from "@/features/ai/assists";
 import {
   flagWaitingReviews,
   readReviewFlags,
   readReviewThemes,
   refreshReviewThemes,
   type ShownTheme,
-} from "@/features/review-assists";
-import type { ReviewFlag } from "@/features/review-flags";
+} from "@/features/ai/review-assists";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 

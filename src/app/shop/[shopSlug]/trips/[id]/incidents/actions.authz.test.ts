@@ -8,7 +8,7 @@ import {
   startMissingDiverReport,
 } from "@/db/incident-reports";
 import { bookings, incidentReports, tripAssignments, trips } from "@/db/schema";
-import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
+import { seedRollCallEvidence } from "@/db/seed/roll-call-evidence";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import {
@@ -44,11 +44,11 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
 });
-vi.mock("../../../../../../features/session/rules", () => ({ requireShopSurface: vi.fn() }));
+vi.mock("../../../../../../features/accounts/session", () => ({ requireShopSurface: vi.fn() }));
 vi.mock("@/i18n/request", () => ({ requestLocale: vi.fn(async () => "en-US") }));
 
 const { getDb } = await import("@/db/client");
-const { requireShopSurface } = await import("../../../../../../features/session/rules");
+const { requireShopSurface } = await import("../../../../../../features/accounts/session");
 const {
   discardIncidentDraftAction,
   saveIncidentDraftAction,

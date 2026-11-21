@@ -38,7 +38,7 @@ import { seedFacts } from "./shop-facts";
 
 const staffCopy = staffTranslator("en-US");
 const NEW_ORDER = "/shop/blue-mantis/orders?add=1";
-// `${fullName} — ${email}`, both deterministic in the seed (src/db/seed.ts).
+// `${fullName} — ${email}`, both deterministic in the seed (src/db/seed/index.ts).
 const CUSTOMER = "Priya Sharma";
 // A seeded departure with divers on it, so the roster has a seat to open.
 const ROSTER_TRIP = "Two-Tank Reef — Molasses & French";

@@ -1,7 +1,7 @@
 import { acknowledgeCrewAwayAction } from "@/app/shop/[shopSlug]/actions";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import type { TodayAction } from "@/features/today";
+import type { TodayAction } from "@/features/day/today";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 
 /**

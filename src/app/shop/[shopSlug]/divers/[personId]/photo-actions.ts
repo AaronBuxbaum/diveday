@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { changePrivatePersonPhoto } from "@/features/person-photo";
+import { changePrivatePersonPhoto } from "@/features/people/person-photo";
 import { requireDiverActionContext } from "./action-helpers";
 
 /** Live staff may add, replace, or remove a diver's portrait. */

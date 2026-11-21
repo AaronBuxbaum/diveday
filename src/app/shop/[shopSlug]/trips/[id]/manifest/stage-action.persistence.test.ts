@@ -2,7 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { tripStageEvents } from "@/db/schema";
 import { createTrip } from "@/db/trips";
-import { latestTripStage } from "@/features/trip-stages";
+import { latestTripStage } from "@/features/trips/trip-stages";
 import { boatStageOf } from "@/lib/trip-phase";
 import { seededShopContext } from "@/test/db";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId, staffSession } from "@/test/staff-session";
@@ -12,11 +12,11 @@ vi.mock("@/db/client", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/db/client")>()),
   getDb: vi.fn(),
 }));
-vi.mock("../../../../../../features/session/rules", async () =>
+vi.mock("../../../../../../features/accounts/session", async () =>
   (await import("@/test/staff-session")).sessionMockOverStaffSession(),
 );
 const { getDb } = await import("@/db/client");
-const { requireStaffSession } = await import("../../../../../../features/session/rules");
+const { requireStaffSession } = await import("../../../../../../features/accounts/session");
 const { setTripStageAction } = await import("./actions");
 const zone = "America/New_York";
 const form = (stage: string) => {

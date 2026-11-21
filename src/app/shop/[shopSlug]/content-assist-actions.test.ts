@@ -7,7 +7,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
  * save directly.
  */
 
-vi.mock("@/features/session", () => ({ requireShopSurface: vi.fn() }));
+vi.mock("@/features/accounts/session", () => ({ requireShopSurface: vi.fn() }));
 vi.mock("@/db/authz", () => ({
   canPersonConfigureTrips: vi.fn(),
   canPersonEditCourseTemplates: vi.fn(),
@@ -17,7 +17,7 @@ vi.mock("@/db/shop-text-translations", () => ({
   translatableOriginal: vi.fn(async () => "English words"),
 }));
 
-const { requireShopSurface } = await import("@/features/session");
+const { requireShopSurface } = await import("@/features/accounts/session");
 const { canPersonEditCourseTemplates } = await import("@/db/authz");
 const { recordTranslation } = await import("@/db/shop-text-translations");
 const { saveTranslationAction } = await import("./content-assist-actions");

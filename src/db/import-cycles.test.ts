@@ -176,7 +176,7 @@ describe("src/db import graph", () => {
     const loaded = [
       "dev-bootstrap.ts",
       "demo-refresh.ts",
-      "seed.ts",
+      "seed/index.ts",
       "stripe-accounts.ts",
       "stripe-providers.ts",
       "trips.ts",

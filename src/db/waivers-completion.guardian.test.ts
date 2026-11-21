@@ -6,7 +6,7 @@ import { nowDate } from "@/lib/clock";
 import { verifyWaiverIntegrity } from "@/lib/waiver-integrity";
 import { fileScopedShopContext } from "@/test/db";
 import { charterContext, markSeat } from "@/test/training-mark-context";
-import { anonymizeDiver } from "../features/anonymize/store";
+import { anonymizeDiver } from "../features/records/anonymize";
 import {
   clearAnswers,
   now,

@@ -39,7 +39,7 @@ const waiverContext = waiverContextFor(fileCtx);
 describe("waiver records (in-memory PGlite)", () => {
   /**
    * The demo shop ships with superseded wordings already on file
-   * (src/db/seed-waiver-versions.ts), so an edit here counts on from whatever
+   * (src/db/seed/waiver-versions.ts), so an edit here counts on from whatever
    * version the seed left live rather than from 1. Written against
    * `template.version` on purpose: what these assert is that saving *appends*
    * and that the newest row is current, which is true whatever the shop's

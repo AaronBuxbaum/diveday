@@ -35,14 +35,14 @@ describe("dependency direction", () => {
 
   it("still catches the named, dynamic, and re-export forms", async () => {
     const root = await fixture({
-      "src/lib/a.ts": 'import { x } from "@/features/calendar-sync";\n',
+      "src/lib/a.ts": 'import { x } from "@/features/crew-and-boats/calendar-sync";\n',
       "src/db/b.ts": 'const m = await import("@/app/actions/demo");\n',
       "src/db/c.ts": 'export * from "../app/page";\n',
     });
     expect(flat(await collectViolations(root)).sort()).toEqual([
       "src/db/b.ts: imports @/app/actions/demo",
       "src/db/c.ts: imports ../app/page",
-      "src/lib/a.ts: imports @/features/calendar-sync",
+      "src/lib/a.ts: imports @/features/crew-and-boats/calendar-sync",
     ]);
   });
 
@@ -160,7 +160,7 @@ describe("the seams", () => {
     ]);
   });
 
-  it("sends everything outside src/db through the trips and seed barrels", async () => {
+  it("sends everything outside src/db through the trips barrel", async () => {
     const root = await fixture({
       "src/app/trip/page.tsx": 'import { getTripRecord } from "@/db/trips-record";\n',
       "src/components/Roster.tsx": 'import type { TripRoster } from "@/db/trips-manifest";\n',
@@ -168,14 +168,10 @@ describe("the seams", () => {
       "src/app/trip/reader.tsx": 'import { getTripOverview } from "@/db/trip-overview";\n',
       "src/db/today.ts": 'import { listStaff } from "./trips-crew";\n',
       "src/app/trip/other.tsx": 'import { x } from "@/db/trip-promos";\n',
-      "src/features/tick.ts": 'import { bringHome } from "@/db/seed-boat-at-sea";\n',
-      "src/features/tick-ok.ts": 'import { bringHome } from "@/db/seed";\n',
-      "src/db/seed.ts": 'export { bringHome } from "./seed-boat-at-sea";\n',
     });
     expect(flat(await collectViolations(root)).sort()).toEqual([
       expect.stringContaining("src/app/trip/page.tsx: imports @/db/trips-record"),
       expect.stringContaining("src/components/Roster.tsx: imports @/db/trips-manifest"),
-      expect.stringContaining("src/features/tick.ts: imports @/db/seed-boat-at-sea"),
     ]);
   });
 });
@@ -192,10 +188,18 @@ describe("an index is a door", () => {
       "src/db/schema/index.ts": "export {};\n",
       "src/db/schema/people.ts": "export {};\n",
       "src/lib/other.ts": 'import type { P } from "@/db/schema/people";\n',
+      "src/db/seed/index.ts": 'export { bringHome } from "./boat-at-sea";\n',
+      "src/db/seed/boat-at-sea.ts": "export const bringHome = 1;\n",
+      "src/db/demo-refresh.ts": 'import { bringHome } from "./seed/boat-at-sea";\n',
+      "src/features/day/README.md": "# day\n",
+      "src/features/day/tick.ts": 'import { bringHome } from "@/db/seed";\n',
     });
     expect(flat(await collectViolations(root)).sort()).toEqual([
       expect.stringContaining(
         'src/app/page.tsx: imports @/lib/storage/limits \u2014 src/lib/storage is a module, reach it through "@/lib/storage"',
+      ),
+      expect.stringContaining(
+        'src/db/demo-refresh.ts: imports ./seed/boat-at-sea \u2014 src/db/seed is a module, reach it through "@/db/seed"',
       ),
       expect.stringContaining("src/lib/other.ts: imports @/db/schema/people"),
     ]);
@@ -213,28 +217,85 @@ describe("an index is a door", () => {
   });
 });
 
-describe("feature-module contract", () => {
+describe("feature areas and concept doors", () => {
+  const area = {
+    "src/features/crew-and-boats/README.md": "# crew and boats\n",
+    "src/features/crew-and-boats/calendar-sync/index.ts": "export {};\n",
+    "src/features/crew-and-boats/calendar-sync/internal.ts": 'import { x } from "./feed";\n',
+    "src/features/crew-and-boats/calendar-sync/feed.ts": "export const x = 1;\n",
+    "src/features/crew-and-boats/boats.ts": "export const boats = 1;\n",
+    "src/features/crew-and-boats/boats.test.ts": "export {};\n",
+  };
+  // Specifiers are split so the real scanner (which walks scripts/ too) doesn't read these
+  // fixture strings as imports of its own.
+  const features = "@/features";
+
   it("flags a deep import even in side-effect form", async () => {
     const root = await fixture({
-      "src/features/calendar-sync/index.ts": "export {};\n",
-      "src/features/calendar-sync/README.md": "# calendar-sync\n",
-      "src/features/calendar-sync/internal.ts": "export const x = 1;\n",
-      // Split so the real scanner (which walks scripts/ too) doesn't read this
-      // fixture string as a deep import of its own.
-      "src/app/page.tsx": `import "${"@/features"}/calendar-sync/internal";\n`,
+      ...area,
+      "src/app/page.tsx": `import "${features}/crew-and-boats/calendar-sync/internal";\n`,
     });
     expect(flat(await collectViolations(root))).toEqual([
-      'src/app/page.tsx: deep-imports @/features/calendar-sync/internal — import from "@/features/calendar-sync" instead',
+      `src/app/page.tsx: deep-imports ${features}/crew-and-boats/calendar-sync/internal — go through its door, "${features}/crew-and-boats/calendar-sync"`,
     ]);
   });
 
-  it("keys missing index/README on the module directory", async () => {
+  it("opens a folder's index and a one-file concept, by alias, relative path or explicit extension", async () => {
     const root = await fixture({
-      "src/features/bare/thing.ts": "export const x = 1;\n",
+      ...area,
+      "src/app/page.tsx": [
+        `import { a } from "${features}/crew-and-boats/calendar-sync";`,
+        `import { b } from "${features}/crew-and-boats/calendar-sync/index";`,
+        `import { c } from "${features}/crew-and-boats/boats";`,
+        "",
+      ].join("\n"),
+      "scripts/boats.mjs": 'import { boats } from "../src/features/crew-and-boats/boats.ts";\n',
+      // A sibling concept in the same area goes through the door too, relative or not.
+      "src/features/crew-and-boats/crew.ts": 'import { x } from "./calendar-sync";\n',
+    });
+    expect(flat(await collectViolations(root))).toEqual([]);
+  });
+
+  it("holds the door between concepts of one area", async () => {
+    const root = await fixture({
+      ...area,
+      "src/features/crew-and-boats/crew.ts": 'import { x } from "./calendar-sync/feed";\n',
+    });
+    expect(flat(await collectViolations(root))).toEqual([
+      `src/features/crew-and-boats/crew.ts: deep-imports ./calendar-sync/feed — go through its door, "${features}/crew-and-boats/calendar-sync"`,
+    ]);
+  });
+
+  it("refuses an import of a bare area, which has no door", async () => {
+    const root = await fixture({
+      ...area,
+      "src/app/page.tsx": `import "${features}/crew-and-boats";\n`,
+    });
+    expect(flat(await collectViolations(root))).toEqual([
+      expect.stringContaining(
+        `src/app/page.tsx: imports ${features}/crew-and-boats — an area has no door`,
+      ),
+    ]);
+  });
+
+  it("requires a README per area and an index per concept folder, and no loose concept", async () => {
+    const root = await fixture({
+      "src/features/thing.ts": "export const x = 1;\n",
+      "src/features/bare/concept/thing.ts": "export const x = 1;\n",
+      "src/features/bare/one.ts": "export const one = 1;\n",
     });
     const violations = await collectViolations(root);
-    expect([...violations.keys()]).toEqual(["src/features/bare"]);
-    expect(violations.get("src/features/bare")).toHaveLength(2);
+    expect([...violations.keys()].sort()).toEqual([
+      "src/features/bare",
+      "src/features/bare/concept",
+      "src/features/thing.ts",
+    ]);
+    expect(violations.get("src/features/bare")).toEqual([
+      expect.stringContaining("missing README.md"),
+    ]);
+    expect(violations.get("src/features/bare/concept")).toEqual([
+      expect.stringContaining("missing index.ts"),
+    ]);
   });
 });
 
@@ -281,14 +342,16 @@ describe("the ratchet", () => {
 describe("server-only modules stay out of client bundles", () => {
   it("keeps partner OAuth credentials and clients out of browser bundles", async () => {
     const root = await fixture({
-      "src/features/logbook-connections/index.ts":
+      "src/features/after-the-dive/logbook-connections/index.ts":
         "export const logbookProvider = 1; export type Config = string;",
-      "src/features/logbook-connections/README.md": "Server-only OAuth adapters.",
+      "src/features/after-the-dive/README.md": "# after the dive",
       "src/app/Form.tsx":
-        '"use client";\nimport { logbookProvider } from "@/features/logbook-connections";',
+        '"use client";\nimport { logbookProvider } from "@/features/after-the-dive/logbook-connections";',
     });
     expect(flat(await collectViolations(root))).toEqual([
-      expect.stringContaining("reaches server-only src/features/logbook-connections/index.ts"),
+      expect.stringContaining(
+        "reaches server-only src/features/after-the-dive/logbook-connections/index.ts",
+      ),
     ]);
   });
 
@@ -315,22 +378,32 @@ describe("server-only modules stay out of client bundles", () => {
   });
 
   for (const [feature, file] of [
-    ["phone-line-type", "rules.ts"],
-    ["payments", "webhook.ts"],
+    ["messages/phone-line-type", "../phone-line-type.ts"],
+    ["money/payments", "webhook.ts"],
   ]) {
+    // A one-file concept is its own door; a folder concept publishes through its index.
+    const folder = !file.startsWith("../");
     const contract = {
-      [`src/features/${feature}/index.ts`]: `export { sensitive } from "./${file.slice(0, -3)}";\nexport type { Secret } from "./${file.slice(0, -3)}";`,
-      [`src/features/${feature}/${file}`]:
-        "export const sensitive = 1; export type Secret = string;",
-      [`src/features/${feature}/README.md`]: "Server-side feature fixture.",
+      [`src/features/${feature.split("/")[0]}/README.md`]: "Server-side feature fixture.",
+      ...(folder
+        ? {
+            [`src/features/${feature}/index.ts`]: `export { sensitive } from "./${file.slice(0, -3)}";\nexport type { Secret } from "./${file.slice(0, -3)}";`,
+            [`src/features/${feature}/${file}`]:
+              "export const sensitive = 1; export type Secret = string;",
+          }
+        : {
+            [`src/features/${feature}.ts`]:
+              "export const sensitive = 1; export type Secret = string;",
+          }),
     };
+    const reached = folder ? `src/features/${feature}/${file}` : `src/features/${feature}.ts`;
     it(`refuses the ${feature} public index even without a transitive package dependency`, async () => {
       const root = await fixture({
         ...contract,
         "src/app/Form.tsx": `"use client";\nimport { sensitive } from "@/features/${feature}";`,
       });
       expect(flat(await collectViolations(root))).toEqual([
-        expect.stringContaining(`reaches server-only src/features/${feature}/${file}`),
+        expect.stringContaining(`reaches server-only ${reached}`),
       ]);
     });
 
@@ -429,47 +502,46 @@ describe("a table module writes by transition", () => {
 describe("runtime boundaries after concept migration", () => {
   it("keeps exact integration-test subjects outside runtime dependency direction", async () => {
     const root = await fixture({
-      "src/features/check-in/index.ts": 'export { read } from "./store";',
-      "src/features/check-in/README.md": "# check-in",
-      "src/features/check-in/store.ts": "export const read = () => 1;",
-      "src/db/counter.test.ts": 'import { read } from "@/features/check-in/store";',
-      "src/test/fixture.ts": 'import { read } from "@/features/check-in/store";',
-      "src/db/production.ts": 'import { read } from "@/features/check-in";',
-      "src/app/page.tsx": 'import { read } from "@/features/check-in/store";',
+      "src/features/boarding/check-in/index.ts": 'export { read } from "./store";',
+      "src/features/boarding/README.md": "# boarding",
+      "src/features/boarding/check-in/store.ts": "export const read = () => 1;",
+      "src/db/counter.test.ts": 'import { read } from "@/features/boarding/check-in/store";',
+      "src/test/fixture.ts": 'import { read } from "@/features/boarding/check-in/store";',
+      "src/db/production.ts": 'import { read } from "@/features/boarding/check-in";',
+      "src/app/page.tsx": 'import { read } from "@/features/boarding/check-in/store";',
     });
     expect(flat(await collectViolations(root)).sort()).toEqual([
       expect.stringContaining("src/app/page.tsx: deep-imports"),
-      "src/db/production.ts: imports @/features/check-in",
+      "src/db/production.ts: imports @/features/boarding/check-in",
     ]);
   });
 
   it("leaves pure feature state transformations outside table-write naming", async () => {
     const root = await fixture({
-      "src/features/selection/index.ts": 'export { updateSelection } from "./rules";',
-      "src/features/selection/README.md": "# selection",
-      "src/features/selection/rules.ts": "export function updateSelection() {}",
+      "src/features/trips/README.md": "# trips",
+      "src/features/trips/selection.ts": "export function updateSelection() {}",
     });
     expect(flat(await collectViolations(root))).toEqual([]);
   });
 
   it("keeps transition naming on a moved feature store", async () => {
     const root = await fixture({
-      "src/features/notes/index.ts": 'export { saveNote } from "./store";',
-      "src/features/notes/README.md": "# notes",
-      "src/features/notes/store.ts": "export function saveNote() {}",
+      "src/features/trips/README.md": "# trips",
+      "src/features/trips/notes/index.ts": 'export { saveNote } from "./store";',
+      "src/features/trips/notes/store.ts": "export function saveNote() {}",
     });
     expect(flat(await collectViolations(root))).toEqual([
-      expect.stringContaining("src/features/notes/store.ts: exports saveNote"),
+      expect.stringContaining("src/features/trips/notes/store.ts: exports saveNote"),
     ]);
   });
 });
 
-it("allows a native Node import of the explicit feature index extension", async () => {
+it("allows a native Node import of a concept folder's explicit index", async () => {
   const root = await fixture({
-    "src/features/world/index.ts": 'export { states } from "./rules";',
-    "src/features/world/README.md": "# world",
-    "src/features/world/rules.ts": "export const states = [];",
-    "scripts/states.mjs": 'import { states } from "../src/features/world/index.ts";',
+    "src/features/day/README.md": "# day",
+    "src/features/day/world/index.ts": 'export { states } from "./rules";',
+    "src/features/day/world/rules.ts": "export const states = [];",
+    "scripts/states.mjs": 'import { states } from "../src/features/day/world/index.ts";',
   });
   expect(flat(await collectViolations(root))).toEqual([]);
 });

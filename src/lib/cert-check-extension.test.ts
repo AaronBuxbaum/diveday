@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { AGENCY_VERIFICATION_PAGES } from "../features/agency-verification/rules";
+import { AGENCY_VERIFICATION_PAGES } from "../features/certifications/agency-verification";
 import { AGENCY_CHECKS, PAGE_TEXT_MAX_LENGTH } from "./agency-check";
 import {
   CHECK_REQUEST_TYPE,

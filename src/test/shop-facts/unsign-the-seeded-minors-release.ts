@@ -23,7 +23,7 @@ import { HOUR_MS } from "../../lib/clock";
  * `boardADiverThenBlockThem` makes and for the same reason: it is what an
  * expiry does in production, it leaves the real readiness evaluation to decide
  * what that means, and it keeps the demo's own minor co-signed, which is the
- * lesson `seed-bookings.ts`' `DEMO_GUARDIANS` exists to teach.
+ * lesson `seed/bookings.ts`' `DEMO_GUARDIANS` exists to teach.
  *
  * Returns the seat it made, because the notice this state exists to photograph
  * names its row by `bid` and the departure by `trip` — both random uuids, so a

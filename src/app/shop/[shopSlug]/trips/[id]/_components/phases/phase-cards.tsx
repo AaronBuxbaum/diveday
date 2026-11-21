@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
-import type { GearToPack } from "@/features/trip-prep";
+import type { GearToPack } from "@/features/trips/trip-prep";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { DepthUnit } from "@/lib/depth-units";
 import { formatTime } from "@/lib/format";

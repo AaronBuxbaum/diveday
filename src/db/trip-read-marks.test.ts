@@ -2,7 +2,7 @@ import { and, eq, isNotNull, isNull, ne, notExists } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { markArrived } from "@/test/arrivals";
 import { fileScopedShopContext, seededShopContext } from "@/test/db";
-import { anonymizeDiver } from "../features/anonymize/store";
+import { anonymizeDiver } from "../features/records/anonymize";
 import { seatCheckedIn } from "./arrival-provenance";
 import type { DbExecutor } from "./client";
 import { recordActivityRow, recordDeskLine } from "./operations";
@@ -665,7 +665,7 @@ describe("listCatchUpSince, against the roster it sits above", () => {
 
 /**
  * The demo shop actually opens on a strip with something to say
- * (`src/db/seed-desk-handoff.ts`). Pinned because the whole seed is annotation
+ * (`src/db/seed/desk-handoff.ts`). Pinned because the whole seed is annotation
  * a reader only notices when it is missing — and because it is what the
  * `manifest` visual baseline photographs.
  */

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { parseForm } from "@/features/form-parse";
+import { parseForm } from "@/features/platform/form-parse";
 import { uuidParam } from "@/lib/uuid";
 
 /**

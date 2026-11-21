@@ -6,7 +6,7 @@ signedInAsOwner();
  * **A staffer reads what a diver wrote and answers it** (ADR
  * 20260907-two-way-inbox).
  *
- * The seed puts four messages in blue-mantis's inbox (`src/db/seed-inbox.ts`):
+ * The seed puts four messages in blue-mantis's inbox (`src/db/seed/inbox.ts`):
  * two unanswered, one already answered with the shop's reply beside it, and
  * one from an address nobody on the roster holds. So this walks the surface
  * the way a shop does — the worklist, the record behind a row, the
@@ -81,7 +81,7 @@ test("a staffer reads the inbox, opens the record, and answers the diver", async
  * Its own test rather than a tail on the flow above: that one already widens
  * its timeout for three surfaces and a send, and this walks one page.
  *
- * The seeded Marta row (`src/db/seed-inbox.ts`) is the shape this is about —
+ * The seeded Marta row (`src/db/seed/inbox.ts`) is the shape this is about —
  * `person_id` null, unanswered, an address nobody on the roster holds — so it
  * has no record to open and no composer, and until this control it was the one
  * row in the worklist a staffer could not finish.

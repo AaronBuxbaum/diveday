@@ -56,7 +56,7 @@ async function packageContext() {
     .where(eq(bookings.shopId, shop.id))
     .limit(1);
   if (!person || !booking) throw new Error("seed missing a person or a booking");
-  // The demo seed puts two packages on sale (src/db/seed-packages.ts). These
+  // The demo seed puts two packages on sale (src/db/seed/packages.ts). These
   // tests are about a shop's own price list from nothing, so they start from a
   // shop that has taken those off sale; the rows stay, as every delete does.
   for (const pkg of await listDivePackages(db, shop.id)) {

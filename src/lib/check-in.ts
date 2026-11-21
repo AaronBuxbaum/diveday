@@ -2,7 +2,7 @@
 
 /**
  * Framework-free helpers for the counter check-in queue
- * (`src/app/shop/[shopSlug]/trips/[id]/_arrivals/arrival-desk.tsx` + `src/features/check-in/store.ts`).
+ * (`src/app/shop/[shopSlug]/trips/[id]/_arrivals/arrival-desk.tsx` + `src/features/boarding/check-in/store.ts`).
  *
  * The predicates below cut a departure's seats into the counter's three
  * disjoint groups — settled, blocked, still to come — and every figure, meter

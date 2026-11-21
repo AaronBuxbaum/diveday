@@ -9,7 +9,7 @@ const db = vi.hoisted(() => ({
   refreshCheckoutFromStripe: vi.fn(),
 }));
 
-vi.mock("@/features/trip-credit", () => ({ tripCreditReceipt: db.tripCreditReceipt }));
+vi.mock("@/features/money/trip-credit", () => ({ tripCreditReceipt: db.tripCreditReceipt }));
 vi.mock("@/db/payments", () => ({ getBookingPayment: db.getBookingPayment }));
 vi.mock("@/db/checkouts", () => ({
   getLatestCheckoutForBooking: db.getLatestCheckoutForBooking,
@@ -72,7 +72,7 @@ describe("resolvePaymentReceipt", () => {
 });
 
 it("states only verified promotional coverage and never refreshes Stripe for its zero-cash receipt", async () => {
-  const { tripCreditReceipt } = await import("@/features/trip-credit");
+  const { tripCreditReceipt } = await import("@/features/money/trip-credit");
   vi.mocked(tripCreditReceipt).mockResolvedValue({
     amountCents: 18_000,
     balanceCents: 5_000,

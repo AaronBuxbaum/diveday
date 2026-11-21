@@ -28,11 +28,11 @@ import {
   type TripPatch,
   type UpdateTripOutcome,
 } from "@/db/trips";
-import { getBoatById } from "@/features/boats";
-import { checkbox, formValue, readForm } from "@/features/form-parse";
-import { revalidateAndRedirect } from "@/features/navigation";
-import { requireShopSurface } from "@/features/session";
-import { getTripLens } from "@/features/trip-lenses";
+import { requireShopSurface } from "@/features/accounts/session";
+import { getBoatById } from "@/features/crew-and-boats/boats";
+import { checkbox, formValue, readForm } from "@/features/platform/form-parse";
+import { revalidateAndRedirect } from "@/features/platform/navigation";
+import { getTripLens } from "@/features/trips/trip-lenses";
 import { nowDate } from "@/lib/clock";
 import { perDiverBookingPriceCents } from "@/lib/courses";
 import { parseWetsuitThicknessMm } from "@/lib/gear";

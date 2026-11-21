@@ -229,7 +229,7 @@ test.describe("as owner", () => {
 
   /**
    * `resetDemoSchedule` treats a shop's promo codes as shop configuration and
-   * deliberately leaves them alone (src/db/seed.ts, the comment above the
+   * deliberately leaves them alone (src/db/seed/index.ts, the comment above the
    * `shopPromoRedemptions` delete), so REEF10's on/off state is whatever an
    * earlier test in this file left it as. Drive it to the state the test needs
    * instead of inheriting one — the assertion after the click is unconditional,
@@ -276,7 +276,7 @@ test.describe("as owner", () => {
    * The fleet now configures a real non-loopback `APP_HOST`
    * (playwright.config.ts `serverEnv`), so the origin holds everywhere. The
    * trip is *created* with a price because **no seeded upcoming departure
-   * carries one** — every `priceCents` in src/db/seed.ts sits on a past trip
+   * carries one** — every `priceCents` in src/db/seed/index.ts sits on a past trip
    * or a course, so the seeded board alone can never reach pay-at-booking
    * however the origin is configured. Same shape as e2e/refunds.spec.ts's
    * `createPaymentRequiredTrip`.
@@ -350,7 +350,7 @@ test.describe("as owner", () => {
     await expect(promoField).toBeVisible();
     await expect(page.getByText("(if you have one)")).toBeVisible();
 
-    // REEF10 is seeded at scope "all" with no window bounds (src/db/seed.ts)
+    // REEF10 is seeded at scope "all" with no window bounds (src/db/seed/index.ts)
     // and was driven live above — the one code a diver on this trip can
     // actually redeem. `bookSpot` resolves it *before* the party is booked
     // (task 20),

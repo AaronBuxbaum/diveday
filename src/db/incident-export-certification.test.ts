@@ -1,12 +1,12 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
+import { seedRollCallEvidence } from "@/db/seed/roll-call-evidence";
 import { nowDate } from "@/lib/clock";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { advanceClock } from "@/test/clock";
 import { fileScopedShopContext } from "@/test/db";
-import { anonymizeDiver } from "../features/anonymize/store";
-import { getIncidentExport } from "../features/incident-export/store";
+import { anonymizeDiver } from "../features/records/anonymize";
+import { getIncidentExport } from "../features/safety/incident-export";
 import { cancelBooking } from "./bookings";
 import { mergeDiverRecords } from "./diver-merge";
 import { getTripManifest, recordRollCall } from "./manifests";

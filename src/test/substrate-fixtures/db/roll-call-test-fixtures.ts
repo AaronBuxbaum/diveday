@@ -1,12 +1,12 @@
 import { and, eq, notExists } from "drizzle-orm";
-import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
+import { seedRollCallEvidence } from "@/db/seed/roll-call-evidence";
 import {
   bookings as bookingsTable,
   people,
   trips as tripsTable,
   waiverRecords,
 } from "../../../db/schema/index";
-import { seedArrivals } from "../../../db/seed-arrivals";
+import { seedArrivals } from "../../../db/seed/arrivals";
 import { listStaff } from "../../../db/trips";
 import { livePerson } from "../../../db/trips-live";
 import { nowMs } from "../../../lib/clock";
@@ -16,7 +16,7 @@ import type { fileScopedShopContext } from "../../db";
  * The unclosed-roll-call suites' fixtures (DOM-H3): a boat that already tied
  * up and the boarding log it left. Shared by the manifest's and departure
  * counts' suites here and by Today's roll-call row suites
- * (`src/features/today/today-roll-call-test-fixtures.ts` adds the row finders).
+ * (`src/features/day/today/today-roll-call-test-fixtures.ts` adds the row finders).
  */
 export const HOUR = 60 * 60 * 1000;
 

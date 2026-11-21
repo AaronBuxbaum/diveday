@@ -1,7 +1,7 @@
 import { getDb } from "@/db/client";
 import { medicalAlertsForOfflineSave } from "@/db/medical-alerts";
 import { getShopById } from "@/db/shops";
-import { isCrossSiteHeaders } from "@/features/same-origin";
+import { isCrossSiteHeaders } from "@/features/platform/same-origin";
 import { auth } from "@/lib/auth";
 import { isStaff } from "@/lib/authz";
 import { supportsCausalRollCall } from "@/lib/roll-call-protocol";

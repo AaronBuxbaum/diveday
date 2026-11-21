@@ -6,7 +6,7 @@ import {
   leftAtTheDock,
   readSeatLadder,
   type SeatRung,
-} from "../../../../../../features/seat-ladder/rules";
+} from "../../../../../../features/bookings/seat-ladder";
 import { groupRoster, waiverControls } from "./roster-model";
 import type { ReadinessByBooking, RosterEntry, WaiverByBooking } from "./types";
 

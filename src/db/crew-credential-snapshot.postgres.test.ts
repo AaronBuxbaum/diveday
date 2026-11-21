@@ -1,7 +1,7 @@
 import { asc, eq, sql } from "drizzle-orm";
 import { expect, it } from "vitest";
 import { describePostgres, holdRowLock, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
-import { anonymizeDiver } from "../features/anonymize/store";
+import { anonymizeDiver } from "../features/records/anonymize";
 import { recordCrewRollCall } from "./manifests";
 import { people, personRoles, rollCallEvents, tripAssignments } from "./schema";
 import { seedDemo } from "./seed";

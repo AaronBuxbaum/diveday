@@ -11,7 +11,7 @@ import {
 import { levelShort, NO_NITROX, noSpecialty } from "@/test/admission-refusals";
 import { markArrived } from "@/test/arrivals";
 import { fileScopedShopContext } from "@/test/db";
-import { createDiver } from "../features/divers/store";
+import { createDiver } from "../features/people/divers/store";
 import { setDiveOneSite } from "../test/substrate-fixtures/db/trip-dives-test-fixtures";
 import { draftsOf, halfTypedDrafts } from "../test/substrate-fixtures/db/waivers-test-fixtures";
 import { standingArrivalStatus } from "./arrival-provenance";
@@ -847,7 +847,7 @@ describe("restoreBooking (undo of a roster removal)", () => {
    * tap from three uncertified first-timers on one instructor — and the trip's
    * own capacity (12) never notices.
    *
-   * 180 days out for the same reason as `src/features/courses/store.test.ts`: clear of the
+   * 180 days out for the same reason as `src/features/training/courses/store.test.ts`: clear of the
    * seeded instructor's calendar, whatever hour the suite runs at.
    */
   const INTRO_SESSION_OFFSET_MS = 180 * 24 * 60 * 60 * 1000;
@@ -3463,7 +3463,7 @@ describe("seat capacity counts only the seats somebody holds", () => {
 
     // The counter's own write, as a bare status change: the question here is
     // what the capacity predicate reads, not how the status got there
-    // (`src/features/no-show/store.test.ts` owns the writer and its gate).
+    // (`src/features/boarding/no-show.test.ts` owns the writer and its gate).
     const roster = await getTripRoster(db, shop.id, fullTrip.id);
     const released = roster[0];
     if (!released) throw new Error("expected the full trip to have a roster");

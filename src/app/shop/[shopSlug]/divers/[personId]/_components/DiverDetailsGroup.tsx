@@ -12,7 +12,7 @@ import {
   FieldActions,
   FieldGrid,
 } from "@/components/ui/form";
-import type { DiverStatusRow } from "@/features/diver-status";
+import type { DiverStatusRow } from "@/features/people/diver-status";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { ageOnDate, isMinorOnDate, maxPlausibleBirthDate } from "@/lib/age";
 import { calendarDateInTimezone } from "@/lib/calendar-date";

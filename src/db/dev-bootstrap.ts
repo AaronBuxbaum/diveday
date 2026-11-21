@@ -26,7 +26,7 @@ const SEED_LOCK_KEY = 872_363_841;
  * Cheap "already seeded" marker: a single indexed-lookup `SELECT`, no
  * transaction, no lock. `seedDemo`'s one transaction either inserts this row
  * or never runs at all, and it is never reaped (see `reapExpiredDemoShops`
- * in seed.ts, which excludes `DEMO_SHOP_SLUG`), so once this is true it stays
+ * in seed/index.ts, which excludes `DEMO_SHOP_SLUG`), so once this is true it stays
  * true for the life of the database — the fast path below trusts it
  * unconditionally instead of re-deriving it from scratch.
  */
@@ -43,7 +43,7 @@ export async function isDemoShopSeeded(db: DbExecutor): Promise<boolean> {
  * Cold-start seed/backfill fast path (audit: docs/product/archive/
  * specialist-optimization-audit-20260731.md §7 "Trim production cold-start
  * work"). Every cold start used to unconditionally open a transaction, take
- * a cross-process advisory lock, and run three scans of seed.ts's checks —
+ * a cross-process advisory lock, and run three scans of seed/index.ts's checks —
  * on a long-lived, already-seeded database (the overwhelmingly common case
  * once the demo shop exists) that work is pure waste repeated on every new
  * serverless instance. `isDemoShopSeeded` short-circuits all of it with one

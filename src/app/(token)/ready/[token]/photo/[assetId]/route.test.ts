@@ -1,13 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/db/client", () => ({ getDb: vi.fn(async () => ({})) }));
-vi.mock("@/features/person-photo", () => ({ getDiverPhotoForCapability: vi.fn() }));
+vi.mock("@/features/people/person-photo", () => ({ getDiverPhotoForCapability: vi.fn() }));
 vi.mock("@/lib/storage", () => ({
   mediaStorageConfigFromEnvironment: vi.fn(() => ({ success: true, data: {} })),
   readS3Object: vi.fn(),
 }));
 
-import { getDiverPhotoForCapability } from "@/features/person-photo";
+import { getDiverPhotoForCapability } from "@/features/people/person-photo";
 import { readS3Object } from "@/lib/storage";
 import { GET } from "./route";
 

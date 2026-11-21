@@ -6,7 +6,7 @@ import {
   getHelpRequestForBooking,
   recordHelpRequest,
   undoHelpRequestCompletion,
-} from "../features/help-requests/store";
+} from "../features/messages/help-requests/store";
 import { getTripCrewAssignments, getTripRoster } from "./trips";
 import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 

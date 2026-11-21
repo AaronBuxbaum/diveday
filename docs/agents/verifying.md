@@ -36,8 +36,8 @@ order-dependent failure, which `pnpm test:lib --sequence.shuffle` reproduces.
 ## The guards that live in files you will never edit
 
 A focused `pnpm test <file>` runs the tests you can name. The **coverage guards** are the ones you
-cannot: `src/db/export.test.ts`, `src/db/diver-merge.test.ts`, `src/db/delete-path-coverage.test.ts`
-and `src/features/retention/store.test.ts` assert over the schema (`src/db/schema/`) from files whose whole job is to
+cannot: `src/db/export/index.test.ts`, `src/db/diver-merge.test.ts`, `src/db/delete-path-coverage.test.ts`
+and `src/features/records/retention/store.test.ts` assert over the schema (`src/db/schema/`) from files whose whole job is to
 notice something you added
 *elsewhere*. Nothing you touch selects them, so they go red on CI instead — four times in one
 afternoon on 2026-09-05: slice 16g's four columns, 16i's `recap_pulses` table and its
@@ -214,7 +214,7 @@ Measured again on 2026-10-18 for #2624, at load averages of 10 to 14 from other 
   before any test started; the bound is now 120 s (untimed setup, not a test). The browser warm-up
   now runs after the servers instead of beside them: its first navigation read 22.3 and 27.2 s
   queued behind worker 0's seed, and reads 1.3 s after it.
-- A cheaper reset stays the fix, and it is #2729's (`src/db/seed.ts`).
+- A cheaper reset stays the fix, and it is #2729's (`src/db/seed/index.ts`).
 
 ### A red run on this branch
 

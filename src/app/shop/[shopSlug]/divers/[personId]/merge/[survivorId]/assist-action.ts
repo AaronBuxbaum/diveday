@@ -1,10 +1,10 @@
 "use server";
 
 import { canPersonMergeDiver } from "@/db/authz";
-import { runAssist } from "@/features/assists";
-import { readUnsurePair } from "@/features/desk-assists";
-import { SAME_PERSON_FEATURE, samePersonCall, samePersonRead } from "@/features/same-person";
-import { requireShopSurface } from "@/features/session";
+import { requireShopSurface } from "@/features/accounts/session";
+import { runAssist } from "@/features/ai/assists";
+import { readUnsurePair } from "@/features/ai/desk-assists";
+import { SAME_PERSON_FEATURE, samePersonCall, samePersonRead } from "@/features/people/same-person";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { uuidParam } from "@/lib/uuid";

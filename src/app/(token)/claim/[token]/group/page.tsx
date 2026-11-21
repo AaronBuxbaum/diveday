@@ -6,7 +6,7 @@ import { ThreadShell } from "@/components/thread/ThreadShell";
 import { buttonClass } from "@/components/ui/button";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { getDb } from "@/db/client";
-import { getGroupClaimPageData } from "@/features/seat-claims";
+import { getGroupClaimPageData } from "@/features/bookings/seat-claims";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { claimLinkPath } from "@/lib/booking-capabilities";

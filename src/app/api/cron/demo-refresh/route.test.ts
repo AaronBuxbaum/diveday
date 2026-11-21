@@ -9,7 +9,7 @@ vi.mock("@/db/demo-refresh", async (importOriginal) => {
   return { ...actual, refreshCanonicalDemoSchedule: vi.fn() };
 });
 // The routes report only where a DSN is configured; the suite runs without one.
-vi.mock("../../../../features/sentry-dsn/rules", () => ({
+vi.mock("../../../../features/platform/sentry-dsn", () => ({
   SENTRY_DSN: "https://key@sentry.invalid/1",
 }));
 vi.mock("@sentry/nextjs", () => ({
@@ -219,7 +219,7 @@ describe("the deployed schedule", () => {
     // departure it pulled onto "today" sailed at 11:46 PM, then vanished from
     // the board at midnight.
     const { DEMO_SHOP_TIMEZONE, demoTodayDepartureStart, sailsAfterDayBoats } = await import(
-      "@/db/seed-clock"
+      "@/db/seed/clock"
     );
     const { utcToWallTime } = await import("@/lib/zoned");
     for (const day of ["2026-07-21", "2026-01-21"]) {

@@ -15,7 +15,7 @@ found two related problems in `src/lib/storage/index.ts` and its callers:
   bomb) had nothing stopping it. Uploaded photos also kept whatever EXIF metadata the camera or
   phone wrote — GPS coordinates and device identifiers included — all the way to publication.
 - **Deleting a recap photo removed the database row but never the Blob object.** `deleteRecapPhoto`
-  (`src/features/recap/store.ts`) was a bare `DELETE`; nothing called `deleteStoredImage` for the photo's URL.
+  (`src/features/after-the-dive/recap/store.ts`) was a bare `DELETE`; nothing called `deleteStoredImage` for the photo's URL.
   Course photo replacement (a new hero upload, a removed gallery photo) had the same gap: the
   superseded URL was simply dropped from `heroImageUrl`/`imageUrls`, and the old blob object was
   never told to go away. Every one of these is a paying-for-nothing orphan, and the ticket also
@@ -146,7 +146,7 @@ found two related problems in `src/lib/storage/index.ts` and its callers:
   `claimBookingsForCheckout`'s `staleBefore` convention (CR-005) — so tests don't depend on real
   wall-clock time passing.
 - `media_deletion_attempts` is an internal reconciliation ledger, not a shop record — excluded from
-  the full-shop export (`src/db/export.test.ts`), same reasoning as `payment_operation_intents`.
+  the full-shop export (`src/db/export/index.test.ts`), same reasoning as `payment_operation_intents`.
 
 ## Amendment 2026-11-03: one reader for unfinished work (issue #2703)
 

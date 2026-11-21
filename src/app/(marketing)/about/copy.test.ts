@@ -114,7 +114,7 @@ describe("the home page's short telling", () => {
 describe("the rest of /about", () => {
   it.each(LOCALES)("names no individual and states no CV in %s", (_l, messages) => {
     // The one person named is the founder, who signs the "Who we are" band
-    // (Aaron, 2026-11-11): the name is `FOUNDER_NAME` in src/features/company-identity
+    // (Aaron, 2026-11-11): the name is `FOUNDER_NAME` in src/features/public-site/company-identity.ts
     // and never a sentence in the bundle, which is why this still holds.
     // The people who build DiveDay are described in generalities (Aaron,
     // 2026-10-07: "use generalities about people in a company"). The founder's

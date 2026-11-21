@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { DiverStatusRow } from "@/features/diver-status";
+import type { DiverStatusRow } from "@/features/people/diver-status";
 import { readinessBlockerText } from "@/i18n/readiness-labels";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { tripNeedsLines } from "./trip-needs";

@@ -1,8 +1,8 @@
 import { AddPanel } from "@/components/AddPanel";
 import { keptTypedScope } from "@/components/kept-typed-scope";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
-import { getOrderNewPage } from "@/features/order-new-page";
-import type { ShopSurface } from "@/features/session";
+import type { ShopSurface } from "@/features/accounts/session";
+import { getOrderNewPage } from "@/features/money/order-new-page";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import { addPanelCloseHref, addPanelHref, addPanelOpen } from "@/lib/add-panel";
 import { bookingInvoiceLines } from "@/lib/courses";

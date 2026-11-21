@@ -51,7 +51,7 @@ it("waits for delayed chunks on a nonblocking large git-diff pipe", () => {
     // Leave fd 0 open but empty while the guard reaches its read, as Actions did.
     await delay(150);
     const irrelevant = Array.from({ length: 4500 }, (_, i) => "docs/architecture/example-" + i + ".md\n").join("");
-    const input = irrelevant + "src/features/check-in/store.ts\nsrc/test/projects.ts\ndocs/no-coverage.md\n";
+    const input = irrelevant + "src/features/boarding/check-in/store.ts\nsrc/test/projects.ts\ndocs/no-coverage.md\n";
     // Split a relevant path as well as sending more than one pipe buffer.
     const cut = irrelevant.length + 17;
     child.stdin.write(input.slice(0, cut));
@@ -73,5 +73,5 @@ it("waits for delayed chunks on a nonblocking large git-diff pipe", () => {
   expect(result.status, result.stderr).toBe(0);
   expect(result.stderr).toBe("");
   expect(result.signal).toBeNull();
-  expect(result.stdout).toBe("src/features/check-in/store.ts\nsrc/test/projects.ts\n");
+  expect(result.stdout).toBe("src/features/boarding/check-in/store.ts\nsrc/test/projects.ts\n");
 });

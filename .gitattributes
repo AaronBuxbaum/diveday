@@ -1,8 +1,8 @@
 # Generated files merge without stopping; `pnpm regen` then rewrites them (scripts/merge-drivers.mjs).
 scripts/ratchets.json merge=diveday-ratchets
 scripts/test-durations.json merge=diveday-durations
-src/db/__snapshots__/export-bundle.shop.snap merge=diveday-generated
-src/db/__snapshots__/export-bundle.divers.snap merge=diveday-generated
-src/db/__snapshots__/export-bundle.diver-interests.snap merge=diveday-generated
+src/db/export/__snapshots__/bundle.shop.snap merge=diveday-generated
+src/db/export/__snapshots__/bundle.divers.snap merge=diveday-generated
+src/db/export/__snapshots__/bundle.diver-interests.snap merge=diveday-generated
 docs/product/glossary.md merge=diveday-generated
 docs/product/human-decisions/README.md merge=diveday-generated

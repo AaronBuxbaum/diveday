@@ -26,15 +26,15 @@ import {
 } from "@/db/readiness";
 import { certificationAgency, certificationLevel, diveSpecialty } from "@/db/schema";
 import { clearNoCertificationDeclaration } from "@/db/self-declared-cards";
-import { recordJuniorCardStatus } from "@/features/certification-junior";
+import { recordJuniorCardStatus } from "@/features/certifications/certification-junior";
+import { formValue, readForm } from "@/features/platform/form-parse";
+import { revalidateAndRedirect } from "@/features/platform/navigation";
+import { undoParams } from "@/features/platform/undo";
 import {
   clearDrysuitExperienceSeen,
   type RecordDrysuitExperienceOutcome,
   recordDrysuitExperienceSeen,
-} from "@/features/drysuit-experience";
-import { formValue, readForm } from "@/features/form-parse";
-import { revalidateAndRedirect } from "@/features/navigation";
-import { undoParams } from "@/features/undo";
+} from "@/features/safety/drysuit-experience";
 import { isPlausibleCardNumber } from "@/lib/card-number";
 import { unreviewedCardState } from "@/lib/readiness";
 import { noticeUrl } from "@/lib/staff-notices";
