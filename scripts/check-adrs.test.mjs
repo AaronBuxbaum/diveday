@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { adrSummary, END, indexTable, START, withIndex } from "./adr-index.mjs";
+import { adrSummary, indexTable } from "./adr-index.mjs";
 import {
   adrProblems,
   adrWords,
@@ -80,7 +80,7 @@ describe("the generated index", () => {
     expect(adrSummary("x.md", adr("x"), known).supersededBy).toBe("");
   });
 
-  it("writes one row per ADR between the markers and leaves the rest of the README alone", () => {
+  it("writes one row per ADR", () => {
     const table = indexTable([
       { id: "0001-a", title: "A | B", status: "Accepted", supersededBy: "" },
       { id: "0002-b", title: "B", status: "Superseded", supersededBy: "0003-c" },
@@ -102,11 +102,6 @@ describe("the generated index", () => {
       "| 0004-d | D (proposed) |",
       "| 0005-e | ~~E~~ (deprecated) |",
     ]);
-    const readme = `# ADRs\n\nprose\n\n${START}\nold\n${END}\n\ntail\n`;
-    const next = withIndex(readme, "T");
-    expect(next).toBe(`# ADRs\n\nprose\n\n${START}\n\nT\n\n${END}\n\ntail\n`);
-    expect(withIndex(next, "T")).toBe(next);
-    expect(withIndex("# no markers", "T")).toBeNull();
   });
 });
 

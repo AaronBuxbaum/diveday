@@ -5,5 +5,4 @@ src/db/export/__snapshots__/bundle.shop.snap merge=diveday-generated
 src/db/export/__snapshots__/bundle.divers.snap merge=diveday-generated
 src/db/export/__snapshots__/bundle.diver-interests.snap merge=diveday-generated
 docs/product/glossary.md merge=diveday-generated
-docs/architecture/decisions/README.md merge=diveday-generated
 docs/product/human-decisions/README.md merge=diveday-generated
