@@ -58,8 +58,7 @@ barrels, bookings, seating, retention, integrations). What they do not say:
 
 - **Change the schema through the schema-change skill**: `pnpm db:generate --name`, then before
   you push run the four coverage guards by path (the **verify** skill's checklist, step 3). Never
-  hand-edit `drizzle/`; regenerate. Its first folder is the baseline, whose reused name is how a
-  database built from the old history skips it; never rename it (ADR 20261121-one-baseline-migration).
+  hand-edit `drizzle/`; regenerate. Its first folder is the baseline (ADR 20261121-one-baseline-migration).
 - **A column that defaults to now uses `appNowTimestamp`** (`src/db/schema/columns.ts`): the
   database default stays for raw SQL and a Drizzle insert takes the app clock, so a row made under a
   pinned `DIVEDAY_CLOCK` carries it; `schema-clock-default.test.ts` refuses a bare `.defaultNow()`.

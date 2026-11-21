@@ -25,8 +25,8 @@ const WAIVER_SEAL_CHECK_LIMIT = 4_000;
 
 /**
  * From when DiveDay sealed every release it took a signature for: the
- * migration that brought `integrity_hash` into the schema
- * (`20260721131359_cheerful_masque`, the baseline the history starts from).
+ * first migration whose schema had `integrity_hash`, dated by its folder
+ * (`20260721131359`).
  * Every signing path seals as it writes (`completeWaiver`,
  * `recordInPersonWaiver`), so a signed, non-imported release signed after both
  * this and its shop's own start that carries no seal has had it removed. The

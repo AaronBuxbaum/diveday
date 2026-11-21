@@ -1,24 +1,18 @@
--- The baseline. One migration describing the whole schema, replacing the 382
--- incremental migrations that stood here until 2026-11-21 (issue #4853, ADR
--- 20261121-one-baseline-migration). The first squash did the same to 202 on
--- 2026-09-04 (ADR 20260904-squash-migration-baseline).
+-- The baseline: one migration describing the whole schema (issue #4853, ADR
+-- 20261121-one-baseline-migration). It replaced every earlier migration on
+-- 2026-11-21, when production was wiped rather than carried forward (issue
+-- #4858); the first squash, on 2026-09-04, is ADR
+-- 20260904-squash-migration-baseline.
 --
--- It deliberately **reuses the first migration's folder name**, and that is the
--- mechanism rather than a cosmetic choice: drizzle's `getMigrationsToRun`
--- (drizzle-orm/migrator.utils.js) filters local migrations against a Set of the
--- `name` column in `__drizzle_migrations`, not a hash and not a timestamp. So a
--- database that already applied `20260721131359_cheerful_masque` skips this file
--- untouched, and only a virgin database runs it. Renaming this folder breaks
--- that, and would re-run the whole schema against a populated database.
+-- Its folder name is new on purpose. drizzle decides what to run by folder
+-- name, so a database still carrying the old history runs this file and stops
+-- on "relation already exists" instead of quietly skipping it. Such a database
+-- is wiped, not upgraded.
 --
 -- Everything between the two extensions and the hand-written block at the
 -- bottom is `drizzle-kit generate` output for `src/db/schema/`. The extensions,
 -- four name collations, the gear exclusion constraint and the booking-link
--- trigger are hand-written, because the schema modules cannot express them;
--- they are carried from the migrations that introduced them, with their
--- reasoning. No UPDATE, INSERT or
--- DO block is carried: each backfilled or checked rows that existed when it was
--- written, and a baseline creates empty tables.
+-- trigger are hand-written, because the schema modules cannot express them.
 --
 -- CR-018: trigram-similarity GIN indexes back the leading-wildcard
 -- `ilike '%query%'` searches. Standard Postgres contrib extension, available
@@ -785,7 +779,6 @@ CREATE TABLE "people" (
 	"public_staff_profile" jsonb,
 	"courtesy_email_opt_out_at" timestamp with time zone,
 	"deleted_at" timestamp with time zone,
-	"self_registered_at" timestamp with time zone,
 	"anonymized_at" timestamp with time zone,
 	"anonymized_by_person_id" uuid,
 	"merged_into_person_id" uuid,

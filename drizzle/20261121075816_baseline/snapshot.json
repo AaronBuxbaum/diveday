@@ -2,7 +2,7 @@
   "type": "base",
   "version": "9",
   "dialect": "postgres",
-  "id": "15adcc49-39e3-4ba9-aecb-bbf04d7ce99f",
+  "id": "d00570e3-aa8c-49e9-bff1-3d8588382dd2",
   "prevIds": [
     "00000000-0000-0000-0000-000000000000"
   ],
@@ -36296,19 +36296,6 @@
       "schema": "public",
       "table": "people",
       "name": "deleted_at",
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "entityType": "columns"
-    },
-    {
-      "schema": "public",
-      "table": "people",
-      "name": "self_registered_at",
       "type": "timestamp with time zone",
       "typeSchema": null,
       "notNull": false,

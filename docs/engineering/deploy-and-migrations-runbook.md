@@ -37,7 +37,7 @@ Seven consequences follow, and every one of them is load-bearing:
 | CI rehearses migrations against a real Postgres before merge — the `real-postgres` job in `.github/workflows/ci.yml` (see [Rehearsal](#what-ci-rehearses-and-what-it-still-doesnt)) | **The deploy is no longer the first time the SQL meets a real server.** It is still the first time it meets *production data* |
 | A destructive statement is refused before `db:migrate` runs — see [the guard](#the-guard-that-enforces-it) | **Expand/contract is enforced, not merely written.** The rule below is a mechanism now; what it does *not* cover is listed there |
 | Vercel's `scripts/vercel-build.mjs` runs no typecheck and `next build` skips its own on Vercel; CI typechecks every commit and local `pnpm build` keeps its check | **Types are gated by CI, not the Vercel build** (Aaron, 2026-11-05; supersedes the #1377 refusal gate). TypeScript 7's checker peaks near 7.7 GB and the 8 GB builder killed it. A type error reaches production only if CI is bypassed, so keep the deploy gate on. |
-| `drizzle/` holds one baseline plus the forward-only folders added since (`migration.sql` + `snapshot.json` each), with no down migrations anywhere | **Rollback is always forward.** There is no `drizzle-kit down`. "Revert the migration" is not a thing that exists here. The baseline's folder *name* is load-bearing — see [The baseline](#the-baseline-and-a-database-built-before-it) before renaming it |
+| `drizzle/` holds one baseline plus the forward-only folders added since (`migration.sql` + `snapshot.json` each), with no down migrations anywhere | **Rollback is always forward.** There is no `drizzle-kit down`. "Revert the migration" is not a thing that exists here. A database built from an earlier history is wiped, not upgraded — see [The baseline](#the-baseline) |
 
 Put together: an unsafe migration is applied by the same command that builds the code, with no way to
 reverse it. The SQL itself has been rehearsed; its interaction with real data volumes has not. That
@@ -179,32 +179,13 @@ To turn it on, in this order:
 To turn it off, remove the Vercel variable first (pushes deploy again), then the GitHub variable.
 The other order leaves a window in which nothing deploys.
 
-## The baseline, and a database built before it
+## The baseline
 
-`drizzle/` starts with one baseline, `20260721131359_cheerful_masque`, which creates the whole schema
-(ADR 20261121-one-baseline-migration; the first squash was ADR 20260904-squash-migration-baseline).
-Its folder reuses the name of the very first migration on purpose. drizzle's migrator skips every
-local folder whose *name* is already in `drizzle.__drizzle_migrations`, never comparing hashes, so:
-
-- **A new database** has no rows there, runs the baseline, then every folder after it.
-- **A database built from the old history** (production, an old dump, a long-lived `.pglite`)
-  already records that name, so it skips the baseline and runs only the folders after it. The first
-  of those, `20261121063401_converge-squash-drift`, drops the one table the schema had stopped
-  declaring and renames the constraints the old history had left under old names, so both kinds of
-  database end with the same schema. `src/db/migrations.postgres.test.ts` checks exactly that.
-
-That skip is only safe for a database that had applied **every** migration of the old history (382
-folders, the last `20261120180620_course-elearning-codes-removable`). One that stopped earlier also
-skips the baseline and silently misses the rest, with no error. Two places this can happen:
-
-| Database | What to do |
-| --- | --- |
-| Production | Nothing, once the cutover in issue #4858 is done: its ledger is checked to hold all 382 names before the squash merges |
-| A dump or Neon branch from before 2026-11-21 | Before running today's migrations on it, check `select count(*) from drizzle.__drizzle_migrations` is at least 382. If it is lower, migrate it first with the `main` commit just before the squash merged (`git checkout <that sha> && pnpm db:migrate`), then with today's tree |
-| A local `.pglite` from before the squash | `pnpm db:reset`. It rebuilds from the baseline and re-seeds |
-
-Rolling the code back past the squash with Instant Rollback is safe: it runs no migrations, and
-the only thing the convergence removed is a table that release no longer read.
+`drizzle/` starts with one baseline, `20261121075816_baseline`, which creates the whole schema on an
+empty database (ADR 20261121-one-baseline-migration). Production was wiped when it landed (issue
+#4858), because nobody's data was in it. A database still carrying the history from before it,
+such as an old dump or a long-lived `.pglite`, stops on "already exists" at the baseline's first
+statement and changes nothing: wipe it (`pnpm db:reset` locally), never patch it forward.
 
 ## What CI rehearses, and what it still doesn't
 

@@ -486,6 +486,6 @@ script again.
 | 20261120-demo-mint-replays-a-template | A visitor's demo is written… |
 | 20261120-e2e-purge-settles-by-set | Delete the e2e reset's minted… |
 | 20261121-feature-areas | Group feature concepts into areas,… |
-| 20261121-one-baseline-migration | Collapse the migration history into… |
+| 20261121-one-baseline-migration | Wipe production and start from… |
 
 <!-- adr-index:end -->

@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { sql } from "drizzle-orm";
@@ -45,7 +45,21 @@ import { extractPreviousReleaseMigrations } from "../../scripts/previous-release
  * different means the upgrade path and the fresh-install path have diverged —
  * a shop provisioned tomorrow would be running a different schema from a shop
  * that upgraded into it, and nothing else in the repo would notice.
+ *
+ * One exception: a branch that replaces the baseline (ADR
+ * 20261121-one-baseline-migration). Its baseline has a folder name the
+ * previous release never applied, so a database that was not wiped must stop
+ * on "already exists" rather than upgrade, and that refusal is what the test
+ * asserts instead.
  */
+
+/** The migration folders in a `drizzle/`-shaped directory, oldest first. */
+function migrationFolders(dir: string): string[] {
+  return readdirSync(dir, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name)
+    .sort();
+}
 
 /**
  * A comparable fingerprint of what the database actually looks like: every
@@ -152,6 +166,17 @@ describePostgres("drizzle migrations against a real Postgres server", () => {
 
     const upgraded = await postgresTestDb({ migrations: false });
     await applyMigrations(upgraded.db, previousDir);
+    const [baseline] = migrationFolders("drizzle");
+    if (!migrationFolders(previousDir).includes(baseline ?? "")) {
+      // A new baseline: the previous release's database must be wiped, and a
+      // deploy against one that was not fails before it changes anything.
+      const refusal = await applyMigrations(upgraded.db, "drizzle").then(
+        () => null,
+        (error: unknown) => error,
+      );
+      expect(String((refusal as { cause?: unknown } | null)?.cause)).toMatch(/already exists/);
+      return;
+    }
     // The deploy's own step: only the migrations this branch adds run here,
     // against a database that already holds every older one.
     await expect(applyMigrations(upgraded.db, "drizzle")).resolves.not.toThrow();
