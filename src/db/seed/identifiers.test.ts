@@ -21,7 +21,9 @@ describe("browser seed identifiers", () => {
     expect(visualSpecs.length).toBeGreaterThan(0);
     for (const spec of ["recap", "reviews", "review-replies", "storefront-brand", ...visualSpecs]) {
       const source = readFileSync(path.join(root, "e2e", `${spec}.spec.ts`), "utf8");
-      expect(source, spec).not.toMatch(/from\s+["']\.\.\/src\/db\/seed(?:\/(?:index|listed-shops))?["']/);
+      expect(source, spec).not.toMatch(
+        /from\s+["']\.\.\/src\/db\/seed(?:\/(?:index|listed-shops))?["']/,
+      );
     }
   });
 });
