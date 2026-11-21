@@ -40,7 +40,16 @@ describe("the CI result job", () => {
     const job = CI.slice(CI.indexOf("\n  ci-result:\n"));
     expect(job).toMatch(/^ {4}name: CI result$/mu);
     expect(job).toMatch(
-      /^ {4}if: \$\{\{ !cancelled\(\) && github\.event_name != 'schedule' && needs\.stack-gate\.outputs\.run != 'false' \}\}$/mu,
+      /^ {4}if: \$\{\{ !cancelled\(\) && github\.event_name != 'schedule' \}\}$/mu,
+    );
+  });
+
+  it("reports success on a lower stack layer and runs the verdict only where CI ran", () => {
+    // main requires `CI result`; a skipped check can read as missing, so a lower layer answers.
+    const job = CI.slice(CI.indexOf("\n  ci-result:\n"));
+    expect(job).toContain("name: Lower layer of a stack");
+    expect(job).toMatch(
+      /name: Every required job passed\n {8}if: \$\{\{ needs\.stack-gate\.outputs\.run != 'false' \}\}/u,
     );
   });
 

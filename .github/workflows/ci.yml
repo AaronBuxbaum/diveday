@@ -1450,13 +1450,19 @@ jobs:
         run: node scripts/ci-runner-pick.mjs
 
   real-postgres:
-    name: Real Postgres (migrations + concurrency)
+    # Two shards: one job took 511-836s of its 15 minutes (main's last green run: 14m52s), which
+    # left no room for a slow runner (2026-11-21). Each shard has its own server container.
+    name: Real Postgres shard ${{ matrix.shard }}/2 (migrations + concurrency)
     needs: changes
     # The status function lets the nightly run despite its skipped `changes` dependency.
     # Unlike always(), !cancelled() also stops obsolete tests when the run is canceled.
     if: ${{ !cancelled() && (github.event_name == 'schedule' || needs.changes.outputs.db == 'true') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
     permissions:
       contents: read
     # The whole point of the job. Everything else in this repo's db suite runs on
@@ -1522,7 +1528,7 @@ jobs:
       # sees it; if it ever matches nothing, vitest exits non-zero rather than
       # reporting a cheerful zero tests.
       - name: Migrations and concurrency against a real server
-        run: pnpm exec vitest run --reporter=dot src/db/*.postgres.test.ts src/features/*/*.postgres.test.ts 'src/app/shop/[shopSlug]/divers/[personId]/erasure-race.postgres.test.ts'
+        run: pnpm exec vitest run --reporter=dot --shard=${{ matrix.shard }}/2 src/db/*.postgres.test.ts src/features/*/*.postgres.test.ts 'src/app/shop/[shopSlug]/divers/[personId]/erasure-race.postgres.test.ts'
         env:
           # Deliberately *not* `DATABASE_URL`. That variable is what `getDb()`
           # reads, and both `vitest.config.ts` and `src/test/global-setup.ts` pin
@@ -1541,7 +1547,11 @@ jobs:
   ci-result:
     name: CI result
     # Failed or skipped dependencies still need a verdict; a canceled run needs no new job.
-    if: ${{ !cancelled() && github.event_name != 'schedule' && needs.stack-gate.outputs.run != 'false' }}
+    # It also runs on a lower stack layer, where it reports success in seconds instead of being
+    # skipped: main requires `CI result`, and a skipped check is one more thing that can read as
+    # missing, which left every layer under the top unable to merge (2026-11-20). The full
+    # verdict still comes only from the top layer, where the jobs above ran.
+    if: ${{ !cancelled() && github.event_name != 'schedule' }}
     needs:
       - stack-gate
       - repo-safeguards
@@ -1566,9 +1576,14 @@ jobs:
       checks: read
       pull-requests: read
     steps:
+      - name: Lower layer of a stack
+        if: ${{ needs.stack-gate.outputs.run == 'false' }}
+        run: |
+          echo 'Lower layer of a stack. CI runs on the top pull request, so there is nothing to check here. Add the ci-now label to run it.' | tee -a "$GITHUB_STEP_SUMMARY"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: ${{ needs.stack-gate.outputs.run != 'false' }}
       - name: Collect exact-attempt CI evidence
-        if: always()
+        if: ${{ always() && needs.stack-gate.outputs.run != 'false' }}
         run: node scripts/ci-evidence.mjs
         env:
           GH_TOKEN: ${{ github.token }}
@@ -1576,15 +1591,16 @@ jobs:
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        if: always()
+        if: ${{ always() && needs.stack-gate.outputs.run != 'false' }}
         with:
           name: ci-result-${{ github.run_attempt }}
           path: .agent-out/ci-result.json
           retention-days: 30
       - name: Evidence artifact
-        if: always()
+        if: ${{ always() && needs.stack-gate.outputs.run != 'false' }}
         run: echo 'Download ci-result-${{ github.run_attempt }} for job failures, annotations, reproduction commands and artifact links.' >> "$GITHUB_STEP_SUMMARY"
       - name: Every required job passed
+        if: ${{ needs.stack-gate.outputs.run != 'false' }}
         env:
           CI_NEEDS: ${{ toJSON(needs) }}
           GITHUB_EVENT_NAME: ${{ github.event_name }}
