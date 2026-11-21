@@ -1,6 +1,6 @@
 import { and, asc, eq, gte, inArray, isNotNull, isNull, lt, ne } from "drizzle-orm";
 import { z } from "zod";
-import { type SeedRollCallEvidenceInput, seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
+import { type SeedRollCallEvidenceInput, seedRollCallEvidence } from "@/db/seed/roll-call-evidence";
 import type { AppDb } from "../../db/client";
 import { oldestMarkFirst } from "../../db/roll-call-order";
 import { crewMarks, markBookingId, markCrewPersonId, seatMarks } from "../../db/roll-call-subject";
@@ -17,7 +17,7 @@ import {
   tripDives,
   trips,
 } from "../../db/schema/index";
-import { bringDemoBoatsAtSeaHome } from "../../db/seed-boat-at-sea";
+import { bringDemoBoatsAtSeaHome } from "../../db/seed/boat-at-sea";
 import { listStaff, liveTrip, seatNotCancelled } from "../../db/trips";
 import { recordTripStage } from "../../features/trips/trip-stages";
 import { HOUR_MS, nowDate } from "../../lib/clock";
@@ -466,7 +466,7 @@ async function closeHeadCounts(
  *
  * **Never seeded into the demo shop itself.** A demo permanently asking about
  * a size somebody swapped is a worse demo, the same reasoning
- * `src/db/seed-front-desk.ts` writes at the row it deliberately seeds
+ * `src/db/seed/front-desk.ts` writes at the row it deliberately seeds
  * `succeeded`.
  */
 async function returnOneUnitFitAdjusted(

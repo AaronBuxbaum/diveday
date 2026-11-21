@@ -476,7 +476,7 @@ for (const scheme of ["light", "dark"] as const) {
        * name assembled from the trip's own requirement row.
        *
        * Advanced Drift is the uncontaminated case from
-       * `src/db/seed-cert-gates.ts`: a level and nothing else, at a site with no
+       * `src/db/seed/cert-gates.ts`: a level and nothing else, at a site with no
        * gate of its own. Its day-31 departure is deliberately off the public
        * schedule's first page, so the id comes off the staff board on a
        * disposable context and `page` never holds a session.

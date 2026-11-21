@@ -8,10 +8,13 @@ import { isDemoShopWithDemoOwnerOrCaptainAccount } from "./demo-account-guard";
 import { DEMO_SHOP_SLUG } from "./demo-shop";
 import { nextOfflineGeneration } from "./offline-generation";
 import { shops, trips } from "./schema";
-import { bringDemoBoatsAtSeaHome } from "./seed-boat-at-sea";
-import { demoTodayDepartureStart } from "./seed-clock";
-import { seedRecentRecaps } from "./seed-recent-recaps";
-import { syncDemoShopBrand, syncDemoShopPackingCopy } from "./seed-shop-brand";
+import {
+  bringDemoBoatsAtSeaHome,
+  demoTodayDepartureStart,
+  seedRecentRecaps,
+  syncDemoShopBrand,
+  syncDemoShopPackingCopy,
+} from "./seed";
 import { syncDemoStripeAccount } from "./stripe-accounts";
 import { lockTripRevisionNotificationFence } from "./trip-revision-notification-fence";
 import { upcomingScheduleRange } from "./trips";
@@ -21,7 +24,7 @@ import { liveTrip } from "./trips-live";
  * The keeper of the canonical demo shop's schedule.
  *
  * Every date in the demo is anchored to the instant it was seeded
- * (`src/db/seed-clock.ts`): one boat sails "today", the rest of the board runs
+ * (`src/db/seed/clock.ts`): one boat sails "today", the rest of the board runs
  * about two months out, and the cards and history behind them are dated
  * relative to the same moment. That seed runs **once**, on the first cold start
  * against a fresh database — `isDemoShopSeeded` short-circuits every start after
@@ -48,7 +51,7 @@ import { liveTrip } from "./trips-live";
  *    satisfies a diver and still leaves the staff surfaces looking at an empty
  *    day, because "today" is what staff read. When nothing sails today, move the
  *    nearest upcoming departure onto today's slot — one row, no wipe.
- * 3. **The month's recaps** (`seedRecentRecaps`, `src/db/seed-recent-recaps.ts`).
+ * 3. **The month's recaps** (`seedRecentRecaps`, `src/db/seed/recent-recaps.ts`).
  *    An owner reads the month just gone, and every tip and review the demo owns
  *    is dated relative to the seed instant — so between restores the current
  *    month carries none of either and "How's your month" reads "Tips $0" beside
@@ -57,7 +60,7 @@ import { liveTrip } from "./trips-live";
  *
  * Before any of them, every demo shop's boat at sea that is past her return
  * gets the count and the log her crew would have written
- * (`bringDemoBoatsAtSeaHome`, `src/db/seed-boat-at-sea.ts`): the seed leaves
+ * (`bringDemoBoatsAtSeaHome`, `src/db/seed/boat-at-sea.ts`): the seed leaves
  * dive 2's count open as of the instant it ran, and a count left open past
  * `endsAt` reads as divers lost at sea. The hourly shop tick runs it
  * too (`/api/cron/shop-tick`, issue 2917), so she is home within an hour

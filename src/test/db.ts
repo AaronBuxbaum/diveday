@@ -46,7 +46,7 @@ function closeWhenTestFinishes(client: PGlite): void {
  * Hydrated from the `empty` snapshot for the same reason the seeded helpers
  * hydrate from theirs: replaying the migrations per test costs ~3.5s against a
  * hydration's fraction of a second. That was invisible while it looked like a
- * seeding cost — `src/db/seed.test.ts`'s atomic-rollback test measured 5.4s, of
+ * seeding cost — `src/db/seed/index.test.ts`'s atomic-rollback test measured 5.4s, of
  * which the migration replay was 3.5s and the two seeds the test is actually
  * about were 1.0s each (issue #1271).
  *
@@ -135,7 +135,7 @@ function warnAboutFullPrice(variant: TemplateVariant): void {
  * hydrates its own isolated database from the snapshot built by the Vitest
  * global setup (see db-template.ts) — do not cache or share a single instance
  * across tests. `{ history: true }` hydrates from the second snapshot, the one
- * carrying seed.ts's trailing-quarter back-fill. The instance is closed
+ * carrying seed/index.ts's trailing-quarter back-fill. The instance is closed
  * automatically when the owning test finishes.
  */
 export async function seededTestDb(options: { history?: boolean } = {}): Promise<AppDb> {

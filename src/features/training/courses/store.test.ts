@@ -17,7 +17,7 @@ import {
   tripAssignments,
   tripRequirements,
 } from "../../../db/schema/index";
-import { courseTemplateDisplayTitle } from "../../../db/seed-catalog";
+import { courseTemplateDisplayTitle } from "../../../db/seed/catalog";
 import { listShopsForSitemap } from "../../../db/shops";
 import {
   createTrip,

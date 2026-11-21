@@ -3,7 +3,7 @@ import { recordDiveNotMade, undoDiveNotMade } from "@/db/dive-not-made";
 import { upsertExecutedDive } from "@/db/executed-dives";
 import { crewSubject } from "@/db/roll-call-subject";
 import { tripAssignments } from "@/db/schema";
-import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
+import { seedRollCallEvidence } from "@/db/seed/roll-call-evidence";
 import { advanceClock } from "@/test/clock";
 import { nowDate, nowMs } from "../../lib/clock";
 import { fileScopedShopContext } from "../../test/db";

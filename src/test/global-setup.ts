@@ -8,7 +8,7 @@ import { TEST_FROZEN_CLOCK } from "./frozen-clock";
  *
  * This runs in Vitest's own process, which does not inherit vitest.config.ts's
  * `test.env` (that's injected into test workers only) — so the clock-anchored
- * demo seed (src/db/seed.ts) would otherwise build against the live wall
+ * demo seed (src/db/seed/index.ts) would otherwise build against the live wall
  * clock while every test queries against the frozen one, permanently
  * disagreeing on "today" outside the one real calendar day the frozen instant
  * falls on. Freeze it here too, to the same instant.

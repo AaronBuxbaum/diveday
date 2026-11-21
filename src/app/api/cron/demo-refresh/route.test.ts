@@ -219,7 +219,7 @@ describe("the deployed schedule", () => {
     // departure it pulled onto "today" sailed at 11:46 PM, then vanished from
     // the board at midnight.
     const { DEMO_SHOP_TIMEZONE, demoTodayDepartureStart, sailsAfterDayBoats } = await import(
-      "@/db/seed-clock"
+      "@/db/seed/clock"
     );
     const { utcToWallTime } = await import("@/lib/zoned");
     for (const day of ["2026-07-21", "2026-01-21"]) {

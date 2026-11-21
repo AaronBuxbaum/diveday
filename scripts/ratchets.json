@@ -943,9 +943,9 @@
         }
       },
       {
-        "why": "export.test.ts gains one FOLDED_TABLES entry for dive_not_made_events (#4681); the file is a table list, not a place to split",
+        "why": "export/index.test.ts gains one FOLDED_TABLES entry for dive_not_made_events (#4681); the file is a table list, not a place to split",
         "files": {
-          "src/db/export.test.ts": "939 -> 940"
+          "src/db/export/index.test.ts": "939 -> 940"
         }
       }
     ],
@@ -967,7 +967,7 @@
     "src/db/dive-sites.test.ts": 1156,
     "src/db/diver-merge.test.ts": 1158,
     "src/db/executed-dives.test.ts": 1085,
-    "src/db/export.test.ts": 940,
+    "src/db/export/index.test.ts": 940,
     "src/db/incident-reports.test.ts": 967,
     "src/db/manifests.test.ts": 3560,
     "src/db/notifications.test.ts": 1860,
@@ -1016,10 +1016,10 @@
   "function-length": {
     "//": "Code lines (blank and comment lines left out) of the top-level functions under src/app, src/components, src/features, src/db, src/lib still over 300, keyed <file>#<name>. Written by `node scripts/check-page-length.mjs --write`. Each number may only go down — see scripts/check-page-length.mjs.",
     "src/app/shop/[shopSlug]/orders/page.tsx#OrdersIndexPage": 316,
-    "src/db/seed-dive-sites.ts#seedDiveSites": 440,
-    "src/db/seed-history.ts#seedHistory": 632,
-    "src/db/seed-more-trips.ts#seedMoreTrips": 607,
-    "src/db/seed-trips.ts#seedTrips": 327,
+    "src/db/seed/dive-sites.ts#seedDiveSites": 440,
+    "src/db/seed/history.ts#seedHistory": 632,
+    "src/db/seed/more-trips.ts#seedMoreTrips": 607,
+    "src/db/seed/trips.ts#seedTrips": 327,
     "src/lib/import.ts#prepareContactImport": 429
   },
   "live-people": {

@@ -1,6 +1,6 @@
 import type { Locator } from "@playwright/test";
 import { AFTER_STATE_TEST_IDS } from "../src/app/(token)/ready/[token]/_components/after-state-test-ids";
-import { DEMO_RECAP_BOOKING_ID } from "../src/db/seed-identifiers";
+import { DEMO_RECAP_BOOKING_ID } from "../src/db/seed/identifiers";
 import { signRecapToken } from "../src/lib/recap-links";
 import { expect, makeActivitySafe, test } from "./fixtures";
 import { RECAP_PHOTO_PATH, stabilizeRecapPhoto } from "./recap-photo-fixture";

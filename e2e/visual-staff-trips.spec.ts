@@ -261,7 +261,7 @@ for (const scheme of ["light", "dark"] as const) {
        * band — and the band is the one surface in the feature a shop reads
        * every day, in the window where ringing round the regulars still saves
        * the departure. The fixture is seeded four days out with a 48-hour
-       * window (src/db/seed-minimum-seats.ts), so against the fleet's frozen
+       * window (src/db/seed/minimum-seats.ts), so against the fleet's frozen
        * clock it photographs the *short* state, not the red about-to-cancel
        * one — deliberately, since short is the state staff can act on.
        */
@@ -427,7 +427,7 @@ for (const scheme of ["light", "dark"] as const) {
        * mark and no tone — and a shop clicking through the demo saw a clean list
        * where a real one has two rows worth pausing over.
        *
-       * `src/db/seed-self-declared.ts` puts them there, and this is the baseline
+       * `src/db/seed/self-declared.ts` puts them there, and this is the baseline
        * that proves the eligible declaration arrives: Rowan Feld's level and
        * enriched-air claims each carry their own unconfirmed mark. Selah Mbeki,
        * who has no certification declaration, is correctly absent from the
@@ -752,7 +752,7 @@ for (const scheme of ["light", "dark"] as const) {
         const tripId = await seededTripId(page, "blue-mantis", title);
 
         // Odile Marchand and Hana Kobayashi are both seeded booked on nothing
-        // (`src/db/seed-cert-gates.ts`, `src/db/seed-cast.ts`), so seating
+        // (`src/db/seed/cert-gates.ts`, `src/db/seed/cast.ts`), so seating
         // them here flips no other departure's manifest, readiness or queue.
         const seat = async (name: string) => {
           await seatFromRoster(page, tripId, name);
@@ -970,7 +970,7 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       // The prep page's rental-assignments panel in its lived-in state: the
-      // wreck trip ships with seeded units already assigned (seed-gear.ts),
+      // wreck trip ships with seeded units already assigned (seed/gear.ts),
       // so the frame holds assigned chips with their Release taps beside
       // open pickers — the grammar the reef trip's all-unassigned capture
       // above can't show (ADR 20260815-minimal-gear-register).

@@ -403,7 +403,7 @@ The anchor is matched per line, so a `.update(\n  trips,\n)` split across three 
 
 The time-id-order one (`scripts/check-time-id-order.mjs`) fails any `.orderBy(…)` whose last two keys are a column ending in `At` and then an `id`. Every `id` in this schema is a `defaultRandom()` uuid. In production the timestamp decides and the id never runs, because `created_at` comes from the clock and two rows are microseconds apart; under test the clock is frozen at the harness boundary, every row a run writes shares one instant, and the whole order is a uuid that differs in every seeded database. Three visual baselines re-ordered themselves that way on commits that touched neither the surface nor its query, each found by eye in a diff image (issue #1762, ruled H-20260916-tiebreaker-user-visible-list). The fix is a key a person could predict between the two, such as a name, a title or a code, with the id kept last for a total order.
 
-`src/db/export.ts` is exempt whole: its docblock writes down which files a person reads or diffs (`bookings.csv`, `buddy_teams.csv`, ordered by name; H-20260916-tiebreaker-user-visible-list, issue #1795), every other file exists to be re-imported, so stability within one database is all it needs, and it holds most of the matches in the tree. Tests are skipped. An order nobody is shown (a revocation sweep, a nightly queue, a seed whose timestamps are unique by construction) says `diveday:allow-time-id-order: <why>` in a comment directly above the `.orderBy(` or inside its arguments, and the reason is required.
+`src/db/export/index.ts` is exempt whole: its docblock writes down which files a person reads or diffs (`bookings.csv`, `buddy_teams.csv`, ordered by name; H-20260916-tiebreaker-user-visible-list, issue #1795), every other file exists to be re-imported, so stability within one database is all it needs, and it holds most of the matches in the tree. Tests are skipped. An order nobody is shown (a revocation sweep, a nightly queue, a seed whose timestamps are unique by construction) says `diveday:allow-time-id-order: <why>` in a comment directly above the `.orderBy(` or inside its arguments, and the reason is required.
 
 A JavaScript comparator that ties on a timestamp has the same failure and no signature this rule can read, so it is left to review.
 
@@ -855,13 +855,13 @@ For `src/db/` and `drizzle/`; the rules themselves are in `.claude/rules/db.md`.
 - **Client / test db factory**: `src/db/client.ts` (`getDb()`, `createTestDb()`).
 - **Queries and seed data**: `src/db/shops.ts`, plus two barrels over sibling modules —
   `src/db/trips.ts` re-exports `trips-create/-series/-record/-schedule/-crew/-roster.ts`, and
-  `src/db/seed.ts` orchestrates the `seed-*.ts` scenarios. Import from the barrel; edit the
-  sibling.
-- **Demo/seed data**: a new `src/db/seed-<scenario>.ts` plus one line in `src/db/seed.ts`'s
+  the `src/db/seed/` folder's `index.ts` orchestrates the scenarios beside it. Import `@/db/trips`
+  or `@/db/seed`; edit the sibling.
+- **Demo/seed data**: a new `src/db/seed/<scenario>.ts` plus one line in `src/db/seed/index.ts`'s
   orchestrator — never wedge rows into an existing scenario, which is how that file became the
   repo's top conflict magnet (ADR 20260803-seed-scenario-modules). Do **not** seed a failure state
   into blue-mantis (see the e2e rules: trouble states are seeded through
-  a fact on `/api/test/shop`); `src/db/seed-front-desk.ts` says so at the row it deliberately
+  a fact on `/api/test/shop`); `src/db/seed/front-desk.ts` says so at the row it deliberately
   seeds `succeeded`.
 - **The booking transaction** (capacity enforcement): `src/db/bookings.ts` — read its tests first.
 - **Staff seating a diver**: one consequence path, `src/features/bookings/seat-diver.ts` (booking + waiver-on-join
@@ -1359,7 +1359,7 @@ For `infra/`, `config/`, `.env.example` and the deploy scripts; the rules themse
 
 ### coverage-floors
 
-`scripts/coverage-floors.mjs` holds branch coverage to `scripts/coverage-floors.json`, outside `check:repo` (it needs a coverage run; CI's `coverage-floors` job). Which files need a floor is no longer a hand-kept list: `scripts/coverage-safety-files.mjs` takes every non-test `.ts` or `.tsx` under `src/lib` and `src/db` that the `dive-domain-expert` patterns in `scripts/check-pr-body.mjs` (`REVIEWS`) match, drops `seed-*`, `*-copy`, test-support and `.d.ts` files, and adds six hand-kept money and authorization files (`trips`, `authz`, `checkouts`, `refunds`, `promo-caps`, `account-security`). A file that needs the reviewer needs a floor, so a new readiness, manifest, nitrox, erasure or waiver module fails the job with "no floor yet" until `--write` seeds it from the measured value, rounded down. Until 2026-11-01 eleven files had floors while `src/db/readiness.ts`, `manifests.ts`, `nitrox.ts`, `seat-diver.ts`, `medical-alerts.ts`, `roll-call-alerts.ts`, the erasure modules and `waiver-signing.ts` had none. Floors only rise. The matching is tested against a fixture list in `scripts/coverage-floors.test.mjs`.
+`scripts/coverage-floors.mjs` holds branch coverage to `scripts/coverage-floors.json`, outside `check:repo` (it needs a coverage run; CI's `coverage-floors` job). Which files need a floor is no longer a hand-kept list: `scripts/coverage-safety-files.mjs` takes every non-test `.ts` or `.tsx` under `src/lib` and `src/db` that the `dive-domain-expert` patterns in `scripts/check-pr-body.mjs` (`REVIEWS`) match, drops `src/db/seed/`, `*-copy`, test-support and `.d.ts` files, and adds six hand-kept money and authorization files (`trips`, `authz`, `checkouts`, `refunds`, `promo-caps`, `account-security`). A file that needs the reviewer needs a floor, so a new readiness, manifest, nitrox, erasure or waiver module fails the job with "no floor yet" until `--write` seeds it from the measured value, rounded down. Until 2026-11-01 eleven files had floors while `src/db/readiness.ts`, `manifests.ts`, `nitrox.ts`, `seat-diver.ts`, `medical-alerts.ts`, `roll-call-alerts.ts`, the erasure modules and `waiver-signing.ts` had none. Floors only rise. The matching is tested against a fixture list in `scripts/coverage-floors.test.mjs`.
 
 ### untested-logic
 

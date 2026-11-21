@@ -9,7 +9,7 @@
 
 Every Playwright worker owns a private `next start` server and a private in-memory PGlite database,
 and `e2e/fixtures.ts` calls `POST /api/test/reset` before every test. That reset is
-`resetDemoSchedule` (`src/db/seed.ts`): a hand-maintained topological delete of the shared
+`resetDemoSchedule` (`src/db/seed/index.ts`): a hand-maintained topological delete of the shared
 `blue-mantis` fixture's **schedule**, followed by a re-seed. Trips, bookings, waivers, roll call,
 the roster, the catalog, the dive sites, the promo codes, the waiver template — all restored, so a
 spec that cancels a departure or fills a boat leaves nothing behind.

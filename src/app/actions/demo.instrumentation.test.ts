@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { demoEntries } from "@/db/schema";
 import { resetDemoSchedule } from "@/db/seed";
-import { DEMO_SHOP_BRAND } from "@/db/seed-shop-brand";
+import { DEMO_SHOP_BRAND } from "@/db/seed/shop-brand";
 import { getShopBySlug } from "@/db/shops";
 import { ALERT_EMAIL } from "@/lib/platform-mail";
 import { fileScopedShopContext } from "@/test/db";

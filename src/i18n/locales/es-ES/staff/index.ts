@@ -3,7 +3,7 @@ import computerDives from "./computerDives.json";
 //
 // Split from a single staff.json because that file was the repo's top merge
 // conflict magnet: every parallel branch adds staff copy, and one 3,500-line
-// file put every addition in one another's way — the same reason seed.ts
+// file put every addition in one another's way — the same reason seed/index.ts
 // became per-scenario modules (ADR 20260807-per-area-staff-bundles). A new
 // namespace is a new <namespace>.json here plus one import line; new keys in
 // an existing area touch only that area's file.

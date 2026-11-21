@@ -160,7 +160,7 @@ describe("the seams", () => {
     ]);
   });
 
-  it("sends everything outside src/db through the trips and seed barrels", async () => {
+  it("sends everything outside src/db through the trips barrel", async () => {
     const root = await fixture({
       "src/app/trip/page.tsx": 'import { getTripRecord } from "@/db/trips-record";\n',
       "src/components/Roster.tsx": 'import type { TripRoster } from "@/db/trips-manifest";\n',
@@ -168,15 +168,10 @@ describe("the seams", () => {
       "src/app/trip/reader.tsx": 'import { getTripOverview } from "@/db/trip-overview";\n',
       "src/db/today.ts": 'import { listStaff } from "./trips-crew";\n',
       "src/app/trip/other.tsx": 'import { x } from "@/db/trip-promos";\n',
-      "src/features/day/README.md": "# day\n",
-      "src/features/day/tick.ts": 'import { bringHome } from "@/db/seed-boat-at-sea";\n',
-      "src/features/day/tick-ok.ts": 'import { bringHome } from "@/db/seed";\n',
-      "src/db/seed.ts": 'export { bringHome } from "./seed-boat-at-sea";\n',
     });
     expect(flat(await collectViolations(root)).sort()).toEqual([
       expect.stringContaining("src/app/trip/page.tsx: imports @/db/trips-record"),
       expect.stringContaining("src/components/Roster.tsx: imports @/db/trips-manifest"),
-      expect.stringContaining("src/features/day/tick.ts: imports @/db/seed-boat-at-sea"),
     ]);
   });
 });
@@ -193,10 +188,17 @@ describe("an index is a door", () => {
       "src/db/schema/index.ts": "export {};\n",
       "src/db/schema/people.ts": "export {};\n",
       "src/lib/other.ts": 'import type { P } from "@/db/schema/people";\n',
+      "src/db/seed/index.ts": 'export { bringHome } from "./boat-at-sea";\n',
+      "src/db/seed/boat-at-sea.ts": "export const bringHome = 1;\n",
+      "src/db/demo-refresh.ts": 'import { bringHome } from "./seed/boat-at-sea";\n',
+      "src/features/tick.ts": 'import { bringHome } from "@/db/seed";\n',
     });
     expect(flat(await collectViolations(root)).sort()).toEqual([
       expect.stringContaining(
         'src/app/page.tsx: imports @/lib/storage/limits \u2014 src/lib/storage is a module, reach it through "@/lib/storage"',
+      ),
+      expect.stringContaining(
+        'src/db/demo-refresh.ts: imports ./seed/boat-at-sea \u2014 src/db/seed is a module, reach it through "@/db/seed"',
       ),
       expect.stringContaining("src/lib/other.ts: imports @/db/schema/people"),
     ]);

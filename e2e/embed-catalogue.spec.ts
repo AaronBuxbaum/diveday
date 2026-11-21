@@ -1,4 +1,4 @@
-import { DEMO_SHOP_BRAND_COLOR } from "@/db/seed-identifiers";
+import { DEMO_SHOP_BRAND_COLOR } from "@/db/seed/identifiers";
 import { deriveBrandTheme } from "@/lib/brand";
 import { cancelEmbeddedDeparture } from "./embed-departure-helpers";
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
@@ -179,7 +179,7 @@ test.describe("the loader on a host page", () => {
 
   /**
    * **A widget with nothing to show folds away** (#2317). Reef Line Divers is
-   * a listed shop with no reviews (`seed-listed-shops.ts`); its reviews widget
+   * a listed shop with no reviews (`seed/listed-shops.ts`); its reviews widget
    * reports a height of 0, and the loader takes the frame and the credit off
    * the host page instead of leaving a blank 120px box under "Bookings by DiveDay".
    */

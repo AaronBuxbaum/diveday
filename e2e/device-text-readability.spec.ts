@@ -1,5 +1,5 @@
 /** ADR 20260907-in-your-hands 19d: simulated capability, real text geometry. */
-import { DEMO_TODAY_TRIP_TITLE } from "../src/db/seed-trips";
+import { DEMO_TODAY_TRIP_TITLE } from "../src/db/seed/trips";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { exposeDeviceBody, fragmentedWords } from "./device-text-size-fixture";
 import { expect, signedInAsOwner, test } from "./fixtures";

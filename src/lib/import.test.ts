@@ -712,7 +712,7 @@ describe("prepareContactImport — safety rules", () => {
   });
 
   it("round-trips a cell the export guarded against spreadsheet-formula injection", () => {
-    // export.ts prefixes a leading '=' with an apostrophe; the importer strips it.
+    // export/index.ts prefixes a leading '=' with an apostrophe; the importer strips it.
     const [row] = prepareContactImport("full_name\n'=cmd").rows;
     expect(row.fullName).toBe("=cmd");
 

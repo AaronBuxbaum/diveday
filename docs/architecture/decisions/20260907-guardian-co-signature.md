@@ -5,7 +5,7 @@
 - **Scope:** `src/lib/guardian.ts`, `waiver_records`' six guardian columns and its
   `draft_guardian` draft, `/waivers/[token]`, `src/lib/readiness.ts`'s
   `guardian_signature_missing`, `src/lib/waiver-integrity.ts` (both versions), the paper-release
-  form on the three staff surfaces that carry it, `src/db/export.ts` and `src/features/records/anonymize.ts`
+  form on the three staff surfaces that carry it, `src/db/export/index.ts` and `src/features/records/anonymize.ts`
 
 ## Context
 

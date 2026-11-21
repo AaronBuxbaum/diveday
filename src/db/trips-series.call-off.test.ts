@@ -1,6 +1,6 @@
 import { and, eq, isNull } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
+import { seedRollCallEvidence } from "@/db/seed/roll-call-evidence";
 import { calendarDateWeekday } from "@/lib/calendar-date";
 import { weekdaySetFrom } from "@/lib/recurrence";
 import { fileScopedShopContext, type seededShopContext } from "@/test/db";

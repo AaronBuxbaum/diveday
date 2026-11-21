@@ -7,7 +7,7 @@ import {
   personRoles as personRolesTable,
   trips as tripsTable,
 } from "@/db/schema";
-import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
+import { seedRollCallEvidence } from "@/db/seed/roll-call-evidence";
 import { createTrip, listStaff, moveTrip, setTripCrew, setTripStatus } from "@/db/trips";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";

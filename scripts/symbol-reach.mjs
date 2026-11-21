@@ -2,8 +2,8 @@
 // rather than file by file.
 //
 // A file-level import graph says a change to `src/db/incident-reports.ts` reaches 179 of 190
-// routes, because `seed.ts` imports one function from it and every public page imports the
-// demo action that imports the seed. The edit touched none of the functions `seed.ts` reads.
+// routes, because `seed/index.ts` imports one function from it and every public page imports the
+// demo action that imports the seed. The edit touched none of the functions `seed/index.ts` reads.
 // Followed by name, the edit reaches the incident pages only.
 //
 // Each module is read as a list of top-level items (an import, a declaration, an export list,

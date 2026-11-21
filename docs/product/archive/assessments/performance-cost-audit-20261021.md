@@ -247,7 +247,7 @@ Existing safeguards worth preserving:
 - `src/db/people-fk-indexes.test.ts:14-69` deliberately indexes high-volume person FKs and
   ratchets others. Its 113 ceiling is a documented write-cost tradeoff, not 113 proven missing
   indexes to add blindly.
-- Export reads use a read-only repeatable-read transaction (`src/db/export.ts:114-144`), while
+- Export reads use a read-only repeatable-read transaction (`src/db/export/index.ts:114-144`), while
   import fetches remote evidence before its transaction and bounds fetch concurrency
   (`src/features/records/import/store.ts:117-151`). Keep both properties.
 - Backups have deterministic object keys, outcome reporting, a census, and an independent
@@ -277,7 +277,7 @@ Compare last successful backup age per shop, not just latest bucket write. Effor
 ### DB-02 — Export/backup memory and photo fan-out are unbounded (P1)
 
 **Confirmed code; resource failure threshold needs measurement.**
-`src/db/export.ts:273` and its table readers materialize the whole shop.
+`src/db/export/index.ts:273` and its table readers materialize the whole shop.
 `src/features/records/backup-export/bundle.ts:53-79` retains bundle input, all photo bytes, generated
 files, and the zip result. `src/lib/export.ts:430-435` synchronously compresses everything
 with `zipSync`. `src/lib/export.ts:467-485` launches a fetch for every unique managed photo
@@ -296,12 +296,12 @@ concurrent exports. Effort S for fetch limits, L for streaming snapshot job.
 
 ### DB-03 — Settings counts sometimes build the entire export (P2)
 
-**Confirmed code.** `src/db/export.ts:1165-1187` promises counts without data materialization,
+**Confirmed code.** `src/db/export/index.ts:1165-1187` promises counts without data materialization,
 but any shop with a rehearsal trip takes `loadShopExportBundleInput` and counts the resulting
 tables' rows. A shop that used rehearsal functionality makes a metadata/settings request
 scale with all retained customer, transaction, and operational data. No photo fetch occurs in
 this path, but the DB reads and in-memory CSV input assembly still occur. The ordinary branch
-also awaits numerous counts one by one (`src/db/export.ts:1190` onward).
+also awaits numerous counts one by one (`src/db/export/index.ts:1190` onward).
 
 **Change:** reuse the export scope/exclusion predicates in count-only SQL so rehearsals are
 excluded identically without loading full rows. Batch or use limited concurrent independent

@@ -102,7 +102,7 @@ optional picker.
 **Slice 2 — the board sees boats (roadmap §4's ask).** Boat chip on schedule-board cards
 (`ScheduleBuilder.tsx`), Today's by-departure headers (`BlockerGroups.tsx`), calendar-feed event
 titles (`src/features/crew-and-boats/calendar-sync`), offline-manifest header (`src/lib/offline-manifests.ts`),
-trips CSV export column (`src/db/export.ts` — added here, *before* the read-API ADR freezes the
+trips CSV export column (`src/db/export/index.ts` — added here, *before* the read-API ADR freezes the
 export schema). Soft same-boat overlap warning on add/move/copy (`src/db/trips-schedule.ts`
 returns a warning code; the board renders it) — warning, never refusal, because deliberate
 double-scheduling is real practice. Seeded demo boats land as a new `seed-boats.ts` scenario

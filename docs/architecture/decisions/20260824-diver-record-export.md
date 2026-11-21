@@ -23,7 +23,7 @@ so satisfying one person's rights manufactures a breach risk for everyone else o
 
 ## Decision
 
-**A second loader, `loadDiverExportBundleInput` (`src/db/export.ts`), scoped to one `person_id` —
+**A second loader, `loadDiverExportBundleInput` (`src/db/export/index.ts`), scoped to one `person_id` —
 a where-clause and a smaller bundle over the same tables, not a second exporter.** Every query in
 it is scoped to `shopId` *and* to this `personId` (or to a booking/order/review id already proven
 to belong to them); there is no query that reads a table by `shopId` alone. Same gate as the shop

@@ -8,7 +8,7 @@ import {
   startMissingDiverReport,
 } from "@/db/incident-reports";
 import { bookings, incidentReports, tripAssignments, trips } from "@/db/schema";
-import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
+import { seedRollCallEvidence } from "@/db/seed/roll-call-evidence";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import {

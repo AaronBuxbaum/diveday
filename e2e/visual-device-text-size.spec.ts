@@ -1,7 +1,7 @@
 /** ADR 20260907-in-your-hands 19d: captures use simulated device-body readings. */
 
-import { DEMO_SHOP_BRAND } from "../src/db/seed-shop-brand";
-import { DEMO_TODAY_TRIP_TITLE } from "../src/db/seed-trips";
+import { DEMO_SHOP_BRAND } from "../src/db/seed/shop-brand";
+import { DEMO_TODAY_TRIP_TITLE } from "../src/db/seed/trips";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { exposeDeviceBody, fragmentedWords } from "./device-text-size-fixture";
 import { expect, signedInAsOwner, test } from "./fixtures";

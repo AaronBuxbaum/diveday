@@ -12,7 +12,7 @@ import { REEF_TRIP_TITLE } from "./reef-trip-title";
  * type.
  *
  * The same boat, people and prices as the demo seed's mixed boat
- * (`seed-mixed-boat.ts`, which arrives with the UX stack above this layer), so
+ * (`seed/mixed-boat.ts`, which arrives with the UX stack above this layer), so
  * a capture reads the same on every layer. **Idempotent**: when the boat
  * already carries a snorkeler and a rider, whoever seeded them, nobody new is
  * seated, so a layer with the demo seed never shows a second Owen Quint.

@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 import { readManifestHistoryCookie } from "../src/app/shop/[shopSlug]/trips/[id]/manifest/_components/manifest-history-cookie";
-import { DEMO_TODAY_TRIP_ID } from "../src/db/seed-identifiers";
+import { DEMO_TODAY_TRIP_ID } from "../src/db/seed/identifiers";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import { manifestRow, openDeckDetails } from "./helpers";

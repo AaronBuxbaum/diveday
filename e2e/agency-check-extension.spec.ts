@@ -47,7 +47,7 @@ async function showAllGuests(page: Page) {
 }
 
 const SHOP = "blue-mantis";
-/** A seeded diver on this departure whose SSI card is still pending (`seed-divers.ts`). */
+/** A seeded diver on this departure whose SSI card is still pending (`seed/divers.ts`). */
 const SEEDED_DIVER = "Tyler Brooks";
 const DEPARTURE = /Two-Tank Reef — French Reef/;
 const PADI_CERTIFIED = "PADI shows this certification. Marked certified.";

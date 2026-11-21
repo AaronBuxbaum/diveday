@@ -1,7 +1,7 @@
 import { and, eq, notExists } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { describe, expect, it } from "vitest";
-import { type SeedRollCallEvidenceInput, seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
+import { type SeedRollCallEvidenceInput, seedRollCallEvidence } from "@/db/seed/roll-call-evidence";
 import { nowDate, nowMs } from "@/lib/clock";
 import { compareMarkOrder } from "@/lib/roll-call";
 import { fileScopedShopContext } from "@/test/db";

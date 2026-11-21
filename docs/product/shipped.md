@@ -2702,7 +2702,7 @@ own carded regulars to hold a line it could not hold was the worse trade. The we
 invariant above still holds and its property test now covers declarations too. See
 [20260820-attested-at-booking-verified-at-boarding](../architecture/decisions/20260820-attested-at-booking-verified-at-boarding.md).
 
-**Architecture.** The four files every feature touched are split (ARCH-3): `src/db/seed.ts`
+**Architecture.** The four files every feature touched are split (ARCH-3): `src/db/seed/index.ts`
 4,650 → a 740-line orchestrator over 14 scenario modules, `src/db/trips.ts` 2,003 → a 94-line barrel
 over six, `notifications/index.ts` 731 → a 77-line surface over five, and `SettingsPage.tsx`'s
 inline `"use server"` closures extracted to a sibling `actions.ts`. Every public export is

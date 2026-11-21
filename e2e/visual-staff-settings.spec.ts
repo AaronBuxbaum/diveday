@@ -425,7 +425,7 @@ for (const scheme of ["light", "dark"] as const) {
        * inline links. a fact on /api/test/shop puts the demo shop into
        * that state; it is a test-only route rather than seed data because a
        * demo permanently shouting that payments are broken is a worse demo
-       * (src/db/seed-front-desk.ts says so at the row it seeds `succeeded`).
+       * (src/db/seed/front-desk.ts says so at the row it seeds `succeeded`).
        * Safe to mutate: each worker owns its own database and resets it before
        * every test (e2e/servers.ts).
        */
@@ -771,7 +771,7 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       // The shop's own pre-departure checklist: seeded lines
-      // (src/db/seed-pre-departure-checklist.ts), the reorder/delete controls
+      // (src/db/seed/pre-departure-checklist.ts), the reorder/delete controls
       // beside each, and the add form (ADR 20260824-pre-departure-safety-check).
       test(`the pre-departure checklist settings render true to the design (${scheme})`, async ({
         page,

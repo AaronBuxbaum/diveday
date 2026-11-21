@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
-import { bringDemoBoatsAtSeaHome } from "@/db/seed-boat-at-sea";
+import { bringDemoBoatsAtSeaHome } from "@/db/seed/boat-at-sea";
 import { e2eTestRouteAuthorized, testRouteRefused } from "@/features/platform/e2e-test-routes";
 import { nowDate } from "@/lib/clock";
 import { moveServerClock } from "../../../../features/platform/test-clock";

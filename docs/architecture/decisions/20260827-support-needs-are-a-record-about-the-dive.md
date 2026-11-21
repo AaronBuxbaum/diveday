@@ -95,7 +95,7 @@ accessible is a claim about shops, not software.
 
 ### What it owes
 
-Health-adjacent personal data, so the build owes rows in `src/db/export.ts`, `src/features/records/anonymize.ts`,
+Health-adjacent personal data, so the build owes rows in `src/db/export/index.ts`, `src/features/records/anonymize.ts`,
 `src/features/records/retention/rules.ts` and `src/db/delete-path-coverage.test.ts`, and a `security-reviewer` review.
 Copy in both locale bundles.
 

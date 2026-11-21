@@ -35,7 +35,7 @@ function face(src: string) {
 
 /**
  * The demo shop's crew in a group chat the night before the 7:30 boat, beside
- * the homepage headline. The cast is the sample shop's own (`src/db/seed-cast.ts`),
+ * the homepage headline. The cast is the sample shop's own (`src/db/seed/cast.ts`),
  * so the faces here are the ones a visitor meets in the demo.
  */
 export function HomeHeroChat({ locale }: { locale: DiverLocale }) {

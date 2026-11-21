@@ -1,6 +1,6 @@
 import { and, eq, inArray } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
+import { seedRollCallEvidence } from "@/db/seed/roll-call-evidence";
 import { crewSubject } from "../../../db/roll-call-subject";
 import type { Notification, NotificationProvider } from "../../../lib/notifications/index";
 import { fileScopedShopContext } from "../../../test/db";

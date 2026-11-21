@@ -12,8 +12,8 @@ import {
   tripAssignments,
   trips as tripsTable,
 } from "@/db/schema";
-import { DEMO_COMPLETED_TRIP_TITLE } from "@/db/seed-more-trips";
-import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
+import { DEMO_COMPLETED_TRIP_TITLE } from "@/db/seed/more-trips";
+import { seedRollCallEvidence } from "@/db/seed/roll-call-evidence";
 import { listStaff } from "@/db/trips";
 import { nowMs } from "@/lib/clock";
 import { rollCallCheckpoints } from "@/lib/roll-call";

@@ -6,7 +6,7 @@
  */
 import type { Page } from "@playwright/test";
 import { AFTER_STATE_TEST_IDS } from "../src/app/(token)/ready/[token]/_components/after-state-test-ids";
-import { DEMO_RECAP_BOOKING_ID } from "../src/db/seed-identifiers";
+import { DEMO_RECAP_BOOKING_ID } from "../src/db/seed/identifiers";
 import { diverTranslator } from "../src/i18n/messages";
 import { signRecapToken } from "../src/lib/recap-links";
 import { expect, makeActivitySafe, test } from "./fixtures";
@@ -90,7 +90,7 @@ for (const scheme of ["light", "dark"] as const) {
        * **The thread's after-state**, reached through the recap token: the same
        * surface `/ready` renders once the boat is home (ADR
        * 20260827-the-divers-thread, decision 4 — slice 7d folded `/recap` into
-       * it), minted for the pinned demo booking (src/db/seed.ts) so the marquee
+       * it), minted for the pinned demo booking (src/db/seed/index.ts) so the marquee
        * word-of-mouth surface has a stable baseline with no in-app link to
        * reach it.
        *
@@ -355,7 +355,7 @@ for (const scheme of ["light", "dark"] as const) {
        * that site's own name, which is what keeps the guide a statement about a
        * *place* rather than a report of what this dive saw.
        *
-       * Molasses and French both carry a seeded guide (`seed-dive-sites.ts`),
+       * Molasses and French both carry a seeded guide (`seed/dive-sites.ts`),
        * so no test route is needed — this is the demo shop's ordinary state.
        */
       test(`the recap's field guide renders true to the design (${scheme})`, async ({ page }) => {

@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { expect, it } from "vitest";
 import { shops } from "@/db/schema";
-import { DEMO_TODAY_TRIP_TITLE } from "@/db/seed-trips";
+import { DEMO_TODAY_TRIP_TITLE } from "@/db/seed/trips";
 import { getTripRoster } from "@/db/trips";
 import { upcomingTripsWithCounts } from "@/db/trips-queries.test-support";
 import { staffTranslator } from "@/i18n/staff-messages";

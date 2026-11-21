@@ -2,7 +2,7 @@ import { eq, sql } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
 import { bookings, shops, trips } from "@/db/schema";
-import { DEMO_RECAP_BOOKING_ID } from "@/db/seed-identifiers";
+import { DEMO_RECAP_BOOKING_ID } from "@/db/seed/identifiers";
 import { fileScopedShopContext } from "@/test/db";
 
 vi.mock("@/db/client", async (importOriginal) => {

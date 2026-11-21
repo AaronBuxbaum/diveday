@@ -62,7 +62,7 @@ export async function getShopTaxEnabled(db: DbExecutor, shopId: string): Promise
  *
  * The canonical demo is the one shop where there is nobody to ask. It has tax
  * on so its report has something to report and its settings row shows the
- * feature at all (src/db/seed.ts), and the invoices it raises are counter sales
+ * feature at all (src/db/seed/index.ts), and the invoices it raises are counter sales
  * whose location genuinely *is* the shop. So it falls back to its own address
  * rather than refusing, and `orders?add=1` prefills the same fields for the same
  * reason.

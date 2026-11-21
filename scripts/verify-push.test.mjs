@@ -119,7 +119,7 @@ describe("the pre-push plan", () => {
   });
 
   it("regenerates the export snapshot only when seed, schema or export changed", () => {
-    expect(plan({ ...base, changed: ["src/db/seed-trips.ts"] })[0].args).toEqual(["regen"]);
+    expect(plan({ ...base, changed: ["src/db/seed/trips.ts"] })[0].args).toEqual(["regen"]);
     expect(plan({ ...base, changed: ["src/lib/x.ts"] })[0].args).toEqual([
       "regen",
       "--no-snapshot",

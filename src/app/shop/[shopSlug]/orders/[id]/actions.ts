@@ -19,7 +19,7 @@ import { afterOrderRefunded } from "./refund-activity";
  * demo never connects a real Stripe account). Refresh / void / refund all reach
  * out to Stripe with those ids and would error against live platform
  * credentials, so on a demo shop these actions are refused before any Stripe
- * call — and the buttons are rendered disabled to match (src/db/seed.ts).
+ * call — and the buttons are rendered disabled to match (src/db/seed/index.ts).
  */
 // i18n-exempt: scanner false positive — the copy scanner reads the `>` closing this generic as JSX and treats the rest of the signature as a text node; it is code, not copy.
 async function isDemoShop(db: Awaited<ReturnType<typeof getDb>>, shopId: string): Promise<boolean> {

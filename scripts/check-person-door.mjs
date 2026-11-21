@@ -44,10 +44,9 @@ export function findPersonInserts(source) {
 
 /** A fixture has no door: seeds, test-support files and the `/api/test` routes. */
 function isFixture(normalized) {
-  const base = path.basename(normalized);
   return (
-    base.startsWith("seed") ||
-    base.includes("fixtures") ||
+    normalized.startsWith(path.normalize("src/db/seed/")) ||
+    path.basename(normalized).includes("fixtures") ||
     normalized.startsWith(path.normalize("src/test/")) ||
     normalized.startsWith(path.normalize("src/app/api/test/"))
   );

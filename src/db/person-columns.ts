@@ -83,14 +83,14 @@
  *
  * `diverOwnRows` (`./export-tables`), the one way the diver's bundle reads by
  * their person id (under `readScoped` and in the loader alike), refuses a
- * column this registry does not call `own`, and `export-registry.test.ts`
+ * column this registry does not call `own`, and `export/registry.test.ts`
  * holds both directions to the loader: every `own` column is read, and nothing
  * is read by the diver's id that is not `own`. **This governs reads by person
  * id.** A read-list entry the diver's bundle takes by the diver's own booking
  * ids (roll call, deliveries, payments, recap photos) states its fate in
  * {@link BOOKING_EXPORT_READS} instead, and `readScoped` refuses one that does
  * not (#3880). The shop's whole bundle is a per-table decision
- * (`export.test.ts`), not a per-person one, and stays there.
+ * (`export/index.test.ts`), not a per-person one, and stays there.
  *
  * **`own` is row-level.** It says the rows are the diver's, not that every
  * column on them is theirs to read: a staff-typed free-text column on an own
@@ -1828,7 +1828,7 @@ export function assertDiverExportColumn(table: string, column: string): void {
 /**
  * **The read-list entries a diver's own bundle takes by their bookings** (#3880),
  * table by table, each with why its rows are the diver's: a row keyed by a seat
- * the diver holds is about that seat. `export-registry.test.ts` fails until a
+ * the diver holds is about that seat. `export/registry.test.ts` fails until a
  * new booking-scoped entry in `EXPORT_TABLES` states one here, and
  * `readScoped` refuses one that has not.
  */

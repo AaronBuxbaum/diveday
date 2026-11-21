@@ -451,7 +451,7 @@ describe("staff-only operational context", () => {
  * erasure destroys are the same set by construction.
  */
 describe("a diver's own activity trail", () => {
-  /** The seeded cast's headline diver — `seed-diver-trail.ts` gives her the long one. */
+  /** The seeded cast's headline diver — `seed/diver-trail.ts` gives her the long one. */
   async function seededDiver(db: AppDb, shopId: string, fullName: string) {
     const [row] = await db
       .select({ id: people.id })

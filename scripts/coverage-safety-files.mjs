@@ -52,7 +52,7 @@ const NOT_LOGIC = [
   /\.d\.ts$/,
   /test-fixtures/,
   /-fixtures\.tsx?$/,
-  /(^|\/)seed-[^/]*$/,
+  /^src\/db\/seed\//,
   // A copy resolver; a one-file feature concept named "…-copy" (waiver-guardian-copy) is logic.
   /^(?!src\/features\/).*-copy\.tsx?$/,
   /\.test-support\.tsx?$/,

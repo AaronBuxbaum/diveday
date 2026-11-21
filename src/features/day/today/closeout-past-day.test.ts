@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { AppDb } from "@/db/client";
 import { bookings, people, shops, trips } from "@/db/schema";
-import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
+import { seedRollCallEvidence } from "@/db/seed/roll-call-evidence";
 import { listStaff } from "@/db/trips";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowMs } from "@/lib/clock";

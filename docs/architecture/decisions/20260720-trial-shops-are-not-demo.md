@@ -21,7 +21,7 @@ resolved instructor/divemaster/captain by hardcoded Blue Mantis seed emails, so 
 
 - Onboarding a shop always sets `isDemo: false`. The "Seed with demo data" checkbox controls
   seeding only. `isDemo: true` is reserved for the canonical seeded demo tenant created by
-  `seedIfEmpty` (`src/db/seed.ts`) and entered via `enterDemoAction` — today, Blue Mantis.
+  `seedIfEmpty` (`src/db/seed/index.ts`) and entered via `enterDemoAction` — today, Blue Mantis.
 - The demo role-switcher (`src/app/actions/demo.ts`) resolves each target person by their role
   **within the current shop**, not by hardcoded email, and no-ops back to the shop if no seeded
   person holds that role. The Demo Playground banner hides role cards whose role has no seeded

@@ -665,7 +665,7 @@ describe("listCatchUpSince, against the roster it sits above", () => {
 
 /**
  * The demo shop actually opens on a strip with something to say
- * (`src/db/seed-desk-handoff.ts`). Pinned because the whole seed is annotation
+ * (`src/db/seed/desk-handoff.ts`). Pinned because the whole seed is annotation
  * a reader only notices when it is missing — and because it is what the
  * `manifest` visual baseline photographs.
  */

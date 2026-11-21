@@ -18,7 +18,7 @@ import {
   stripCommentsAndStrings,
 } from "../test/substrate-fixtures/db/erasure-source.test-support";
 import type { AppDb } from "./client";
-import { EXPORT_TABLES, type ExportTableRead } from "./export-tables";
+import { EXPORT_TABLES, type ExportTableRead } from "./export/tables";
 import { erasedPersonRowDeletes } from "./person-columns";
 import * as schema from "./schema";
 import {

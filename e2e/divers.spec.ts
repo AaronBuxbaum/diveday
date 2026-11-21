@@ -313,7 +313,7 @@ test("a Guests card shows an emergency contact only when it is missing", async (
   await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
   await openTripTab(page, "Trip");
 
-  // Nadia Petrov is seeded with no contact (src/db/seed.ts `customerDefs`), so
+  // Nadia Petrov is seeded with no contact (src/db/seed/index.ts `customerDefs`), so
   // her card states it where a staffer will act on it.
   const missing = await rosterRow(page, "Nadia Petrov");
   // One warning line under her name, and the form behind her row.
@@ -588,7 +588,7 @@ test("erase is absent on a live diver's record and appears once they are deleted
  * The activity trail always existed, and its only door was a departure — the
  * Guests tab's collapsed log, one boat at a time. So "what happened with this
  * diver?" could only be answered by remembering which trips they were on. Priya
- * is the seeded diver whose trail runs past one page (`seed-diver-trail.ts`),
+ * is the seeded diver whose trail runs past one page (`seed/diver-trail.ts`),
  * which is what makes the section's pager a rendered thing here.
  */
 test("a diver's record carries the shop's activity about them, paged", async ({ page }) => {

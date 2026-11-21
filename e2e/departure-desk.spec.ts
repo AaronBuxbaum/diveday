@@ -1,4 +1,4 @@
-import { LOST_MASK } from "../src/db/seed-booth";
+import { LOST_MASK } from "../src/db/seed/booth";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import {

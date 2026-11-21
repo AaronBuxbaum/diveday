@@ -72,7 +72,7 @@ export async function storedReservation(db: AppDb, reservationId: string) {
 
 /**
  * A shop of this suite's own. The seeded blue-mantis demo now ships with a
- * whole fleet (src/db/seed-gear.ts), so asserting counts and list contents
+ * whole fleet (src/db/seed/gear.ts), so asserting counts and list contents
  * against it would pin the demo's inventory; a fresh shop keeps every
  * assertion about exactly the rows each test wrote — and doubles as proof
  * the readers are shop-scoped.

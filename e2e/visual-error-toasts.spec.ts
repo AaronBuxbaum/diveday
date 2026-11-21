@@ -2,7 +2,7 @@ import {
   DEMO_MEDICAL_ALERT,
   DEMO_MEDICAL_ALERT_DIVER,
   DEMO_MEDICAL_ALERT_TRIP,
-} from "../src/db/seed-medical-alert";
+} from "../src/db/seed/medical-alert";
 import { expect, signedInAs, test } from "./fixtures";
 import { manifestRow, openManifestPerson, openTripFromBoard, openTripTab } from "./helpers";
 import {

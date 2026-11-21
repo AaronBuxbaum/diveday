@@ -1,5 +1,5 @@
-import { DEMO_COMPLETED_TRIP_TITLE } from "../src/db/seed-more-trips";
-import { DEMO_TODAY_TRIP_TITLE } from "../src/db/seed-trips";
+import { DEMO_COMPLETED_TRIP_TITLE } from "../src/db/seed/more-trips";
+import { DEMO_TODAY_TRIP_TITLE } from "../src/db/seed/trips";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import {
   counterPath,

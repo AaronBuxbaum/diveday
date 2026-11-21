@@ -28,7 +28,7 @@ Every call `runAssist` (`src/features/ai/assists/store.ts`) sends writes two row
 
 ## Who can read it
 
-DiveDay only: no staff screen, no shop export (`src/db/export-shop-files.ts`) and no per-shop
+DiveDay only: no staff screen, no shop export (`src/db/export/shop-files.ts`) and no per-shop
 backup bundle reads it. In practice that is whoever holds production database access, today the
 founder, by SQL in the Neon console. Backups hold a copy until they expire: the weekly full-cluster
 dump after 35 days, Neon's point-in-time recovery after its own window, which the
