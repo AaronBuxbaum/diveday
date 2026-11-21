@@ -42,7 +42,7 @@ export const DEFAULT_LEAD_MS = 700;
 const TAP_MS = 1800;
 
 /** Card 1 holds its first frame this long before its beat starts, so a reader lands on it before it moves (ms; Aaron, 2026-11-20). */
-export const FIRST_CARD_HOLD_MS = 2000;
+export const FIRST_CARD_HOLD_MS = 3000;
 
 /** How long the finished screen stays for reading (ms), about a hundred seconds a walk (Aaron, 2026-11-18). */
 const HOLD_AFTER_MS = 4200;
@@ -143,18 +143,21 @@ export function HomeWalkthrough({
     }
   }, [beat]);
 
+  // It plays only while the current slide's own screen is mostly in view, not the whole tall list:
+  // a reader who has scrolled to the controls has not yet reached the screen, and the first card's
+  // hold runs only from the moment they do (Aaron, 2026-11-21).
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the beat is the trigger; the frame is found in the list
   useEffect(() => {
-    const root = rootRef.current;
-    if (!root) return;
+    const target =
+      rootRef.current?.querySelector<HTMLElement>("[data-walk-frame-current]") ?? rootRef.current;
+    if (!target) return;
     const watcher = new IntersectionObserver(
       ([entry]) => setOnScreen(entry?.isIntersecting ?? false),
-      {
-        threshold: 0.25,
-      },
+      { threshold: 0.6 },
     );
-    watcher.observe(root);
+    watcher.observe(target);
     return () => watcher.disconnect();
-  }, []);
+  }, [beat]);
 
   useEffect(() => {
     const sync = () => setTabVisible(!document.hidden);

@@ -80,7 +80,7 @@ export const STEPS: readonly {
     // the next slide fills in (Aaron, 2026-11-17 and 2026-11-18).
     id: "browse",
     lead: 4400,
-    hold: 1600,
+    hold: 3000,
     feature: "online-booking",
     note: "marketing.home.steps.browse.note",
     label: "marketing.home.steps.browse.mockupLabel",
