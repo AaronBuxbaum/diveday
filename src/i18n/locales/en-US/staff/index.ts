@@ -67,6 +67,7 @@ import settings from "./settings.json";
 import shared from "./shared.json";
 import shopHome from "./shopHome.json";
 import staffing from "./staffing.json";
+import stats from "./stats.json";
 import today from "./today.json";
 import tripPrep from "./tripPrep.json";
 import tripSeries from "./tripSeries.json";
@@ -83,6 +84,7 @@ const staff = {
   emailSettings,
   calls,
   staffing,
+  stats,
   feed,
   gear,
   gearRentals,

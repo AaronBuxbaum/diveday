@@ -180,6 +180,7 @@ describe("permission gating", () => {
       "signedWaivers",
       "reports",
       "promoCodes",
+      "ownerStats",
       "safety",
       "drills",
       "boats",
@@ -292,7 +293,7 @@ describe("what each consumer derives", () => {
     expect(bySection("schedule")).toEqual(["board", "addBooking", "staffing", "lostFound"]);
     expect(bySection("divers")).toEqual(["divers", "signedWaivers"]);
     expect(bySection("inbox")).toEqual(["inbox", "requests", "reviews"]);
-    expect(bySection("money")).toEqual(["orders", "reports", "promoCodes"]);
+    expect(bySection("money")).toEqual(["orders", "reports", "promoCodes", "ownerStats"]);
     expect(bySection("safety")).toEqual(["safety", "drills"]);
     expect(bySection("courses")).toEqual(["courses", "certifications"]);
     expect(bySection("diveSites")).toEqual(["diveSites"]);
@@ -494,7 +495,7 @@ describe("currentStaffDestination and the section it lights", () => {
     }
     expect(section(`${root}/divers/waivers`)).toBe("divers");
     expect(section(`${root}/safety/drills`)).toBe("safety");
-    for (const suffix of ["/orders", "/reports", "/promos"]) {
+    for (const suffix of ["/orders", "/reports", "/promos", "/stats"]) {
       expect(section(`${root}${suffix}`), suffix).toBe("money");
     }
   });
@@ -626,11 +627,17 @@ describe("a switched-off feature leaves every list", () => {
   it("drops Discounts from the Money tabs only when codes, deals and packages are all off, and Work orders from the Gear tabs", () => {
     const money = (switches: ShopSwitchesOn) =>
       staffSectionTabs("money", owner, switches).map((d) => d.id);
-    expect(money(switchedOff("promoCodes"))).toEqual(["orders", "promoCodes", "reports"]);
+    expect(money(switchedOff("promoCodes"))).toEqual([
+      "orders",
+      "promoCodes",
+      "reports",
+      "ownerStats",
+    ]);
     expect(money(switchedOff("promoCodes", "lastMinuteList"))).toContain("promoCodes");
     expect(money(switchedOff("promoCodes", "lastMinuteList", "divePackages"))).toEqual([
       "orders",
       "reports",
+      "ownerStats",
     ]);
     expect(
       staffPaletteDestinations(

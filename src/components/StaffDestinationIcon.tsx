@@ -247,6 +247,15 @@ const ICON_PATHS: Record<StaffDestinationId, ReactNode> = {
       <path d="M7.5 7.5h.01" />
     </>
   ),
+  // Stats: three rising bars on a baseline.
+  ownerStats: (
+    <>
+      <path d="M4 20h16" />
+      <path d="M7 20v-6" />
+      <path d="M12 20V9" />
+      <path d="M17 20V4" />
+    </>
+  ),
   // Calendar feed: a subscription — the broadcast arcs on a calendar.
   calendarFeed: (
     <>

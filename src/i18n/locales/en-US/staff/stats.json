@@ -1,0 +1,34 @@
+{
+  "figuresLabel": "The last 12 months",
+  "basis": "Departures that have left in the last 12 months.",
+  "none": "—",
+  "repeat": {
+    "label": "Repeat divers",
+    "detail": "{repeat} of {divers, plural, one {# diver} other {# divers}} dived more than once"
+  },
+  "waivers": {
+    "label": "Waivers in by departure",
+    "detail": "{signed} of {seats, plural, one {# seat} other {# seats}}"
+  },
+  "ready": {
+    "label": "Waivers in the day before",
+    "detail": "{ready} of {counted, plural, one {# departure} other {# departures}} with every waiver in"
+  },
+  "medical": {
+    "label": "Medical review time",
+    "hours": "{hours, plural, one {# hour} other {# hours}}",
+    "days": "{days, plural, one {# day} other {# days}}",
+    "detail": "{cleared, plural, one {# review cleared} other {# reviews cleared}}, {waiting} still open"
+  },
+  "courses": {
+    "title": "Courses",
+    "asked": "{count, plural, one {# asked} other {# asked}}",
+    "booked": "{count, plural, one {# seated} other {# seated}}",
+    "certified": "{count, plural, one {# certified} other {# certified}}",
+    "empty": "No course activity in the last 12 months."
+  },
+  "empty": {
+    "title": "Nothing to count yet",
+    "body": "These fill in as departures leave."
+  }
+}
