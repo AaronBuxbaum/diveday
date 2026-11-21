@@ -12,10 +12,15 @@ import { rollCallEvents, trips } from "../schema";
 import { liveTrip } from "../trips-live";
 import { seedRollCallEvidenceBatch } from "./roll-call-evidence-batch";
 
+/** A fixture names its subject kind or means a diver's seat; the row always stores it. */
 export type SeedRollCallEvidenceInput = Omit<
   typeof rollCallEvents.$inferInsert,
-  "statementStatus" | "causalFrontier" | "evidenceConflict" | "evidenceOrderingUnknown"
->;
+  | "statementStatus"
+  | "causalFrontier"
+  | "evidenceConflict"
+  | "evidenceOrderingUnknown"
+  | "subjectKind"
+> & { subjectKind?: (typeof rollCallEvents.$inferInsert)["subjectKind"] };
 
 /**
  * Author seeded/fixture evidence through the real causal projector. This is
@@ -61,6 +66,7 @@ export async function seedRollCallEvidence(
             .insert(rollCallEvents)
             .values({
               ...value,
+              subjectKind: kind,
               id: eventId,
               statementStatus: value.status,
               causalFrontier: [
@@ -125,6 +131,7 @@ export async function seedRollCallEvidence(
         .insert(rollCallEvents)
         .values({
           ...value,
+          subjectKind: kind,
           ...projection,
           statementStatus: value.status,
           captureContext: {

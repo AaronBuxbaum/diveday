@@ -201,10 +201,7 @@ async function moneyOut(
   const [checkoutMoney] = await db
     .select({
       refunded: sql<string>`coalesce(sum(${bookingCheckouts.refundedCents}), 0)`,
-      discounted: sql<string>`coalesce(sum(coalesce(
-        ${bookingCheckouts.appliedDiscountCents},
-        round(${bookingCheckouts.totalCents} * ${bookingCheckouts.appliedDiscountPercent} / 100.0)
-      )), 0)`,
+      discounted: sql<string>`coalesce(sum(${bookingCheckouts.discountOffCents}), 0)`,
     })
     .from(bookingCheckouts)
     .where(

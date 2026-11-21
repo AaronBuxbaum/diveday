@@ -232,7 +232,7 @@ export async function seedWaiverEvidence(db: DbExecutor, shopId: string): Promis
       // The older, unsealed half came from the shop's paper archive. It must
       // be an import: a recent signature taken by DiveDay always has a seal,
       // so the nightly check rightly treats an unsealed native signature as
-      // a removed seal once this shop has existed for more than a day.
+      // a removed seal.
       signatureMethod: sealed ? record.signatureMethod : "imported",
       importedFromLabel: sealed ? record.importedFromLabel : "Paper archive",
       medicalAnswers: sealed ? record.medicalAnswers : null,

@@ -77,12 +77,10 @@ export const rollCallEvents = pgTable(
       .notNull()
       .references(() => trips.id),
     /**
-     * Seat or crew. The database default is `seat` only so a release still
-     * serving while this migration runs keeps writing diver rows; every crew
-     * writer names `crew`, and a crew row left at the default fails
-     * `roll_call_events_subject` for want of a booking.
+     * Seat or crew, always named by the writer: there is no default, so a
+     * writer that forgets fails at the database instead of writing a diver row.
      */
-    subjectKind: rollCallSubjectKind("subject_kind").notNull().default("seat"),
+    subjectKind: rollCallSubjectKind("subject_kind").notNull(),
     /** The seat this is about. Set exactly when `subject_kind = 'seat'`. */
     bookingId: uuid("booking_id").references(() => bookings.id),
     /**

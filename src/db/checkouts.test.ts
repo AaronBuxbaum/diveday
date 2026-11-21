@@ -1531,48 +1531,6 @@ describe("checkout completion", () => {
     expect(start.checkout.appliedDiscountPercent).toBe(25);
   });
 
-  // Rows written before `applied_discount_percent` existed carry no snapshot,
-  // and one of them can still be completed today by a late webhook. There is
-  // nothing local left to reconstruct a trip deal's discount from, and the trip
-  // itself must never be consulted — a live deal on the trip says nothing about
-  // what *this* session applied, and reading it would discount full-price
-  // divers. So the row keeps the conservative pre-column answer: the asked
-  // amounts. Never a refusal, never zero.
-  it("still completes a row predating the discount snapshot, at the asked amounts", async () => {
-    const { db, shop, reef, bookingIds } = await checkoutContext();
-    const tripPromo = await sentTripDeal(db, shop.id, reef.id, 25);
-    const start = await startBookingCheckout(
-      db,
-      {
-        ...startInput(shop.id, reef.id, bookingIds),
-        promotionCode: tripPromo.stripePromotionCodeId ?? undefined,
-        tripPromo: {
-          id: tripPromo.id,
-          code: tripPromo.code,
-          discountPercent: tripPromo.discountPercent,
-        },
-      },
-      fakeCheckout(),
-    );
-    if (!start.ok) throw new Error("checkout start failed");
-
-    // Rewind the row to what the migration left behind: the discount columns
-    // empty, everything else exactly as it was.
-    await db
-      .update(bookingCheckouts)
-      .set({ appliedDiscountPercent: null, dealId: null, promoCode: null })
-      .where(eq(bookingCheckouts.id, start.checkout.id));
-
-    const completed = await markCheckoutPaidBySessionId(db, start.checkout.stripeSessionId);
-    expect(completed?.status).toBe("completed");
-    expect(completed?.settledTotalCents).toBeNull();
-    for (const bookingId of bookingIds) {
-      const payment = await getBookingPayment(db, shop.id, bookingId);
-      expect(payment?.status).toBe("paid");
-      expect(payment?.amountCents).toBe(REEF_PRICE_CENTS);
-    }
-  });
-
   it("prefers Stripe's own settled total over the reconstruction whenever there is one", async () => {
     // The reconstruction is a fallback, never a second opinion: a real
     // `amount_total` (a promo that only partly applied, a code Stripe refused)

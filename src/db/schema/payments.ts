@@ -1031,6 +1031,15 @@ export const bookingCheckouts = pgTable(
      * session could lose. At most one of the two is set.
      */
     appliedDiscountCents: integer("applied_discount_cents"),
+    /**
+     * What this session's promotion actually took off the asked total, in
+     * minor units, whichever way Stripe was told. With a pass-through fee the
+     * discount is worked out on the discountable lines only and handed over as
+     * a fixed coupon; if that coupon cannot be made, the percent code goes out
+     * and discounts the gross, fee included. The reports read this one figure
+     * rather than re-deriving it from the percent. Null: no promotion.
+     */
+    discountOffCents: integer("discount_off_cents"),
     currency: text("currency").notNull(),
     /** Price snapshot at checkout time, so a later trip re-price never rewrites what was asked. */
     amountPerDiverCents: integer("amount_per_diver_cents").notNull(),
@@ -1150,6 +1159,10 @@ export const bookingCheckouts = pgTable(
       sql`${table.appliedDiscountCents} is null or ${table.appliedDiscountCents} > 0`,
     ),
     check(
+      "booking_checkouts_discount_off_positive",
+      sql`${table.discountOffCents} is null or ${table.discountOffCents} > 0`,
+    ),
+    check(
       "booking_checkouts_single_discount_snapshot",
       sql`${table.appliedDiscountPercent} is null or ${table.appliedDiscountCents} is null`,
     ),
@@ -1159,7 +1172,7 @@ export const bookingCheckouts = pgTable(
     // or deposit seat.
     check(
       "booking_checkouts_tip_shape",
-      sql`${table.purpose} <> 'tip' or (not ${table.isDeposit} and ${table.dealId} is null and ${table.appliedDiscountPercent} is null and ${table.appliedDiscountCents} is null and not ${table.taxEnabled} and ${table.passThroughCents} = 0)`,
+      sql`${table.purpose} <> 'tip' or (not ${table.isDeposit} and ${table.dealId} is null and ${table.appliedDiscountPercent} is null and ${table.appliedDiscountCents} is null and ${table.discountOffCents} is null and not ${table.taxEnabled} and ${table.passThroughCents} = 0)`,
     ),
     // The abandoned-checkout-recovery scan's exact predicate (pending, not yet
     // recovered), so the daily cron doesn't force a sequential scan of the

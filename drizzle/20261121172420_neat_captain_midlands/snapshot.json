@@ -1,0 +1,114 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "3dc5c5c1-2a66-4d9d-b61b-a9308e1ca6ec",
+  "prevIds": [
+    "d00570e3-aa8c-49e9-bff1-3d8588382dd2"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "booking_checkouts",
+        "discount_off_cents"
+      ],
+      "writes": [
+        "s|col|public.booking_checkouts.discount_off_cents",
+        "n|col|public.booking_checkouts.discount_off_cents",
+        "e|col|public.booking_checkouts.discount_off_cents"
+      ],
+      "reads": [
+        "n|tbl|public.booking_checkouts",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_check",
+      "statementTarget": [
+        "table",
+        "public",
+        "booking_checkouts"
+      ],
+      "writes": [
+        "s|ck|public.booking_checkouts.booking_checkouts_discount_off_positive",
+        "n|ck|public.booking_checkouts.booking_checkouts_discount_off_positive",
+        "e|ck|public.booking_checkouts.booking_checkouts_discount_off_positive",
+        "n|con|public.booking_checkouts.booking_checkouts_discount_off_positive"
+      ],
+      "reads": [
+        "n|tbl|public.booking_checkouts",
+        "n|sch|public",
+        "n|col|public.booking_checkouts.discount_off_cents"
+      ]
+    },
+    {
+      "statementType": "alter_check",
+      "statementTarget": [
+        "table",
+        "public",
+        "booking_checkouts"
+      ],
+      "writes": [
+        "s|ck|public.booking_checkouts.booking_checkouts_tip_shape"
+      ],
+      "reads": [
+        "n|tbl|public.booking_checkouts",
+        "n|sch|public",
+        "n|col|public.booking_checkouts.purpose",
+        "n|col|public.booking_checkouts.is_deposit",
+        "n|col|public.booking_checkouts.deal_id",
+        "n|col|public.booking_checkouts.applied_discount_percent",
+        "n|col|public.booking_checkouts.applied_discount_cents",
+        "n|col|public.booking_checkouts.discount_off_cents",
+        "n|col|public.booking_checkouts.tax_enabled",
+        "n|col|public.booking_checkouts.pass_through_cents",
+        "e|col|public.booking_checkouts.purpose",
+        "e|col|public.booking_checkouts.is_deposit",
+        "e|col|public.booking_checkouts.deal_id",
+        "e|col|public.booking_checkouts.applied_discount_percent",
+        "e|col|public.booking_checkouts.applied_discount_cents",
+        "e|col|public.booking_checkouts.tax_enabled",
+        "e|col|public.booking_checkouts.pass_through_cents"
+      ],
+      "sqlHash": "f47315c7e32e2482"
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "booking_checkouts",
+        "name": "discount_off_cents",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "booking_checkouts",
+        "name": "booking_checkouts_discount_off_positive",
+        "value": "\"discount_off_cents\" is null or \"discount_off_cents\" > 0",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "alter",
+      "key": "checks\u0000[\"public\",\"booking_checkouts\",\"booking_checkouts_tip_shape\"]",
+      "set": {
+        "value": "\"purpose\" <> 'tip' or (not \"is_deposit\" and \"deal_id\" is null and \"applied_discount_percent\" is null and \"applied_discount_cents\" is null and \"discount_off_cents\" is null and not \"tax_enabled\" and \"pass_through_cents\" = 0)"
+      }
+    }
+  ]
+}

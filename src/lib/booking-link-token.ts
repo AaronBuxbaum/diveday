@@ -27,7 +27,8 @@ import { isUuid } from "./uuid";
  *   v1 holds the "previous" slot until the first real rotation fills it, so
  *   v1 links can be retired without rotating `AUTH_SECRET` (which also signs
  *   every staffer out). Issuing never re-sends a row signed under anything but
- *   the signing version, so old rows drain as their bookings are mailed.
+ *   the signing version, so rows signed under an older key drain as their
+ *   bookings are mailed.
  * - **v2 and later** come from `BOOKING_LINK_SECRET`, whose value carries its
  *   own version: `v<n>:<secret>`, n from 2 to 9, the secret at least 32 bytes.
  *   The key is HKDF-SHA256 of the secret under `diveday-booking-capability-v<n>`.

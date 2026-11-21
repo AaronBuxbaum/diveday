@@ -8,11 +8,7 @@ import {
   waiverContextFor,
 } from "../test/substrate-fixtures/db/waivers-test-fixtures";
 import { people, shops, waiverRecords, waiverTemplates } from "./schema";
-import {
-  recheckWaiverSeals,
-  WAIVER_SEALING_SHIPPED_AT,
-  waiverSealPassHealthy,
-} from "./waiver-seal-checks";
+import { recheckWaiverSeals, waiverSealPassHealthy } from "./waiver-seal-checks";
 import { listWaiverIntegrityAudit } from "./waivers-audit";
 import { completeWaiver } from "./waivers-completion";
 import { issueWaiverRequest } from "./waivers-requests";
@@ -85,10 +81,15 @@ describe("the seal's verdict, written when the release is sealed", () => {
     const { db, shop, booking } = await waiverContext();
     const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
     if (!issued.ok) throw new Error(`issue failed: ${issued.reason}`);
-    // Signed by a path that seals nothing: an import, or a row from before sealing.
+    // Signed by a path that seals nothing by design: an import.
     await db
       .update(waiverRecords)
-      .set({ status: "completed", signedAt: now, completedAt: now })
+      .set({
+        status: "completed",
+        signatureMethod: "imported",
+        signedAt: now,
+        completedAt: now,
+      })
       .where(eq(waiverRecords.id, issued.recordId));
     await recheckWaiverSeals(db, { now: later });
     expect(await verdictOf(db, issued.recordId)).toMatchObject({ valid: null, checkedAt: null });
@@ -101,7 +102,7 @@ describe("recheckWaiverSeals", () => {
     const { db, shop, recordId } = await signedRelease();
     await tamper(db, recordId);
     await recheckWaiverSeals(db, { now: later });
-    // Another signed release, newer and with no seal: a legacy import.
+    // Another signed release, newer and with no seal: an import.
     const [legacy] = await db
       .select({ id: waiverRecords.id })
       .from(waiverRecords)
@@ -123,6 +124,7 @@ describe("recheckWaiverSeals", () => {
         integrityVersion: null,
         integrityValid: null,
         integrityCheckedAt: null,
+        signatureMethod: "imported",
         signedAt: newer,
       })
       .where(eq(waiverRecords.id, legacyId));
@@ -245,13 +247,9 @@ describe("recheckWaiverSeals", () => {
     expect(await inUncheckedView(db, shop.id, recordId)).toBe(true);
   });
 
-  it("finds a release signed since sealing shipped with no seal and no verdict, but not an import", async () => {
-    const { db, shop, recordId } = await signedRelease();
-    const signedAt = new Date(WAIVER_SEALING_SHIPPED_AT.getTime() + 24 * 60 * 60 * 1000);
-    await db
-      .update(shops)
-      .set({ createdAt: new Date("2026-01-01T00:00:00.000Z") })
-      .where(eq(shops.id, shop.id));
+  it("finds a signed native release with no seal and no verdict, but not an import", async () => {
+    const { db, recordId } = await signedRelease();
+    const signedAt = new Date("2026-01-01T00:00:00.000Z");
     const stripped = {
       integrityHash: null,
       integrityVersion: null,

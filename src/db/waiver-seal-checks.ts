@@ -14,7 +14,7 @@ import {
 import { log } from "@/lib/log";
 import { waiverIntegrityVerdict } from "@/lib/waiver-integrity";
 import type { DbExecutor } from "./client";
-import { shops, waiverRecords } from "./schema";
+import { waiverRecords } from "./schema";
 import { WAIVER_SEALED_COLUMNS } from "./waiver-record-columns";
 import { acknowledgedWaiverSeals } from "./waiver-seal-acknowledgements";
 
@@ -22,18 +22,6 @@ import { acknowledgedWaiverSeals } from "./waiver-seal-acknowledgements";
 const WAIVER_SEAL_CHECK_BATCH = 200;
 /** Rows one nightly pass re-checks at most; the rest wait for the next night, oldest first. */
 const WAIVER_SEAL_CHECK_LIMIT = 4_000;
-
-/**
- * From when DiveDay sealed every release it took a signature for: the
- * first migration whose schema had `integrity_hash`, dated by its folder
- * (`20260721131359`).
- * Every signing path seals as it writes (`completeWaiver`,
- * `recordInPersonWaiver`), so a signed, non-imported release signed after both
- * this and its shop's own start that carries no seal has had it removed. The
- * baseline is the latest the column could have arrived, so it errs towards
- * calling an old row legacy rather than broken.
- */
-export const WAIVER_SEALING_SHIPPED_AT = new Date("2026-07-21T13:13:59.000Z");
 
 export type WaiverSealCheckSummary = {
   /** Sealed releases whose verdict this pass re-wrote. */
@@ -78,10 +66,10 @@ export function waiverSealPassHealthy(summary: WaiverSealCheckSummary): boolean 
  * A sealed row (a hash and a seal version) is verified. A row missing either
  * is checked too when its seal has been **removed** rather than broken: it
  * carries a verdict, which only a seal is written with, or it is a signed,
- * non-imported release signed after DiveDay sealed every signature
- * ({@link WAIVER_SEALING_SHIPPED_AT}) and after its shop began. Such a row is
- * written `invalid`. Any other unsealed row is legacy, which the view finds
- * by its nulls. Oldest verdict first (never-checked before all; one dated
+ * non-imported release: every signing path seals as it writes
+ * (`completeWaiver`, `recordInPersonWaiver`), so one without a seal has had it
+ * removed. Such a row is written `invalid`. An imported record is unsealed by
+ * design, never alarmed, and the view finds it by its nulls. Oldest verdict first (never-checked before all; one dated
  * after now ahead of those, since a forged future time would otherwise never
  * come due), and only rows checked at a time other than `now`, so a row is
  * read once per pass and a large log is covered over several nights rather
@@ -107,10 +95,6 @@ export async function recheckWaiverSeals(
     capped: false,
   };
   const unsealed = or(isNull(waiverRecords.integrityHash), isNull(waiverRecords.integrityVersion));
-  const shopStartedAt = db
-    .select({ at: shops.createdAt })
-    .from(shops)
-    .where(eq(shops.id, waiverRecords.shopId));
   const sealRemoved = and(
     unsealed,
     or(
@@ -118,7 +102,7 @@ export async function recheckWaiverSeals(
       and(
         inArray(waiverRecords.status, ["completed", "medical_review"]),
         or(isNull(waiverRecords.signatureMethod), ne(waiverRecords.signatureMethod, "imported")),
-        sql`${waiverRecords.signedAt} >= greatest(${WAIVER_SEALING_SHIPPED_AT}::timestamptz, (${shopStartedAt}))`,
+        isNotNull(waiverRecords.signedAt),
       ),
     ),
   );

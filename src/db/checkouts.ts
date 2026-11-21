@@ -43,7 +43,6 @@ import {
   courses,
   trips,
 } from "./schema";
-import { getShopPromoCodeById } from "./shop-promos";
 import { getShopById } from "./shops";
 import {
   canAcceptPayments,
@@ -339,12 +338,10 @@ export async function startBookingCheckout(
   // What this attempt's discount is worth, as the two snapshot columns hold
   // it: a percent as itself, a fixed amount as the minor units it actually
   // takes off — capped at the discountable lines, so it never exceeds them.
-  const appliedDiscountPercent =
-    appliedPromo?.promoDiscount.kind === "percent" ? appliedPromo.promoDiscount.percent : null;
-  const appliedDiscountCents =
-    appliedPromo?.promoDiscount.kind === "amount"
-      ? discountOffCents(discountableCents, appliedPromo.promoDiscount) || null
-      : null;
+  const { appliedDiscountPercent, appliedDiscountCents } = discountSnapshot(
+    appliedPromo?.promoDiscount ?? null,
+    discountableCents,
+  );
   // One Stripe line per (amount, kind of seat, deposit-or-fare): two divers at
   // the same figure share a line, a snorkeler at the same figure does not.
   const tripLines = new Map<
@@ -433,12 +430,9 @@ export async function startBookingCheckout(
   }
 
   // A promotion must never discount the pass-through fee: that money is
-  // collected for a third party and remitted in full, so a shop-wide 20% code
-  // would make the shop pay a fifth of every diver's park levy out of its own
-  // margin (issue #1019). Stripe cannot express "this line is not
-  // discountable" — a coupon's `applies_to` names *Product* ids and these lines
-  // are inline `price_data` — so the percent is worked out here against the
-  // discountable lines only and handed over as a fixed amount.
+  // remitted to a third party in full (issue #1019). Stripe cannot exempt an
+  // inline `price_data` line, so the percent is worked out here against the
+  // discountable lines and handed over as a fixed amount.
   //
   // Only in this combination. With no fee, or no promotion, the shop's own
   // percent promotion code goes to Stripe exactly as before.
@@ -497,11 +491,8 @@ export async function startBookingCheckout(
         })
       : null;
   if (passThroughDiscountGuard && passThroughDiscountGuard.status !== "created") {
-    // Falling back to the percent code is strictly no worse than the behaviour
-    // this replaces, and refusing the booking outright would be worse than
-    // either — so the session still goes out, and the shop absorbs the fee's
-    // share of the discount that one time. Logged, so a provider that starts
-    // failing is visible rather than silent.
+    // Falling back to the percent code is no worse than refusing the booking:
+    // the shop absorbs the fee's share of the discount that once. Logged.
     log("checkout.pass_through_discount_unavailable", "warn", {
       shopId: input.shopId,
       tripId: input.tripId,
@@ -512,6 +503,9 @@ export async function startBookingCheckout(
     passThroughDiscountGuard?.status === "created"
       ? passThroughDiscountGuard.stripeCouponId
       : undefined;
+
+  const offBase = promotionCouponId ? discountableCents : totalCents;
+  const discountOff = takenOff(appliedPromo?.promoDiscount ?? null, offBase);
 
   try {
     const session = await checkout.createCheckoutSession({
@@ -609,6 +603,7 @@ export async function startBookingCheckout(
           promoCode: appliedPromo?.code ?? input.shopPromo?.code ?? null,
           appliedDiscountPercent,
           appliedDiscountCents,
+          discountOffCents: discountOff,
         })
         .returning();
       if (!row) throw new Error("startBookingCheckout: insert returned no row");
@@ -634,6 +629,24 @@ export async function startBookingCheckout(
     // future callers check.
     await releaseBookingCheckoutClaim(db, input.bookingIds, intent.id);
   }
+}
+
+/** The two snapshot columns: a percent as itself, a fixed amount as what it takes off, capped at the discountable lines. */
+function discountSnapshot(discount: PromoDiscount | null, discountableCents: number) {
+  return {
+    appliedDiscountPercent: discount?.kind === "percent" ? discount.percent : null,
+    appliedDiscountCents:
+      discount?.kind === "amount" ? discountOffCents(discountableCents, discount) || null : null,
+  };
+}
+
+/**
+ * What the promotion really takes off, or null for none, out of `base`: the
+ * discountable lines when the fixed coupon guards the park fee, the gross when
+ * Stripe gets the percent code itself.
+ */
+function takenOff(discount: PromoDiscount | null, base: number): number | null {
+  return discount ? discountOffCents(base, discount) || null : null;
 }
 
 /** What a fresh attempt right now would charge, for comparison against a stored session. */
@@ -1015,50 +1028,17 @@ export async function getLatestCheckoutForBooking(
  * shares sum above what the single shared payment intent actually captured and
  * the first party member to cancel can drain more than their share of it.
  *
- * `applied_discount_percent` is the whole answer whenever it is set: the
- * percent Stripe was actually told to take off *this* session, snapshotted at
- * session-creation time from whichever promotion the caller applied. Both
- * flavors are percent-only and neither restricts the coupon to particular line
- * items, so one percent describes the whole discount, gear included.
- *
- * Rows written before that column existed have no snapshot. They keep the
- * conservative behaviour they were completed under: a shop-wide code is still
- * reconstructible from its own deal row (one of `discount_percent` and
- * `discount_amount_cents` is always set, `deals_one_discount`), and anything else — an undiscounted session,
- * or an old trip-scoped last-minute deal, which left no local trace at all —
- * falls back to the asked total. Both answers are a figure, never a refusal and
- * never zero.
- *
- * Deliberately never re-derived from whatever deal happens to be live on the
- * trip: that would discount full-price divers on a promoted trip and
- * under-refund people who owe nothing. This checkout's own snapshot, or nothing.
+ * `discount_off_cents` is the whole answer: what the promotion took off *this*
+ * session, recorded when the session was created from whichever promotion the
+ * caller applied and however Stripe was told (a fixed coupon sparing the
+ * pass-through fee, or the percent code over the gross). Never re-derived from
+ * whatever deal happens to be live on the trip: that would discount full-price
+ * divers on a promoted trip and under-refund people who owe nothing.
  *
  * Reads only rows, never Stripe: this runs inside the completion transaction.
  */
-async function attributableTotalCents(db: DbExecutor, checkout: BookingCheckout): Promise<number> {
-  // The pass-through fee is outside the discount, here as at session creation:
-  // it is remitted in full whatever code the diver typed (issue #1019). Adding
-  // it back after discounting the rest is the same arithmetic the fixed-amount
-  // coupon performs at Stripe, so the fallback and the real settlement agree.
-  const discountable = checkout.totalCents - checkout.passThroughCents;
-  const net = (discount: PromoDiscount) =>
-    discountable - discountOffCents(discountable, discount) + checkout.passThroughCents;
-  if (checkout.appliedDiscountPercent !== null) {
-    return net({ kind: "percent", percent: checkout.appliedDiscountPercent });
-  }
-  // A fixed amount's snapshot is already what it took off this session.
-  if (checkout.appliedDiscountCents !== null) {
-    return net({ kind: "amount", amountCents: checkout.appliedDiscountCents });
-  }
-  if (!checkout.dealId) return checkout.totalCents;
-  // A shop-wide code only: `getShopPromoCodeById` finds no trip deal, which
-  // falls back to the asked total as it always did.
-  const promo = await getShopPromoCodeById(db, checkout.shopId, checkout.dealId);
-  // A code deleted since (or belonging to another shop) leaves nothing to
-  // reconstruct from; the asked total is the only defensible figure left.
-  const discount = promo ? promoDiscountOf(promo) : null;
-  if (!discount) return checkout.totalCents;
-  return net(discount);
+function attributableTotalCents(checkout: BookingCheckout): number {
+  return checkout.totalCents - (checkout.discountOffCents ?? 0);
 }
 
 /**
@@ -1501,8 +1481,7 @@ export async function markCheckoutPaidBySessionId(
     // Always a number, so a completion is never refused and never recorded as
     // zero for want of a settled figure.
     const attributableCents =
-      updated.settledTotalCents ??
-      (await attributableTotalCents(tx, updated)) + (updated.taxCents ?? 0);
+      updated.settledTotalCents ?? attributableTotalCents(updated) + (updated.taxCents ?? 0);
     const allocation = allocateSettledTotal(
       linked.map((row) => ({
         key: row.bookingId,

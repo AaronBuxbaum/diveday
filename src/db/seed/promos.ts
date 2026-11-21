@@ -91,6 +91,7 @@ async function seedPromosInTransaction(
       dealId: reef10.id,
       promoCode: reef10.code,
       appliedDiscountPercent: reef10.discountPercent,
+      discountOffCents: source.amountCents - settledTotalCents,
       currency: "usd",
       amountPerDiverCents: source.amountCents,
       totalCents: source.amountCents,

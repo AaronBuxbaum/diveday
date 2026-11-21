@@ -919,7 +919,6 @@
         "files": {
           "src/app/api/webhooks/stripe/route.replay.test.ts": "1249 -> 1250",
           "src/db/buddy-teams.test.ts": "967 -> 968",
-          "src/db/checkouts.test.ts": "2964 -> 2965",
           "src/db/incident-reports.test.ts": "966 -> 967",
           "src/db/manifests.test.ts": "3559 -> 3560",
           "src/db/orders.test.ts": "3174 -> 3175",
@@ -937,7 +936,6 @@
       {
         "why": "the moved shop setters import from shops.test-support, one extra import line in three test files",
         "files": {
-          "src/db/checkouts.test.ts": "2965 -> 2966",
           "src/db/orders.test.ts": "3175 -> 3176",
           "src/features/money/checkout-recovery/store.test.ts": "901 -> 902"
         }
@@ -962,7 +960,7 @@
     "src/components/ui/form.tsx": 1153,
     "src/db/bookings.test.ts": 3514,
     "src/db/buddy-teams.test.ts": 968,
-    "src/db/checkouts.test.ts": 2966,
+    "src/db/checkouts.test.ts": 2924,
     "src/db/course-forms.test.ts": 1234,
     "src/db/dive-sites.test.ts": 1156,
     "src/db/diver-merge.test.ts": 1158,

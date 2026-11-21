@@ -1,0 +1,39 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "a05e46e8-4162-4f23-a39a-4e12b7ea1a54",
+  "prevIds": [
+    "3dc5c5c1-2a66-4d9d-b61b-a9308e1ca6ec"
+  ],
+  "footprints": [
+    {
+      "statementType": "alter_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "roll_call_events",
+        "subject_kind"
+      ],
+      "writes": [
+        "s|colprop|public.roll_call_events.subject_kind.default"
+      ],
+      "reads": [
+        "n|tbl|public.roll_call_events",
+        "n|sch|public",
+        "n|col|public.roll_call_events.subject_kind",
+        "n|enum|public.roll_call_subject_kind"
+      ],
+      "sqlHash": "03caf6706aeb88f9"
+    }
+  ],
+  "deltas": [
+    {
+      "op": "alter",
+      "key": "columns\u0000[\"public\",\"roll_call_events\",\"subject_kind\"]",
+      "set": {
+        "default": null
+      }
+    }
+  ]
+}
