@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { createBookingParty } from "@/db/bookings";
 import { getTripManifest } from "@/db/manifests";
-import { bookings, rollCallEvents, shops } from "@/db/schema";
+import { bookings, diveParticipationNotes, rollCallEvents, shops } from "@/db/schema";
 import { listStaff } from "@/db/trips";
 import { upcomingTripsWithCounts } from "@/db/trips-queries.test-support";
 import { fileScopedShopContext } from "@/test/db";
@@ -146,5 +146,23 @@ describe("dive participation notes (in-memory PGlite)", () => {
     expect((await diveParticipationForTrip(db, otherShop.id, reef.id)).size).toBe(0);
     expect((await satOutDives(db, otherShop.id, reef.id, bookingId)).size).toBe(0);
     expect((await satOutDives(db, shop.id, reef.id, bookingId)).has(1)).toBe(true);
+  });
+
+  it("takes the row written last as the note when two share a timestamp", async () => {
+    const { db, shop, reef, bookingId, base } = await noteContext();
+    const at = new Date("2026-07-21T15:00:00Z");
+    // `recorded_at` ties under a frozen clock; `seq` decides, newest wins.
+    await db.insert(diveParticipationNotes).values([
+      { ...base, diveNumber: 1, participation: "sat_out", recordedAt: at },
+      { ...base, diveNumber: 1, participation: "dived", recordedAt: at },
+    ]);
+    expect((await diveParticipationForTrip(db, shop.id, reef.id)).get(bookingId)?.get(1)).toBe(
+      "dived",
+    );
+    expect((await satOutDives(db, shop.id, reef.id, bookingId)).size).toBe(0);
+    await db
+      .insert(diveParticipationNotes)
+      .values({ ...base, diveNumber: 1, participation: "sat_out", recordedAt: at });
+    expect([...(await satOutDives(db, shop.id, reef.id, bookingId))]).toEqual([1]);
   });
 });

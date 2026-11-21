@@ -371,6 +371,9 @@ describe("the person sheet notes whether a diver went in on the dive just counte
     panel(diver({ bookingId: "b-2", participantType: "rider" }));
     expect(group()).toBeNull();
     cleanup();
+    panel(diver({ bookingId: "b-3", participantType: "snorkeler" }));
+    expect(group()).toBeNull();
+    cleanup();
     panel(seat, { paper: true });
     expect(group()).toBeNull();
     cleanup();
@@ -379,5 +382,44 @@ describe("the person sheet notes whether a diver went in on the dive just counte
     cleanup();
     panel(seat);
     expect(group()).not.toBeNull();
+  });
+});
+
+describe("a tap on dived or sat out that does not land says so", () => {
+  const press = async (action: () => Promise<{ ok: boolean }>) => {
+    const seat = diver({ bookingId: "b-1" });
+    render(
+      <DiverRowPanel
+        context={diverContext({
+          checkpoint: "after_dive_2",
+          divers: [seat],
+          diveParticipation: { diveNumber: 2, bySeat: () => "unknown", action },
+        })}
+        diver={seat}
+        state={diverRowState(seat, "after_dive_2", false, "America/New_York")}
+        sharedAdvisoryTexts={new Set()}
+        bookingNotes={[]}
+      />,
+    );
+    const group = screen.getByRole("group", {
+      name: t("manifest.participation.label", { number: 2 }),
+    });
+    fireEvent.click(
+      within(group).getByRole("button", { name: t("manifest.participation.satOut") }),
+    );
+    return screen.findByRole("alert");
+  };
+
+  it("with no signal, the action rejects and the crew gets the error toast", async () => {
+    const offline = vi.fn(async () => {
+      throw new TypeError("Failed to fetch");
+    });
+    expect(await press(offline)).toHaveTextContent(t("manifest.participation.error"));
+  });
+
+  it("when the server refuses, the same toast", async () => {
+    expect(await press(vi.fn(async () => ({ ok: false })))).toHaveTextContent(
+      t("manifest.participation.error"),
+    );
   });
 });
