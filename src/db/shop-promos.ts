@@ -512,10 +512,8 @@ export type CodeOutcome = { offCents: number; ofCents: number };
 /**
  * **What each code took off, and off what**: "$28.50 off $285 of seats". The
  * asked total of every checkout the code was spent on (`total_cents`, before
- * the discount) and the discount snapshot that checkout recorded
- * (`applied_discount_cents`, or the percent of the asked total). A redemption
- * with no snapshot, written before the column, counts its seats and no
- * discount rather than a guessed one.
+ * the discount) and what that checkout's promotion actually took
+ * off (`discount_off_cents`), which a pass-through fee keeps off the park levy.
  */
 export async function shopPromoOutcomes(
   db: DbExecutor,
@@ -527,7 +525,7 @@ export async function shopPromoOutcomes(
     .select({
       codeId: bookingCheckouts.dealId,
       of: sql<string>`coalesce(sum(${bookingCheckouts.totalCents}), 0)`,
-      off: sql<string>`coalesce(sum(coalesce(${bookingCheckouts.appliedDiscountCents}, round(${bookingCheckouts.totalCents} * ${bookingCheckouts.appliedDiscountPercent} / 100.0), 0)), 0)`,
+      off: sql<string>`coalesce(sum(${bookingCheckouts.discountOffCents}), 0)`,
     })
     .from(bookingCheckouts)
     // diveday:any-checkout-purpose: keyed by a promotion, which a tip never carries (booking_checkouts_tip_shape)

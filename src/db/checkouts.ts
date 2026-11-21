@@ -513,6 +513,15 @@ export async function startBookingCheckout(
       ? passThroughDiscountGuard.stripeCouponId
       : undefined;
 
+  // What the promotion really takes off: the discountable lines when the fixed
+  // coupon guards the fee, the gross when Stripe gets the percent code itself.
+  const discountOff = appliedPromo
+    ? discountOffCents(
+        promotionCouponId ? discountableCents : totalCents,
+        appliedPromo.promoDiscount,
+      ) || null
+    : null;
+
   try {
     const session = await checkout.createCheckoutSession({
       stripeAccountId,
@@ -609,6 +618,7 @@ export async function startBookingCheckout(
           promoCode: appliedPromo?.code ?? input.shopPromo?.code ?? null,
           appliedDiscountPercent,
           appliedDiscountCents,
+          discountOffCents: discountOff,
         })
         .returning();
       if (!row) throw new Error("startBookingCheckout: insert returned no row");

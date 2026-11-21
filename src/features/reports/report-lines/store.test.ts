@@ -314,8 +314,7 @@ describe("what left the month's money", () => {
     money: {
       totalCents: number;
       refundedCents?: number;
-      appliedDiscountCents?: number;
-      appliedDiscountPercent?: number;
+      discountOffCents?: number;
       completedAt?: Date;
     },
   ) {
@@ -331,8 +330,7 @@ describe("what left the month's money", () => {
       amountPerDiverCents: money.totalCents,
       totalCents: money.totalCents,
       refundedCents: money.refundedCents ?? 0,
-      appliedDiscountCents: money.appliedDiscountCents ?? null,
-      appliedDiscountPercent: money.appliedDiscountPercent ?? null,
+      discountOffCents: money.discountOffCents ?? null,
       completedAt: money.completedAt ?? MID_JUNE,
     });
   }
@@ -361,12 +359,12 @@ describe("what left the month's money", () => {
     await paidOrder(db, shop, [{ kind: "rental", cents: 10_000 }], { refundedCents: 2_500 });
     await checkoutWith(db, shop.shopId, { totalCents: 20_000, refundedCents: 5_000 });
     // $15 off, and 10% of $180.
-    await checkoutWith(db, shop.shopId, { totalCents: 18_500, appliedDiscountCents: 1_500 });
-    await checkoutWith(db, shop.shopId, { totalCents: 18_000, appliedDiscountPercent: 10 });
+    await checkoutWith(db, shop.shopId, { totalCents: 18_500, discountOffCents: 1_500 });
+    await checkoutWith(db, shop.shopId, { totalCents: 18_000, discountOffCents: 1_800 });
     // May's checkout: not June's discount.
     await checkoutWith(db, shop.shopId, {
       totalCents: 18_000,
-      appliedDiscountPercent: 50,
+      discountOffCents: 9_000,
       completedAt: new Date("2031-05-31T12:00:00Z"),
     });
     await payout(db, shop.shopId, {

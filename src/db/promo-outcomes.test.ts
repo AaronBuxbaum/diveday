@@ -169,19 +169,18 @@ describe("shopPromoOutcomes", () => {
     await checkout(db, shopId, tripId, {
       seats: 2,
       dealId: code.id,
-      appliedDiscountCents: 2_000,
+      discountOffCents: 2_000,
     });
-    // No cents snapshot: the percent of the asked total.
     await checkout(db, shopId, tripId, {
       seats: 1,
       dealId: code.id,
-      appliedDiscountPercent: 10,
+      discountOffCents: 1_000,
     });
     // An unpaid checkout that carried the code is not a redemption.
     await checkout(db, shopId, tripId, {
       seats: 1,
       dealId: code.id,
-      appliedDiscountCents: 500,
+      discountOffCents: 500,
       status: "pending",
     });
 

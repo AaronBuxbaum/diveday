@@ -1,0 +1,3 @@
+ALTER TABLE "booking_checkouts" ADD COLUMN "discount_off_cents" integer;--> statement-breakpoint
+ALTER TABLE "booking_checkouts" ADD CONSTRAINT "booking_checkouts_discount_off_positive" CHECK ("discount_off_cents" is null or "discount_off_cents" > 0);--> statement-breakpoint
+ALTER TABLE "booking_checkouts" DROP CONSTRAINT "booking_checkouts_tip_shape", ADD CONSTRAINT "booking_checkouts_tip_shape" CHECK ("purpose" <> 'tip' or (not "is_deposit" and "deal_id" is null and "applied_discount_percent" is null and "applied_discount_cents" is null and "discount_off_cents" is null and not "tax_enabled" and "pass_through_cents" = 0));
