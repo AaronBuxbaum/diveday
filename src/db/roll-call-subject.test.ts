@@ -84,8 +84,8 @@ describe("a roll-call mark names exactly one subject", () => {
     const { db, shop } = ctx;
     const { tripId, bookingId, staffId } = await reefWithCrew(db, shop.id);
     const base = { shopId: shop.id, tripId, recordedByPersonId: staffId, occurredAt: nowDate() };
-    // The default is `seat`, for the release still serving during the
-    // migration; a crew writer that forgot to say `crew` is refused here.
+    // Fixtures that name no kind mean a seat, so a crew mark that forgot to
+    // say `crew` is refused here.
     expect(await refusal(db, { ...base, crewPersonId: staffId, status: "boarded" })).toBe(
       "roll_call_events_subject",
     );
@@ -100,6 +100,31 @@ describe("a roll-call mark names exactly one subject", () => {
         status: "boarded",
       }),
     ).toBe("roll_call_events_subject");
+  });
+
+  it("refuses a row that names no subject kind at all", async () => {
+    const { db, shop } = ctx;
+    const { tripId, bookingId, staffId } = await reefWithCrew(db, shop.id);
+    const row = {
+      shopId: shop.id,
+      tripId,
+      bookingId,
+      recordedByPersonId: staffId,
+      status: "boarded" as const,
+      statementStatus: "boarded" as const,
+      causalFrontier: ["evidence"],
+      occurredAt: nowDate(),
+    };
+    // The refused insert runs in a savepoint so the shared test transaction survives it.
+    await expect(
+      db.transaction(async (tx) => {
+        // @ts-expect-error `subjectKind` is required: the table has no default.
+        await tx.insert(rollCallEvents).values(row);
+      }),
+    ).rejects.toMatchObject({
+      cause: { code: "23502", column: "subject_kind" },
+    });
+    await db.insert(rollCallEvents).values({ ...row, subjectKind: "seat" });
   });
 
   it("keeps each half's evidence on its own half", async () => {

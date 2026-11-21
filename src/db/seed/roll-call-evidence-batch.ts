@@ -261,6 +261,7 @@ export async function seedRollCallEvidenceBatch(
         // Deliberately invalid fixtures must still fail the real SQL constraint.
         values.push({
           ...value,
+          subjectKind: value.subjectKind ?? "seat",
           id,
           statementStatus: value.status,
           causalFrontier: [canonicalRollCallEvidenceId({ id, clientEventId: value.clientEventId })],
@@ -298,6 +299,7 @@ export async function seedRollCallEvidenceBatch(
       const projection = projectionColumns(scope, day, next);
       const inserted = {
         ...value,
+        subjectKind: value.subjectKind ?? "seat",
         id,
         ...projection,
         statementStatus: value.status,

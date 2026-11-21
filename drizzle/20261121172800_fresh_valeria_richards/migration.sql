@@ -1,0 +1,1 @@
+ALTER TABLE "roll_call_events" ALTER COLUMN "subject_kind" DROP DEFAULT;
