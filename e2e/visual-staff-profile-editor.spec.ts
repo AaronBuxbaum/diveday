@@ -1,5 +1,6 @@
 /** The staff introduction uses the shared growing textarea at its own row count. */
 import { expect, test } from "./fixtures";
+import { seedFacts } from "./shop-facts";
 import {
   capture,
   installVisualBuildGuard,
@@ -20,6 +21,9 @@ test("light mode staff public introduction editor with a filled description", as
   page,
   privateShop,
 }) => {
+  // Better Auth mints session timestamps on the wall clock while the visual
+  // server is frozen; pin this private shop's session display time.
+  await seedFacts(page.request, ["staffSessionsSeenNow"], { slug: privateShop.slug });
   await page.goto(`/shop/${privateShop.slug}/me/security`);
   await expect(page.getByText("Reef Garden Dive Center", { exact: true }).first()).toBeVisible();
   const description = page.locator('textarea[name="profileDescription"]');
