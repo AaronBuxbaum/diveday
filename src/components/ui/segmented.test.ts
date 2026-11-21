@@ -46,8 +46,11 @@ describe("the segment's corner", () => {
   it("comes to 3px on today's tokens — 8, less 1px of border and 4px of padding", () => {
     const inset = CSS.match(/--radius-inset:\s*([\d.]+)rem;/);
     expect(inset, "globals.css declares --radius-inset in rem").not.toBeNull();
-    // `p-1` is one `--spacing`, and the app leaves Tailwind's 0.25rem alone.
-    expect(CSS).not.toMatch(/--spacing:/);
+    // `p-1` is one `--spacing`, and the app leaves Tailwind's 0.25rem alone —
+    // except under enlarged device text, where it holds spacing at the phone's
+    // ordinary 4px so only type scales (and 4px is what the 3px corner needs).
+    expect(CSS.match(/--spacing:/g)).toHaveLength(1);
+    expect(CSS).toMatch(/html\[data-device-text-size\] \{\s*--spacing: min\(0\.25rem,/);
     const px = Number(inset?.[1]) * 16 - 0.25 * 16 - 1;
     expect(px).toBe(3);
   });

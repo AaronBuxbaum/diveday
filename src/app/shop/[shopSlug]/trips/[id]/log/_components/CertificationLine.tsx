@@ -73,7 +73,7 @@ export function CertificationLine({
       ? [part]
       : [
           // biome-ignore lint/suspicious/noArrayIndexKey: the message's own order, never reordered
-          <span key={index} className="whitespace-nowrap">
+          <span key={index} className="whitespace-nowrap device-text-number">
             {card.identifier}
           </span>,
           part,

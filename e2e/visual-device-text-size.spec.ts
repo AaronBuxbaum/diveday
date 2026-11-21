@@ -1,5 +1,6 @@
 /** ADR 20260907-in-your-hands 19d: captures use simulated device-body readings. */
 
+import { DEMO_TODAY_TRIP_ID } from "../src/db/seed/identifiers";
 import { DEMO_SHOP_BRAND } from "../src/db/seed/shop-brand";
 import { DEMO_TODAY_TRIP_TITLE } from "../src/db/seed/trips";
 import { staffTranslator } from "../src/i18n/staff-messages";
@@ -519,4 +520,29 @@ test.describe("light mode unchanged device body", () => {
     ).toBeVisible();
     await capture(page, "settings-editor-device-body-default", "light");
   });
+});
+
+test.describe("light mode largest device body trip and departure log", () => {
+  signedInAsOwner();
+  test.use({ viewport: { width: 390, height: 844 }, reducedMotion: "reduce" });
+  for (const [name, path] of [
+    ["trip-device-body-53", `/shop/blue-mantis/trips/${DEMO_TODAY_TRIP_ID}`],
+    ["departure-log-device-body-53", `/shop/blue-mantis/trips/${DEMO_TODAY_TRIP_ID}/log`],
+  ] as const) {
+    test(`${name} stays inside the phone at a simulated 53px device body (#4850)`, async ({
+      page,
+    }) => {
+      await exposeDeviceBody(page, 53);
+      await page.goto(path);
+      await expect(page.locator("main h1").first()).toBeVisible();
+      await capture(page, name, "light", {
+        beforeScreenshot: async () => {
+          if (page.viewportSize()?.width !== 390) return;
+          expect(
+            await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+          ).toBe(true);
+        },
+      });
+    });
+  }
 });
