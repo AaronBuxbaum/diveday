@@ -428,7 +428,7 @@ export const waiverRecords = pgTable(
      */
     signedVia: waiverSignedVia("signed_via"),
     completedAt: timestamp("completed_at", { withTimezone: true }),
-    /** HMAC over the immutable signed metadata; null means legacy/unverified. */
+    /** HMAC over the immutable signed metadata; null means imported (unsealed by design) or a seal someone removed. */
     integrityHash: text("integrity_hash"),
     integrityVersion: integer("integrity_version"),
     /**

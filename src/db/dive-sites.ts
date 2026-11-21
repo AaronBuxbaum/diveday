@@ -735,9 +735,9 @@ export async function editDiveSite(
         // them.
         //
         // A null *input* means allow, which is about the page and not the row:
-        // the migration runs while the previous release is still serving
-        // (AGENTS.md's expand/contract rule), and a page that release rendered
-        // sends no hidden field at all.
+        // a page the previous release rendered, still open in a tab across a
+        // deploy, sends no hidden field at all. That window recurs on every
+        // deploy, so this stays.
         expected === null || expected === undefined
           ? undefined
           : eq(diveSites.rowVersion, expected),

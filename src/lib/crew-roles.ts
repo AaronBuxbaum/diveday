@@ -58,9 +58,9 @@ export type TripCrewAssignment = {
    * What this person is rostered to do on **this** trip, or null/undefined for
    * "not specified".
    *
-   * Unspecified is the **status quo, not a safety claim**: every row written
-   * before the column existed has no role, and must keep counting exactly as
-   * it did — by shop-wide inference. It says nothing about whether the person
+   * Unspecified is the **status quo, not a safety claim**: an assignment
+   * written with no trip role (the writer still allows it) counts by
+   * shop-wide inference. It says nothing about whether the person
    * is in the water; it says nobody has told us yet.
    */
   tripRole?: TripCrewRole | null;

@@ -765,9 +765,10 @@ export async function editCourseContent(
       and(
         eq(courses.id, courseId),
         eq(courses.shopId, shopId),
-        // A null *input* means allow — that is the expand/contract half, and it
-        // is about the page, not the row: a page rendered by the previous
-        // release sends no hidden field at all.
+        // A null *input* means allow. It is about the page, not the row: a
+        // page rendered by the previous release, still open in a tab across a
+        // deploy, sends no hidden field at all. That window recurs on every
+        // deploy, so this stays.
         expected === null || expected === undefined ? undefined : eq(courses.rowVersion, expected),
       ),
     )
