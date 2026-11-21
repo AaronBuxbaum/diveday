@@ -3945,7 +3945,9 @@ svg.leaflet-image-layer.leaflet-interactive path {
 /* A card or phone number is never broken at an ordinary size. At several times
    that it is wider than the phone, and the page scrolls sideways; it may break
    once it cannot fit. */
-html[data-device-text-size] .device-text-number {
-  white-space: normal;
-  overflow-wrap: anywhere;
+@media screen {
+  html[data-device-text-size] .device-text-number {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
 }
