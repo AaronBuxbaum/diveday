@@ -1450,13 +1450,19 @@ jobs:
         run: node scripts/ci-runner-pick.mjs
 
   real-postgres:
-    name: Real Postgres (migrations + concurrency)
+    # Two shards: one job took 511-836s of its 15 minutes (main's last green run: 14m52s), which
+    # left no room for a slow runner (2026-11-21). Each shard has its own server container.
+    name: Real Postgres shard ${{ matrix.shard }}/2 (migrations + concurrency)
     needs: changes
     # The status function lets the nightly run despite its skipped `changes` dependency.
     # Unlike always(), !cancelled() also stops obsolete tests when the run is canceled.
     if: ${{ !cancelled() && (github.event_name == 'schedule' || needs.changes.outputs.db == 'true') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
     permissions:
       contents: read
     # The whole point of the job. Everything else in this repo's db suite runs on
@@ -1522,7 +1528,7 @@ jobs:
       # sees it; if it ever matches nothing, vitest exits non-zero rather than
       # reporting a cheerful zero tests.
       - name: Migrations and concurrency against a real server
-        run: pnpm exec vitest run --reporter=dot src/db/*.postgres.test.ts src/features/*/*.postgres.test.ts 'src/app/shop/[shopSlug]/divers/[personId]/erasure-race.postgres.test.ts'
+        run: pnpm exec vitest run --reporter=dot --shard=${{ matrix.shard }}/2 src/db/*.postgres.test.ts src/features/*/*.postgres.test.ts 'src/app/shop/[shopSlug]/divers/[personId]/erasure-race.postgres.test.ts'
         env:
           # Deliberately *not* `DATABASE_URL`. That variable is what `getDb()`
           # reads, and both `vitest.config.ts` and `src/test/global-setup.ts` pin
