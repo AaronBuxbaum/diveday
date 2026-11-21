@@ -1,8 +1,10 @@
 import { deskPaymentSentence } from "@/i18n/desk-payment-labels";
 import type { DiverTranslator } from "@/i18n/messages";
+import { formatCalendarDate } from "@/lib/calendar-date";
 import { partyMoneyTerms } from "@/lib/deposits";
 import type { DeskPayment } from "@/lib/desk-payment";
-import { formatMoneyCents } from "@/lib/format";
+import type { PackageDiveGroup } from "@/lib/dive-packages";
+import { formatMoneyCents, joinFacts } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
 import type { ParticipantType } from "@/lib/participant-types";
 import { seatRentalItems } from "@/lib/participant-types";
@@ -80,6 +82,45 @@ export function payStepLines(
             .filter(Boolean)
             .join(" ")
         : null,
+  };
+}
+
+/** Whether the Pay step asks for money here: the diver can pay, and the step's item is owed or refunded. */
+export function payStepIsPayable(canPay: boolean, code: string | undefined): boolean {
+  return canPay && (code === "payment_due" || code === "payment_refunded");
+}
+
+/**
+ * **The optional breakdown under the compact balance** (issue #4309): the
+ * dives a diver holds, one row per cover and end date, soonest to end first
+ * (`packageDiveGroups`), so a diver holding a lapsing fun-dive pack and an
+ * open-ended pack can tell which one their next trip spends.
+ *
+ * The compact "N package dives left" stays the line (owner decision
+ * 2026-10-09); this sits behind a disclosure and only when it adds something:
+ * two kinds of dive to tell apart, or an end date the line does not say.
+ * Each row names its own cover, so no total reads as covering a course, and
+ * nothing here speaks of seats: a dive pays for a tank, it does not hold one.
+ */
+export function packageDiveBreakdown(
+  t: DiverTranslator,
+  locale: string,
+  groups: readonly PackageDiveGroup[],
+): { summary: string; rows: string[]; note: string } | null {
+  if (groups.length === 0) return null;
+  if (groups.length === 1 && groups[0]?.useBy === null) return null;
+  return {
+    summary: t("ready.packageBreakdownSummary"),
+    rows: groups.map((group) =>
+      joinFacts([
+        t("packages.dives", { count: group.count }),
+        group.scope === "all" ? t("packages.scopeAll") : t("packages.scopeFunDives"),
+        group.useBy
+          ? t("packages.useBy", { date: formatCalendarDate(group.useBy, locale) })
+          : t("packages.noExpiry"),
+      ]),
+    ),
+    note: t("ready.packageBreakdownNote"),
   };
 }
 

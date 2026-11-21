@@ -1161,6 +1161,8 @@
     "gearOnFile": "Your sizes are with the crew.",
     "packageDivesUsed": "{line} · Uses {used, plural, one {# package dive} other {# package dives}} ({left} left), one per tank",
     "packageDivesLeft": "{line} · {count, plural, one {# package dive left} other {# package dives left}}",
+    "packageBreakdownSummary": "Your package dives",
+    "packageBreakdownNote": "Used soonest-ending first, one dive per tank.",
     "partyClaimedSeatsPayOwn": "{count, plural, one {# claimed seat is paid from its own page.} other {# claimed seats are paid from their own pages.}}",
     "changesSizesLabel": "Sizes",
     "changesTanksLabel": "Tanks",
