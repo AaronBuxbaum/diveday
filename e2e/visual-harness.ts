@@ -1944,10 +1944,12 @@ export async function capture(
     await waitForClientFills(page);
     // Today's arrival search takes the page's first focus in the same effect
     // that marks it hydrated, so a shot before that mark photographs the focus
-    // ring on some runs and not others (#4703). Any page without the search
-    // passes straight through.
+    // ring on some runs and not others (#4703). Only Today (`/shop/<slug>`)
+    // draws that component; the trip page's add band reuses the id without the
+    // mark, so any other page passes straight through.
     await page.waitForFunction(
       () => {
+        if (!/^\/shop\/[^/]+\/?$/.test(location.pathname)) return true;
         const search = document.querySelector("#arrival-search");
         return !search || search.hasAttribute("data-hydrated");
       },
