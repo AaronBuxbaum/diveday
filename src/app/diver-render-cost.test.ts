@@ -49,7 +49,7 @@ async function timedSeededShop(options: { history?: boolean } = {}) {
  * The seeded shop's past days carry no roll call, so this is the commonest
  * shape — the four-hour floor decides, and the page renders the afterglow.
  */
-async function readinessLinkForSeatAfterTheDive(plain: AppDb, shopId: string) {
+async function readinessLinksForSeatsAfterTheDive(plain: AppDb, shopId: string) {
   const seats = await plain
     .select({ bookingId: bookings.id })
     .from(bookings)
@@ -65,6 +65,7 @@ async function readinessLinkForSeatAfterTheDive(plain: AppDb, shopId: string) {
     )
     .orderBy(desc(trips.startsAt), asc(bookings.id))
     .limit(25);
+  const tokens: string[] = [];
   for (const { bookingId } of seats) {
     if ((await getRecapPageState(plain, bookingId)).kind !== "recap") continue;
     const issued = await issueBookingCapability(plain, {
@@ -72,9 +73,15 @@ async function readinessLinkForSeatAfterTheDive(plain: AppDb, shopId: string) {
       bookingId,
       purpose: "readiness",
     });
-    if (issued) return issued.token;
+    if (issued) tokens.push(issued.token);
   }
-  throw new Error("the seeded shop has no past seat with an open recap");
+  if (tokens.length === 0) throw new Error("the seeded shop has no past seat with an open recap");
+  return tokens;
+}
+
+/** One seat after the dive, for the tests that count phases and not reads. */
+async function readinessLinkForSeatAfterTheDive(plain: AppDb, shopId: string) {
+  return (await readinessLinksForSeatsAfterTheDive(plain, shopId))[0] as string;
 }
 
 /**
@@ -213,9 +220,16 @@ describe("what a diver's page sends", () => {
   it("reads /ready after the dive", async () => {
     // The past days are history, seeded only on request.
     const { db, plain, shop } = await timedSeededShop({ history: true });
-    const token = await readinessLinkForSeatAfterTheDive(plain, shop.id);
-    const { stats } = await withQueryStats(() => readyAfterTheDiveReads(db, token));
-    expect(report("ready after the dive", stats.queries)).toBeLessThanOrEqual(READY_AFTER_CEILING);
+    // The reads differ by seat (63 to 75 on the seeded shop: a seat whose trip has requirements,
+    // stages or schedule days pays more), and a seat's id is random, so the first seat found made
+    // this ceiling pass or fail by luck (issue #4849). The ceiling holds for the dearest seat.
+    const tokens = await readinessLinksForSeatsAfterTheDive(plain, shop.id);
+    let dearest = 0;
+    for (const token of tokens) {
+      const { stats } = await withQueryStats(() => readyAfterTheDiveReads(db, token));
+      dearest = Math.max(dearest, stats.queries);
+    }
+    expect(report("ready after the dive", dearest)).toBeLessThanOrEqual(READY_AFTER_CEILING);
   });
 
   it("reads /recap/[token]", async () => {
@@ -340,7 +354,9 @@ describe("how many round trips a diver's page waits for, one after another", () 
 // statements the recap pays, in the after-state's one wave. No new phase.
 // 70 → 71 (this recap's dive chart): one read of the diver's and the crew's computer dives for the
 // trip day, in the after-state's one wave. No new phase.
-const READY_AFTER_CEILING = 71;
+// 71 → 75 (issue #4849): the number is the dearest of the seeded shop's seats, not the first one
+// found, which was a random seat and read anywhere from 63 to 75.
+const READY_AFTER_CEILING = 75;
 const READY_AFTER_PHASE_CEILING = 12;
 // `/recap/[token]`, replayed from item 32: the recap's 3 and the after-state's
 // next-dive read, with no handoff. Before item 32 the same reads were 7 + 2.
