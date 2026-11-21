@@ -335,7 +335,10 @@ async function scrubPlans(tx) {
 }
 `,
     ],
-    ["src/features/records/plans/index.ts", 'export { clearPlans as forgetPeople } from "./store";'],
+    [
+      "src/features/records/plans/index.ts",
+      'export { clearPlans as forgetPeople } from "./store";',
+    ],
     [
       "src/features/records/plans/store.ts",
       `export async function clearPlans(tx) {
