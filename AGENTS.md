@@ -62,20 +62,21 @@ Playbooks have one source in `.agents/skills/`, mirrored into Claude by symlinks
 
 ## Parallel work
 
-Other sessions share this checkout ([rules](docs/agents/working-rules.md#parallel-work)).
+Sessions share this checkout ([rules](docs/agents/working-rules.md#parallel-work)).
 
-- Read the prompt's branch and dirty count before touching shared tree state.
+- Read the prompt's branch and dirty count before touching shared state.
 - **Claim the issue before you start**, clear it when you stop
   ([issue-tracker.md](docs/agents/issue-tracker.md)); read open PRs and `pnpm gates` first; a
   **stale** claim is a dead session: take it.
 - Worktree from the shell, never `EnterWorktree`; no bare `git stash`; never switch a live
   thread's model.
-- Unique branch slug; early draft PR naming owned paths, schema changes and ADR ids; trial-merge
-  the target before calling work done.
-- **A thread builds one layer itself**; independent parallel layers go to fresh workers with a
+- Unique branch slug; early draft PR naming owned paths, schema changes, ADR ids; trial-merge
+  the target before done.
+- **A thread builds one layer itself**; independent layers go to fresh workers with a
   [spec](docs/agents/spec-template.md); past ~150k context, write a state note, retire.
 - **Stack everything, across threads**: cut from the newest open branch, draft with `base` on it,
-  push one layer at a time, one PR's CI at a time (**stacked-prs**).
+  one PR's CI at a time. Top green: base to `main`; Aaron squashes it once, landing the stack
+  (**stacked-prs**).
 
 ## Hard rules
 

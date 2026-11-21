@@ -6,9 +6,8 @@ description: DiveDay's cross-thread stack policy: branch from the newest open la
 # Stacked pull requests
 
 A stack is one linear chain of pull requests: the bottom targets `main`, each one above targets the
-head branch of the one below. Aaron sets threads on varied work, comes back, and clicks **Merge** on
-the top PR: GitHub merges every layer up to it, all or nothing. Registering and moving the chain is
-`gh stack` (ADR [20261105-gh-stack-is-the-stack](../../../docs/architecture/decisions/20261105-gh-stack-is-the-stack.md)).
+head branch of the one below. Aaron sets threads on varied work, comes back, and merges **once**:
+the stack lands as one PR (see "Landing"). Registering and moving the chain is `gh stack` (ADR [20261105-gh-stack-is-the-stack](../../../docs/architecture/decisions/20261105-gh-stack-is-the-stack.md)).
 
 ## The rule
 
@@ -20,10 +19,19 @@ message bundle) and conflicts later, by hand. Only two cases go off `main`: **no
 depth.
 
 **CI runs on the top layer only** (ADR [20261105-ci-runs-on-the-top-of-the-stack](../../../docs/architecture/decisions/20261105-ci-runs-on-the-top-of-the-stack.md)):
-the account has a fixed number of runners and Aaron merges the whole stack from the top, so
+the account has a fixed number of runners and the whole stack lands from the top, so
 `stack-gate` in `ci.yml` skips every lower layer, and a slice of CI across layers never happens.
-A lower layer shows skipped checks, which are not green; label it `ci-now` and re-run (or push) to run CI there when the top is red and Aaron wants to merge up to it. Fix a red top from the top; do not hold a
-push for the layer below.
+A lower layer shows skipped checks, which are not green. Fix a red top from the top down; do not
+hold a push for the layer below.
+
+## Landing
+
+When the top PR is green, change its base to `main` (`gh pr edit <top> --base main`) and tell Aaron
+that this one PR lands the whole stack. He merges once, with a squash. The `Close landed layers`
+workflow then comments "Landed in #N with the rest of its stack." on each lower PR it carried,
+closes it and deletes its branch; a PR stacked above the merged one is retargeted to `main` by
+GitHub and left alone. Wait for CI to run on the retargeted top against `main` before you tell
+Aaron; a green run on the old base is not enough.
 
 ## Commands
 
@@ -44,13 +52,12 @@ gh stack push                                # force-with-lease; plain `git push
   the same base goes on top instead.
 - **A conflict** stops the rebase mid-way and names the files: `git add`, then
   `gh stack rebase --continue` (`--abort` backs out).
-- **After merging a layer up** run **`pnpm regen`** and commit what it changed before you push.
-- **Never `gh pr edit --base`** on a stacked PR (GitHub refuses), and never close a layer with
+- **After rebasing onto a newer base** run **`pnpm regen`** and commit what it changed before you push.
+- **Change a base only on the top PR, and only to `main`, when landing.** Never close a layer with
   `--delete-branch`: it closes the layer above and leaves a stray stack record.
 - **`gh stack submit` leaves empty PR bodies.** Right after it, `gh pr edit` each body with its
   position line ([position.md](position.md)) and the repository's PR body rows.
-- Merging is `gh stack merge <pr> --yes`, or the Merge button on the top PR. It checks only that
-  each PR is open and not a draft; GitHub enforces protections. Merging is Aaron's.
+- Merging is Aaron's: one squash of the retargeted top PR. Never `gh stack merge`.
 
 ## Reference
 

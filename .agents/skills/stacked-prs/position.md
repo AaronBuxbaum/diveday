@@ -28,5 +28,5 @@ a notification has no other way to find the bottom:
 
 ```
 Layer 2 of 3 — based on `claude/<slug>-1-schema` (#641). Above: `claude/<slug>-3-surface` (#643).
-Review and merge bottom-up.
+Lands with the top PR in one squash.
 ```

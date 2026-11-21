@@ -1,0 +1,47 @@
+# Close the lower layers of a stack when its top pull request lands.
+#
+# A stack lands as one pull request: the top layer is retargeted to main and squash-merged, so
+# every layer below it is already inside that commit. `scripts/close-landed-layers.mjs` comments
+# "Landed in #N with the rest of its stack.", closes each open same-repository pull request whose
+# head is an ancestor of the merged head, and deletes its branch. A layer above the merged one, an
+# unrelated pull request and a fork's are left alone.
+#
+# `pull_request_target` so the token can write, and so the script that runs is main's, never the
+# merged branch's: it checks out the base branch only and reads the pull request's head sha as data.
+name: Close landed layers
+
+on:
+  pull_request_target:
+    types: [closed]
+    branches: [main]
+
+concurrency:
+  group: close-landed-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  close:
+    name: Close the layers this merge carried
+    if: ${{ github.event.pull_request.merged == true }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write # delete a closed layer's head branch
+      pull-requests: write # comment on and close it
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.base.ref }}
+          persist-credentials: false
+      - name: Close lower layers
+        run: node scripts/close-landed-layers.mjs
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_MERGED: ${{ github.event.pull_request.merged }}
+          PR_BASE_REF: ${{ github.event.pull_request.base.ref }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}

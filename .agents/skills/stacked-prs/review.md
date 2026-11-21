@@ -23,9 +23,8 @@ REST, never `gh pr list` / `gh pr view`: those go through GraphQL, which cloud s
 reply and resolve calls.
 
 **Answer a comment on the layer that owns the code, never the layer you are standing on.** The
-rule is the one that governs a red check in a stack, for the same reason: a stack merges bottom-up,
-so a fix committed above the layer being commented on arrives *after* that layer has already merged
-without it. Fix at the owning layer, then rebase each layer above onto the one below (on a
+rule is the one that governs a red check in a stack: the fix belongs to the layer whose code it
+changes, so each layer stays truthful. Fix at the owning layer, then rebase each layer above onto the one below (on a
 workstation, `gh stack sync --prune` does that in one).
 
 Each thread ends in a state: fixed and replied to with the commit, declined with the reason, or

@@ -92,17 +92,18 @@ runs. Pass args directly. The shell guard refuses the bare form.
   <branch>` puts a layer on top (it refuses anywhere else, so a stack never forks) and
   `gh stack submit --auto` pushes, opens the draft PRs with the right bases and registers the
   stack; always pass `-m` and `--auto` and read stdin from `/dev/null`, because without them
-  `gh stack` opens an editor. Give each body its position line afterwards (`gh pr edit`). Aaron
-  clicks Merge on the top PR and the whole stack lands, all or nothing. **CI runs on the top layer
-  only** (`stack-gate` in `ci.yml` skips the layers below; never run a slice across layers), and a
-  red top is fixed from the top. Bring a layer forward with
+  `gh stack` opens an editor. Give each body its position line afterwards (`gh pr edit`). **CI runs
+  on the top layer only** (`stack-gate` in `ci.yml` skips the layers below; never run a slice
+  across layers), and a red top is fixed from the top down. **When the top PR is green, change its
+  base to `main` and tell Aaron that this one PR lands the whole stack**; he merges once with a
+  squash, and the `Close landed layers` workflow closes the lower PRs and deletes their branches
+  (`scripts/close-landed-layers.mjs`; issue #4852). Bring a layer forward with
   `gh stack rebase`, then `gh stack push` (force-with-lease; plain `git push` is refused after a
-  rebase). Never `gh pr edit --base` on a stacked PR. Never close a layer with `--delete-branch`:
-  it closes the layer above. Only two cases go off `main`: no stack is open, or a fix that must
+  rebase). Change a stacked PR's base only for that landing. Never close a layer with
+  `--delete-branch`: it closes the layer above. Only two cases go off `main`: no stack is open, or a fix that must
   merge now. The mechanics are in the **stacked-prs** skill.
 - **Push less often.** A push cancels the PR's run in flight; cancelled runs were about half of PR
-  CI compute (2026-11-01 profile). Batch fixes into one push, hold a stacked layer's push until
-  the layer below is green, and push a stack cascade once.
+  CI compute (2026-11-01 profile). Batch fixes into one push, push a stack cascade once.
 - Before fixing a failing or flaky test, search open PRs for one that already touches the same spec
   or test name; coordinate in that thread instead of pushing a competing fix.
 - **A thread builds one layer itself; parallel layers go to fresh workers.** A single layer or a
