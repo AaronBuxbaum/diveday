@@ -17,10 +17,10 @@ import {
   tripRequirements,
   trips as tripsTable,
 } from "../schema";
+import { tripPrimarySiteId } from "../trip-primary-site";
 import { resetDemoSchedule } from ".";
 import { staffDefs } from "./cast";
 import { DEMO_COMPLETED_TRIP_TITLE } from "./more-trips";
-import { tripPrimarySiteId } from "../trip-primary-site";
 
 // One seeded database for the file and a rolled-back transaction per test
 // (src/test/db.ts, `fileScopedShopContext`).

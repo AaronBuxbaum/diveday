@@ -191,7 +191,8 @@ describe("an index is a door", () => {
       "src/db/seed/index.ts": 'export { bringHome } from "./boat-at-sea";\n',
       "src/db/seed/boat-at-sea.ts": "export const bringHome = 1;\n",
       "src/db/demo-refresh.ts": 'import { bringHome } from "./seed/boat-at-sea";\n',
-      "src/features/tick.ts": 'import { bringHome } from "@/db/seed";\n',
+      "src/features/day/README.md": "# day\n",
+      "src/features/day/tick.ts": 'import { bringHome } from "@/db/seed";\n',
     });
     expect(flat(await collectViolations(root)).sort()).toEqual([
       expect.stringContaining(

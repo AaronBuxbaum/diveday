@@ -16,8 +16,6 @@ import {
   EXPECTED_FILES,
   EXPORTED_TABLES,
 } from "../../test/substrate-fixtures/db/export-test-fixtures";
-import { canPersonExportShopData, loadShopExportBundleInput } from ".";
-import { table } from "./bundle-table.test-support";
 import * as schema from "../schema";
 import {
   activityEvents,
@@ -35,6 +33,8 @@ import {
 } from "../schema";
 import { createTrip } from "../trips";
 import { getCurrentWaiverTemplate, issueWaiverRequest } from "../waivers";
+import { canPersonExportShopData, loadShopExportBundleInput } from ".";
+import { table } from "./bundle-table.test-support";
 
 /** Tables whose data rides inside another file rather than its own CSV. */
 const FOLDED_TABLES = [

@@ -595,7 +595,7 @@ const THE_DAY: readonly SeedStep[] = [
   // Same shape and the same reasons: its own departure, added late, four days
   // out and three of six seats sold — the long-range run a shop states a
   // minimum head count on, in the state it is worked in (short, deadline still
-  // ahead). See src/db/seed-minimum-seats.ts.
+  // ahead). See src/db/seed/minimum-seats.ts.
   demo((db, c) =>
     seedMinimumSeats(db, c.shopId, {
       siteByName: c.sites.siteByName,

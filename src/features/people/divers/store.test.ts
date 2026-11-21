@@ -1674,7 +1674,7 @@ describe("diver erasure", () => {
 
     // And the half that matters at least as much: erasing one diver must not
     // blank a bystander's interest. The seed carries three
-    // (src/db/seed-course-inquiries.ts), none of them Elena's — they must come
+    // (src/db/seed/course-inquiries.ts), none of them Elena's — they must come
     // through untouched. This assertion could not exist while the table was
     // empty on a seeded shop, so the sweep's *scoping* was never tested at all;
     // only its reach was.

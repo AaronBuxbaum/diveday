@@ -31,6 +31,7 @@ import {
   tripBlowouts,
   trips,
 } from "../schema";
+import { liveTrip } from "../trips-live";
 import {
   LOST_MASK,
   SHOP_CERTIFIED_TITLE,
@@ -40,7 +41,6 @@ import {
 } from "./booth";
 import { DEMO_SHOP_TIMEZONE } from "./clock";
 import { DEMO_WEEKLY_RUN_TITLE } from "./weekly-run";
-import { liveTrip } from "../trips-live";
 
 const TZ = DEMO_SHOP_TIMEZONE;
 

@@ -36,7 +36,6 @@ import {
   todayReadMarks,
   userAccounts,
 } from "../schema";
-import { resetDemoSchedule, seedIfEmpty } from ".";
 import {
   createShopPromoCode,
   getShopPromoByCode,
@@ -47,6 +46,7 @@ import { setShopStripeAccountStatus, upsertShopStripeAccount } from "../stripe-a
 import { listStaff } from "../trips";
 import { upcomingTripsWithCounts } from "../trips-queries.test-support";
 import { getCurrentWaiverTemplate, recordWaiverTemplate } from "../waivers";
+import { resetDemoSchedule, seedIfEmpty } from ".";
 
 // One seeded database for the file and a rolled-back transaction per test
 // (src/test/db.ts, `fileScopedShopContext`).
@@ -335,7 +335,7 @@ describe("resetDemoSchedule", () => {
     //
     // "Seeded state" is a *history*, not one row: the demo shop ships with two
     // superseded wordings behind its live release
-    // (src/db/seed-waiver-versions.ts), and a reset that restored a bare
+    // (src/db/seed/waiver-versions.ts), and a reset that restored a bare
     // version 1 would silently empty the template history the demo exists to
     // show.
     const { db, shop } = ctx;

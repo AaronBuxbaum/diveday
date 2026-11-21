@@ -11,9 +11,9 @@
  * either exported here or on the deliberate exclusion list.
  *
  * The pieces: the plain per-table reads both bundles share are one list,
- * `EXPORT_TABLES` (`./export-tables`); each bundle's files — header, note and
- * row builder — are one list per bundle (`./export-shop-files`,
- * `./export-diver-files`); this file reads, under the one transaction, and
+ * `EXPORT_TABLES` (`./tables`); each bundle's files — header, note and
+ * row builder — are one list per bundle (`./shop-files`,
+ * `./diver-files`); this file reads, under the one transaction, and
  * hands what it read to those lists. `bundle.snapshot.test.ts` pins the
  * output so a change to that wiring cannot move a cell unnoticed.
  *
@@ -103,8 +103,8 @@ export type ExportBundleScope =
  * **The one bundle loader** (#2358): reads the scope's rows under one
  * transaction and builds its bundle's files. The shop's files take the shop
  * columns of each shared spec and the diver's the diver columns
- * (`shopFile` / `diverFile`, `./export-shared-files`); every plain read goes
- * through the same scoped reader (`readScoped`, `./export-tables`), so the
+ * (`shopFile` / `diverFile`, `./shared-files`); every plain read goes
+ * through the same scoped reader (`readScoped`, `./tables`), so the
  * two bundles differ only where their reads are written out on purpose — the
  * diver's own bookings and buddy teams ordered by the boat (H-20260916-tiebreaker-user-visible-list), and the
  * joins only one bundle needs. `null` for a shop, or a diver of this shop,
@@ -294,7 +294,7 @@ async function readCrewAwayRows(tx: AppTransaction, scope: ShopExportScope) {
 /**
  * Everything the shop bundle's files are built from, read once inside the
  * bundle's transaction: the plain per-table reads through `EXPORT_TABLES`
- * (`./export-tables`), the joined and filtered reads written out below, and
+ * (`./tables`), the joined and filtered reads written out below, and
  * the lookups the files share (names by id, per-person rollups). `null` for a
  * shop that does not exist. Each entry of `SHOP_EXPORT_FILES` takes only what
  * it names from this.

@@ -5,7 +5,7 @@ export function assertDemoReset(
 ): void {
   if (!response.ok()) {
     throw new Error(
-      `${phase}: POST /api/test/reset returned ${response.status()}. Check resetDemoSchedule's delete ordering in src/db/seed.ts.`,
+      `${phase}: POST /api/test/reset returned ${response.status()}. Check resetDemoSchedule's delete ordering in src/db/seed/index.ts.`,
     );
   }
 }
