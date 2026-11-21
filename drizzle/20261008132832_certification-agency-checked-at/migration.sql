@@ -1,1 +1,0 @@
-ALTER TABLE "certifications" ADD COLUMN "agency_checked_at" timestamp with time zone;

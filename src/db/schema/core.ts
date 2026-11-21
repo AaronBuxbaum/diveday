@@ -997,7 +997,7 @@ export const people = pgTable(
       .references(() => shops.id),
     /**
      * **`COLLATE "und-x-icu"` in the database**, set by
-     * `drizzle/20260911200158_person-name-collation`. The type here is plain
+     * the baseline migration's collation block. The type here is plain
      * `text` because drizzle-orm's pg-core has no way to say it — and because
      * drizzle-kit only *reports* a collation delta rather than modelling one,
      * a later `pnpm db:generate` will not take it back off.
@@ -1288,32 +1288,6 @@ export const people = pgTable(
     courtesyEmailOptOutAt: timestamp("courtesy_email_opt_out_at", { withTimezone: true }),
     /** Keeps history intact while removing a person from active shop workspaces. */
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
-    /**
-     * **The diver filled this record in themselves**, at the shop's own QR or
-     * printed card, before any booking existed (issue #1236).
-     *
-     * A date rather than a flag, because "when" is what a staffer standing at
-     * the counter actually wants: a person who registered this morning is the
-     * one in front of them, and one who registered in March is a returning
-     * diver whose details may have moved on.
-     *
-     * Set **only when the row is created**. A returning diver re-submitting the
-     * form is matched by email and keeps the stamp they already had — and a
-     * person the shop typed in itself never gets one, so the mark means
-     * precisely "this came from the diver" and not "this was recent".
-     *
-     * It is also load-bearing for what a shop trusts: nothing here is reviewed
-     * evidence. The certification is `self_declared_at`, the fit is a
-     * preference, and the medical answers arrive through the ordinary waiver
-     * flow with the ordinary hard block.
-     */
-    /**
-     * **No longer written or read** (issue #2726): `origin = 'self_registration'`
-     * with `created_at` is the same fact. The column is declared only so the
-     * release still serving can read it while this one deploys; the next release
-     * removes it (expand/contract, the destructive-migration guard).
-     */
-    selfRegisteredAt: timestamp("self_registered_at", { withTimezone: true }),
     /**
      * Set when this person's identifying and medical data was destructively
      * erased across the shop's tables (ADR 20260802-diver-data-erasure).

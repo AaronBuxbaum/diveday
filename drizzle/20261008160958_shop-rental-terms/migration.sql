@@ -1,1 +1,0 @@
-ALTER TABLE "shops" ADD COLUMN "rental_terms" text;

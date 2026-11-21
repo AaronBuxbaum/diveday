@@ -261,7 +261,7 @@ describe("what PGlite answers", () => {
    *
    * The one column that mattered no longer takes it from the default:
    * `people.full_name` carries `COLLATE "und-x-icu"` of its own, set by
-   * `drizzle/20260911200158_person-name-collation`, so the twenty-one
+   * the baseline migration's collation block, so the twenty-one
    * name-ordered reads in `src/db` are the same order on both engines without
    * naming a collation (`src/db/name-collation.test.ts` and its `.postgres`
    * sibling hold both halves). What stays true is the row below: the

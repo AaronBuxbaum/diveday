@@ -1,1 +1,0 @@
-ALTER TABLE "account_sessions" ADD COLUMN "last_human_activity_at" timestamp with time zone DEFAULT now() NOT NULL;

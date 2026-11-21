@@ -1,1 +1,0 @@
-ALTER TABLE "trip_invitations" ADD COLUMN "emailed_at" timestamp with time zone;

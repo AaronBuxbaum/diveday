@@ -1,1 +1,0 @@
-ALTER TABLE "bookings" ADD COLUMN "contact_typed_by_lead_at" timestamp with time zone;

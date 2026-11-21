@@ -1,1 +1,0 @@
-ALTER TABLE "incident_reports" ADD COLUMN "missing_alert_sent_at" timestamp with time zone;

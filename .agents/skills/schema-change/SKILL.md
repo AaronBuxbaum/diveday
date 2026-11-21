@@ -56,8 +56,11 @@ questions — read the schema module.
 ## Notes
 
 - Migrations apply automatically in dev/test (`getDb()`/`createTestDb()` run the migrator);
-  there is no manual migrate step locally. Production migration application will be defined
-  with the hosting ADR.
+  there is no manual migrate step locally. Production applies them in the Vercel build
+  (`pnpm db:migrate`; [deploy runbook](../../../docs/engineering/deploy-and-migrations-runbook.md)).
+- `drizzle/` starts from one baseline, `20261121075816_baseline` (ADR
+  20261121-one-baseline-migration). A local `.pglite` built before it fails on "already exists":
+  `pnpm db:reset` once.
 - `pnpm check:migration-graph` (inside `pnpm check:repo`) is what keeps parallel sessions from
   colliding on the graph; [two-branches.md](two-branches.md) is its remedy. It reads files only — no database, no
   credential — so it answers the same on a laptop as in CI.

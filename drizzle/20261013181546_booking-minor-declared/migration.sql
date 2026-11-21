@@ -1,1 +1,0 @@
-ALTER TABLE "bookings" ADD COLUMN "minor_declared_at" timestamp with time zone;

@@ -165,7 +165,7 @@ export function migrationPathsAt(commit, run = runGit) {
  * @param {typeof runGit} [run]
  * @returns {Materialized | Failure}
  */
-export function materializeMigrations(commit, outDir, run = runGit) {
+function materializeMigrations(commit, outDir, run = runGit) {
   const listed = migrationPathsAt(commit, run);
   if (!listed.ok) return listed;
   rmSync(outDir, { recursive: true, force: true });

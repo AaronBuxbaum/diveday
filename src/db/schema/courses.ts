@@ -42,7 +42,7 @@ export const courses = pgTable(
       .references(() => shops.id),
     /**
      * **`COLLATE "und-x-icu"` in the database**, set by
-     * `drizzle/20261010081009_site-gear-course-collation` — the same treatment
+     * the baseline migration's collation block — the same treatment
      * `people.full_name` has (see its comment in `core.ts`). The type here is
      * plain `text` because drizzle-orm's pg-core has no way to say it, and a
      * later `pnpm db:generate` will not take it back off.

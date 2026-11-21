@@ -1,1 +1,0 @@
-ALTER TABLE "courses" ADD COLUMN "included_personal_gear" jsonb DEFAULT '[]' NOT NULL;

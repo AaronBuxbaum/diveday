@@ -1,1 +1,0 @@
-CREATE INDEX "bookings_group_hold_due_idx" ON "bookings" ("group_hold_until") WHERE "group_hold_until" is not null;

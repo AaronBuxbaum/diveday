@@ -63,8 +63,6 @@ export const EXCLUDED_COLUMNS: Record<string, string[]> = {
     // inferred signal, not a fact the shop entered, so a CSV can't vouch for
     // one. Null on import falls back to the shop's locale; nothing is lost.
     "locale",
-    // Superseded by `origin` (#2726), no longer written; dropped next release.
-    "self_registered_at",
   ],
   trips: [
     "shop_id",

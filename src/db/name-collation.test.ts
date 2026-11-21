@@ -8,7 +8,7 @@ import { courses, diveSites, gearItems, people } from "./schema";
  * **`people.full_name` carries its own ICU collation**, so a name-ordered list
  * comes out in the order a person expects without a single query saying so.
  *
- * Until `drizzle/20260911200158_person-name-collation` the order came from the
+ * Until the column carried its own collation the order came from the
  * *database* default, which is `C` (byte order) on PGlite and whatever initdb
  * was handed on a server — so `Ángel` and `Ñuria` sorted after `Zoe` in this
  * suite and somewhere else entirely in production, and no test could say which
@@ -66,7 +66,7 @@ describe("people.full_name ordering (PGlite, the engine the suite runs on)", () 
 
 /**
  * **The three other columns a list is ordered by** carry the same collation
- * (`drizzle/20261010081009_site-gear-course-collation`, issue #1708): the
+ * (the baseline migration's collation block, issue #1708): the
  * dive-site library, the gear register and the course roster. Each assertion
  * is a bare `orderBy` for the same reason as above.
  */

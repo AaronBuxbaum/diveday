@@ -1,2 +1,0 @@
-ALTER TABLE "trip_assignments" ADD COLUMN "offline_incarnation" uuid DEFAULT gen_random_uuid() NOT NULL;--> statement-breakpoint
-ALTER TABLE "roll_call_events" ADD COLUMN "offline_crew_assignment_id" uuid;

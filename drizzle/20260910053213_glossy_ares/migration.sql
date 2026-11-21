@@ -1,1 +1,0 @@
-ALTER TYPE "media_deletion_kind" ADD VALUE 'payment_receipt';

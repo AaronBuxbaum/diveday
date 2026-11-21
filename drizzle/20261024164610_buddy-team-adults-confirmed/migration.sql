@@ -1,1 +1,0 @@
-ALTER TABLE "buddy_team_events" ADD COLUMN "adults_confirmed" boolean DEFAULT false NOT NULL;

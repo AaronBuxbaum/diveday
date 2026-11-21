@@ -1,1 +1,0 @@
-ALTER TABLE "notification_send_queue" ADD COLUMN "recovery_attempts" integer DEFAULT 0 NOT NULL;

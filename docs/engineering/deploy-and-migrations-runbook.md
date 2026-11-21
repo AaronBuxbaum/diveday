@@ -37,7 +37,7 @@ Seven consequences follow, and every one of them is load-bearing:
 | CI rehearses migrations against a real Postgres before merge — the `real-postgres` job in `.github/workflows/ci.yml` (see [Rehearsal](#what-ci-rehearses-and-what-it-still-doesnt)) | **The deploy is no longer the first time the SQL meets a real server.** It is still the first time it meets *production data* |
 | A destructive statement is refused before `db:migrate` runs — see [the guard](#the-guard-that-enforces-it) | **Expand/contract is enforced, not merely written.** The rule below is a mechanism now; what it does *not* cover is listed there |
 | Vercel's `scripts/vercel-build.mjs` runs no typecheck and `next build` skips its own on Vercel; CI typechecks every commit and local `pnpm build` keeps its check | **Types are gated by CI, not the Vercel build** (Aaron, 2026-11-05; supersedes the #1377 refusal gate). TypeScript 7's checker peaks near 7.7 GB and the 8 GB builder killed it. A type error reaches production only if CI is bypassed, so keep the deploy gate on. |
-| `drizzle/` holds a squashed baseline plus the forward-only folders added since (`migration.sql` + `snapshot.json` each), with no down migrations anywhere | **Rollback is always forward.** There is no `drizzle-kit down`. "Revert the migration" is not a thing that exists here. The baseline's folder *name* is load-bearing — see ADR 20260904-squash-migration-baseline before renaming it |
+| `drizzle/` holds one baseline plus the forward-only folders added since (`migration.sql` + `snapshot.json` each), with no down migrations anywhere | **Rollback is always forward.** There is no `drizzle-kit down`. "Revert the migration" is not a thing that exists here. A database built from an earlier history is wiped, not upgraded — see [The baseline](#the-baseline) |
 
 Put together: an unsafe migration is applied by the same command that builds the code, with no way to
 reverse it. The SQL itself has been rehearsed; its interaction with real data volumes has not. That
@@ -179,6 +179,14 @@ To turn it on, in this order:
 To turn it off, remove the Vercel variable first (pushes deploy again), then the GitHub variable.
 The other order leaves a window in which nothing deploys.
 
+## The baseline
+
+`drizzle/` starts with one baseline, `20261121075816_baseline`, which creates the whole schema on an
+empty database (ADR 20261121-one-baseline-migration). Production was wiped when it landed (issue
+#4858), because nobody's data was in it. A database still carrying the history from before it,
+such as an old dump or a long-lived `.pglite`, stops on "already exists" at the baseline's first
+statement and changes nothing: wipe it (`pnpm db:reset` locally), never patch it forward.
+
 ## What CI rehearses, and what it still doesn't
 
 The `real-postgres` job in `.github/workflows/ci.yml` runs the migrations against a genuine
@@ -312,8 +320,7 @@ exist, on 2026-08-22, when a deploy died at 11:58 printing a tree diagram and no
 
 **The fix is `pnpm db:merge`, and it rewrites nothing.** It writes one migration folder whose SQL is
 empty and whose snapshot names every open head as a parent; drizzle compares open heads only, and
-this leaves one. `drizzle/20260822212616_merge-migration-heads` is the worked
-example. The one case where it is the wrong answer is when the two branches genuinely add the same
+this leaves one; the folder it writes is named `<timestamp>_merge-migration-heads`. The one case where it is the wrong answer is when the two branches genuinely add the same
 column — then the merge folder quiets the check and the second `ADD COLUMN` still fails against a
 real server, which the `real-postgres` job is what catches.
 

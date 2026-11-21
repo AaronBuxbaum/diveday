@@ -96,7 +96,7 @@ export async function listTripDiverContacts(db: AppDb, shopId: string, tripId: s
  * whichever token happens to be first. Never call the manifest alphabetical in
  * staff copy — a crew would search it that way and conclude a diver is
  * missing. The column carries `COLLATE "und-x-icu"`
- * (`drizzle/20260911200158_person-name-collation`), so this inherits an
+ * (the baseline migration's collation block), so this inherits an
  * ordering sensible in any language without the query saying so — `Ángel`
  * beside `Ana`, not after `Zoe`.
  *

@@ -1,1 +1,0 @@
-ALTER TABLE "waiver_records" ADD COLUMN "draft_via_link_id" uuid;

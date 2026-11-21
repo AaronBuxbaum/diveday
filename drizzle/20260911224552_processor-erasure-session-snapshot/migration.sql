@@ -1,1 +1,0 @@
-ALTER TYPE "processor_erasure_target" ADD VALUE 'stripe_checkout_session_snapshot';

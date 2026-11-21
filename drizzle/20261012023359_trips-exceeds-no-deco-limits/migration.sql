@@ -1,1 +1,0 @@
-ALTER TABLE "trips" ADD COLUMN "exceeds_no_deco_limits" boolean DEFAULT false NOT NULL;
