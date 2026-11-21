@@ -338,12 +338,10 @@ export async function startBookingCheckout(
   // What this attempt's discount is worth, as the two snapshot columns hold
   // it: a percent as itself, a fixed amount as the minor units it actually
   // takes off — capped at the discountable lines, so it never exceeds them.
-  const appliedDiscountPercent =
-    appliedPromo?.promoDiscount.kind === "percent" ? appliedPromo.promoDiscount.percent : null;
-  const appliedDiscountCents =
-    appliedPromo?.promoDiscount.kind === "amount"
-      ? discountOffCents(discountableCents, appliedPromo.promoDiscount) || null
-      : null;
+  const { appliedDiscountPercent, appliedDiscountCents } = discountSnapshot(
+    appliedPromo?.promoDiscount ?? null,
+    discountableCents,
+  );
   // One Stripe line per (amount, kind of seat, deposit-or-fare): two divers at
   // the same figure share a line, a snorkeler at the same figure does not.
   const tripLines = new Map<
@@ -432,12 +430,9 @@ export async function startBookingCheckout(
   }
 
   // A promotion must never discount the pass-through fee: that money is
-  // collected for a third party and remitted in full, so a shop-wide 20% code
-  // would make the shop pay a fifth of every diver's park levy out of its own
-  // margin (issue #1019). Stripe cannot express "this line is not
-  // discountable" — a coupon's `applies_to` names *Product* ids and these lines
-  // are inline `price_data` — so the percent is worked out here against the
-  // discountable lines only and handed over as a fixed amount.
+  // remitted to a third party in full (issue #1019). Stripe cannot exempt an
+  // inline `price_data` line, so the percent is worked out here against the
+  // discountable lines and handed over as a fixed amount.
   //
   // Only in this combination. With no fee, or no promotion, the shop's own
   // percent promotion code goes to Stripe exactly as before.
@@ -496,11 +491,8 @@ export async function startBookingCheckout(
         })
       : null;
   if (passThroughDiscountGuard && passThroughDiscountGuard.status !== "created") {
-    // Falling back to the percent code is strictly no worse than the behaviour
-    // this replaces, and refusing the booking outright would be worse than
-    // either — so the session still goes out, and the shop absorbs the fee's
-    // share of the discount that one time. Logged, so a provider that starts
-    // failing is visible rather than silent.
+    // Falling back to the percent code is no worse than refusing the booking:
+    // the shop absorbs the fee's share of the discount that once. Logged.
     log("checkout.pass_through_discount_unavailable", "warn", {
       shopId: input.shopId,
       tripId: input.tripId,
@@ -512,14 +504,8 @@ export async function startBookingCheckout(
       ? passThroughDiscountGuard.stripeCouponId
       : undefined;
 
-  // What the promotion really takes off: the discountable lines when the fixed
-  // coupon guards the fee, the gross when Stripe gets the percent code itself.
-  const discountOff = appliedPromo
-    ? discountOffCents(
-        promotionCouponId ? discountableCents : totalCents,
-        appliedPromo.promoDiscount,
-      )
-    : 0;
+  const offBase = promotionCouponId ? discountableCents : totalCents;
+  const discountOff = takenOff(appliedPromo?.promoDiscount ?? null, offBase);
 
   try {
     const session = await checkout.createCheckoutSession({
@@ -617,7 +603,7 @@ export async function startBookingCheckout(
           promoCode: appliedPromo?.code ?? input.shopPromo?.code ?? null,
           appliedDiscountPercent,
           appliedDiscountCents,
-          discountOffCents: discountOff || null,
+          discountOffCents: discountOff,
         })
         .returning();
       if (!row) throw new Error("startBookingCheckout: insert returned no row");
@@ -643,6 +629,24 @@ export async function startBookingCheckout(
     // future callers check.
     await releaseBookingCheckoutClaim(db, input.bookingIds, intent.id);
   }
+}
+
+/** The two snapshot columns: a percent as itself, a fixed amount as what it takes off, capped at the discountable lines. */
+function discountSnapshot(discount: PromoDiscount | null, discountableCents: number) {
+  return {
+    appliedDiscountPercent: discount?.kind === "percent" ? discount.percent : null,
+    appliedDiscountCents:
+      discount?.kind === "amount" ? discountOffCents(discountableCents, discount) || null : null,
+  };
+}
+
+/**
+ * What the promotion really takes off, or null for none, out of `base`: the
+ * discountable lines when the fixed coupon guards the park fee, the gross when
+ * Stripe gets the percent code itself.
+ */
+function takenOff(discount: PromoDiscount | null, base: number): number | null {
+  return discount ? discountOffCents(base, discount) || null : null;
 }
 
 /** What a fresh attempt right now would charge, for comparison against a stored session. */
