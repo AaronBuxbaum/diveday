@@ -1,4 +1,4 @@
-import { DEMO_TODAY_TRIP_ID } from "../src/db/seed-identifiers";
+import { DEMO_TODAY_TRIP_ID } from "../src/db/seed/identifiers";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import { offlineCopySaved, openCounterFor, openDeckPerson, openGuestFolio } from "./helpers";

@@ -15,7 +15,7 @@ the e2e baselines depend on it.
 
 ## Decision
 
-- **One context.** `src/db/seed-schedule.ts` builds a typed `SeedContext` once, in `seedTheBoard`
+- **One context.** `src/db/seed/schedule.ts` builds a typed `SeedContext` once, in `seedTheBoard`
   (staff, divers, catalog, sites, trips, bookings, shop facts), and every later step reads it
   (`c.bookings.wreck`, `c.staff.instructor`). Step modules keep their own signatures and write
   through their own code; only the orchestrator knows the context.
@@ -26,7 +26,7 @@ the e2e baselines depend on it.
   a history half is two steps (`seedFrontDeskLists`, `seedFrontDesk`).
 - **The day is an ordered list.** `THE_DAY` holds every step after the board, in order, each with
   its prose comment. A new scenario is a new module and one entry where its reads are satisfied.
-- **Kept from 20260803:** one clock and one counter (`seed-clock.ts`); a new scenario is a new
+- **Kept from 20260803:** one clock and one counter (`src/db/seed/clock.ts`); a new scenario is a new
   module; byte-identical output is proven by fingerprinting the seeded database, not by review.
 
 The fingerprint proof for this change is in its PR (#3879).
@@ -47,3 +47,7 @@ The fingerprint proof for this change is in its PR (#3879).
   must move it into the board, which is the friction 20260803 intended.
 - Revisit if steps start reading context fields they do not need, or the board grows past the
   scenarios every step reads.
+
+## Amendment, 2026-11-21
+
+The seed is a folder: `src/db/seed/<scenario>.ts` behind `src/db/seed/index.ts`, still `@/db/seed`.

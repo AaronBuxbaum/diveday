@@ -9,7 +9,7 @@ This module owns a demo shop built ahead of time for one prospect, and the recor
 
 ## Does not own
 
-The demo shop itself (`src/db/seed.ts`), the demo reaper (`src/db/seed-demo-lifecycle.ts`), sign-in (`src/app/actions/demo.ts`), and the page (`src/app/(token)/preview/[token]`).
+The demo shop itself (`src/db/seed/index.ts`), the demo reaper (`src/db/seed/demo-lifecycle.ts`), sign-in (`src/app/actions/demo.ts`), and the page (`src/app/(token)/preview/[token]`).
 
 ## Invariants
 

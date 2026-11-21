@@ -35,7 +35,7 @@ const LABELS = {
 
 /**
  * The seeded shop with this test's own destination and a blank delivery
- * history — the seed ships blue-mantis with both (src/db/seed-backup.ts), and
+ * history — the seed ships blue-mantis with both (src/db/seed/backup.ts), and
  * the seeded "yesterday" delivery lands in whatever ISO week the suite runs
  * in, which is exactly the week these idempotency tests reason about.
  */

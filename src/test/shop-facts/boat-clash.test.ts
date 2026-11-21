@@ -1,6 +1,6 @@
 import { inArray } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
+import { seedRollCallEvidence } from "@/db/seed/roll-call-evidence";
 import { crewSubject } from "../../db/roll-call-subject";
 import { trips } from "../../db/schema/index";
 import { createTrip } from "../../db/trips";

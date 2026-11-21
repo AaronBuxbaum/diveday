@@ -5,7 +5,7 @@ import { seedFacts } from "./shop-facts";
  * **The register's Rentals view** (plan `rental-tracking`, layer 2): every
  * open rental by who holds it, reached from the register's own filter band
  * like Service due and Deleted. The demo reserves four units on the wreck
- * trip for two divers (`seed-gear.ts`); the trouble seed drags the first
+ * trip for two divers (`seed/gear.ts`); the trouble seed drags the first
  * diver's kit into the past, which is the state a desk chases.
  */
 test.describe("staff", () => {

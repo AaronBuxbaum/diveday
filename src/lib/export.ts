@@ -1,7 +1,7 @@
 /**
  * Full-shop export bundle: RFC-4180 CSV serialization and ZIP assembly
  * (ADR 20260722-full-shop-export). Framework-free — the data arrives as plain
- * tables from src/db/export.ts and leaves as bytes the route can stream. The
+ * tables from src/db/export/index.ts and leaves as bytes the route can stream. The
  * CSV column sets written here are the documented contract the planned
  * importer, scheduled backups, and read API reuse; change them deliberately.
  */
@@ -365,7 +365,7 @@ export function buildExportBundle(input: ExportBundleInput, now: Date): ExportFi
 }
 
 /**
- * Every record family named in `loadDiverExportBundleInput` (src/db/export.ts)
+ * Every record family named in `loadDiverExportBundleInput` (src/db/export/index.ts)
  * that is deliberately absent from a diver's own bundle, and why — the same
  * discipline `NOT_INCLUDED` above holds the shop bundle to, so a diver reading
  * their own README can tell "not applicable" from "silently dropped". Each

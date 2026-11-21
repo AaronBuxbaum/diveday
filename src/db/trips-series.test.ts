@@ -2,7 +2,7 @@ import type { PGlite } from "@electric-sql/pglite";
 import { and, eq, isNull } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
+import { seedRollCallEvidence } from "@/db/seed/roll-call-evidence";
 import { calendarDateWeekday } from "@/lib/calendar-date";
 import { queryTimingLogger, withQueryStats } from "@/lib/observability/query-timing";
 import { EVERY_WEEKDAY, weekdaySetFrom } from "@/lib/recurrence";

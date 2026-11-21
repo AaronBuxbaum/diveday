@@ -5,7 +5,7 @@
  * `e2e/visual-harness.ts`, and the procedure is the e2e-and-visual skill.
  */
 import type { Page } from "@playwright/test";
-import { LISTED_SHOP_SLUGS } from "../src/db/seed-identifiers";
+import { LISTED_SHOP_SLUGS } from "../src/db/seed/identifiers";
 import { diverTranslator } from "../src/i18n/messages";
 import { type FeaturePageSlug, featurePagePath } from "../src/lib/feature-pages";
 import { publicFindMyBookingPath } from "../src/lib/public-routes";

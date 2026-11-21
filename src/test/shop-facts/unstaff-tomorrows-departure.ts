@@ -8,7 +8,7 @@ import { HOUR_MS } from "../../lib/clock";
  * **A departure this week the shop no longer has crew for** — the loud state
  * the staffing week exists to put in front of a manager (ADR
  * 20260827-the-shops-shelves, decision 3), on a boat the seed *had* crewed.
- * The same call `seed-front-desk.ts` makes about its `succeeded` payment: a
+ * The same call `seed/front-desk.ts` makes about its `succeeded` payment: a
  * demo permanently short-handed is a worse demo, so this is opt-in.
  *
  * Tomorrow's departure rather than today's: today's boat is the one Today, the

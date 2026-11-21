@@ -39,6 +39,8 @@ import { bankCounts, ratchetFlags, readCounts } from "./ratchet.mjs";
 
 const ROOT = process.cwd();
 const GUARDED_ROOTS = ["src/db", "src/lib", "src/features", "src/app"];
+/** A seed scenario writes the demo, not a read a person sees: the whole `src/db/seed/` folder is skipped. */
+const SEED_DIRECTORY = path.normalize("src/db/seed/");
 const SOURCE_EXTENSIONS = new Set([".ts", ".tsx"]);
 const IS_TEST = /\.test\.tsx?$/;
 const QUERY_WINDOW = 60;
@@ -125,8 +127,7 @@ async function collect() {
       (relativePath) => SOURCE_EXTENSIONS.has(path.extname(relativePath)),
     )) {
       if (IS_TEST.test(file)) continue;
-      const base = path.basename(file);
-      if (base === "seed.ts" || base.startsWith("seed-")) continue;
+      if (path.normalize(file).startsWith(SEED_DIRECTORY)) continue;
       const source = await readFile(path.join(ROOT, file), "utf8");
       const listed = CARRIERS[file.split(path.sep).join("/")] ?? [];
       const result = findUnfilteredPeopleReads(source, carriersIn(source, listed));

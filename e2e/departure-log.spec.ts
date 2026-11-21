@@ -84,7 +84,7 @@ test("Wrapped up opens the log with the recorded facts", async ({ page }) => {
 
   // Who dived with whom is on the document — the pairing staff recorded, not a
   // derived verdict about it. Tom Okafor and Lena Fischer are the seeded reef
-  // pair (src/db/seed-buddy-teams.ts), so each names the other.
+  // pair (src/db/seed/buddy-teams.ts), so each names the other.
   const roster = page.getByRole("table").first();
   await expect(roster.getByRole("columnheader", { name: "Buddy team" })).toBeVisible();
   // Anchored on the numbered Diver cell, not row text: a pairing prints both
@@ -124,7 +124,7 @@ test("Wrapped up opens the log with the recorded facts", async ({ page }) => {
   await expect(timeline.getByText(/Members at that moment: .*Tom Okafor/).first()).toBeVisible();
 
   // The shop's own pre-departure checklist (ADR 20260824-pre-departure-safety-check):
-  // seeded (src/db/seed-pre-departure-checklist.ts) but never tapped on this
+  // seeded (src/db/seed/pre-departure-checklist.ts) but never tapped on this
   // departure, so every line states its absence rather than rendering blank.
   await expect(page.getByRole("heading", { name: "Pre-departure check" })).toBeVisible();
   const checklistTable = page.getByRole("table").filter({ hasText: "VHF radio checked" });

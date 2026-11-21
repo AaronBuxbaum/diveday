@@ -20,7 +20,7 @@ import { seedFacts } from "./shop-facts";
  * Three things worth knowing before reading the assertions:
  *
  * - The seed gives the dawn boat's crew a distinct shift today
- *   (`src/db/seed-staff-roster.ts`, `SEEDED_SHIFT` below), and the frozen clock puts today at
+ *   (`src/db/seed/staff-roster.ts`, `SEEDED_SHIFT` below), and the frozen clock puts today at
  *   Tuesday 21 July 2026, 09:30 in the shop's own zone — so the default week
  *   is Mon 20 – Sun 26 July and it is never empty.
  * - Paging is `?week=<ISO Monday>`, the schedule board's own grammar
@@ -32,7 +32,7 @@ import { seedFacts } from "./shop-facts";
  *   unavoidable it takes the first (visible) match.
  * - **The seeded week is a clean week.** The DOM-M3 charter (the divemaster
  *   driving, the captain on the lines) sails a week out, past this one
- *   (`seed-trips.ts`); today's reef boat is crewed the ordinary way. Assertions
+ *   (`seed/trips.ts`); today's reef boat is crewed the ordinary way. Assertions
  *   here still name their own departure rather than counting the week's chips.
  */
 
@@ -41,7 +41,7 @@ const t = staffTranslator("en-US");
 
 /**
  * The distinct fictional dawn-crew shift, independently checked to be
- * present this week and absent next week by `seed-staff-shifts.test.ts`.
+ * present this week and absent next week by `seed/staff-shifts.test.ts`.
  */
 const SEEDED_SHIFT = "5:00 AM – 9:00 AM";
 

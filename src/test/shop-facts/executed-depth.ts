@@ -3,7 +3,7 @@ import { z } from "zod";
 import type { AppDb } from "../../db/client";
 import { upsertExecutedDive } from "../../db/executed-dives";
 import { shops, trips } from "../../db/schema/index";
-import { DEMO_TODAY_TRIP_TITLE } from "../../db/seed-trips";
+import { DEMO_TODAY_TRIP_TITLE } from "../../db/seed/trips";
 import { listStaff } from "../../db/trips";
 import { FactRefused } from "./refusal";
 

@@ -16,7 +16,7 @@ async function showAllGuests(page: Page) {
 }
 
 const SHOP = "blue-mantis";
-/** A seeded diver on this departure whose SSI card is still pending (`seed-divers.ts`, index 34). */
+/** A seeded diver on this departure whose SSI card is still pending (`seed/divers.ts`, index 34). */
 const SEEDED_DIVER = "Tyler Brooks";
 const DEPARTURE = /Two-Tank Reef — French Reef/;
 const LEAD = "NAUI also shows these certifications. Add them? Each waits for Mark certified.";

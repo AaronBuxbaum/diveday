@@ -1,6 +1,6 @@
 import { and, eq, ne } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
+import { seedRollCallEvidence } from "@/db/seed/roll-call-evidence";
 import { createBookingParty } from "../../../db/bookings";
 import { upsertExecutedDive } from "../../../db/executed-dives";
 import { recordCrewRollCall, recordRollCall } from "../../../db/manifests";

@@ -1,0 +1,214 @@
+import { and, eq } from "drizzle-orm";
+import { seedRollCallEvidence } from "@/db/seed/roll-call-evidence";
+import { nowDate, nowMs } from "@/lib/clock";
+import { demoEmail } from "@/lib/simulator-email";
+import type { DbExecutor } from "../client";
+import {
+  bookingCheckoutBookings,
+  bookingCheckouts,
+  deals,
+  interests,
+  notificationDeliveries,
+  paymentOperationIntents,
+  people,
+  personRoles,
+} from "../schema";
+import { CAPTAIN_NAME, type Cast } from "./cast";
+import { at, dateAt, nextCreatedAt } from "./clock";
+
+/**
+ * The paperwork side of a working week: divers waiting on a sold-out charter,
+ * rental sizes already asked for on the boats that have not sailed yet, a
+ * couple of invoices out, and the confirmation emails that went with them —
+ * including one that bounced, because they do.
+ *
+ * Nothing here touches today's boat. Its roster, its readiness counts, and the
+ * blocker copy on the departure board are asserted exactly, and they describe a
+ * morning where the work has not been done yet — which is the point of showing
+ * it.
+ */
+type FrontDeskInputs = {
+  cast: Cast<{ id: string; fullName: string }>;
+  tripRows: { id: string; title: string }[];
+  bookingRows: { id: string; tripId: string; personId: string }[];
+};
+
+const wreckIdOf = (tripRows: FrontDeskInputs["tripRows"]) =>
+  new Map(tripRows.map((trip) => [trip.title, trip.id])).get("Wreck Trip — Spiegel Grove");
+
+/**
+ * The working week's lists: the last-minute list, the wait list on the sold-out
+ * charter, its deal, a checkout left pending. Part of the `history` set, so a
+ * lean shop has no lists to read.
+ */
+export async function seedFrontDeskLists(
+  db: DbExecutor,
+  shopId: string,
+  { cast, tripRows, bookingRows }: FrontDeskInputs,
+): Promise<void> {
+  const wreckId = wreckIdOf(tripRows);
+
+  // Keep the export useful on a fresh demo: these are the small operational
+  // records that otherwise tend to remain empty because they are created by
+  // later staff actions in a real shop.
+  const listPeople = [9, 10, 11, 12, 43, 45, 47, 49, 51]
+    .map((index) => cast.slot(index))
+    .filter((person) => person !== undefined);
+  if (listPeople.length > 0) {
+    await db
+      .insert(interests)
+      .values(
+        listPeople.map((person, index) => ({
+          shopId,
+          scope: "anytime" as const,
+          askedBy: "diver" as const,
+          personId: person.id,
+          availableFrom: dateAt(index === 0 ? 0 : 2),
+          availableUntil: dateAt(30),
+          ...(index === listPeople.length - 1
+            ? { closedAt: nowDate(), closedAs: "unsubscribed" as const }
+            : {}),
+          askedAt: nextCreatedAt(),
+        })),
+      )
+      .onConflictDoNothing();
+  }
+
+  // The sold-out charter is where a wait-list earns its keep.
+  if (wreckId) {
+    const waiting = [cast.amara, cast.felix, cast.hana];
+    if (waiting.length > 0) {
+      await db.insert(interests).values(
+        waiting.map((person) => ({
+          shopId,
+          scope: "departure" as const,
+          askedBy: "diver" as const,
+          partySize: 1,
+          tripId: wreckId,
+          personId: person.id,
+          askedAt: nextCreatedAt(),
+        })),
+      );
+    }
+
+    await db
+      .insert(deals)
+      .values({
+        shopId,
+        tripId: wreckId,
+        status: "active",
+        discountPercent: 25,
+        code: "DEMO-REEF-25",
+        stripeCouponId: "coupon_demo_reef",
+        stripePromotionCodeId: "promo_demo_reef",
+        expiresAt: at(2, 18),
+        recipientCount: Math.max(1, listPeople.length - 1),
+        createdByPersonId: null,
+        createdAt: nextCreatedAt(),
+      })
+      .onConflictDoNothing();
+
+    const booking = bookingRows.find((row) => row.tripId === wreckId);
+    if (booking) {
+      const [recorder] = await db
+        .select({ id: people.id })
+        .from(people)
+        .innerJoin(personRoles, eq(personRoles.personId, people.id))
+        .where(
+          and(
+            eq(people.shopId, shopId),
+            eq(personRoles.role, "captain"),
+            eq(people.fullName, CAPTAIN_NAME),
+          ),
+        )
+        .limit(1);
+      if (recorder) {
+        await seedRollCallEvidence(
+          db,
+          {
+            shopId,
+            tripId: wreckId,
+            bookingId: booking.id,
+            recordedByPersonId: recorder.id,
+            status: "boarded",
+            checkpoint: "departure",
+            source: "live",
+            occurredAt: nowDate(),
+          },
+          { observesPrevious: false },
+        );
+      }
+      const [checkout] = await db
+        .insert(bookingCheckouts)
+        .values({
+          shopId,
+          tripId: wreckId,
+          status: "pending",
+          currency: "usd",
+          stripeAccountId: "acct_demo",
+          stripeSessionId: "cs_demo_pending",
+          checkoutUrl: "https://checkout.stripe.com/c/pay/demo-pending",
+          customerEmail: demoEmail("priya.sharma"),
+          amountPerDiverCents: 18_000,
+          totalCents: 18_000,
+          expiresAt: at(1, 12),
+          createdAt: nextCreatedAt(),
+        })
+        .onConflictDoNothing({ target: bookingCheckouts.stripeSessionId })
+        .returning();
+      if (checkout) {
+        await db.insert(bookingCheckoutBookings).values({
+          shopId,
+          checkoutId: checkout.id,
+          bookingId: booking.id,
+        });
+      }
+      await db
+        .insert(paymentOperationIntents)
+        .values({
+          shopId,
+          kind: "checkout_session",
+          status: "succeeded",
+          tripId: wreckId,
+          bookingId: booking.id,
+          stripeObjectId: "cs_demo_pending",
+          startedAt: nextCreatedAt(),
+          resolvedAt: nowDate(),
+        })
+        .onConflictDoNothing();
+    }
+  }
+}
+
+/**
+ * The confirmations that went out on the charter, which every shape carries.
+ */
+export async function seedFrontDesk(
+  db: DbExecutor,
+  shopId: string,
+  { tripRows, bookingRows }: Omit<FrontDeskInputs, "cast">,
+): Promise<void> {
+  const wreckId = wreckIdOf(tripRows);
+
+  // Orders are deliberately absent. An order belongs to a Stripe account the
+  // shop connected itself, and fabricating one here would show the settings
+  // page a connected integration whose "Refresh status" button then calls the
+  // real Stripe API and fails. The payment states that gate boarding are
+  // seeded on the wreck charter instead, where they are real.
+
+  // The confirmations that went out. Only successes: a seeded bounce would put
+  // a permanent red row on the dashboard that no amount of retrying clears,
+  // since there is no provider behind it to succeed on the second attempt.
+  const notified = bookingRows.filter((booking) => booking.tripId === wreckId).slice(0, 4);
+  const deliveries = notified.map((booking, index) => ({
+    shopId,
+    bookingId: booking.id,
+    kind: "booking_confirmation" as const,
+    status: "sent" as const,
+    providerMessageId: `demo-msg-${index}`,
+    attemptedAt: new Date(nowMs() - (index + 1) * 60 * 60 * 1000),
+  }));
+  if (deliveries.length > 0) {
+    await db.insert(notificationDeliveries).values(deliveries);
+  }
+}

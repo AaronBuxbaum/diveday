@@ -12,9 +12,9 @@ import { inputsFingerprint } from "./db-template-inputs";
 
 /**
  * The three database shapes tests ask for. `lean` is the small controlled
- * demo dataset unit tests are calibrated to; `history` adds seed.ts's
+ * demo dataset unit tests are calibrated to; `history` adds seed/index.ts's
  * trailing-quarter back-fill, which the reporting-shaped assertions in
- * src/db/orders.test.ts, export.test.ts and search.test.ts read numbers out of.
+ * src/db/orders.test.ts, export/index.test.ts and search.test.ts read numbers out of.
  * `empty` is migrated and nothing else — what {@link unseededTestDb} hands a
  * test that seeds for itself, or whose subject *is* seeding.
  *
@@ -22,7 +22,7 @@ import { inputsFingerprint } from "./db-template-inputs";
  * full build on every single test. That is ~8.5s for the seeded pair and
  * ~3.5s for `empty` — and the second number is why `empty` is here at all.
  * It was the only shape still paying `initdb + migrate` per test, which made
- * `src/db/seed.test.ts`'s atomic-rollback test 5.4s of which 3.5s was the
+ * `src/db/seed/index.test.ts`'s atomic-rollback test 5.4s of which 3.5s was the
  * migration replay rather than the seed it is about (issue #1271).
  */
 export type TemplateVariant = "lean" | "history" | "empty";

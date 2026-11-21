@@ -107,7 +107,7 @@ bigint per row.
 the queue that raises the missing-diver row, and the half of the DOM-H3 agreement that is now
 guarded on one side only), `src/features/safety/incident-export.ts` (twice — the departure log's timeline, whose
 footer carries a SHA-256 over the printed facts, so a tie can print two orders and two hashes for
-one unchanged record), and `src/db/export.ts`, which tie-breaks on `id` — `defaultRandom()`, so the
+one unchanged record), and `src/db/export/index.ts`, which tie-breaks on `id` — `defaultRandom()`, so the
 shop's own CSV of the safety trail is arbitrarily ordered on any tie. `maxRecordedDiveNumber`
 (`src/lib/manifests.ts`, called from `src/db/trips-record.ts`) is in the same entry.
 

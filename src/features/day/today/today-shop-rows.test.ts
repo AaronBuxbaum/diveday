@@ -566,7 +566,7 @@ describe("reviews waiting on moderation (one row, and where it lands)", () => {
  * The inbox's one row (ADR 20260907-two-way-inbox): what nobody has answered
  * yet, counted once for the whole shop and pointing at the page that empties
  * it. The demo seed leaves three messages unanswered
- * (`src/db/seed-inbox.ts`), which is what this counts.
+ * (`src/db/seed/inbox.ts`), which is what this counts.
  */
 describe("unanswered messages", () => {
   const ctx = fileScopedShopContext();

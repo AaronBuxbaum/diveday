@@ -19,7 +19,7 @@ practical — no background job or async delivery is needed.
 
 ## Decision
 
-- `loadShopExportBundleInput` (`src/db/export.ts`) collects every `*_image_url` /
+- `loadShopExportBundleInput` (`src/db/export/index.ts`) collects every `*_image_url` /
   `image_urls[]` value referenced anywhere in the bundle's rows into a deduped, sorted
   `photoUrls: string[]` on `ExportBundleInput`.
 - The download route (`src/app/shop/[shopSlug]/settings/export/download/route.ts`) calls the new

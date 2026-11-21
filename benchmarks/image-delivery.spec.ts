@@ -1,5 +1,5 @@
 import { expect, test } from "../e2e/fixtures";
-import { DEMO_RECAP_BOOKING_ID } from "../src/db/seed-identifiers";
+import { DEMO_RECAP_BOOKING_ID } from "../src/db/seed/identifiers";
 import { signRecapToken } from "../src/lib/recap-links";
 
 for (const width of [390, 1280]) {

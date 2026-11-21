@@ -33,6 +33,8 @@ import { filesUnder } from "./files-under.mjs";
 
 const ROOT = process.cwd();
 const GUARDED_ROOTS = ["src/db", "src/features", "src/app", "src/lib"];
+/** A seed scenario writes the demo, not a read a person sees: the whole `src/db/seed/` folder is skipped. */
+const SEED_DIRECTORY = path.normalize("src/db/seed/");
 const SOURCE_EXTENSIONS = new Set([".ts", ".tsx"]);
 const QUERY_WINDOW = 60;
 
@@ -41,10 +43,8 @@ const ANCHOR =
 const PROOF = /fareCheckout\(\)|tipCheckout\(\)|diveday:any-checkout-purpose:[ \t]*\S/;
 const IS_TEST = /\.test\.tsx?$|\.test-support\.ts$/;
 
-/** Files that write every purpose by construction: the seeds and the demo refresh. */
-const SKIPPED_FILES = new Set(
-  ["src/db/seed.ts", "src/db/demo-refresh.ts"].map((file) => path.normalize(file)),
-);
+/** A file that writes every purpose by construction: the demo refresh (the seeds are `SEED_DIRECTORY`). */
+const SKIPPED_FILES = new Set(["src/db/demo-refresh.ts"].map((file) => path.normalize(file)));
 const SKIPPED_DIRECTORY = path.normalize("src/app/api/test/");
 
 export function findUnnamedCheckoutReads(source) {
@@ -88,7 +88,7 @@ async function main() {
       const normalized = path.normalize(file);
       if (SKIPPED_FILES.has(normalized) || IS_TEST.test(file)) continue;
       if (normalized.startsWith(SKIPPED_DIRECTORY)) continue;
-      if (path.basename(file).startsWith("seed-")) continue;
+      if (normalized.startsWith(SEED_DIRECTORY)) continue;
       const source = await readFile(path.join(ROOT, file), "utf8");
       const result = findUnnamedCheckoutReads(source);
       guarded += result.guarded;

@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
+import { seedRollCallEvidence } from "@/db/seed/roll-call-evidence";
 import { bookings, people, shops, tripScheduleDays, trips } from "../../../db/schema/index";
 import { listStaff } from "../../../db/trips";
 import type { Notification, NotificationProvider } from "../../../lib/notifications/index";

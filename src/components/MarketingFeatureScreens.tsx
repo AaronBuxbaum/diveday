@@ -140,7 +140,7 @@ export function BookingCardFallback({ locale }: { locale: DiverLocale }) {
   );
 }
 
-/** The seeded Molasses Reef route (`src/db/seed-dive-sites.ts`), in the map frame's 0 to 100 units. */
+/** The seeded Molasses Reef route (`src/db/seed/dive-sites.ts`), in the map frame's 0 to 100 units. */
 const MOLASSES_ROUTE = [
   { x: 16, y: 67 },
   { x: 44, y: 29 },
@@ -156,7 +156,7 @@ const MOLASSES_ROUTE = [
  * (`TripRoutes`, `src/components/DiveSiteMap.tsx`): the shop's drawn line,
  * hollow at the start and filled at the finish, with the route's name and
  * note. The site, depth and route are the seeded Molasses Reef's, and so are
- * the two sightings' counts (`src/db/seed-sightings.ts`). The map is drawn as
+ * the two sightings' counts (`src/db/seed/sightings.ts`). The map is drawn as
  * a plain frame: the page lays the line over a terrain map. Left out: the
  * field guide, the moments, and the site's own notes.
  */
@@ -261,7 +261,7 @@ const GEAR_CHIP =
  * per unit: its tag, its model and size, and the one fact it carries. A
  * reserved unit names its diver and the day; a unit that needs service says
  * so in warning ink; a tank names its next inspection. The counts are the
- * seeded fleet's (`src/db/seed-gear.ts`, 37 units). Left out: the other 33
+ * seeded fleet's (`src/db/seed/gear.ts`, 37 units). Left out: the other 33
  * rows, the add form and the service log. Below a 448px panel the chips run
  * off the edge, where the page scrolls them.
  */

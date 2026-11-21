@@ -7,7 +7,7 @@
 ## Context
 
 `src/i18n/locales/<locale>/staff.json` was the repo's top merge-conflict magnet: 50 touches per
-locale in three days of history — ahead of even `src/db/seed.ts` before its scenario split
+locale in three days of history — ahead of even `src/db/seed/index.ts` before its scenario split
 (ADR 20260803-seed-scenario-modules). The mechanism is structural, not behavioral: every parallel
 branch that touches a staff surface adds copy, every addition lands in the same 3,500-line file in
 both locales, and JSON offers no append point that keeps two branches out of each other's diff

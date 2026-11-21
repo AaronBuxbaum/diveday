@@ -1,12 +1,12 @@
 import { and, eq, notExists } from "drizzle-orm";
-import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
+import { seedRollCallEvidence } from "@/db/seed/roll-call-evidence";
 import {
   bookings as bookingsTable,
   people,
   trips as tripsTable,
   waiverRecords,
 } from "../../../db/schema/index";
-import { seedArrivals } from "../../../db/seed-arrivals";
+import { seedArrivals } from "../../../db/seed/arrivals";
 import { listStaff } from "../../../db/trips";
 import { livePerson } from "../../../db/trips-live";
 import { nowMs } from "../../../lib/clock";

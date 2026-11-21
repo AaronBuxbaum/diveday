@@ -59,7 +59,7 @@ test("the crew taps what they saw and the tally counts it", async ({ page }) => 
   await expect(seen.getByText(/At Molasses Reef\./)).toBeVisible();
 
   // The site's own field guide leads the chip row (`seenChipSlugs`), and
-  // Molasses names the southern stingray on its own (`seed-dive-sites.ts`).
+  // Molasses names the southern stingray on its own (`seed/dive-sites.ts`).
   const chip = seen.getByRole("button", { name: "Southern stingray", exact: true });
   await chip.click();
   // The list under the chips is the tap's whole answer — wait on what it
@@ -101,7 +101,7 @@ test("a diver reads the crew's month under the site on the trip page", async ({ 
   // Two navigations and a cold public render; well inside the default budget on
   // a quiet box and past it on a loaded one.
   test.setTimeout(30_000);
-  // The seeded log (`src/db/seed-sightings.ts`) puts a month of the crew's own
+  // The seeded log (`src/db/seed/sightings.ts`) puts a month of the crew's own
   // taps on Molasses and French, which is what this beat reads.
   await page.goto("/s/blue-mantis");
   await page

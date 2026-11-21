@@ -33,7 +33,7 @@ missing model:
 The roadmap's own instruction: *"design the two together, not separately."* This dossier does that.
 
 One vocabulary note up front: in the glossary and the code, **"charter" already means an ordinary
-scheduled trip** (["Trip / charter"](../product/glossary.md), `src/db/seed.ts`). The new concept is
+scheduled trip** (["Trip / charter"](../product/glossary.md), `src/db/seed/index.ts`). The new concept is
 therefore called a **buyout** everywhere below, so the existing vocabulary is not poisoned.
 
 ---

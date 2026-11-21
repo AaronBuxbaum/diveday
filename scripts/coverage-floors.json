@@ -94,7 +94,7 @@
   "src/db/certifications-in-training.ts": 50,
   "src/db/checkouts.ts": 90.62,
   "src/db/erasure-coordinated-send.ts": 90.19,
-  "src/db/export-crew-roll-call.ts": 58.33,
+  "src/db/export/crew-roll-call.ts": 58.33,
   "src/db/manifest-events.ts": 75.92,
   "src/db/manifests.ts": 91.99,
   "src/db/medical-alerts.ts": 94.28,

@@ -38,7 +38,7 @@ example.
 `fakes.ts` the providers, `staff-session.ts` a signed-in staff member, `frozen-clock.ts` the
 clock, `source.ts` the tree a guard walks. Reuse an existing scenario helper in `src/test/` when
 it matches the case; otherwise insert the minimal rows through the real database and schema.
-For cross-tenant coverage, `src/db/export.test.ts` inserts a rival shop and person, then proves
+For cross-tenant coverage, `src/db/export/index.test.ts` inserts a rival shop and person, then proves
 each export contains only its own rows. There is no shared `factories.ts` interface.
 
 **A rule over source is a guard.** A test that reads files to assert a rule lives in `check:repo`
@@ -192,9 +192,9 @@ What a diff runs is decided by reading it, at two places:
   modules that name it, a `public/` asset to the code that names its path, and picks the captures
   that visit those routes plus a fixed smoke set; an edit inside an `e2e/visual-*.spec.ts` or a capture
   helper picks the captures it touched. A schema edit is followed from the tables it changes to the
-  modules that read them, and a seed scenario's (`src/db/seed-<scenario>.ts`) from the tables it
+  modules that read them, and a seed scenario's (`src/db/seed/<scenario>.ts`) from the tables it
   writes, never through a seed module (the demo action that runs the seed is on every public page).
-  It captures everything for the capture harness, the seed's orchestrator (`src/db/seed.ts`), the
+  It captures everything for the capture harness, the seed's orchestrator (`src/db/seed/index.ts`), the
   catalog seed, a stylesheet, a root config or renderer dependency, a module every page runs (the
   proxy, the service worker), and its own plumbing (`ci.yml`, the setup action, these scripts).
   **A pull request captures light mode only** (`--light-only`, 2026-10-24: dark was 339 of 836

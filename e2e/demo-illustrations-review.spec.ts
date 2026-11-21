@@ -1,6 +1,6 @@
 import type { Locator } from "@playwright/test";
 import { demoIllustration } from "../src/content/demo-illustrations";
-import { SEED_COURSE_ILLUSTRATIONS } from "../src/db/seed-course-illustrations";
+import { SEED_COURSE_ILLUSTRATIONS } from "../src/db/seed/course-illustrations";
 import { diverTranslator } from "../src/i18n/messages";
 import { expect, READ_ONLY, test } from "./fixtures";
 import { settleCaptureFonts } from "./visual-harness";

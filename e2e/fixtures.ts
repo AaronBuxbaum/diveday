@@ -2,7 +2,7 @@ import path from "node:path";
 import type { Page, Request } from "@playwright/test";
 import { test as base, expect } from "@playwright/test";
 import { DEV_STAFF_LOGINS } from "../src/db/dev-credentials";
-import { DEMO_SHOP_TIMEZONE } from "../src/db/seed-clock";
+import { DEMO_SHOP_TIMEZONE } from "../src/db/seed/clock";
 import { BASEMAP_TILE_HOSTS } from "../src/lib/basemap";
 import { ARRIVAL_MAP_PROBES, MAP_REACHABILITY_PROBES } from "../src/lib/maps";
 import { shopDayBounds } from "../src/lib/zoned";
@@ -393,7 +393,7 @@ export const test = base.extend<
       // whichever spec read the wreckage next — which is how it took a
       // 25-spec-wide failure to notice the blow-out cascade's two tables were
       // missing from the ordering, and why the same bug class went unnoticed
-      // once before (see the last-minute-unsubscribe comments in src/db/seed.ts).
+      // once before (see the last-minute-unsubscribe comments in src/db/seed/index.ts).
       assertDemoReset(response, "demo reset failed");
       await use(undefined);
     },

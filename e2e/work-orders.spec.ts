@@ -92,7 +92,7 @@ async function assertValidationRefusalSurvivesDelete(
  * gear, working it, pricing it, and handing it back.
  *
  * Every write lands on blue-mantis on purpose — the work-order tables are
- * reset-owned (deleted and re-seeded by `/api/test/reset`, src/db/seed.ts), so
+ * reset-owned (deleted and re-seeded by `/api/test/reset`, src/db/seed/index.ts), so
  * nothing a test opens here leaks into the next spec.
  */
 test.describe("staff", () => {

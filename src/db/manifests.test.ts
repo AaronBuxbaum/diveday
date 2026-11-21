@@ -1,6 +1,6 @@
 import { and, eq, inArray } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
-import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
+import { seedRollCallEvidence } from "@/db/seed/roll-call-evidence";
 import { ageOnDate, birthdayCallout } from "@/lib/age";
 import { STAFF_ROLES } from "@/lib/authz";
 import { isWaiverCode } from "@/lib/blockers";
@@ -1852,7 +1852,7 @@ describe("age on the crew's boarding list (H-20260730-minimum-age-gate-data)", (
     if (!manifest) throw new Error("expected a manifest");
 
     // The seed gives a handful of divers a date of birth, including one
-    // 13-year-old with a birthday two days out (src/db/seed.ts).
+    // 13-year-old with a birthday two days out (src/db/seed/index.ts).
     const withAge = manifest.divers.filter((diver) => diver.age !== null);
     expect(withAge.length).toBeGreaterThan(0);
 

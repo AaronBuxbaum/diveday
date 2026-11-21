@@ -2,7 +2,7 @@
 
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { DEMO_SHOP_DESK } from "@/db/seed-shop-brand";
+import { DEMO_SHOP_DESK } from "@/db/seed/shop-brand";
 import { DEFAULT_DIVER_LOCALE } from "@/i18n/settings";
 import { DRAFT_SYSTEM } from "@/lib/assists/inbox";
 import { PackingSection } from "./PackingSection";

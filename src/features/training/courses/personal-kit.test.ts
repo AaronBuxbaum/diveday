@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { loadShopExportBundleInput } from "@/db/export";
-import { table } from "@/db/export-bundle-table.test-support";
+import { table } from "@/db/export/bundle-table.test-support";
 import { fileScopedShopContext } from "@/test/db";
 import { editCourse, getCourseBySlug } from "./store";
 

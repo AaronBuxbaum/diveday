@@ -72,7 +72,7 @@ A local-history query counted path appearances in reachable non-merge commits si
 | `src/i18n/locales/es-ES/diver.json` | 167 |
 | `src/i18n/locales/en-US/diver.json` | 158 |
 | `e2e/visual.spec.ts` | 134 |
-| `src/db/__snapshots__/export-bundle.shop.snap` | 118 |
+| `src/db/export/__snapshots__/bundle.shop.snap` | 118 |
 | `src/i18n/locales/es-ES/staff/trips.json` | 101 |
 | `src/i18n/locales/en-US/staff/trips.json` | 98 |
 | `src/lib/notifications/kinds.ts` | 67 |

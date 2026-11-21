@@ -5,7 +5,7 @@ import { openDrysuitRentalFit } from "./rental-fit-helpers";
 
 const diver = diverTranslator("en-US");
 
-// The demo shop prices its rental gear (src/db/seed.ts): a $45 full set and
+// The demo shop prices its rental gear (src/db/seed/index.ts): a $45 full set and
 // per-piece prices. A diver setting their rental fit should see those prices and
 // a running estimate, not a bare "ask the shop" line. The shop also carries a
 // per-dive nitrox surcharge, which this diver never sees: nitrox waits for a

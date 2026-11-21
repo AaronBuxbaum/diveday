@@ -106,7 +106,7 @@ that already held a `*.demo.invalid` account, at which point `DEMO_BYPASS_PASSWO
 tenant. Both writers now call `isDemoAccountEmail` and refuse (`email_reserved`), each through the
 error mechanism its surface already has — `backToForm` on `/onboard`, an `InviteStaffResult` reason
 on the team page — so the namespace is a property of the schema's write path. Demo seeding
-(`src/db/seed.ts`, `DEV_STAFF_LOGINS`) writes those rows directly and is deliberately not routed
+(`src/db/seed/index.ts`, `DEV_STAFF_LOGINS`) writes those rows directly and is deliberately not routed
 through either guard; that split is the thing to preserve if a third writer ever appears.
 
 The new coupling to cost: **any future demo-minting path must generate its staff addresses under

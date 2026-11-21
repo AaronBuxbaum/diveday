@@ -239,7 +239,7 @@ not an estimate.
 - **Why PR review should have caught it:** cold start checks for any shop and then seeds without a
   transaction, advisory lock, or conflict-safe inserts. Concurrent first requests can race, and a
   rejected memoized initialization promise poisons that process instance.
-- **Owned paths:** `src/db/client.ts`, `src/db/seed.ts`, bootstrap tests.
+- **Owned paths:** `src/db/client.ts`, `src/db/seed/index.ts`, bootstrap tests.
 - **Acceptance criteria:**
   - bootstrap is serialized or fully idempotent around the canonical demo shop;
   - a failed initialization clears the memoized promise so a later request can retry;

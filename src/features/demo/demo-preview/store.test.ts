@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { demoPreviews, shops } from "../../../db/schema/index";
 import { purgeMintedDemoShops } from "../../../db/seed";
-import { DEMO_SHOP_BRAND } from "../../../db/seed-shop-brand";
+import { DEMO_SHOP_BRAND } from "../../../db/seed/shop-brand";
 import { unseededTestDb } from "../../../test/db";
 import { PREVIEW_TTL_MS, type PreviewInput } from "./rules";
 import {

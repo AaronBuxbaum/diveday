@@ -20,7 +20,7 @@ live and the rules a change must keep. Read `foo.test.ts` before `foo.ts`; tests
 | Seating a diver (every staff door) | `src/features/bookings/seat-diver.ts` via `src/app/actions/seat-diver.ts` |
 | The booking transaction | `src/db/bookings.ts` |
 | Schema (never `drizzle/`) | `src/db/schema/` |
-| Export, import, backups | `src/db/export.ts`, `src/features/records/import/store.ts`, `src/features/records/backup-export/` |
+| Export, import, backups | `src/db/export/index.ts`, `src/features/records/import/store.ts`, `src/features/records/backup-export/` |
 | Payments | `src/lib/payments/`, `src/db/orders.ts`, `src/db/payments.ts`, `src/db/refunds.ts` |
 | Copy | `src/i18n/` bundles; readiness words in `src/i18n/readiness-labels.ts` |
 | Domain logic (framework-free) | `src/lib/`; dates in `src/lib/format.ts` |

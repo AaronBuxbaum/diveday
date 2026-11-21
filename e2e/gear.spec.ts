@@ -7,7 +7,7 @@ import { seedFacts } from "./shop-facts";
  * The gear register (ADR 20260815-minimal-gear-register): the fleet on the
  * wall, the per-departure assignments, and the check-out/return loop. Every
  * gear-table write here lands on blue-mantis on purpose — the gear tables are
- * reset-owned (deleted and re-seeded by `/api/test/reset`, src/db/seed.ts),
+ * reset-owned (deleted and re-seeded by `/api/test/reset`, src/db/seed/index.ts),
  * so nothing a test adds, deletes, or reserves leaks into the next spec.
  */
 
@@ -109,7 +109,7 @@ test.describe("staff", () => {
   test("walks a seeded reservation through check-out and return from the unit's record", async ({
     page,
   }) => {
-    // BCD #2 ships reserved against the wreck trip (src/db/seed-gear.ts).
+    // BCD #2 ships reserved against the wreck trip (src/db/seed/gear.ts).
     await page.goto("/shop/blue-mantis/gear");
     await page.getByRole("link", { name: "BCD #2", exact: true }).click();
     await expect(page.getByRole("heading", { level: 1, name: "BCD #2" })).toBeVisible();
@@ -483,7 +483,7 @@ test.describe("staff", () => {
   test("refuses to delete a unit a diver still has, and says who is holding it", async ({
     page,
   }) => {
-    // BCD #2 ships reserved against the upcoming wreck trip (src/db/seed-gear.ts).
+    // BCD #2 ships reserved against the upcoming wreck trip (src/db/seed/gear.ts).
     await page.goto("/shop/blue-mantis/gear");
     await page.getByRole("link", { name: "BCD #2", exact: true }).click();
     await expect(page.getByRole("heading", { level: 1, name: "BCD #2" })).toBeVisible();

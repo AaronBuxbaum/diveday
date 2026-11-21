@@ -91,7 +91,7 @@ and listed the rest in a closed index on `/product`.
   ("Every diver booked, signed, checked, and accounted for") and the lede says what DiveDay is: the
   journey from online booking to dock readiness. Beside the headline, a phone shows the demo shop's
   crew in a group chat the night before the 7:30 boat (`MarketingGroupChat`; Aaron, 2026-11-19).
-  Sal, Keiko, and Marcus (`src/db/seed-cast.ts`) try to work out whether Tom signed his waiver,
+  Sal, Keiko, and Marcus (`src/db/seed/cast.ts`) try to work out whether Tom signed his waiver,
   and which Tom, since Tomasz goes by Tom too. The signed forms are in a binder on the boat, or
   in the other binder in the truck, and the captain is in bed. Each line lands after its sender's
   typing dots. The owner answers "It's in DiveDay" with the shop's list: eight of nine divers
@@ -395,7 +395,7 @@ reviewed as a page, which is the right unit for copy and the wrong one for hiera
   margin notes went in the 2026-10-24 visual review, B10). But it is only true of the shop's **records**: the bundle also leaves out
   notification retry queues, provider linkage, DiveDay's own reconciliation ledgers, and the
   close-out and buddy-team trails, which is why the real Settings screen names all of them
-  (`settings.export.notIncluded.text`, and `EXCLUDED_TABLES` in `src/db/export.test.ts`). So the
+  (`settings.export.notIncluded.text`, and `EXCLUDED_TABLES` in `src/db/export/index.test.ts`). So the
   marketing sentence carries its scope and the mockup lists without claiming to be the whole list —
   "the only thing held back is credentials", said flat, would be a fabricated-proof failure wearing
   a security badge. `src/lib/marketing.test.ts` pins the scope; the Settings screen's own wording is

@@ -6,7 +6,7 @@ vi.mock("@/db/client", async (importOriginal) => {
   return { ...actual, getDb: vi.fn() };
 });
 vi.mock("@/db/bookings", () => ({ expireGroupHolds: vi.fn() }));
-vi.mock("@/db/seed-boat-at-sea", () => ({ bringDemoBoatsAtSeaHome: vi.fn() }));
+vi.mock("@/db/seed/boat-at-sea", () => ({ bringDemoBoatsAtSeaHome: vi.fn() }));
 vi.mock("@/db/trips", () => ({
   cancelDeparturesBelowMinimum: vi.fn(),
   listMinimumNotMetRecipients: vi.fn(),
@@ -40,7 +40,7 @@ vi.mock("@sentry/nextjs", () => ({
 
 const { expireGroupHolds } = await import("@/db/bookings");
 const { getDb } = await import("@/db/client");
-const { bringDemoBoatsAtSeaHome } = await import("@/db/seed-boat-at-sea");
+const { bringDemoBoatsAtSeaHome } = await import("@/db/seed/boat-at-sea");
 const { cancelDeparturesBelowMinimum } = await import("@/db/trips");
 const { sendDueReminders } = await import("../../../../features/messages/reminders");
 const { sendDueCheckoutRecoveries } = await import(

@@ -1,12 +1,12 @@
 import type { Page, Route } from "@playwright/test";
-import { CAPTAIN_NAME } from "../src/db/seed-cast";
-import { DEMO_TODAY_TRIP_ID } from "../src/db/seed-identifiers";
+import { CAPTAIN_NAME } from "../src/db/seed/cast";
+import { DEMO_TODAY_TRIP_ID } from "../src/db/seed/identifiers";
 import {
   DEMO_MEDICAL_ALERT,
   DEMO_MEDICAL_ALERT_DIVER,
   DEMO_MEDICAL_ALERT_TRIP,
-} from "../src/db/seed-medical-alert";
-import { DEMO_TODAY_TRIP_TITLE } from "../src/db/seed-trips";
+} from "../src/db/seed/medical-alert";
+import { DEMO_TODAY_TRIP_TITLE } from "../src/db/seed/trips";
 import { diverTranslator } from "../src/i18n/messages";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { OFFLINE_MANIFEST_SHELL_VERSION } from "../src/lib/offline-manifests";
@@ -1110,7 +1110,7 @@ test.describe("checklist configuration in a private shop", () => {
     privateShop,
   }) => {
     await page.goto(`/shop/${privateShop.slug}/safety-checklist`);
-    // The seeded demo shop's own list (src/db/seed-pre-departure-checklist.ts).
+    // The seeded demo shop's own list (src/db/seed/pre-departure-checklist.ts).
     await expect(page.getByText("VHF radio checked")).toBeVisible();
     await expect(page.getByLabel("New line")).not.toBeVisible();
     await page.locator("#checklist-new summary").click();
@@ -1461,7 +1461,7 @@ test("a failed reload of the counter lands on this device's saved copy", async (
 /**
  * Issue #2960: every staffer sees the chip; the departure's crew opens the
  * words, and the read is on the diver's trail. The seeded alert is on
- * tomorrow's crewed departure (`src/db/seed-medical-alert.ts`).
+ * tomorrow's crewed departure (`src/db/seed/medical-alert.ts`).
  */
 // story: ROLL-08
 test("a departure's crew opens a diver's medical alert, and the read is on their trail", async ({

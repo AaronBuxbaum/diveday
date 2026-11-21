@@ -178,7 +178,7 @@ describe("the stuck-payment-operations panel", () => {
     // The panel left `canPersonViewShopReports` for
     // `canPersonManagePaymentSettings`. Both are `isOwnerOrManager`, so the
     // move must not have cost a manager the visibility they already had. The
-    // seed's only manager is also the owner (`src/db/seed-cast.ts`), so the
+    // seed's only manager is also the owner (`src/db/seed/cast.ts`), so the
     // owner role is dropped first — the gate is DB-checked, so the demotion is
     // what the page sees.
     const element = await renderOrders("manager", async (db, session) => {
@@ -689,8 +689,8 @@ describe("the trip filter", () => {
   /**
    * A shop whose seeded reef trip carries one open invoice against a seat.
    *
-   * The demo seed has open orders (`seed-orders.ts`) and booking-linked orders
-   * (`seed-history.ts`) but no order that is both, so the departure filter has
+   * The demo seed has open orders (`seed/orders.ts`) and booking-linked orders
+   * (`seed/history.ts`) but no order that is both, so the departure filter has
    * nothing of its own to find until this writes one. The whole fixture is one
    * database, shared by every render in a test: trip ids are random per seed,
    * so a `tripId` read from one `seededTestDb` means nothing in the next.
@@ -789,7 +789,7 @@ describe("the diver filter", () => {
   /**
    * A shop billing two different divers — so "narrowed to one of them" is a
    * claim with something to narrow away from. The lean unit-test template is
-   * deliberately order-free (`src/db/seed.ts`), so the rows are written here.
+   * deliberately order-free (`src/db/seed/index.ts`), so the rows are written here.
    */
   async function shopWithOrders() {
     const { db, session } = await sessionFor("owner");
@@ -857,7 +857,7 @@ describe("the diver filter", () => {
 describe("the day ledger", () => {
   /**
    * Two orders on one day and one on another, written directly: the lean
-   * unit-test template is deliberately order-free (`src/db/seed.ts`), and the
+   * unit-test template is deliberately order-free (`src/db/seed/index.ts`), and the
    * instants below straddle New York's midnight so the grouping is the shop's
    * day rather than the server's.
    */

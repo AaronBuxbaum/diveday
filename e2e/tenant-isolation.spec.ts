@@ -25,7 +25,7 @@ import { mintOnboardFormPath } from "./setup-link";
  * page for anyone who happens to be signed in elsewhere.
  */
 
-// Seeded Blue Mantis facts (src/db/seed.ts) that must not surface to another
+// Seeded Blue Mantis facts (src/db/seed/index.ts) that must not surface to another
 // tenant: the shop's own name, and a diver on its roster.
 const OTHER_SHOP_NAME = "Blue Mantis Divers";
 const OTHER_SHOP_DIVER = "Priya Sharma";

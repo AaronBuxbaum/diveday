@@ -23,8 +23,8 @@ fill a screen. Tests can create a particular exceptional state through a named s
 
 `lean` runs the everyday demo scenarios without the added historical sets and is the default database
 fixture for most unit tests. `history` adds the operating history; both are cached as migrated PGlite
-snapshots by the test harness. New scenarios belong in their own `seed-*.ts` module and in the ordered
-`THE_DAY` list in `src/db/seed-schedule.ts`. New history must keep foreign keys, capacity, dates,
+snapshots by the test harness. New scenarios belong in their own module in `src/db/seed/` and in the ordered
+`THE_DAY` list in `src/db/seed/schedule.ts`. New history must keep foreign keys, capacity, dates,
 financial sources, release versions and equipment fit consistent with the rest of the story.
 
 The bootstrap seeds a database only when its demo shop is absent. Existing demo data does not change

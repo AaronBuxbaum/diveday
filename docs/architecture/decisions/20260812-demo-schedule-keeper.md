@@ -13,7 +13,7 @@ upkeep a public surface needs.
 
 ## Context
 
-Every date in the demo is anchored to the instant it was seeded (`src/db/seed-clock.ts`): one boat
+Every date in the demo is anchored to the instant it was seeded (`src/db/seed/clock.ts`): one boat
 sails today, the board runs about two months out, cards expire relative to the same moment. That
 anchoring is deliberate and load-bearing — it is what lets the e2e fleet freeze one clock and get a
 pixel-identical shop on every run.
@@ -98,7 +98,7 @@ revenue figure and a real waiver percentage beside **"Tips $0 · No tips left on
 with the Reviews page's "this month" line at zero. That reads as unseeded data and was reported as such
 (FU-20260813-reviews-and-tips-look-unseeded); nothing is unseeded, it has aged out of the window.
 
-So `seedRecentRecaps` (`src/db/seed-recent-recaps.ts`) runs on the same tick, behind the same `isDemo`
+So `seedRecentRecaps` (`src/db/seed/recent-recaps.ts`) runs on the same tick, behind the same `isDemo`
 guard: settled tips and published bare ratings onto the bookings of departures that have **already
 sailed** this calendar month in the shop's own timezone. Never a departure that has not left — a tip on
 a boat still at the dock is not a thin demo, it is a wrong one.
@@ -119,7 +119,7 @@ The demo seeds a boat at sea mid roll call (`seedBoatAtSea`): dive 2's count ope
 guide still down, as of the instant the seed ran. Nothing closed it, so a demo seeded at 10 AM showed
 two divers and a guide never counted back at 3 PM and on every later day, the miscount roll call exists
 to catch (dive-domain review of the demo reseed, item 3). `bringDemoBoatsAtSeaHome`
-(`src/db/seed-boat-at-sea.ts`) runs first on the same tick, over **every** `isDemo` shop, the visitors'
+(`src/db/seed/boat-at-sea.ts`) runs first on the same tick, over **every** `isDemo` shop, the visitors'
 own included: for a boat at sea past her `endsAt` with dive 2 not in the log, it writes the missing
 `after_dive_2` marks a few minutes after the last count, and dive 2's log. A boat with dive 2 logged is
 left alone, so a second run writes nothing. The tick is daily, so between her return and the next run

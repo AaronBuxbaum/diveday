@@ -16,7 +16,7 @@ import {
 import { visualSpecs } from "../scripts/visual-specs.mjs";
 import { REVEAL_MARKER_ATTRIBUTE, REVEAL_READY_ATTRIBUTE } from "../src/components/MarketingReveal";
 import { DIVE_SITE_TEMPLATES } from "../src/content/dive-site-templates";
-import { DEMO_SHOP_BRAND } from "../src/db/seed-shop-brand";
+import { DEMO_SHOP_BRAND } from "../src/db/seed/shop-brand";
 import { diverTranslator } from "../src/i18n/messages";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { OFFLINE_MANIFEST_PENDING_GRACE_MS } from "../src/lib/offline-manifest-store";
@@ -775,11 +775,11 @@ export const REEF_TRIP = "Two-Tank Reef — Molasses & French";
  */
 export const EASING_BACK_TRIP = "Two-Tank Reef — French Reef";
 
-/** The seeded long-range run that only sails with six (src/db/seed-minimum-seats.ts). */
+/** The seeded long-range run that only sails with six (src/db/seed/minimum-seats.ts). */
 export const MINIMUM_SEATS_TRIP = "Long-Range Day — Duane & Outer Reef";
 
 /**
- * The three cert-gate departures from `src/db/seed-cert-gates.ts`. Each one can
+ * The three cert-gate departures from `src/db/seed/cert-gates.ts`. Each one can
  * be refused for exactly one reason, which is what lets a refusal capture show
  * a single sentence rather than three overlapping ones. They sit on days 29-32,
  * deliberately off the public schedule's first page — so reaching one means

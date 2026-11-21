@@ -1,0 +1,621 @@
+import { and, asc, eq, inArray, isNotNull, isNull, lt, ne, sql } from "drizzle-orm";
+import { DAY_MS, nowMs } from "@/lib/clock";
+import { log } from "@/lib/log";
+import type { AppDb, DbExecutor } from "../client";
+import { DEMO_SHOP_SLUG } from "../demo-shop";
+import { DemoSightingCleanupBlocked, refuseEncounteredDockSightings } from "../demo-sighting-guard";
+import { deleteHeldSendsAndDeskRows } from "../departure-notes";
+import {
+  clearCompletedDemoPhotoObligations,
+  DEMO_PRIVATE_PHOTO_CLEANUP_REQUIRED,
+} from "../private-photo-demo-guard";
+import { isTransactionExecutor } from "../query-helpers";
+import {
+  accountSecurity,
+  accountSessions,
+  accountSignInChallenges,
+  accountStepUps,
+  activityEvents,
+  authProviderAccounts,
+  authVerifications,
+  boatSnags,
+  boats,
+  bookingArrivalEvents,
+  bookingCapabilities,
+  bookingCheckoutBookings,
+  bookingCheckouts,
+  bookingReferrals,
+  bookings,
+  buddyTeamEvents,
+  buddyTeamMembers,
+  capabilities,
+  cards,
+  collectionEntries,
+  computerDiveProfiles,
+  computerDives,
+  computerImportBatches,
+  courseElearningCodes,
+  courseFormRecords,
+  courseFormRequirements,
+  courseForms,
+  courseFormVersions,
+  courseSessionProgress,
+  courses,
+  crewAssignmentRequests,
+  crewAvailabilityBlocks,
+  customerGearItems,
+  deals,
+  departureBoatSafetySnapshots,
+  diveNotMadeEvents,
+  divePackageEntitlements,
+  divePackages,
+  diveParticipationNotes,
+  diveSiteCreatures,
+  diveSites,
+  executedDives,
+  formDrafts,
+  gearItems,
+  gearReservations,
+  gearServiceEvents,
+  importedPaymentHistory,
+  inboundMessages,
+  incidentReportAddenda,
+  incidentReports,
+  integrationDeliveries,
+  integrationEvents,
+  integrationOauthStates,
+  interests,
+  internalNotes,
+  marineLifeRequests,
+  mediaDeletionAttempts,
+  notificationDeliveries,
+  notificationSendQueue,
+  orderLineItems,
+  orders,
+  packageGifts,
+  paymentDisputes,
+  paymentOperationIntents,
+  people,
+  personRoles,
+  preDepartureCheckEvents,
+  preDepartureChecklistItems,
+  pricingVolumeStatements,
+  priorGearAssignments,
+  priorVisits,
+  processorErasureObligations,
+  recapPhotos,
+  recapPulses,
+  recoveryActivities,
+  recoveryActivityEvents,
+  recoveryActivityOffers,
+  recoveryActivityParticipants,
+  rentalFitProfiles,
+  reviewModerationEvents,
+  reviewReplies,
+  rollCallDeckCounts,
+  rollCallEvents,
+  safetyDrillParticipants,
+  safetyDrills,
+  shopBackupDeliveries,
+  shopBackupDeliveryClaims,
+  shopBackupDestinations,
+  shopContactEmailConfirmationTokens,
+  shopIntegrations,
+  shopStripeAccounts,
+  shopSubscriptions,
+  shops,
+  shopTextTranslations,
+  shopWhatsappAccounts,
+  staffCredentials,
+  staffReplies,
+  staffShifts,
+  stripePayouts,
+  stripeRefundFailures,
+  tripAssignments,
+  tripBlowoutDivers,
+  tripBlowouts,
+  tripChangeEvents,
+  tripConservation,
+  tripCreditEntries,
+  tripDives,
+  tripHelpRequests,
+  tripLenses,
+  tripRecapPhotos,
+  tripRequirements,
+  tripReviews,
+  tripSeries,
+  tripSeriesCrew,
+  tripSeriesSkips,
+  tripSightings,
+  tripStageEvents,
+  trips,
+  userAccounts,
+  waiverDeliveries,
+  waiverDrafts,
+  waiverMaterialityDecisions,
+  waiverRecords,
+  waiverSealAcknowledgements,
+  waiverTemplates,
+  walletPasses,
+  walletPassRegistrations,
+  workOrderBills,
+  workOrderCare,
+  workOrderEvents,
+  workOrderItems,
+  workOrderLines,
+  workOrders,
+} from "../schema";
+
+/**
+ * The life and death of a minted demo shop.
+ *
+ * "Try the live demo" mints a throwaway `isDemo` shop per visitor (ADR
+ * 20260724-per-visitor-demo-shops), so something has to clean up after them:
+ * a TTL reaper, a hard cascade delete that knows every child table, and an
+ * aggregate live-count cap enforced before each mint. The canonical
+ * blue-mantis demo and every real shop are never eligible for any of it.
+ */
+
+/**
+ * How long a minted demo shop may sit untouched before the reaper clears it:
+ * seven days since its last sign-in or staff input, not since it was minted.
+ */
+export const DEFAULT_DEMO_TTL_MS = 7 * DAY_MS;
+
+/**
+ * Delete a demo shop and every row it owns. There is no `ON DELETE CASCADE` on
+ * the shop-scoped foreign keys, so this is a hand-maintained topological delete:
+ * every table that references bookings, trips, orders, checkouts, dive sites, or
+ * people is cleared before those parents, and the shop row goes last. The
+ * **global** dive-site catalog (`globalDiveSites`) is shared across shops and is
+ * deliberately never touched.
+ *
+ * The guard on this ordering is `reap-demos.test.ts`, but read it before trusting
+ * it: it is a set of hand-written per-table cases (a tip, an account token, a
+ * last-minute unsubscribe token), **not** a sweep that proves every table is
+ * empty. A new table with a shop-scoped FK is therefore invisible to it until
+ * someone adds a case — which is exactly how
+ * `last_minute_list_unsubscribe_tokens` slipped through and started aborting
+ * every `/api/test/reset` mid-run. Adding a table here means adding its case
+ * there in the same change.
+ *
+ * Never call this on the canonical blue-mantis demo, or on any shop somebody
+ * uses. Its caller is the reaper below, which only ever passes a minted demo
+ * (`isDemo`, non-canonical slug). The gated test door also releases fixtures
+ * it owns: a real-shaped mint or a signup proven by a test-created setup link
+ * held in server memory. A supplied real-shop slug alone is never ownership.
+ */
+export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Promise<void> {
+  if (!isTransactionExecutor(db)) return db.transaction((tx) => deleteDemoShopCascade(tx, shopId));
+  await clearCompletedDemoPhotoObligations(db, shopId);
+  const shopTrips = await db.select({ id: trips.id }).from(trips).where(eq(trips.shopId, shopId));
+  const tripIds = shopTrips.map((t) => t.id);
+  const shopPeople = await db
+    .select({ id: people.id })
+    .from(people)
+    .where(eq(people.shopId, shopId));
+  const personIds = shopPeople.map((p) => p.id);
+
+  // Integration deliveries reference both the event and the connection, so
+  // clear the operational records before the shop-owned connection rows. The
+  // sync records then disappear with their connection through its cascade.
+  await db.delete(integrationDeliveries).where(eq(integrationDeliveries.shopId, shopId));
+  await db.delete(integrationEvents).where(eq(integrationEvents.shopId, shopId));
+  await db.delete(integrationOauthStates).where(eq(integrationOauthStates.shopId, shopId));
+  await db.delete(shopIntegrations).where(eq(shopIntegrations.shopId, shopId));
+  await deleteHeldSendsAndDeskRows(db, shopId);
+  await db.delete(formDrafts).where(eq(formDrafts.shopId, shopId));
+
+  // Order/checkout/booking dependents first. A ticket's bill names its order
+  // without a cascade (ADR 20261008-work-order-follow-up), so the link goes
+  // before the order it points at.
+  await db.delete(workOrderBills).where(eq(workOrderBills.shopId, shopId));
+  await db.delete(orderLineItems).where(eq(orderLineItems.shopId, shopId));
+  await db.delete(paymentOperationIntents).where(eq(paymentOperationIntents.shopId, shopId));
+  // A dispute references the order or checkout it is about, so it goes first.
+  await db.delete(paymentDisputes).where(eq(paymentDisputes.shopId, shopId));
+  await db.delete(stripePayouts).where(eq(stripePayouts.shopId, shopId));
+  // So does a failed refund (issue #2291).
+  await db.delete(stripeRefundFailures).where(eq(stripeRefundFailures.shopId, shopId));
+  // The shop is going, so its prepaid dives go with it. Entitlements reference
+  // bookings, orders *and* the package they came from, so they go before all
+  // three (ADR 20260822-a-package-is-entitlements-not-money).
+  await db.delete(divePackageEntitlements).where(eq(divePackageEntitlements.shopId, shopId));
+  await db.delete(packageGifts).where(eq(packageGifts.shopId, shopId));
+  // Counter rentals can name their invoice, so clear them before orders too.
+  await db.delete(gearReservations).where(eq(gearReservations.shopId, shopId));
+  await db.delete(orders).where(eq(orders.shopId, shopId));
+  await db.delete(bookingCheckoutBookings).where(eq(bookingCheckoutBookings.shopId, shopId));
+  // The codes are referenced *by* checkouts, so they go after them.
+  await db.delete(divePackages).where(eq(divePackages.shopId, shopId));
+  await db.delete(bookingCheckouts).where(eq(bookingCheckouts.shopId, shopId));
+  await db.delete(deals).where(and(eq(deals.shopId, shopId), isNull(deals.tripId)));
+  await db.delete(bookingCapabilities).where(eq(bookingCapabilities.shopId, shopId));
+  // The buddy referral references bookings (ADR 20260908-one-hand, decision 6,
+  // lever W) — two of them, and neither is deleted first — so it goes before them.
+  await db.delete(bookingReferrals).where(eq(bookingReferrals.shopId, shopId));
+  await db.delete(bookingArrivalEvents).where(eq(bookingArrivalEvents.shopId, shopId));
+  await refuseEncounteredDockSightings(db, shopId);
+  // Incident reports name bookings, people and the departure, so they go first.
+  await db.delete(incidentReportAddenda).where(eq(incidentReportAddenda.shopId, shopId));
+  // Each report takes its people rows with it (cascade): a raised report
+  // points at its subject's row, so that row cannot go first.
+  await db.delete(incidentReports).where(eq(incidentReports.shopId, shopId));
+  // diveday:roll-call-both-subjects: the demo shop's whole ledger goes, seat and crew.
+  await db.delete(rollCallEvents).where(eq(rollCallEvents.shopId, shopId));
+  // Events before the shop's own item list they reference.
+  // A snag names its boat, its departures and its checklist line, none cascading.
+  await db.delete(boatSnags).where(eq(boatSnags.shopId, shopId));
+  await db.delete(preDepartureCheckEvents).where(eq(preDepartureCheckEvents.shopId, shopId));
+  await db.delete(rollCallDeckCounts).where(eq(rollCallDeckCounts.shopId, shopId));
+  await db.delete(diveParticipationNotes).where(eq(diveParticipationNotes.shopId, shopId));
+  await db
+    .delete(departureBoatSafetySnapshots)
+    .where(eq(departureBoatSafetySnapshots.shopId, shopId));
+  await db.delete(tripStageEvents).where(eq(tripStageEvents.shopId, shopId));
+  await db.delete(diveNotMadeEvents).where(eq(diveNotMadeEvents.shopId, shopId));
+  await db.delete(safetyDrillParticipants).where(eq(safetyDrillParticipants.shopId, shopId));
+  await db.delete(safetyDrills).where(eq(safetyDrills.shopId, shopId));
+  await db.delete(preDepartureChecklistItems).where(eq(preDepartureChecklistItems.shopId, shopId));
+  // The close-out trail references people and the shop, so it must clear
+  // before both parents below (ADR 20260804-day-closeout).
+  await db.delete(recapPhotos).where(eq(recapPhotos.shopId, shopId));
+  await db.delete(tripRecapPhotos).where(eq(tripRecapPhotos.shopId, shopId));
+  // Before the reviews it describes: the trail's review_id FK carries no
+  // ON DELETE CASCADE (ADR 20260813-review-moderation-has-a-floor).
+  await db.delete(reviewReplies).where(eq(reviewReplies.shopId, shopId));
+  await db.delete(reviewModerationEvents).where(eq(reviewModerationEvents.shopId, shopId));
+  await db.delete(tripReviews).where(eq(tripReviews.shopId, shopId));
+  // The review's private sibling, on the same parents (D40).
+  await db.delete(recapPulses).where(eq(recapPulses.shopId, shopId));
+  // The inbox: replies before the messages and people they name.
+  await db.delete(staffReplies).where(eq(staffReplies.shopId, shopId));
+  await db.delete(inboundMessages).where(eq(inboundMessages.shopId, shopId));
+  // Course forms, children first (records → requirements → versions → forms).
+  await db.delete(courseFormRecords).where(eq(courseFormRecords.shopId, shopId));
+  await db.delete(courseElearningCodes).where(eq(courseElearningCodes.shopId, shopId));
+  await db.delete(courseSessionProgress).where(eq(courseSessionProgress.shopId, shopId));
+  await db.delete(courseFormRequirements).where(eq(courseFormRequirements.shopId, shopId));
+  await db.delete(courseFormVersions).where(eq(courseFormVersions.shopId, shopId));
+  await db.delete(courseForms).where(eq(courseForms.shopId, shopId));
+  // Per-channel delivery state hangs off the waiver record, so it goes first.
+  await db.delete(waiverDeliveries).where(eq(waiverDeliveries.shopId, shopId));
+  // So does an acknowledgement of a broken seal (#3891).
+  await db.delete(waiverSealAcknowledgements).where(eq(waiverSealAcknowledgements.shopId, shopId));
+  await db.delete(waiverDrafts).where(eq(waiverDrafts.shopId, shopId));
+  await db.delete(waiverRecords).where(eq(waiverRecords.shopId, shopId));
+  await db.delete(notificationSendQueue).where(eq(notificationSendQueue.shopId, shopId));
+  await db.delete(notificationDeliveries).where(eq(notificationDeliveries.shopId, shopId));
+  // Same reasoning as resetDemoSchedule above (docs ADR 20260727-last-minute-fill-promos),
+  // including the unsubscribe capabilities that reference the interests and
+  // the people (both purposes go in one delete, before either parent).
+  await db.delete(capabilities).where(eq(capabilities.shopId, shopId));
+  await db.delete(interests).where(eq(interests.shopId, shopId));
+  await db.delete(deals).where(and(eq(deals.shopId, shopId), isNotNull(deals.tripId)));
+  if (tripIds.length > 0) {
+    await db.delete(tripAssignments).where(inArray(tripAssignments.tripId, tripIds));
+    await db.delete(executedDives).where(inArray(executedDives.tripId, tripIds));
+    // The crew's sighting tally references trips, dive sites and people, so it
+    // goes with the dive log it sits beside on the manifest.
+    await db.delete(tripConservation).where(inArray(tripConservation.tripId, tripIds));
+    await db.delete(tripSightings).where(inArray(tripSightings.tripId, tripIds));
+    await db.delete(tripDives).where(inArray(tripDives.tripId, tripIds));
+  }
+  await db.delete(tripRequirements).where(eq(tripRequirements.shopId, shopId));
+  // The blow-out cascade's two tables, innermost first: the per-diver rows
+  // reference both `bookings` and `trip_blowouts`, and the cascade row
+  // references `trips` (ADR 20260804-blowout-cascade).
+  await db.delete(tripCreditEntries).where(eq(tripCreditEntries.shopId, shopId));
+  // Dependent classroom evidence is demo-only lifecycle data here, deleted innermost first.
+  await db.delete(recoveryActivityEvents).where(eq(recoveryActivityEvents.shopId, shopId));
+  await db.delete(recoveryActivityOffers).where(eq(recoveryActivityOffers.shopId, shopId));
+  await db
+    .delete(recoveryActivityParticipants)
+    .where(eq(recoveryActivityParticipants.shopId, shopId));
+  await db.delete(recoveryActivities).where(eq(recoveryActivities.shopId, shopId));
+  await db.delete(tripBlowoutDivers).where(eq(tripBlowoutDivers.shopId, shopId));
+  await db.delete(tripBlowouts).where(eq(tripBlowouts.shopId, shopId));
+  await db.delete(tripHelpRequests).where(eq(tripHelpRequests.shopId, shopId));
+  // The buddy-team trail references trips and people (ADR 20260804-buddy-teams).
+  await db.delete(buddyTeamEvents).where(eq(buddyTeamEvents.shopId, shopId));
+  // Buddy pairs reference bookings, so they go before the bookings delete
+  // (ADR 20260804-buddy-teams).
+  await db.delete(buddyTeamMembers).where(eq(buddyTeamMembers.shopId, shopId));
+  // The bench, children first: lines, pieces, the Work done record and the
+  // status trail reference the ticket, and a ticket references a customer, a
+  // fleet unit, and the technician working it — so all of it clears before
+  // gear_items, bookings and the people purge (ADR 20261008-gear-work-orders).
+  await db.delete(workOrderLines).where(eq(workOrderLines.shopId, shopId));
+  await db.delete(workOrderCare).where(eq(workOrderCare.shopId, shopId));
+  await db.delete(workOrderItems).where(eq(workOrderItems.shopId, shopId));
+  await db.delete(workOrderEvents).where(eq(workOrderEvents.shopId, shopId));
+  await db.delete(workOrders).where(eq(workOrders.shopId, shopId));
+  await db.delete(customerGearItems).where(eq(customerGearItems.shopId, shopId));
+  // The gear register, children first: reservations were cleared before orders;
+  // service events reference gear_items and people
+  // (ADR 20260815-minimal-gear-register).
+  await db.delete(gearServiceEvents).where(eq(gearServiceEvents.shopId, shopId));
+  await db.delete(priorGearAssignments).where(eq(priorGearAssignments.shopId, shopId));
+  await db.delete(gearItems).where(eq(gearItems.shopId, shopId));
+  await db.delete(walletPassRegistrations).where(eq(walletPassRegistrations.shopId, shopId));
+  await db.delete(walletPasses).where(eq(walletPasses.shopId, shopId));
+  await db.delete(bookings).where(eq(bookings.shopId, shopId));
+  await db.delete(tripChangeEvents).where(eq(tripChangeEvents.shopId, shopId));
+  // The shop's Spanish for the trips, sites and courses about to go: a
+  // translation has no foreign key to its subject, so it goes with them.
+  await db.delete(shopTextTranslations).where(eq(shopTextTranslations.shopId, shopId));
+  // A crew request names its departure as well as the person who asked.
+  await db.delete(crewAssignmentRequests).where(eq(crewAssignmentRequests.shopId, shopId));
+  await db.delete(trips).where(eq(trips.shopId, shopId));
+  // Before the series it points at, and after the trips: a skip is the
+  // memory of a date that is no longer there.
+  await db.delete(tripSeriesSkips).where(eq(tripSeriesSkips.shopId, shopId));
+  await db.delete(tripSeriesCrew).where(eq(tripSeriesCrew.shopId, shopId));
+  await db.delete(tripSeries).where(eq(tripSeries.shopId, shopId));
+
+  // People-scoped records and the shop's own catalog/config.
+  // Every kind of card at once: the reset clears the shop's whole ledger.
+  await db.delete(cards).where(eq(cards.shopId, shopId));
+  await db.delete(staffCredentials).where(eq(staffCredentials.shopId, shopId));
+  await db.delete(rentalFitProfiles).where(eq(rentalFitProfiles.shopId, shopId));
+  await db.delete(computerDiveProfiles).where(eq(computerDiveProfiles.shopId, shopId));
+  await db.delete(computerDives).where(eq(computerDives.shopId, shopId));
+  await db.delete(computerImportBatches).where(eq(computerImportBatches.shopId, shopId));
+  await db.delete(priorVisits).where(eq(priorVisits.shopId, shopId));
+  await db.delete(importedPaymentHistory).where(eq(importedPaymentHistory.shopId, shopId));
+  await db.delete(diveSiteCreatures).where(eq(diveSiteCreatures.shopId, shopId));
+  // A species request points at the site the staffer was writing when they hit
+  // the wall, so it goes before the sites — the FK is `ON DELETE SET NULL`, but
+  // the row's own `shop_id` is not, and leaving it would block the shop delete
+  // outright. Cleared on a schedule reset too: nothing seeds it, so an empty
+  // table is the demo shop's correct state, and the e2e suite writes one every
+  // time it exercises the picker's refusal.
+  await db.delete(marineLifeRequests).where(eq(marineLifeRequests.shopId, shopId));
+  await db.delete(diveSites).where(eq(diveSites.shopId, shopId));
+  await db.delete(courses).where(eq(courses.shopId, shopId));
+  await db.delete(waiverMaterialityDecisions).where(eq(waiverMaterialityDecisions.shopId, shopId));
+  await db.delete(waiverTemplates).where(eq(waiverTemplates.shopId, shopId));
+  await db.delete(boats).where(eq(boats.shopId, shopId));
+  // The shop's own words for a kind of day (ADR 20260904-reef-all-the-way-down,
+  // decision 2). Same shape as `boats` above: it references `shops` with no
+  // cascade, so a demo whose owner wrote a vocabulary made the final
+  // `delete(shops)` throw 23503 and stranded the shop past its TTL.
+  await db.delete(tripLenses).where(eq(tripLenses.shopId, shopId));
+  await db.delete(shopStripeAccounts).where(eq(shopStripeAccounts.shopId, shopId));
+  await db.delete(pricingVolumeStatements).where(eq(pricingVolumeStatements.shopId, shopId));
+  await db.delete(collectionEntries).where(eq(collectionEntries.shopId, shopId));
+  await db.delete(shopSubscriptions).where(eq(shopSubscriptions.shopId, shopId));
+  await db.delete(mediaDeletionAttempts).where(eq(mediaDeletionAttempts.shopId, shopId));
+  // References both shops and people (ADR 20260803-processor-erasure-obligations),
+  // so it must go before the people/shops deletes below or reaping a demo shop
+  // whose visitor tried the erasure flow FK-violates and strands the shop past
+  // its TTL — the same class of bug the account-tokens comment below walks.
+  await db
+    .delete(processorErasureObligations)
+    .where(eq(processorErasureObligations.shopId, shopId));
+  // The contact-email confirmation links (issue #1288) reference `shops` with
+  // no cascade; a demo whose owner saved a front-desk address holds one, and
+  // it stranded the private e2e shop's teardown on the final `delete(shops)`
+  // the first time the flow was exercised -- the exact 23503 below describes.
+  await db
+    .delete(shopContactEmailConfirmationTokens)
+    .where(eq(shopContactEmailConfirmationTokens.shopId, shopId));
+  /*
+   * Seven shop-scoped tables that reference `shops` (and most of them `people`)
+   * with no `ON DELETE CASCADE`, so a minted demo carrying any of them made the
+   * final `delete(shops)` throw 23503 and stranded that shop past its TTL —
+   * forever, since every later reap hit the same row. Not hypothetical: staff
+   * seating a diver writes an `activity_events` row on the way through
+   * (src/features/bookings/seat-diver.ts), so *any* demo where someone used the Guests tab was
+   * already unreapable.
+   *
+   * All seven were invisible to `reap-demos.test.ts`, whose cases are
+   * hand-written per table. They were found by the shop-scoped sweep in
+   * `delete-path-coverage.test.ts`, which exists precisely so the next one is
+   * found by a failing check rather than by a stranded shop.
+   */
+  await db.delete(internalNotes).where(eq(internalNotes.shopId, shopId));
+  await db.delete(activityEvents).where(eq(activityEvents.shopId, shopId));
+  await db.delete(staffShifts).where(eq(staffShifts.shopId, shopId));
+  // Requests were cleared before their departures; availability still names people.
+  await db.delete(crewAvailabilityBlocks).where(eq(crewAvailabilityBlocks.shopId, shopId));
+  // Deliveries reference the destination they were sent to, so they go first.
+  await db.delete(shopBackupDeliveries).where(eq(shopBackupDeliveries.shopId, shopId));
+  await db.delete(shopBackupDeliveryClaims).where(eq(shopBackupDeliveryClaims.shopId, shopId));
+  await db.delete(shopBackupDestinations).where(eq(shopBackupDestinations.shopId, shopId));
+  await db.delete(shopWhatsappAccounts).where(eq(shopWhatsappAccounts.shopId, shopId));
+  // References user_accounts/people/shops, all of which go below — a live
+  // sign-in session for this shop's own staff must not survive the shop it
+  // belonged to.
+  await db.delete(accountSignInChallenges).where(eq(accountSignInChallenges.shopId, shopId));
+  await db.delete(accountSessions).where(eq(accountSessions.shopId, shopId));
+
+  if (personIds.length > 0) {
+    // Account tokens (capabilities naming the account) reference user_accounts, one layer further down the same
+    // chain the comment above already walks — a demo owner who ever requested
+    // a reset link leaves one behind, and it must go before user_accounts or
+    // this FK-violates and strands the shop past the reaper's TTL (security
+    // review finding on 20260725-account-lifecycle-emails).
+    const demoAccounts = await db
+      .select({ id: userAccounts.id, email: userAccounts.email })
+      .from(userAccounts)
+      .where(inArray(userAccounts.personId, personIds));
+    const demoAccountIds = demoAccounts.map((row) => row.id);
+    if (demoAccountIds.length > 0) {
+      await db.delete(capabilities).where(inArray(capabilities.userAccountId, demoAccountIds));
+      // A provider login references the account row and carries no cascade, so
+      // it must go before user_accounts for the same reason the tokens above
+      // do. Nothing writes this table yet — no OAuth provider is configured —
+      // so today this deletes nothing and costs one statement; the day a
+      // provider is enabled it is the difference between this path working and
+      // FK-violating mid-run (issue #1594).
+      await db
+        .delete(authProviderAccounts)
+        .where(inArray(authProviderAccounts.userAccountId, demoAccountIds));
+      // The same text-keyed sweep the reset does, for the same reason: a
+      // verification row names its person as a string and no join reaches it.
+      await db
+        .delete(authVerifications)
+        .where(
+          inArray(authVerifications.identifier, [
+            ...new Set(demoAccounts.flatMap((row) => [row.id, row.email])),
+          ]),
+        );
+      // **Sessions again, by account this time.** The sweep at the top of this
+      // function deletes them by `account_sessions.shop_id`, which is a
+      // snapshot taken at sign-in rather than a derived fact — a row whose
+      // snapshot disagreed with the person's shop would survive it and then
+      // FK-violate against `user_accounts` below, stranding the shop past the
+      // reaper's TTL. Keyed on the account, that cannot happen (issue #1594's
+      // security review). The shop-keyed sweep stays: it is the one that
+      // reaches a session belonging to a person this block does not name.
+      await db
+        .delete(accountSessions)
+        .where(inArray(accountSessions.userAccountId, demoAccountIds));
+      await db.delete(accountStepUps).where(inArray(accountStepUps.userAccountId, demoAccountIds));
+      await db
+        .delete(accountSecurity)
+        .where(inArray(accountSecurity.userAccountId, demoAccountIds));
+    }
+    await db.delete(userAccounts).where(inArray(userAccounts.personId, personIds));
+    await db.delete(personRoles).where(inArray(personRoles.personId, personIds));
+  }
+  await db.delete(people).where(eq(people.shopId, shopId));
+  await db.delete(shops).where(eq(shops.id, shopId));
+}
+
+/**
+ * When a shop was last used: its latest recorded staff input on any session
+ * (`account_sessions.last_human_activity_at`, which a sign-in also sets), or
+ * the moment it was minted when nobody ever signed in. A session row outlives
+ * its last input by the whole idle limit, which is the reaper's window, so a
+ * shop used inside the window always still has the row that says so.
+ */
+function demoLastActiveAt() {
+  return sql<Date>`greatest(${shops.createdAt}, coalesce((select max(${accountSessions.lastHumanActivityAt}) from ${accountSessions} where ${accountSessions.shopId} = ${shops.id}), ${shops.createdAt}))`;
+}
+
+/**
+ * Clear minted demo shops idle for more than `maxAgeMs` (seven days with no
+ * sign-in or staff input; see `demoLastActiveAt`). Selects only `isDemo` shops
+ * whose slug is not the canonical demo — so blue-mantis and every real shop are
+ * untouchable here — and deletes each in its own transaction so one failure
+ * doesn't strand the rest. Time comes through `now` (clock rule); the cron route
+ * supplies the TTL from env.
+ */
+export async function reapExpiredDemoShops(
+  db: AppDb,
+  opts: { now?: number; maxAgeMs?: number } = {},
+): Promise<{ deleted: number; slugs: string[] }> {
+  const now = opts.now ?? nowMs();
+  const maxAgeMs = opts.maxAgeMs ?? DEFAULT_DEMO_TTL_MS;
+  const cutoff = new Date(now - maxAgeMs);
+
+  const expired = await db
+    .select({ id: shops.id, slug: shops.slug })
+    .from(shops)
+    .where(
+      and(eq(shops.isDemo, true), ne(shops.slug, DEMO_SHOP_SLUG), lt(demoLastActiveAt(), cutoff)),
+    );
+
+  const slugs: string[] = [];
+  for (const shop of expired) {
+    try {
+      await db.transaction(async (tx) => deleteDemoShopCascade(tx, shop.id));
+      slugs.push(shop.slug);
+    } catch (error) {
+      if (error instanceof DemoSightingCleanupBlocked) {
+        log("demo_sighting_cleanup_blocked", "warn", { shopId: shop.id });
+        continue;
+      }
+      if (!(error instanceof Error) || error.message !== DEMO_PRIVATE_PHOTO_CLEANUP_REQUIRED)
+        throw error;
+      log("demo_private_photo_cleanup_pending", "warn", { shopId: shop.id });
+    }
+  }
+  return { deleted: slugs.length, slugs };
+}
+
+/**
+ * Delete every minted demo shop right now, regardless of age — the canonical
+ * blue-mantis demo and all real shops are left alone. The e2e reset uses this so
+ * the shared test database doesn't accumulate the disposable shops each "Try the
+ * live demo" mints (age-based reaping is unreliable under the frozen e2e clock,
+ * since `created_at` is a real wall-clock default).
+ */
+export async function purgeMintedDemoShops(
+  db: AppDb,
+  /**
+   * How one shop goes, inside its own transaction. The e2e reset passes one
+   * that runs this same cascade with its foreign-key triggers settled by set
+   * (`src/features/demo/demo-reset-snapshot.ts`).
+   */
+  deleteShop: (tx: DbExecutor, shopId: string) => Promise<void> = deleteDemoShopCascade,
+): Promise<number> {
+  const minted = await db
+    .select({ id: shops.id })
+    .from(shops)
+    .where(and(eq(shops.isDemo, true), ne(shops.slug, DEMO_SHOP_SLUG)));
+  for (const shop of minted) {
+    await db.transaction(async (tx) => deleteShop(tx, shop.id));
+  }
+  return minted.length;
+}
+
+/**
+ * Hard ceiling on how many minted demo shops may exist at once — the aggregate
+ * bound the per-IP rate limit can't provide (security review, finding 1).
+ * `DEMO_SHOP_MAX_LIVE` overrides it; a non-positive or non-numeric value keeps
+ * the default.
+ */
+export const DEFAULT_DEMO_SHOP_MAX_LIVE = 200;
+
+function mintedDemoCap(): number {
+  const configured = Number(process.env.DEMO_SHOP_MAX_LIVE);
+  return Number.isFinite(configured) && configured > 0 ? configured : DEFAULT_DEMO_SHOP_MAX_LIVE;
+}
+
+/**
+ * Evict the longest-idle minted demos until there is room for one more under the cap.
+ * Only minted demos are ever eligible — the canonical blue-mantis demo (by slug)
+ * and every real shop (`isDemo:false`) are excluded, so this can never delete a
+ * real tenant. When the caller supplies a transaction, eviction and the new
+ * mint can commit together. A root-handle call commits the eviction separately.
+ *
+ * **`id` breaks the `createdAt` tie, and that second key is load-bearing.** Two
+ * demos minted inside the same clock tick sort equally on `createdAt` alone,
+ * and a query with no total order returns them in whatever sequence the storage
+ * engine finds convenient — so *which tenant this function deletes* was
+ * unspecified whenever timestamps collided. Rare against a live clock, and
+ * permanent under the frozen test clock (src/test/frozen-clock.ts), where every
+ * row a test mints shares one instant by construction: `reap-demos.test.ts`
+ * asserted a specific victim and passed or failed on row order, which surfaced
+ * as a flake only under full-suite load. A deletion is the last place to leave
+ * an order to chance.
+ */
+export async function enforceMintedDemoCap(db: DbExecutor): Promise<void> {
+  if (!isTransactionExecutor(db)) return db.transaction((tx) => enforceMintedDemoCap(tx));
+  const cap = mintedDemoCap();
+  const live = await db
+    .select({ id: shops.id })
+    .from(shops)
+    .where(and(eq(shops.isDemo, true), ne(shops.slug, DEMO_SHOP_SLUG)))
+    // diveday:allow-time-id-order: an eviction order, not a list; the id makes it total (above).
+    .orderBy(asc(demoLastActiveAt()), asc(shops.id));
+  let remaining = live.length - (cap - 1);
+  let protectedShop: DemoSightingCleanupBlocked | undefined;
+  for (const shop of live) {
+    if (remaining <= 0) break;
+    try {
+      // A savepoint restores the entire failed cleanup before trying another shop.
+      await db.transaction((tx) => deleteDemoShopCascade(tx, shop.id));
+      remaining--;
+    } catch (error) {
+      if (!(error instanceof DemoSightingCleanupBlocked)) throw error;
+      protectedShop = error;
+    }
+  }
+  // Do not mint beyond the cap when no more eligible shops remain. The caller
+  // must let this error escape the enclosing transaction to roll back evictions.
+  if (remaining > 0) throw protectedShop ?? new Error("Demo shop capacity unavailable");
+}

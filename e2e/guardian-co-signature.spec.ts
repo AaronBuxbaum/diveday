@@ -30,7 +30,7 @@ const diverText = diverTranslator("en-US");
  * and once both signatures are on it the record says who co-signed.
  *
  * Its own diver, minted per run, rather than the seeded thirteen-year-old:
- * hers is already co-signed (`DEMO_GUARDIANS` in `src/db/seed-bookings.ts`, so
+ * hers is already co-signed (`DEMO_GUARDIANS` in `src/db/seed/bookings.ts`, so
  * the demo boat shows the co-signature rather than a permanent blocker), and a
  * spec that unpicked that would be changing the fixture every other spec on the
  * shared shop reads.

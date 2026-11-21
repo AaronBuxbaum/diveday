@@ -247,7 +247,7 @@ describe("uncrewed and below-target departures (issue #732)", () => {
 
     const row = work.actions.find((action) => action.id === `uncrewed:${reef.id}`);
     expect(row?.kind).toBe("uncrewed_departure");
-    // Divers only: the snorkeler and the rider aboard (`seed-mixed-boat.ts`)
+    // Divers only: the snorkeler and the rider aboard (`seed/mixed-boat.ts`)
     // are in the headcount, not the ratio.
     expect(reef.bookedDivers).toBeLessThan(reef.booked);
     expect(row?.detail).toBe(`${reef.bookedDivers} divers booked, no divemaster or instructor.`);

@@ -17,7 +17,7 @@ const ctx = fileScopedShopContext();
 
 /**
  * The seeded demo shop already owns a six-word vocabulary
- * (`src/db/seed-lenses.ts`), so every word written here is one the demo does
+ * (`src/db/seed/lenses.ts`), so every word written here is one the demo does
  * not use. A test that reached for "Wrecks" would be asserting against a
  * collision suffix rather than against the rule it means to pin.
  */

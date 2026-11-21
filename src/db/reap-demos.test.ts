@@ -136,7 +136,7 @@ describe("createDemoShop", () => {
    * by default it has no logo, cover photo or badges. `brand` exists for the
    * visitor demo and for surfaces that need all of them on file, such as the
    * settings profile row (`settings-profile`).
-   * The canonical demo wears its own profile (`seed-shop-brand.ts`); the
+   * The canonical demo wears its own profile (`seed/shop-brand.ts`); the
    * minted fixture differs from it in colour, face and logo.
    */
   it("wears the canonical demo's brand, and a logo, only when asked", async () => {

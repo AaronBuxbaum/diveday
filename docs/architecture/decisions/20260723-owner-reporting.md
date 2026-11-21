@@ -38,7 +38,7 @@ paid date") makes a single dashboard incoherent — the numbers stop describing 
   predicate). Revenue is owner-grade information the daily crew has no reason to see; the page shows
   the same owner-only notice the export does when a captain or instructor lands on it.
 - **The demo is seeded with a realistic trailing quarter** so reporting is not hollow the first time
-  a buyer opens it. `seedHistory` (in `src/db/seed.ts`) back-fills already-sailed trips across this
+  a buyer opens it. `seedHistory` (in `src/db/seed/index.ts`) back-fills already-sailed trips across this
   month, last month, and the one before, with the bookings, `booking_payments`, signed
   `waiver_records`, and paid `orders` those trips left behind. It is derived deterministically from a
   booking counter (never a live clock or randomness) so the frozen-clock e2e fleet renders identical

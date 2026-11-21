@@ -739,7 +739,7 @@ export const waiverSealAcknowledgements = pgTable(
  * peers, and each button wears its own last outcome. A single latest-attempt
  * column can only ever light one of them.
  *
- * Deliberately out of the export bundle (`src/db/export.test.ts`): the outcome
+ * Deliberately out of the export bundle (`src/db/export/index.test.ts`): the outcome
  * a destination system could use is already on `waiver_records.csv`; this is
  * the per-channel mechanics behind it.
  *

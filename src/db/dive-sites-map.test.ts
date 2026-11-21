@@ -13,7 +13,7 @@ import {
   listGlobalDiveSiteTemplates,
 } from "./dive-sites";
 import { globalDiveSites, globalDiveSiteVersions } from "./schema";
-import { seedDiveSiteCatalog } from "./seed-dive-site-catalog";
+import { seedDiveSiteCatalog } from "./seed/dive-site-catalog";
 
 const ctx = fileScopedShopContext();
 

@@ -1,0 +1,194 @@
+import { EXPORT_FILE_NOTES } from "@/lib/export";
+import { privatePersonPhotoId } from "@/lib/person-photo";
+import type { DiverExportContext } from ".";
+import {
+  BOOKING_ARRIVAL_EVENTS_CSV,
+  BOOKING_CHECKOUT_BOOKINGS_CSV,
+  BOOKING_PAYMENT_EVENTS_CSV,
+  BOOKINGS_CSV,
+  BUDDY_PAIRS_CSV,
+  CARDS_CSV,
+  CERTIFICATION_JUNIOR_REVIEWS_CSV,
+  COMPUTER_DIVE_PROFILES_CSV,
+  COMPUTER_DIVES_CSV,
+  COMPUTER_IMPORT_BATCHES_CSV,
+  COURSE_FORM_RECORDS_CSV,
+  COURSE_SESSION_PROGRESS_CSV,
+  CUSTOMER_GEAR_ITEMS_CSV,
+  DIVE_PACKAGE_ENTITLEMENTS_CSV,
+  diverFile,
+  GEAR_RESERVATIONS_CSV,
+  IMPORTED_PAYMENT_HISTORY_CSV,
+  INBOUND_MESSAGES_CSV,
+  INTERESTS_CSV,
+  LOST_ITEMS_CSV,
+  NOTIFICATION_DELIVERIES_CSV,
+  ORDER_LINE_ITEMS_CSV,
+  ORDERS_CSV,
+  PRIOR_VISITS_CSV,
+  RECAP_PHOTOS_CSV,
+  RECAP_PULSES_CSV,
+  RENTAL_FIT_CSV,
+  REVIEW_MODERATION_EVENTS_CSV,
+  ROLL_CALL_EVENTS_CSV,
+  STAFF_CREDENTIALS_CSV,
+  STAFF_REPLIES_CSV,
+  TIPS_CSV,
+  TRIP_CREDIT_CSV,
+  TRIP_REVIEWS_CSV,
+  WAIVER_RECORDS_CSV,
+  WORK_ORDER_CARE_CSV,
+  WORK_ORDER_LINES_CSV,
+  WORK_ORDERS_CSV,
+} from "./shared-files";
+import type { ExportFileSpec } from "./tables";
+
+/**
+ * **One diver's own bundle, file by file** (ADR 20260824-diver-record-export):
+ * every CSV `loadDiverExportBundleInput` writes, in bundle order. The same
+ * tables as the shop bundle, read by the diver's person id or their bookings,
+ * but **not the same files**: each one is shaped for a subject-access answer —
+ * other people appear by name where the diver needs to know who, and not at
+ * all where the row is shared (the decisions are written above
+ * `loadDiverExportBundleInput` in `./export`).
+ *
+ * A table both bundles write is declared once, in `./export-shared-files`,
+ * where every column names the bundle it belongs to; `diverFile` takes the
+ * columns marked for the diver. The two entries written out here are the ones
+ * with no shop twin: the diver's own profile, and the release wording *as
+ * signed*, which is a snapshot on the diver's records rather than the shop's
+ * live template.
+ */
+
+export const DIVER_EXPORT_FILES: ExportFileSpec<DiverExportContext>[] = [
+  {
+    file: "recovery_activity_participants.csv",
+    header: [
+      "id",
+      "activity_id",
+      "person_id",
+      "blowout_diver_id",
+      "status",
+      "revision",
+      "confirmed_at",
+    ],
+    rows: ({ recoveryActivityParticipantRows }) =>
+      recoveryActivityParticipantRows.map((row) => [
+        row.id,
+        row.activityId,
+        row.personId,
+        row.blowoutDiverId,
+        row.status,
+        row.revision,
+        row.confirmedAt,
+      ]),
+    note: EXPORT_FILE_NOTES["recovery_activity_participants.csv"],
+  },
+  {
+    file: "profile.csv",
+    header: [
+      "id",
+      "full_name",
+      "staff_photo_path",
+      "diver_photo_path",
+      "diver_photo_suppressed",
+      "public_staff_profile_enabled",
+      "public_staff_profile",
+      "email",
+      "phone",
+      "date_of_birth",
+      "dive_insurance",
+      "roles",
+      "emergency_contact_name",
+      "emergency_contact_phone",
+      "courtesy_email_opt_out_at",
+      "no_certification_declared_at",
+      "no_certification_cleared_at",
+      "adult_attested_at",
+      "deleted_at",
+      "created_at",
+    ],
+    rows: ({ person, rolesText }) => [
+      [
+        person.id,
+        person.fullName,
+        person.staffPhotoPath,
+        privatePersonPhotoId(person.diverPhotoPath)
+          ? `photos/private-person-photos/${privatePersonPhotoId(person.diverPhotoPath)}`
+          : null,
+        person.diverPhotoSuppressed,
+        person.publicStaffProfileEnabled,
+        person.publicStaffProfile ? JSON.stringify(person.publicStaffProfile) : null,
+        person.email,
+        person.phone,
+        person.dateOfBirth,
+        person.diveInsurance,
+        rolesText,
+        person.emergencyContactName,
+        person.emergencyContactPhone,
+        person.courtesyEmailOptOutAt,
+        person.noCertificationDeclaredAt,
+        person.noCertificationClearedAt,
+        person.adultAttestedAt,
+        person.deletedAt,
+        person.createdAt,
+      ],
+    ],
+    note: "This diver's own contact and profile record.",
+  },
+  diverFile(CARDS_CSV),
+  diverFile(CERTIFICATION_JUNIOR_REVIEWS_CSV),
+  diverFile(BOOKINGS_CSV),
+  diverFile(INTERESTS_CSV),
+  diverFile(BOOKING_PAYMENT_EVENTS_CSV),
+  diverFile(BOOKING_CHECKOUT_BOOKINGS_CSV),
+  diverFile(BOOKING_ARRIVAL_EVENTS_CSV),
+  diverFile(ROLL_CALL_EVENTS_CSV),
+  diverFile(BUDDY_PAIRS_CSV),
+  {
+    file: "waiver_templates.csv",
+    header: ["id", "title", "version", "body"],
+    // waiverRecords.templateBody is the text as signed — a snapshot at
+    // signing time, never the live waiverTemplates row, which a shop can
+    // go on editing after this diver signed. One row per distinct
+    // template this diver actually agreed to.
+    rows: ({ waiverRows }) =>
+      (() => {
+        const templateIds = [...new Set(waiverRows.map((row) => row.templateId))];
+        return templateIds.map((id) => {
+          const row = waiverRows.find((waiver) => waiver.templateId === id);
+          return [id, row?.templateTitle, row?.templateVersion, row?.templateBody];
+        });
+      })(),
+    note: "The exact wording of each release this diver signed, by version, as it read the moment they signed it.",
+  },
+  diverFile(WAIVER_RECORDS_CSV),
+  diverFile(COURSE_FORM_RECORDS_CSV),
+  diverFile(RENTAL_FIT_CSV),
+  diverFile(STAFF_CREDENTIALS_CSV),
+  diverFile(GEAR_RESERVATIONS_CSV),
+  diverFile(CUSTOMER_GEAR_ITEMS_CSV),
+  diverFile(INBOUND_MESSAGES_CSV),
+  diverFile(STAFF_REPLIES_CSV),
+  diverFile(LOST_ITEMS_CSV),
+  diverFile(WORK_ORDERS_CSV),
+  diverFile(WORK_ORDER_LINES_CSV),
+  diverFile(WORK_ORDER_CARE_CSV),
+  diverFile(PRIOR_VISITS_CSV),
+  diverFile(TRIP_CREDIT_CSV),
+  diverFile(COURSE_SESSION_PROGRESS_CSV),
+  diverFile(COMPUTER_IMPORT_BATCHES_CSV),
+  diverFile(COMPUTER_DIVES_CSV),
+  diverFile(COMPUTER_DIVE_PROFILES_CSV),
+
+  diverFile(IMPORTED_PAYMENT_HISTORY_CSV),
+  diverFile(NOTIFICATION_DELIVERIES_CSV),
+  diverFile(ORDERS_CSV),
+  diverFile(ORDER_LINE_ITEMS_CSV),
+  diverFile(TIPS_CSV),
+  diverFile(RECAP_PHOTOS_CSV),
+  diverFile(TRIP_REVIEWS_CSV),
+  diverFile(RECAP_PULSES_CSV),
+  diverFile(REVIEW_MODERATION_EVENTS_CSV),
+  diverFile(DIVE_PACKAGE_ENTITLEMENTS_CSV),
+];

@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
+import { seedRollCallEvidence } from "@/db/seed/roll-call-evidence";
 import { listDepartureBoardedByTrip, listUnaccountedForByTrip } from "../../db/manifests";
 import { listTripsReadiness } from "../../db/readiness";
 import { bookings as bookingsTable, trips as tripsTable } from "../../db/schema/index";
