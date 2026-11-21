@@ -87,7 +87,7 @@ migration cost against this list.
 | The board's add panel + `/trips/[id]` | One trip form (creation lives in `ScheduleBuilder`'s panel — ADR 20260806-one-trip-create-form) and the trip editor: capacity is a bare number staff retype per trip; crew and roster sections. |
 | Today (`/shop/[shopSlug]` `?view=`) | Departure cards; no boat name to anchor "which boat is this pile of problems on". |
 | Reports (`/shop/[shopSlug]/reports`) | Utilization against stated capacity; no per-boat cut. |
-| `calendar-sync` feature (`src/features/calendar-sync`) | Trips → VEVENT; a boat name would belong in the event title/location for crew phones. |
+| `calendar-sync` feature (`src/features/crew-and-boats/calendar-sync`) | Trips → VEVENT; a boat name would belong in the event title/location for crew phones. |
 | Offline manifest viewer (`src/app/offline-manifest/`) | Per-trip snapshot; on a multi-boat morning the crew needs "which boat" on the snapshot header. |
 | e2e + visual (`e2e/visual-*.spec.ts`, `scripts/route-coverage.json`) | Clock-frozen seed; board and public-schedule captures are pixel baselines. Any slice that adds visible boat chrome moves baselines and must say so in its PR (visual-triage rule). |
 

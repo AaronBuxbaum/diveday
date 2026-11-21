@@ -2,10 +2,14 @@
 
 import { z } from "zod";
 import { canPersonManageShopSettings } from "@/db/authz";
-import { readForm } from "@/features/form-parse";
-import { revalidateAndRedirect } from "@/features/navigation";
-import { requireShopSurface } from "@/features/session";
-import { acceptSetupLine, dismissSetupLine, readWebsiteForSetup } from "@/features/website-setup";
+import { requireShopSurface } from "@/features/accounts/session";
+import { readForm } from "@/features/platform/form-parse";
+import { revalidateAndRedirect } from "@/features/platform/navigation";
+import {
+  acceptSetupLine,
+  dismissSetupLine,
+  readWebsiteForSetup,
+} from "@/features/shop-setup/website-setup";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 
 const siteForm = z.object({ site: z.string().max(500).default("") });

@@ -1,7 +1,7 @@
 import { and, eq, gte, isNull } from "drizzle-orm";
 import type { AppDb } from "../../db/client";
 import { people, trips } from "../../db/schema/index";
-import { seatDiver } from "../../features/seat-diver/store";
+import { seatDiver } from "../../features/bookings/seat-diver";
 
 /**
  * **A seat the counter's own name prompt produced** (H-20260724-one-person-per-email, issues #1556 and

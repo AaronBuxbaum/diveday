@@ -24,8 +24,11 @@ import {
 } from "@/test/jsx-inspect";
 import { nextHeadersStub } from "@/test/next-headers";
 import { demoteOwnerToManager } from "@/test/staff-session";
-import { CONNECTION_PROVIDERS, CONNECTION_STATES } from "../../../../features/connections/rules";
-import { listShopStaff } from "../../../../features/staff-accounts/store";
+import { listShopStaff } from "../../../../features/accounts/staff-accounts";
+import {
+  CONNECTION_PROVIDERS,
+  CONNECTION_STATES,
+} from "../../../../features/shop-setup/connections/rules";
 import { SettingsSelection } from "./_components/SettingsSelection";
 import { CounterQrCard } from "./CounterQrCard";
 import { SETTINGS_RAIL_ROWS, type SectionId, settingsSectionFragment } from "./settings-groups";

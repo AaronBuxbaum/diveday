@@ -10,8 +10,8 @@
 import { revalidatePath } from "next/cache";
 import { getDb } from "@/db/client";
 import { type DiveNotMadeOutcome, recordDiveNotMade, undoDiveNotMade } from "@/db/dive-not-made";
-import { revalidateAndRedirect } from "@/features/navigation";
-import { requireShopSurface } from "@/features/session";
+import { requireShopSurface } from "@/features/accounts/session";
+import { revalidateAndRedirect } from "@/features/platform/navigation";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 

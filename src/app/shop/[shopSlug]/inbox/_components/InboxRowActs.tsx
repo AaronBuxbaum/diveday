@@ -4,7 +4,7 @@ import { RowMenu } from "@/components/RowMenu";
 import { SubmitButton } from "@/components/SubmitButton";
 import { menuRowClass } from "@/components/ui/menu";
 import type { InboxRow as InboxMessageRow } from "@/db/inbound-messages";
-import type { InboxSeat } from "@/features/inbox-seats";
+import type { InboxSeat } from "@/features/messages/inbox-seats";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { mailtoHref } from "@/lib/contact-links";
 

@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { canPersonCallDayBlowout, canPersonRefund } from "@/db/authz";
 import { callDayBlowout, listDayBlowoutDepartures } from "@/db/blowouts";
 import { recordTripActivity } from "@/db/operations";
-import { requireShopSurface } from "@/features/session";
+import { requireShopSurface } from "@/features/accounts/session";
 import { trackEvent } from "@/lib/analytics";
 import { parseBlowoutPreferences } from "@/lib/blowout-preferences";
 import { isValidCalendarDate } from "@/lib/calendar-date";

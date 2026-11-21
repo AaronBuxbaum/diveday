@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
-import { removeStaffMember, restoreStaffMember } from "../features/staff-accounts/store";
+import { removeStaffMember, restoreStaffMember } from "../features/accounts/staff-accounts";
 import { consumeAccountToken, issueAccountToken } from "./account-tokens";
 import type { AppDb } from "./client";
 import { people, personRoles, userAccounts } from "./schema";

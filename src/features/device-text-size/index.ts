@@ -1,1 +1,0 @@
-export { deviceTextSizeScript } from "./rules";

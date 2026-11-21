@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { countingShopContext } from "@/test/query-count";
-import { createBoat } from "../features/boats/store";
+import { createBoat } from "../features/crew-and-boats/boats/store";
 import { type BookingRequest, cancelBooking, createBooking, createBookingParty } from "./bookings";
 import { bookings, trips } from "./schema";
 import { createTrip, listStaff, setTripCrew } from "./trips";

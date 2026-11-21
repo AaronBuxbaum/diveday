@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { marineLifeNamesIn } from "@/i18n/marine-life-labels";
 import { fileScopedShopContext } from "@/test/db";
 import { fakeEmail, fakeSms } from "@/test/fakes";
-import { getRecapPageData, sendDueRecaps } from "../features/recap/store";
+import { getRecapPageData, sendDueRecaps } from "../features/after-the-dive/recap/store";
 import { createBookingParty, setBookingParticipantType } from "./bookings";
 import { upsertExecutedDive } from "./executed-dives";
 import { listStaff } from "./trips";

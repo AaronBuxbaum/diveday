@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { afterAll, beforeAll, expect, it, vi } from "vitest";
-import { readOfflineManifestRosterWithWindows } from "@/features/offline-manifest-snapshots";
+import { readOfflineManifestRosterWithWindows } from "@/features/boarding/offline-manifest-snapshots";
 import { nowDate } from "@/lib/clock";
 import { describePostgres, postgresTestDb } from "@/test/postgres";
 import {

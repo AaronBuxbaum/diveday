@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { unseededTestDb } from "@/test/db";
-import { createDiver, listDiverSummaries } from "../features/divers/store";
+import { createDiver, listDiverSummaries } from "../features/people/divers/store";
 import type { AppDb } from "./client";
 import { bookings, priorVisits, shops, trips } from "./schema";
 

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getDiveSite, getGlobalDiveSiteTemplate } from "@/db/dive-sites";
-import { requireShopSurface } from "@/features/session";
+import { requireShopSurface } from "@/features/accounts/session";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";

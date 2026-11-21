@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { beforeEach, expect, it, vi } from "vitest";
 import { personRoles, shops } from "@/db/schema";
-import { signRosterConfirmation } from "@/features/offline-manifest-snapshots";
+import { signRosterConfirmation } from "@/features/boarding/offline-manifest-snapshots";
 import type { DiveDaySession } from "@/lib/auth";
 import { fileScopedShopContext } from "@/test/db";
 import { SEEDED_CAPTAIN_EMAIL, seededStaffPersonId } from "@/test/staff-session";

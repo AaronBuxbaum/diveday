@@ -22,12 +22,13 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
 });
-vi.mock("../../../../../features/session/rules", () => ({ requireShopSurface: vi.fn() }));
-vi.mock("../../../../../features/seat-diver/store", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../../../../features/seat-diver/store")>();
+vi.mock("../../../../../features/accounts/session", () => ({ requireShopSurface: vi.fn() }));
+vi.mock("../../../../../features/bookings/seat-diver", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("../../../../../features/bookings/seat-diver")>();
   return { ...actual, moveSeat: vi.fn(), moveParty: vi.fn() };
 });
-vi.mock("../../../../../features/interest-roll/store", () => ({ carryInterests: vi.fn() }));
+vi.mock("../../../../../features/bookings/interest-roll", () => ({ carryInterests: vi.fn() }));
 vi.mock("@/db/person-clashes", () => ({ seatClashesAfterMove: vi.fn(async () => []) }));
 vi.mock("./roster-booking", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./roster-booking")>();
@@ -35,10 +36,10 @@ vi.mock("./roster-booking", async (importOriginal) => {
 });
 
 const { getDb } = await import("@/db/client");
-const { moveParty, moveSeat } = await import("../../../../../features/seat-diver/store");
-const { requireShopSurface } = await import("../../../../../features/session/rules");
+const { moveParty, moveSeat } = await import("../../../../../features/bookings/seat-diver");
+const { requireShopSurface } = await import("../../../../../features/accounts/session");
 const { requireRosterBooking } = await import("./roster-booking");
-const { carryInterests } = await import("../../../../../features/interest-roll/store");
+const { carryInterests } = await import("../../../../../features/bookings/interest-roll");
 const { seatClashesAfterMove } = await import("@/db/person-clashes");
 const { carryWaitlistAction, moveSeatAction } = await import("./roster-seating-actions");
 

@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import { useActionState, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { FormStatus, StickyFormActions } from "@/components/ui/form";
-import type { DiveSiteFormError, SubmittedFormValues } from "@/features/dive-sites";
+import type { DiveSiteFormError, SubmittedFormValues } from "@/features/sites/dive-sites";
 import { SITE_FORM_REFUSAL_SECTION } from "./site-form-sections";
 
 /**

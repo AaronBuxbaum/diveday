@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { AGENCY_KEYS } from "@/app/shop/[shopSlug]/divers/[personId]/_components/shared";
 import { buttonClass } from "@/components/ui/button";
-import type { CardToValidate, CardWhat } from "@/features/agency-processing";
+import type { CardToValidate, CardWhat } from "@/features/certifications/agency-processing";
 import { CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatShortDate } from "@/lib/format";

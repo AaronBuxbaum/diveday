@@ -12,7 +12,7 @@ import { SectionCard } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import type { NoticeTone } from "@/components/ui/tone";
 import { type GearItemDetail, getGearItemDetail } from "@/db/gear";
-import { requireShopSurface } from "@/features/session";
+import { requireShopSurface } from "@/features/accounts/session";
 import {
   gearItemKindLabel,
   gearPhaseLabel,

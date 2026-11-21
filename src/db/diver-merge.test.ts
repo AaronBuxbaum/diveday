@@ -9,7 +9,7 @@ import {
   WAIVER_INTEGRITY_VERSION_SIGNED,
 } from "@/lib/waiver-integrity";
 import { fileScopedShopContext } from "@/test/db";
-import { getIncidentExport } from "../features/incident-export/store";
+import { getIncidentExport } from "../features/safety/incident-export";
 import { listTripBuddyTeams } from "./buddy-teams";
 import {
   DIVER_HISTORY_TABLES,

@@ -1,11 +1,11 @@
 "use server";
 
 import { getDb } from "@/db/client";
-import { csvUploadForm, parseForm } from "@/features/form-parse";
-import { commitGearImport, prepareGearImport } from "@/features/gear-import";
-import { canPersonImportShopData } from "@/features/import";
-import { revalidateAndRedirect } from "@/features/navigation";
-import { requireStaffSession } from "@/features/session";
+import { requireStaffSession } from "@/features/accounts/session";
+import { commitGearImport, prepareGearImport } from "@/features/gear/gear-import";
+import { csvUploadForm, parseForm } from "@/features/platform/form-parse";
+import { revalidateAndRedirect } from "@/features/platform/navigation";
+import { canPersonImportShopData } from "@/features/records/import";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 
 /**

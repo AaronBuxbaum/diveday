@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
-import { createBoat } from "../features/boats/store";
+import { createBoat } from "../features/crew-and-boats/boats/store";
 import { boats } from "./schema";
 import {
   createTrip,

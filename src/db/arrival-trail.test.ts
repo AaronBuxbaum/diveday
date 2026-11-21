@@ -4,9 +4,13 @@ import { nowDate } from "@/lib/clock";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { markArrived } from "@/test/arrivals";
 import { fileScopedShopContext } from "@/test/db";
-import { checkInBooking, listCheckInQueue, undoCheckInBooking } from "../features/check-in/store";
-import { strandedMoveOffer } from "../features/move-offer/store";
-import { undoBookingNoShow } from "../features/no-show/store";
+import {
+  checkInBooking,
+  listCheckInQueue,
+  undoCheckInBooking,
+} from "../features/boarding/check-in/store";
+import { undoBookingNoShow } from "../features/boarding/no-show";
+import { strandedMoveOffer } from "../features/bookings/move-offer";
 import { seatCheckedIn, standingArrivalStatus } from "./arrival-provenance";
 import { moveBooking, restoreBooking, selfCancelBooking } from "./bookings";
 import { bookingArrivalEvents, bookings, rollCallEvents, trips } from "./schema";

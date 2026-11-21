@@ -1,7 +1,7 @@
 import { tapTargetLinkClass } from "@/components/ui/button";
 import { SettledCheck } from "@/components/ui/SettledCheck";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
-import type { ReadyPageData } from "@/features/ready";
+import type { ReadyPageData } from "@/features/boarding/ready";
 import type { DiverTranslator } from "@/i18n/messages";
 import { mailtoHref } from "@/lib/contact-links";
 import { isLearningMaterialLink } from "@/lib/courses";

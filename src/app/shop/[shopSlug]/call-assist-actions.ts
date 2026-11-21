@@ -1,8 +1,8 @@
 "use server";
 
 import { CALL_NOTE_MAX, type CallNoteReading } from "@/components/assists/call-note";
-import { bookingAskFromNote } from "@/features/booking-ask-assists";
-import { requireShopSurface } from "@/features/session";
+import { requireShopSurface } from "@/features/accounts/session";
+import { bookingAskFromNote } from "@/features/ai/booking-ask-assists";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { shopPath } from "@/lib/staff-notices";

@@ -8,16 +8,16 @@ import { getDb } from "@/db/client";
 import { cancelUnusedCourseCodes, recordCourseCodes } from "@/db/course-codes";
 import { queueAndAttemptMediaDeletion } from "@/db/media-deletions";
 import { getShopById } from "@/db/shops";
+import { requireShopSurface, requireStaffSession } from "@/features/accounts/session";
+import { checkbox, formValue, readForm, text, trimmedText } from "@/features/platform/form-parse";
+import { revalidateAndRedirect } from "@/features/platform/navigation";
 import {
   editCourse,
   editCourseContent,
   getCourseBySlug,
   pullCourseTemplateUpdates,
   setCourseVisibility,
-} from "@/features/courses";
-import { checkbox, formValue, readForm, text, trimmedText } from "@/features/form-parse";
-import { revalidateAndRedirect } from "@/features/navigation";
-import { requireShopSurface, requireStaffSession } from "@/features/session";
+} from "@/features/training/courses";
 import { parseElearningCodes } from "@/lib/course-codes";
 import { toCoursePersonalGear } from "@/lib/course-personal-gear";
 import {

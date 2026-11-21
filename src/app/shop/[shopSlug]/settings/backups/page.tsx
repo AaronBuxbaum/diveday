@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import type { NoticeTone } from "@/components/ui/tone";
+import { requireShopSurface } from "@/features/accounts/session";
 import {
   BACKUP_SETTINGS_GATE,
   getBackupSettingsPage,
   type SaveBackupDestinationRefusal,
-} from "@/features/backup-export";
-import { requireShopSurface } from "@/features/session";
+} from "@/features/records/backup-export";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import type { NoticeCodeOf } from "@/lib/staff-notices";

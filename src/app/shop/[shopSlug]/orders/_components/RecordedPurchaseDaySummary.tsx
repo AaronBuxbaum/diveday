@@ -1,6 +1,6 @@
 import { buttonClass } from "@/components/ui/button";
 import { DateField, Field } from "@/components/ui/form";
-import type { RecordedPurchaseDay } from "@/features/recorded-purchases";
+import type { RecordedPurchaseDay } from "@/features/money/recorded-purchases";
 import { ORDER_COLLECTION_KEYS } from "@/i18n/order-labels";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import { formatCalendarDate } from "@/lib/calendar-date";

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
-import { recordEmailBounces } from "../features/email-bounces/store";
-import type { SesBounceReport } from "../features/email-events/rules";
+import { recordEmailBounces } from "../features/messages/email-bounces";
+import type { SesBounceReport } from "../features/messages/email-events/rules";
 import { recipientSuppressed } from "./send-holds";
 
 const ctx = fileScopedShopContext();

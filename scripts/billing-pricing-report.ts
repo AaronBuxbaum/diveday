@@ -1,6 +1,6 @@
 /** Read-only billing performance by current plan: pnpm billing:pricing-report. */
 import { getDb } from "@/db/client";
-import { pricingByPlan } from "@/features/pricing-report";
+import { pricingByPlan } from "@/features/money/pricing-report";
 
 const dollars = (cents: number) => `$${(cents / 100).toFixed(2)}`;
 

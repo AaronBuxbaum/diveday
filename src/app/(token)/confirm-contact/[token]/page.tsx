@@ -9,16 +9,16 @@ import {
   checkBookkeeperConfirmation,
   isBookkeeperToken,
   wasBookkeeperConfirmed,
-} from "@/features/bookkeeper";
-import {
-  checkShopContactEmailConfirmation,
-  wasShopContactEmailConfirmed,
-} from "@/features/shop-contact-email";
+} from "@/features/money/bookkeeper";
 import {
   checkShoreAlertConfirmation,
   isShoreAlertToken,
   wasShoreAlertConfirmed,
-} from "@/features/shore-alert-tokens";
+} from "@/features/safety/shore-alert-tokens";
+import {
+  checkShopContactEmailConfirmation,
+  wasShopContactEmailConfirmed,
+} from "@/features/shop-setup/shop-contact-email";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { nowDate } from "@/lib/clock";

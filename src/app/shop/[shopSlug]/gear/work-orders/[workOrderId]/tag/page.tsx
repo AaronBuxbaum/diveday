@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
-import { requireShopSurface } from "@/features/session";
-import { getWorkOrderDetail } from "@/features/work-orders";
+import { requireShopSurface } from "@/features/accounts/session";
+import { getWorkOrderDetail } from "@/features/gear/work-orders";
 import { gearItemKindLabel } from "@/i18n/gear-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";

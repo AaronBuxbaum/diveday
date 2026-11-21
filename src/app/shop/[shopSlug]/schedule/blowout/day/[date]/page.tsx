@@ -17,7 +17,7 @@ import {
   type DayBlowoutDepartureRow,
   getDayBlowoutPage,
 } from "@/db/blowouts";
-import { requireShopSurface } from "@/features/session";
+import { requireShopSurface } from "@/features/accounts/session";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { formatCalendarDate, isValidCalendarDate } from "@/lib/calendar-date";

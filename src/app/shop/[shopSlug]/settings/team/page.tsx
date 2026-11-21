@@ -11,9 +11,12 @@ import { CompactDisclosureRow } from "@/components/ui/disclosure";
 import { FormStatus } from "@/components/ui/form";
 import { InsetGroup } from "@/components/ui/ledger";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
-import { requireShopSurface } from "@/features/session";
-import type { StaffMember } from "@/features/staff-accounts";
-import { canPersonManageStaffAccounts, getTeamSettingsPage } from "@/features/team-settings-page";
+import { requireShopSurface } from "@/features/accounts/session";
+import type { StaffMember } from "@/features/accounts/staff-accounts";
+import {
+  canPersonManageStaffAccounts,
+  getTeamSettingsPage,
+} from "@/features/crew-and-boats/team-settings-page";
 import { requestLocale } from "@/i18n/request";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { staffRoleLabelRecord } from "@/i18n/staff-role-labels";

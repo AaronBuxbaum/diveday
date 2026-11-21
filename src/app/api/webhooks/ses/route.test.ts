@@ -6,25 +6,30 @@ vi.mock("@/db/client", async (importOriginal) => {
 });
 vi.mock("@/db/notifications", () => ({ applyProviderEmailEvent: vi.fn() }));
 vi.mock("@/db/courtesy-email", () => ({ optOutAddressAfterComplaint: vi.fn() }));
-vi.mock("../../../../features/email-bounces/store", () => ({ recordEmailBounces: vi.fn() }));
-vi.mock("../../../../features/bookkeeper/store", () => ({
+vi.mock("../../../../features/messages/email-bounces", () => ({ recordEmailBounces: vi.fn() }));
+vi.mock("../../../../features/money/bookkeeper/store", () => ({
   recordBookkeeperDeliveryOutcome: vi.fn(),
 }));
-vi.mock("../../../../features/sns-webhook/rules", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../../../features/sns-webhook/rules")>();
+vi.mock("../../../../features/messages/sns-webhook/rules", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("../../../../features/messages/sns-webhook/rules")>();
   return { ...actual, verifySnsMessage: vi.fn(), confirmSnsSubscription: vi.fn() };
 });
 
 const { getDb } = await import("@/db/client");
 const { applyProviderEmailEvent } = await import("@/db/notifications");
 const { optOutAddressAfterComplaint } = await import("@/db/courtesy-email");
-const { recordEmailBounces } = await import("../../../../features/email-bounces/store");
-const { recordBookkeeperDeliveryOutcome } = await import("../../../../features/bookkeeper/store");
+const { recordEmailBounces } = await import("../../../../features/messages/email-bounces");
+const { recordBookkeeperDeliveryOutcome } = await import(
+  "../../../../features/money/bookkeeper/store"
+);
 const { verifySnsMessage, confirmSnsSubscription } = await import(
-  "../../../../features/sns-webhook/rules"
+  "../../../../features/messages/sns-webhook/rules"
 );
 const { POST } = await import("./route");
-const { forgetWebhookRefusalReports } = await import("../../../../features/webhook-refusal/rules");
+const { forgetWebhookRefusalReports } = await import(
+  "../../../../features/platform/webhook-refusal"
+);
 
 const FAKE_DB = { fake: "db" };
 

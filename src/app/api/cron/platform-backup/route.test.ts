@@ -4,8 +4,8 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
 });
-vi.mock("@/features/backup-export", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/features/backup-export")>();
+vi.mock("@/features/records/backup-export", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/features/records/backup-export")>();
   return {
     ...actual,
     claimPlatformBackupShop: vi.fn(),
@@ -16,7 +16,7 @@ vi.mock("@/features/backup-export", async (importOriginal) => {
   };
 });
 // The routes report only where a DSN is configured; the suite runs without one.
-vi.mock("../../../../features/sentry-dsn/rules", () => ({
+vi.mock("../../../../features/platform/sentry-dsn", () => ({
   SENTRY_DSN: "https://key@sentry.invalid/1",
 }));
 vi.mock("@sentry/nextjs", () => ({
@@ -32,7 +32,7 @@ const {
   listShopsForPlatformBackup,
   runPlatformBackup,
   storePlatformBackupCensus,
-} = await import("@/features/backup-export");
+} = await import("@/features/records/backup-export");
 const Sentry = await import("@sentry/nextjs");
 const { GET } = await import("./route");
 

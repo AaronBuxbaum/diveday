@@ -13,10 +13,10 @@ import {
   counterTally,
   isTurnedAwayAtCounter,
   listCheckInQueue,
-} from "@/features/check-in";
-import { foundItemsText, openLostItemsByPerson } from "@/features/lost-items";
-import { noShowSalvage } from "@/features/no-show";
-import { partyLeadBookingIds } from "@/features/turn-away";
+} from "@/features/boarding/check-in";
+import { noShowSalvage } from "@/features/boarding/no-show";
+import { partyLeadBookingIds } from "@/features/boarding/turn-away";
+import { foundItemsText, openLostItemsByPerson } from "@/features/day/lost-items";
 import { presenceText } from "@/i18n/presence-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import {

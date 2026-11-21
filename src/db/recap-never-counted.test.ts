@@ -8,7 +8,7 @@ import {
   bookingsLeftAtTheDock,
   bookingsNeverCountedAtRollCall,
   getRecapPageData,
-} from "../features/recap/store";
+} from "../features/after-the-dive/recap/store";
 import { createBookingParty } from "./bookings";
 import { bookingArrivalEvents, notificationDeliveries } from "./schema";
 import { listStaff } from "./trips";

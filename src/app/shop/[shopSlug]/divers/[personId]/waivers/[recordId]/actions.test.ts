@@ -28,11 +28,11 @@ vi.mock("@/db/operations", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/operations")>();
   return { ...actual, recordDiverActivity: vi.fn(actual.recordDiverActivity) };
 });
-vi.mock("../../../../../../../features/session/rules", async () =>
+vi.mock("../../../../../../../features/accounts/session", async () =>
   (await import("@/test/staff-session")).sessionMockOverStaffSession(),
 );
 const { getDb } = await import("@/db/client");
-const { requireStaffSession } = await import("../../../../../../../features/session/rules");
+const { requireStaffSession } = await import("../../../../../../../features/accounts/session");
 const { recordDiverActivity } = await import("@/db/operations");
 const { showMedicalAnswersAction, showMedicalAlertOnRecordAction } = await import("./actions");
 

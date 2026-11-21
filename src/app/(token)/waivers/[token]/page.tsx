@@ -12,7 +12,7 @@ import {
   staleWaiverRecordForToken,
   waiverLinkDoor,
 } from "@/db/waivers";
-import { connectionForRoute } from "@/features/render-connection";
+import { connectionForRoute } from "@/features/platform/render-connection";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { isUnresolvedMedicalHold } from "@/lib/waivers";

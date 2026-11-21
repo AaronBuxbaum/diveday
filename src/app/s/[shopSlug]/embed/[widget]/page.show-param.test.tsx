@@ -9,7 +9,7 @@ import { diverTranslator } from "@/i18n/messages";
  */
 
 vi.mock("@/db/client", () => ({ getDb: vi.fn(async () => ({})) }));
-vi.mock("../../../../../features/shops-cached/store", () => ({
+vi.mock("../../../../../features/platform/shops-cached", () => ({
   shopBySlugCached: vi.fn(async () => ({
     id: "shop-1",
     slug: "blue-mantis",
@@ -21,7 +21,9 @@ vi.mock("../../../../../features/shops-cached/store", () => ({
     coursesEnabled: true,
   })),
 }));
-vi.mock("../../../../../features/boats/store", () => ({ listBoats: vi.fn(async () => []) }));
+vi.mock("../../../../../features/crew-and-boats/boats/store", () => ({
+  listBoats: vi.fn(async () => []),
+}));
 vi.mock("@/db/trips", () => ({
   getTripWithBooked: vi.fn(async () => {
     throw new Error("invalid input syntax for type uuid");

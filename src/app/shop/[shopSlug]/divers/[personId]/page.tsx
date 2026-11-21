@@ -3,11 +3,11 @@ import { notFound, redirect } from "next/navigation";
 import { StaffPage } from "@/app/shop/[shopSlug]/_components/StaffPage";
 import { EarnedMomentLine } from "@/components/EarnedMoment";
 import { FlashParams } from "@/components/FlashParams";
-import { getDiverRecord } from "@/features/diver-record";
-import { diverStanding } from "@/features/diver-standing";
-import { splitDiverStatus } from "@/features/diver-status";
-import { requireShopSurface } from "@/features/session";
-import { readUndoOffer } from "@/features/undo";
+import { requireShopSurface } from "@/features/accounts/session";
+import { getDiverRecord } from "@/features/people/diver-record";
+import { diverStanding } from "@/features/people/diver-standing";
+import { splitDiverStatus } from "@/features/people/diver-status";
+import { readUndoOffer } from "@/features/platform/undo";
 import { resolveDiverNotice } from "@/i18n/diver-notice-text";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -83,7 +83,7 @@ export default async function DiverDetailPage({
   params: Promise<{ shopSlug: string; personId: string }>;
   searchParams: Promise<{
     notice?: string;
-    /** The Undo the last removal offered (`src/features/undo/rules.ts`), with its payload fields. */
+    /** The Undo the last removal offered (`src/features/platform/undo.ts`), with its payload fields. */
     undo?: string;
     undoPerson?: string;
     undoCard?: string;

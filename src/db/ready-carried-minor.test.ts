@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { fileScopedShopContext } from "@/test/db";
-import { carriedPreparationForDiver } from "../features/ready/store";
+import { carriedPreparationForDiver } from "../features/boarding/ready";
 import { createBookingParty } from "./bookings";
 import { bookings, trips } from "./schema";
 import { upcomingTripsWithCounts } from "./trips-queries.test-support";

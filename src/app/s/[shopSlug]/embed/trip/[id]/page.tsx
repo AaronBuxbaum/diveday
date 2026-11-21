@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { shopBySlugCached } from "@/features/shops-cached";
+import { shopBySlugCached } from "@/features/platform/shops-cached";
 import { uuidParam } from "@/lib/uuid";
 import { EmbedChromeCollapse } from "../../../_components/EmbedChromeCollapse";
 import { publicTripMetadata } from "../../../trips/[id]/_lib/page-metadata";

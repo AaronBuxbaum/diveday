@@ -18,8 +18,8 @@ import {
   textareaClassFor,
 } from "@/components/ui/form";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
-import { canPersonManageBoats, getBoatsPage } from "@/features/boats-page";
-import { requireShopSurface } from "@/features/session";
+import { requireShopSurface } from "@/features/accounts/session";
+import { canPersonManageBoats, getBoatsPage } from "@/features/crew-and-boats/boats-page";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { calendarDateInTimezone } from "@/lib/calendar-date";

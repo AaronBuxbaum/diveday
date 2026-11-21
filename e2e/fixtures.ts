@@ -383,7 +383,7 @@ export const test = base.extend<
       // Fail *here*, naming the reset, rather than letting the test run on a
       // half-wrecked shop. (A replay from the server's copy that cannot finish
       // rolls back and runs the real reset instead, so the failure below is
-      // still the real reset's: src/features/demo-reset-snapshot/store.ts.)
+      // still the real reset's: src/features/demo/demo-reset-snapshot.ts.)
       // `resetDemoSchedule` is a hand-maintained topological
       // delete, so a new table with a shop-scoped FK that nobody added to the
       // ordering makes it throw 23503 partway: the deletes before the violation

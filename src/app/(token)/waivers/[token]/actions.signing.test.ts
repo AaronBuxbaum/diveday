@@ -57,7 +57,7 @@ vi.mock("@/i18n/request", async (importOriginal) => {
     requestLocale: vi.fn(async () => "en-US"),
   };
 });
-vi.mock("../../../../features/render-connection/rules", () => ({
+vi.mock("../../../../features/platform/render-connection", () => ({
   connectionForRoute: vi.fn(async () => undefined),
 }));
 vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn() }));

@@ -10,7 +10,7 @@ import {
   textareaClassFor,
 } from "@/components/ui/form";
 import type { listSiteBottomTimeOverrides } from "@/db/dive-sites";
-import { MIN_TURNAROUND_LIMITS } from "@/features/move-preflight";
+import { MIN_TURNAROUND_LIMITS } from "@/features/bookings/move-preflight";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import {
   DOCK_DAY_FIELDS,

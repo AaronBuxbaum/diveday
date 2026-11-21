@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
-import type { SafetyMonth } from "../../../../../features/safety-report/rules";
+import type { SafetyMonth } from "../../../../../features/safety/safety-report/rules";
 import { SAFETY_LIST_IDS } from "./SafetyLists";
 import { safetyMonthTiles } from "./safety-month-tiles";
 

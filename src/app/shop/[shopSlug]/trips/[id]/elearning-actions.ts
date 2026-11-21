@@ -3,10 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getDb } from "@/db/client";
-import { recordCourseMaterialsDone } from "@/features/course-materials";
-import { seatForElearningCheck } from "@/features/elearning-check";
-import { formValue, readForm, text } from "@/features/form-parse";
-import { requireShopSurface } from "@/features/session";
+import { requireShopSurface } from "@/features/accounts/session";
+import { formValue, readForm, text } from "@/features/platform/form-parse";
+import { recordCourseMaterialsDone } from "@/features/training/course-materials";
+import { seatForElearningCheck } from "@/features/training/elearning-check";
 import { ELEARNING_PAGE_TEXT_MAX_LENGTH, judgeElearningPage } from "@/lib/elearning-check";
 import { uuidParam } from "@/lib/uuid";
 import { tripPath } from "./roster-booking";

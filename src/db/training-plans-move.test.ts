@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
 import { charterContext, markSeat } from "@/test/training-mark-context";
-import { readTrainingPlan, setTrainingPlanAssignment } from "../features/training-plans/store";
+import { readTrainingPlan, setTrainingPlanAssignment } from "../features/training/training-plans";
 import { moveBooking } from "./bookings";
 import { bookings, tripAssignments, tripRequirements, trips } from "./schema";
 

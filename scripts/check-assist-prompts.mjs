@@ -47,23 +47,25 @@ const SCHEMA_SPECIFIER = /(?:^|\/)schema(?:\/[\w-]+)?$/;
 const MEDICAL_TABLE = /\bwaiverRecords\b/;
 const PROMPT_ROOTS = [
   "src/lib/assists/",
-  "src/features/assists/",
-  "src/features/bench-note/",
-  "src/features/booking-request/",
-  "src/features/cert-scan/",
-  "src/features/description-draft/",
-  "src/features/monday-summary/",
-  "src/features/recap-line/",
-  "src/features/rental-note/",
-  "src/features/review-flags/",
-  "src/features/review-themes/",
-  "src/features/same-person/",
-  "src/features/site-brief/",
-  "src/features/waiver-draft/",
-  "src/features/website-reading/",
+  "src/features/ai/assists/",
+  "src/features/gear/bench-note.ts",
+  "src/features/bookings/booking-request.ts",
+  "src/features/certifications/cert-scan.ts",
+  "src/features/ai/description-draft.ts",
+  "src/features/reports/monday-summary.ts",
+  "src/features/after-the-dive/recap-line.ts",
+  "src/features/gear/rental-note.ts",
+  "src/features/after-the-dive/review-flags.ts",
+  "src/features/after-the-dive/review-themes.ts",
+  "src/features/people/same-person.ts",
+  "src/features/sites/site-brief.ts",
+  "src/features/waivers/waiver-draft.ts",
+  "src/features/ai/website-reading.ts",
 ];
 const PROMPTS = PROMPT_ROOTS.join(" or ");
-const ASSIST_FEATURE_MODULE = /^src\/features\/(?:[^/]*assist[^/]*\/|[^/]+\/[^/]*assist[^/]*\.ts$)/;
+// An assist concept in any area (a folder or a one-file concept), or an assist file in a concept folder.
+const ASSIST_FEATURE_MODULE =
+  /^src\/features\/[^/]+\/(?:[^/]*assist[^/]*(?:\/|\.ts$)|[^/]+\/[^/]*assist[^/]*\.ts$)/;
 
 async function walk(relative) {
   let entries;
@@ -93,7 +95,7 @@ for (const file of await walk("src")) {
   )
     continue;
   // The seam itself, and the schema barrel (whose `./assists` is the usage table).
-  if (file === "src/features/assists/store.ts" || file.startsWith("src/db/schema/")) continue;
+  if (file === "src/features/ai/assists/store.ts" || file.startsWith("src/db/schema/")) continue;
   scanned += 1;
   for (const match of text.matchAll(IMPORT)) {
     const specifier = match[1] ?? match[2] ?? "";

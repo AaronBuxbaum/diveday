@@ -15,9 +15,9 @@ import {
 } from "@/db/gear";
 import { getShopById } from "@/db/shops";
 import { getTripWithBooked } from "@/db/trips";
-import { revalidateAndRedirect } from "@/features/navigation";
-import { requireStaffSession } from "@/features/session";
-import { screenGearPicks } from "@/features/trip-prep";
+import { requireStaffSession } from "@/features/accounts/session";
+import { revalidateAndRedirect } from "@/features/platform/navigation";
+import { screenGearPicks } from "@/features/trips/trip-prep";
 import { PREP_SECTION_ID } from "@/lib/element-id";
 import { GEAR_RETURN_OUTCOMES, tripReservationWindow } from "@/lib/gear";
 import { type NoticeCodeOf, noticeUrl, shopPath } from "@/lib/staff-notices";

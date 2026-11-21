@@ -5,9 +5,12 @@ import { z } from "zod";
 
 import { getDb } from "@/db/client";
 import { getShopBySlug } from "@/db/shops";
-import { blankAsAbsent, parseForm } from "@/features/form-parse";
-import { deliverSelfRegistrationWaiver, registerDiverAtShop } from "@/features/self-registration";
-import { selfRegistrationReleaseDelivery } from "@/features/self-registration-delivery";
+import {
+  deliverSelfRegistrationWaiver,
+  registerDiverAtShop,
+} from "@/features/people/self-registration";
+import { selfRegistrationReleaseDelivery } from "@/features/people/self-registration-delivery";
+import { blankAsAbsent, parseForm } from "@/features/platform/form-parse";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { log } from "@/lib/log";

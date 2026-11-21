@@ -5,7 +5,7 @@ import type { AppDb } from "@/db/client";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { fileScopedShopContext } from "@/test/db";
 import { findElements, hrefsIn } from "@/test/jsx-inspect";
-import { listShopStaff } from "../../../../../../features/staff-accounts/store";
+import { listShopStaff } from "../../../../../../features/accounts/staff-accounts";
 import { SETTINGS_GROUPS } from "../../settings-groups";
 import { SettingsRow } from "../SettingsRows";
 import {

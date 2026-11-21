@@ -2,7 +2,7 @@ import { submitInquiryAction } from "@/app/actions/inquiry";
 import { DateRequestForm } from "@/components/DateRequestForm";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { getDb } from "@/db/client";
-import { publicRecoveryActivity } from "@/features/recovery-activities";
+import { publicRecoveryActivity } from "@/features/trips/recovery-activities";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
 import { dateRequestCopy } from "@/i18n/date-request-copy";
 import { diverTranslator } from "@/i18n/messages";

@@ -1,8 +1,8 @@
 "use server";
 
 import QRCode from "qrcode";
-import { issueCounterCourseForms } from "@/features/course-counter-qr";
-import { requireShopSurface } from "@/features/session";
+import { requireShopSurface } from "@/features/accounts/session";
+import { issueCounterCourseForms } from "@/features/training/course-counter-qr";
 import { courseFormsLinkPath } from "@/lib/booking-capabilities";
 import { publicAppUrl } from "@/lib/notifications/app-url";
 import { uuidParam } from "@/lib/uuid";

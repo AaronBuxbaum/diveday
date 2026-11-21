@@ -1,6 +1,6 @@
 import type { AppDb } from "@/db/client";
 import { listStaff } from "@/db/trips";
-import { lastSafetyDrills, listSafetyDrills } from "@/features/safety-drills";
+import { lastSafetyDrills, listSafetyDrills } from "@/features/safety/safety-drills";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { isoDate, type MonthRef } from "@/lib/calendar";
 import {

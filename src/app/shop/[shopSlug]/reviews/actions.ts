@@ -5,19 +5,19 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { canPersonReadPrivateRecapPulse, canPersonReplyToReviews } from "@/db/authz";
 import { getDb } from "@/db/client";
-import { ruleCrewThanks } from "@/features/crew-thanks";
-import { parseForm } from "@/features/form-parse";
-import { revalidateAndRedirect } from "@/features/navigation";
-import { markRecapPulseAddressed } from "@/features/recap";
-import { deleteReviewReply, writeReviewReply } from "@/features/review-replies";
+import { requireStaffSession } from "@/features/accounts/session";
+import { ruleCrewThanks } from "@/features/after-the-dive/crew-thanks";
+import { markRecapPulseAddressed } from "@/features/after-the-dive/recap";
+import { deleteReviewReply, writeReviewReply } from "@/features/after-the-dive/review-replies";
 import {
   REVIEW_MODERATION_REASONS,
   type ReviewModerationReason,
   setReviewPublished,
   setReviewStandout,
   setReviewsPublished,
-} from "@/features/reviews";
-import { requireStaffSession } from "@/features/session";
+} from "@/features/after-the-dive/reviews";
+import { parseForm } from "@/features/platform/form-parse";
+import { revalidateAndRedirect } from "@/features/platform/navigation";
 import { nowDate } from "@/lib/clock";
 import { publicReviewsPath, publicSchedulePath } from "@/lib/public-routes";
 import { CREW_THANKS_RULINGS } from "@/lib/reviews";

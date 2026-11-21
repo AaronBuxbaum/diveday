@@ -9,20 +9,20 @@ import { PARTY_MAX, partyMemberField } from "@/lib/seat-party-form";
  */
 
 vi.mock("@/db/client", () => ({ getDb: vi.fn(async () => ({ db: "handle" })) }));
-vi.mock("../../features/divers/store", () => ({ findSimilarDivers: vi.fn(async () => []) }));
-vi.mock("../../features/seat-diver/store", () => ({ seatDiver: vi.fn(), seatParty: vi.fn() }));
-vi.mock("../../features/form-drafts/store", () => ({ discardFormDraft: vi.fn(async () => {}) }));
-vi.mock("../../features/navigation/rules", () => ({
+vi.mock("../../features/people/divers/store", () => ({ findSimilarDivers: vi.fn(async () => []) }));
+vi.mock("../../features/bookings/seat-diver", () => ({ seatDiver: vi.fn(), seatParty: vi.fn() }));
+vi.mock("../../features/platform/form-drafts", () => ({ discardFormDraft: vi.fn(async () => {}) }));
+vi.mock("../../features/platform/navigation", () => ({
   revalidateAndRedirect: vi.fn((_path: string, to: string) => {
     throw new Error(`REDIRECT:${to}`);
   }),
 }));
-vi.mock("../../features/session/rules", () => ({ requireShopSurface: vi.fn() }));
+vi.mock("../../features/accounts/session", () => ({ requireShopSurface: vi.fn() }));
 
-const { findSimilarDivers } = await import("../../features/divers/store");
-const { seatParty } = await import("../../features/seat-diver/store");
-const { discardFormDraft } = await import("../../features/form-drafts/store");
-const { requireShopSurface } = await import("../../features/session/rules");
+const { findSimilarDivers } = await import("../../features/people/divers/store");
+const { seatParty } = await import("../../features/bookings/seat-diver");
+const { discardFormDraft } = await import("../../features/platform/form-drafts");
+const { requireShopSurface } = await import("../../features/accounts/session");
 const { seatPartyAction } = await import("./seat-diver");
 
 const SHOP_ID = "22222222-2222-4222-8222-222222222222";

@@ -6,7 +6,7 @@ import {
   REQUEST_PATH_HEADER,
 } from "@/lib/embed-routes";
 import { TEST_FROZEN_CLOCK } from "@/test/frozen-clock";
-import type { PublicRouteQuery } from "./features/public-route-shape/rules";
+import type { PublicRouteQuery } from "./features/public-site/public-route-shape";
 
 /**
  * The edge refusal's two database modules, stubbed at the module boundary.
@@ -14,7 +14,7 @@ import type { PublicRouteQuery } from "./features/public-route-shape/rules";
  * A factory mock means neither real module is ever evaluated, which is the
  * point: `@/db/client` opens an embedded Postgres at import time, and this file
  * is about the proxy's routing decisions rather than about rows. What each
- * lookup *answers* is pinned in `src/features/public-route-existence/store.test.ts` against
+ * lookup *answers* is pinned in `src/features/public-site/public-route-existence.test.ts` against
  * a real database; what the proxy does with the answer is pinned here.
  */
 const existence = vi.hoisted(() => ({
@@ -53,8 +53,8 @@ const existence = vi.hoisted(() => ({
  * admission rather than a refusal (security review, issue #1735).
  */
 const preview = vi.hoisted(() => ({ throws: false }));
-vi.mock("./features/course-preview-gate/rules", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("./features/course-preview-gate/rules")>();
+vi.mock("./features/training/course-preview-gate", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./features/training/course-preview-gate")>();
   return {
     ...actual,
     coursePreviewIsValid: (...args: Parameters<typeof actual.coursePreviewIsValid>) => {
@@ -65,7 +65,7 @@ vi.mock("./features/course-preview-gate/rules", async (importOriginal) => {
 });
 
 vi.mock("@/db/client", () => ({ getDb: async () => ({}) }));
-vi.mock("./features/public-route-existence/store", () => ({
+vi.mock("./features/public-site/public-route-existence", () => ({
   // The per-instance memory in front of the lookup is pinned in its own test
   // file; here every ask reaches the stub, so each test sees its own answer.
   rememberedPublicRouteLookup: async (shape: PublicRouteQuery, open: () => Promise<unknown>) => {
@@ -110,7 +110,7 @@ import {
   COURSE_PREVIEW_PARAM,
   COURSE_PREVIEW_TTL_MS,
   signCoursePreview,
-} from "./features/course-preview-gate/rules";
+} from "./features/training/course-preview-gate";
 
 function request(url: string, headers?: Record<string, string>): NextRequest {
   return new NextRequest(`http://127.0.0.1${url}`, { headers });
@@ -833,7 +833,7 @@ describe("the public namespace's edge refusal", () => {
  * existed on 404, and a dozen guesses read a shop's unpublished drafts off the
  * status line. The previewer is told apart by what they carry, never by a guess
  * at who they are — the three cheaper mechanisms and why each is worse than the
- * disclosure are in `src/features/public-route-existence/store.ts`'s invariant block.
+ * disclosure are in `src/features/public-site/public-route-existence.ts`'s invariant block.
  */
 describe("a hidden course at the edge", () => {
   const SHOP = "blue-mantis";

@@ -5,12 +5,15 @@ import {
   billingConfigFromEnvironment,
   billingKeyIsLive,
   readBillingEvent,
-} from "@/features/billing";
-import { verifyStripeWebhook } from "@/features/payments";
-import { sentry } from "@/features/sentry-server";
-import { applyBillingEffect } from "@/features/shop-subscriptions";
-import { claimStripeWebhookEvent, releaseStripeWebhookEventClaim } from "@/features/webhook-events";
-import { logWebhookRefusal } from "@/features/webhook-refusal";
+} from "@/features/money/billing";
+import { verifyStripeWebhook } from "@/features/money/payments";
+import { applyBillingEffect } from "@/features/money/shop-subscriptions";
+import { sentry } from "@/features/platform/sentry-server";
+import {
+  claimStripeWebhookEvent,
+  releaseStripeWebhookEventClaim,
+} from "@/features/platform/webhook-events";
+import { logWebhookRefusal } from "@/features/platform/webhook-refusal";
 import { nowDate } from "@/lib/clock";
 import { type LogContext, log } from "@/lib/log";
 

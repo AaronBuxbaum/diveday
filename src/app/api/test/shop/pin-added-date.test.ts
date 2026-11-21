@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { people, shops } from "@/db/schema";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
-import { createDiver } from "../../../../features/divers/store";
+import { createDiver } from "../../../../features/people/divers/store";
 
 const ctx = fileScopedShopContext();
 

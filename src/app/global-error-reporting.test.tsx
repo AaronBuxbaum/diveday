@@ -8,7 +8,7 @@ const sdk = vi.hoisted(() => ({
   captureRouterTransitionStart: vi.fn(),
 }));
 vi.mock("@sentry/nextjs", () => sdk);
-vi.mock("@/features/sentry-dsn", () => ({ SENTRY_DSN: "https://key@sentry.invalid/1" }));
+vi.mock("@/features/platform/sentry-dsn", () => ({ SENTRY_DSN: "https://key@sentry.invalid/1" }));
 vi.mock("./_fonts/fonts", () => ({ fontVariables: "" }));
 
 import GlobalError from "./global-error";

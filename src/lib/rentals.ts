@@ -33,7 +33,7 @@ export type RentableItemKind =
 /**
  * The gear a diver's last trip with the shop carried, to start their next
  * booking's gear step from (fifth-loop ideas, item 40). Read by
- * `lastGearFor` (`src/features/booking-handoff/store.ts`).
+ * `lastGearFor` (`src/features/bookings/booking-handoff/store.ts`).
  */
 export type LastGear = { nitrox: boolean; rentedKinds: RentableItemKind[] };
 

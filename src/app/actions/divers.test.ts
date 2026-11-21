@@ -9,7 +9,7 @@ import { redirectedTo, staffSession } from "@/test/staff-session";
  * person from, and the roster says `invalid` rather than minting a blank row.
  */
 
-vi.mock("../../features/navigation/rules", () => ({
+vi.mock("../../features/platform/navigation", () => ({
   revalidateAndRedirect: vi.fn((_path: string, to: string) => {
     throw new Error(`REDIRECT:${to}`);
   }),
@@ -19,15 +19,15 @@ vi.mock("@/db/client", async (importOriginal) => {
   return { ...actual, getDb: vi.fn(async () => ({}) as never) };
 });
 vi.mock("@/db/authz", () => ({ canPersonAddDiver: vi.fn(async () => true) }));
-vi.mock("../../features/divers/store", () => ({
+vi.mock("../../features/people/divers/store", () => ({
   createDiver: vi.fn(),
   findLiveDiverIdByEmail: vi.fn(),
 }));
-vi.mock("../../features/session/rules", () => ({ requireStaffSession: vi.fn() }));
+vi.mock("../../features/accounts/session", () => ({ requireStaffSession: vi.fn() }));
 
 const { canPersonAddDiver } = await import("@/db/authz");
-const { createDiver, findLiveDiverIdByEmail } = await import("../../features/divers/store");
-const { requireStaffSession } = await import("../../features/session/rules");
+const { createDiver, findLiveDiverIdByEmail } = await import("../../features/people/divers/store");
+const { requireStaffSession } = await import("../../features/accounts/session");
 const { createDiverFromSearchAction } = await import("./divers");
 
 describe("createDiverFromSearchAction", () => {

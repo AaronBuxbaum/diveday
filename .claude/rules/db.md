@@ -41,7 +41,7 @@ barrels, bookings, seating, retention, integrations). What they do not say:
 - **A table module** (`src/db/<table>.ts`) holds a table's rows and the transitions on them, named
   by the transition (`record`, `mark`, `issue`, `claim`, `release`, `consume`, `restore`,
   `cancel`, `edit`), never `update` or `save` (`check-architecture.mjs` rule 7).
-- **A surface reader** (`src/db/<surface>.ts`, e.g. `recap.ts`; Today's are in `src/features/today`) answers one page's
+- **A surface reader** (`src/db/<surface>.ts`, e.g. `recap.ts`; Today's are in `src/features/day/today`) answers one page's
   question in one call. Every staff `page.tsx` reads through `requireShopSurface` plus exactly one
   `@/db/*` module, its reader; permissions and constants the page needs come back from it
   (`check-architecture.mjs` rule 6). The trip page's readers (`trip-page.ts`, over `trip-overview.ts` and

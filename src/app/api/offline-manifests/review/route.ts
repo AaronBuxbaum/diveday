@@ -4,7 +4,7 @@ import {
   OFFLINE_MANIFEST_NO_STORE,
 } from "@/app/api/offline-manifests/staff-context";
 import { recordRollCall } from "@/db/manifests";
-import { buildOfflineManifestCopies } from "@/features/offline-manifest-snapshots";
+import { buildOfflineManifestCopies } from "@/features/boarding/offline-manifest-snapshots";
 import {
   offlineRollCallWitnessEnabled,
   verifyRollCallWitness,

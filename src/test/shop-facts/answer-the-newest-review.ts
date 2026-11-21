@@ -1,7 +1,7 @@
 import { and, desc, eq, isNotNull } from "drizzle-orm";
 import type { AppDb } from "../../db/client";
 import { tripReviews } from "../../db/schema/index";
-import { writeReviewReply } from "../../features/review-replies/store";
+import { writeReviewReply } from "../../features/after-the-dive/review-replies";
 
 /**
  * **The shop's reply under its newest published review with words** (batch 4,

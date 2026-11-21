@@ -32,7 +32,7 @@ vi.mock("next/headers", () => ({
     },
   })),
 }));
-vi.mock("../../../../features/render-connection/rules", () => ({
+vi.mock("../../../../features/platform/render-connection", () => ({
   connectionForRoute: vi.fn(async () => undefined),
 }));
 vi.mock("@/db/client", async (original) => ({

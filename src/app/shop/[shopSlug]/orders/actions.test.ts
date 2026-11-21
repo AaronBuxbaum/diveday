@@ -27,27 +27,27 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
 });
-vi.mock("../../../../features/session/rules", () => ({ requireStaffSession: vi.fn() }));
-vi.mock("../../../../features/step-up/store", () => ({
+vi.mock("../../../../features/accounts/session", () => ({ requireStaffSession: vi.fn() }));
+vi.mock("../../../../features/accounts/step-up", () => ({
   hasRequiredStepUp: vi.fn(async () => true),
 }));
-vi.mock("../../../../features/security-step-up/rules", () => ({
+vi.mock("../../../../features/accounts/security-step-up", () => ({
   stepUpChallengeUrl: vi.fn(() => "/step-up"),
 }));
-vi.mock("../../../../features/unattributed-refunds/store", () => ({
+vi.mock("../../../../features/money/unattributed-refunds", () => ({
   attributeUnattributedRefund: vi.fn(async () => ({ status: "attributed", remainingCents: 0 })),
 }));
-vi.mock("../../../../features/checkouts-paid-after-close/store", () => ({
+vi.mock("../../../../features/money/checkouts-paid-after-close", () => ({
   refundPaidAfterCloseCheckout: vi.fn(async () => ({ status: "refunded", amountCents: 100 })),
 }));
 
 const { getDb } = await import("@/db/client");
-const { requireStaffSession } = await import("../../../../features/session/rules");
+const { requireStaffSession } = await import("../../../../features/accounts/session");
 const { refundPaidAfterCloseCheckout } = await import(
-  "../../../../features/checkouts-paid-after-close/store"
+  "../../../../features/money/checkouts-paid-after-close"
 );
 const { attributeUnattributedRefund } = await import(
-  "../../../../features/unattributed-refunds/store"
+  "../../../../features/money/unattributed-refunds"
 );
 const { matchStripeRefundAction, refundPaidAfterCloseAction } = await import("./actions");
 

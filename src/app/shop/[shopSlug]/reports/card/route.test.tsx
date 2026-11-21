@@ -9,11 +9,11 @@ vi.mock("next/og", () => ({
     }
   },
 }));
-vi.mock("../../../../../features/reporting/store", () => ({
+vi.mock("../../../../../features/reports/reporting/store", () => ({
   canPersonViewShopReports: vi.fn(),
   getShopYear: mocks.getShopYear,
 }));
-vi.mock("../../../../../features/session/rules", () => ({
+vi.mock("../../../../../features/accounts/session", () => ({
   requireShopSurface: vi.fn(async () => ({
     db: {},
     shop: {
@@ -28,7 +28,7 @@ vi.mock("../../../../../features/session/rules", () => ({
   })),
 }));
 vi.mock("@/i18n/request", () => ({ requestLocale: async () => "en-US" }));
-vi.mock("../../../../../features/og-rasterizer/rules", () => ({
+vi.mock("../../../../../features/public-site/og-rasterizer", () => ({
   allowSvgRasterization: async () => {},
 }));
 

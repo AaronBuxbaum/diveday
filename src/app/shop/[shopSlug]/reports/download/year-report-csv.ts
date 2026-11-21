@@ -1,4 +1,4 @@
-import { formatPercent, type MonthlyReport } from "@/features/reporting";
+import { formatPercent, type MonthlyReport } from "@/features/reports/reporting";
 import { type MonthRef, monthKey } from "@/lib/calendar";
 import { buildCsv } from "@/lib/export";
 

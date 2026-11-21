@@ -2,7 +2,7 @@ import { afterAll, beforeAll, expect, it, vi } from "vitest";
 import {
   buildOfflineManifestCopies,
   readOfflineManifestRosterWithWindows,
-} from "@/features/offline-manifest-snapshots";
+} from "@/features/boarding/offline-manifest-snapshots";
 import { nowDate } from "@/lib/clock";
 import { clientRollCallEvidenceId } from "@/lib/roll-call-causality";
 import { describePostgres, postgresTestDb, waitForLockWaiters } from "@/test/postgres";

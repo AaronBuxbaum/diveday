@@ -8,9 +8,12 @@ import { getDb } from "@/db/client";
 import { recordTripActivity } from "@/db/operations";
 import { refundBookingsForShopCancelledTrip } from "@/db/refunds";
 import { getTripWithBooked } from "@/db/trips";
-import { recordRecoveryFollowUp } from "@/features/disruption-recovery";
-import { createRecoveryActivity, transitionRecoveryActivity } from "@/features/recovery-activities";
-import { requireShopSurface } from "@/features/session";
+import { requireShopSurface } from "@/features/accounts/session";
+import { recordRecoveryFollowUp } from "@/features/trips/disruption-recovery";
+import {
+  createRecoveryActivity,
+  transitionRecoveryActivity,
+} from "@/features/trips/recovery-activities";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { trackEvent } from "@/lib/analytics";

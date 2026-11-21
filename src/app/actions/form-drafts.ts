@@ -1,8 +1,8 @@
 "use server";
 
 import { getDb } from "@/db/client";
-import { discardFormDraft, recordFormDraft } from "@/features/form-drafts";
-import { requireStaffSession } from "@/features/session";
+import { requireStaffSession } from "@/features/accounts/session";
+import { discardFormDraft, recordFormDraft } from "@/features/platform/form-drafts";
 import type { DiveDaySession } from "@/lib/auth";
 import { isFormDraftKind } from "@/lib/form-drafts";
 

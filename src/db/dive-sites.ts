@@ -1534,7 +1534,7 @@ export type UpcomingSiteTrip = {
   tripId: string;
   title: string;
   startsAt: Date;
-  /** What the tide window needs to place the boat at this site (src/features/departure-tides/rules.ts). */
+  /** What the tide window needs to place the boat at this site (src/features/sites/departure-tides.ts). */
   plannedDives: number;
   diveMode: DiveMode;
 };

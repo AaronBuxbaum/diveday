@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { requireShopSurface } from "@/features/session";
-import { getSignedWaiverPage } from "@/features/signed-waiver-page";
+import { requireShopSurface } from "@/features/accounts/session";
+import { getSignedWaiverPage } from "@/features/waivers/signed-waiver-page";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";

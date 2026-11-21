@@ -5,8 +5,8 @@ import {
 } from "@/db/booking-capabilities";
 import type { getDb } from "@/db/client";
 import { getShopById } from "@/db/shops";
-import { strandedMoveAsk } from "@/features/move-offer";
-import { getReadyPageData } from "@/features/ready";
+import { getReadyPageData } from "@/features/boarding/ready";
+import { strandedMoveAsk } from "@/features/bookings/move-offer";
 import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { nowDate } from "@/lib/clock";

@@ -1,7 +1,7 @@
 import { tapTargetLinkClass } from "@/components/ui/button";
-import { partySeatAnchor } from "@/features/party-seat-anchor";
-import type { ReadyPageData } from "@/features/ready";
-import type { PartySeatClaim } from "@/features/seat-claims";
+import type { ReadyPageData } from "@/features/boarding/ready";
+import { partySeatAnchor } from "@/features/bookings/party-seat-anchor";
+import type { PartySeatClaim } from "@/features/bookings/seat-claims";
 import type { DiverTranslator } from "@/i18n/messages";
 
 type SummarySeat = Pick<

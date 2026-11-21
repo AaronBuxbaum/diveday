@@ -62,7 +62,7 @@
 > Vercel/Neon guardrails** are shipped, leaving only their owner-spend halves (Upstash provisioning;
 > naming a second alert-inbox human) open. **MKT-F5 is closed, not merely buildable** —
 > `migration-guides.ts`'s cutover copy no longer claims an install base; it now reads as advice and
-> shipped importer behavior only. **ARCH-6 is answered** — `src/features/backup-export/` is a real
+> shipped importer behavior only. **ARCH-6 is answered** — `src/features/records/backup-export/` is a real
 > second feature-module adopter, shipped 2026-08-04, so HD-22 needed no new decision row. What
 > survived this pass — PROD-C1/C2 (human-external), MKT-F10 (gated on V-02), DOM-L1's residual
 > companion-field gap, the live Stripe-invoice-URL export finding (new, found reviewing the
@@ -290,7 +290,7 @@ unusual standard; 130+ ADRs with honest supersession records, including one deli
   simultaneously (Next 16.3 preview, next-auth 5 beta, drizzle 1.0-rc, TS 7); ADR-justified, but the
   "move promptly at GA" triggers exist only as prose. reg-suit 0.14.x is a low-activity-upstream risk
   (acknowledged). → [human-decisions/](../human-decisions/README.md) H-20261025-ga-migration-budget-pre.
-- **ARCH-6 (Low). Answered 2026-08-04.** `src/features/backup-export/` shipped as a genuine second
+- **ARCH-6 (Low). Answered 2026-08-04.** `src/features/records/backup-export/` shipped as a genuine second
   adopter of the feature-module pattern (its own `index.ts`/README, per
   [20260730-feature-module-contracts](../../architecture/decisions/20260730-feature-module-contracts.md)),
   alongside `calendar-sync`. HD-22's "name the second adopter or shelve the pattern" needed no new

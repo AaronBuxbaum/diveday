@@ -6,7 +6,7 @@ import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
 import { HOUR_MS } from "@/lib/clock";
 import { FLY_SAFE_MULTI_DAY_LOOKBACK_DAYS } from "@/lib/fly-safe";
 import { fileScopedShopContext } from "@/test/db";
-import { getMonthlyReport } from "../features/reporting/store";
+import { getMonthlyReport } from "../features/reports/reporting/store";
 import { createBookingParty } from "./bookings";
 import { countSpendableDives, createDivePackage, grantPackageEntitlements } from "./dive-packages";
 import { peopleWhoDivedBefore } from "./executed-dives";
@@ -54,17 +54,17 @@ const read = (file: string) => readFileSync(path.join(ROOT, file), "utf8");
 /** Modules whose answers leave the staff screens. */
 const OUTWARD_MODULES = [
   // Reports and the numbers DiveDay itself reads.
-  "src/features/reporting/store.ts",
-  "src/features/report-lines/store.ts",
-  "src/features/founder-metrics/store.ts",
-  "src/features/weekly-digest/digest.ts",
-  "src/features/season-scale/store.ts",
+  "src/features/reports/reporting/store.ts",
+  "src/features/reports/report-lines/store.ts",
+  "src/features/reports/founder-metrics.ts",
+  "src/features/reports/weekly-digest/digest.ts",
+  "src/features/reports/season-scale.ts",
   // The public site.
   "src/db/dive-sites.ts",
-  "src/features/trip-sightings/store.ts",
-  "src/features/month-sightings/store.ts",
+  "src/features/sites/trip-sightings.ts",
+  "src/features/sites/month-sightings/store.ts",
   // The staff calendar feed, which leaves for someone's phone calendar.
-  "src/features/calendar-sync/feed-trips.ts",
+  "src/features/crew-and-boats/calendar-sync/feed-trips.ts",
 ] as const;
 
 const ANCHOR = /\.from\(trips\)|\.(?:inner|left)Join\(\s*trips\b/;
@@ -76,7 +76,7 @@ const ALLOW = "diveday:allow-rehearsal:";
  * one in the file must itself contain `notRehearsal()`.
  */
 const CARRIERS: Record<string, readonly string[]> = {
-  "src/features/reporting/store.ts": ["inWindow"],
+  "src/features/reports/reporting/store.ts": ["inWindow"],
 };
 
 /** Definitions of `name` in `source` (`const name = and(` … `);`) that leave rehearsals in. */
@@ -213,12 +213,12 @@ const GATES: { file: string; holds: string; times?: number; why: string }[] = [
     why: "a release or course-forms link is issued for hand-over, never texted or emailed",
   },
   {
-    file: "src/features/reminders/store.ts",
+    file: "src/features/messages/reminders.ts",
     holds: "notRehearsal()",
     why: "no reminder, by email or text",
   },
   {
-    file: "src/features/recap/store.ts",
+    file: "src/features/after-the-dive/recap/store.ts",
     holds: "notRehearsal()",
     why: "no recap, by email or text",
   },
@@ -284,32 +284,33 @@ const SENDERS: Record<string, string> = {
   "src/db/notifications.ts": "the chokepoint itself",
   "src/db/push-subscriptions.ts":
     "`pushManifestChanged` reads the departure with `notRehearsal()`; `pushTripAlert`'s one caller is roll-call-alerts",
-  "src/features/roll-call-alerts/store.ts":
+  "src/features/boarding/roll-call-alerts/store.ts":
     "the candidate scan carries `notRehearsal()`, so no email or push",
   "src/db/manifest-events.ts": "calls `pushManifestChanged`, which reads with `notRehearsal()`",
-  "src/features/reminders/store.ts":
+  "src/features/messages/reminders.ts":
     "the candidate scan carries `notRehearsal()`, so no email or text",
   "src/db/fly-safe-correction.ts":
     "correction email passes through sendNotification and notificationHeldForRehearsal",
-  "src/features/recap/store.ts": "the candidate scan carries `notRehearsal()`, so no email or text",
+  "src/features/after-the-dive/recap/store.ts":
+    "the candidate scan carries `notRehearsal()`, so no email or text",
   "src/db/waiver-issue.ts": "a rehearsal's link is hand-over only, never texted or emailed",
   "src/db/crew-notices.ts": "a rehearsal's crew news is never recorded",
-  "src/features/interest-replies/store.ts":
+  "src/features/bookings/interest-replies.ts":
     "a reply answers a date request, which names no departure, so no rehearsal reaches it",
   "src/db/interest-offers.ts":
     "`offerSeats` offers nobody on a rehearsal, deal or not; the email is also held at the chokepoint",
   "src/db/blowouts.ts": HELD_AT_CHOKEPOINT,
-  "src/features/booking-cancelled-notice/store.ts": HELD_AT_CHOKEPOINT,
-  "src/features/booking-handoff/store.ts": HELD_AT_CHOKEPOINT,
-  "src/features/checkout-recovery/store.ts": HELD_AT_CHOKEPOINT,
-  "src/features/find-my-booking/store.ts": HELD_AT_CHOKEPOINT,
-  "src/features/your-days/store.ts": HELD_AT_CHOKEPOINT,
-  "src/features/readiness-link-rescue/store.ts": HELD_AT_CHOKEPOINT,
+  "src/features/bookings/booking-cancelled-notice.ts": HELD_AT_CHOKEPOINT,
+  "src/features/bookings/booking-handoff/store.ts": HELD_AT_CHOKEPOINT,
+  "src/features/money/checkout-recovery/store.ts": HELD_AT_CHOKEPOINT,
+  "src/features/bookings/find-my-booking.ts": HELD_AT_CHOKEPOINT,
+  "src/features/bookings/your-days.ts": HELD_AT_CHOKEPOINT,
+  "src/features/boarding/readiness-link-rescue.ts": HELD_AT_CHOKEPOINT,
   "src/db/trip-invitations.ts": HELD_AT_CHOKEPOINT,
-  "src/features/waiver-guardian-copy/store.ts": HELD_AT_CHOKEPOINT,
-  "src/features/party-payment-receipt/store.ts":
+  "src/features/waivers/waiver-guardian-copy.ts": HELD_AT_CHOKEPOINT,
+  "src/features/money/party-payment-receipt.ts":
     "a rehearsal starts no card checkout, so nothing settles; the email is also held at the chokepoint",
-  "src/features/seat-already-held/store.ts": HELD_AT_CHOKEPOINT,
+  "src/features/bookings/seat-already-held.ts": HELD_AT_CHOKEPOINT,
   "src/db/missing-diver-alerts.ts":
     "refuses a rehearsal's report itself, before any email or push; the email is also held at the chokepoint",
   "src/app/s/[shopSlug]/trips/[id]/actions.ts":
@@ -317,27 +318,27 @@ const SENDERS: Record<string, string> = {
   "src/app/s/[shopSlug]/trips/[id]/send-join-mail.ts": HELD_AT_CHOKEPOINT,
   "src/app/shop/[shopSlug]/trips/[id]/conditions-actions.ts": HELD_AT_CHOKEPOINT,
   "src/db/departure-notes.ts": "its departure read carries `notRehearsal()`, so no note goes",
-  "src/features/move-ask-alerts/store.ts":
+  "src/features/bookings/move-ask-alerts.ts":
     "its ask read carries `notRehearsal()`, so a practice run's ask emails nobody",
-  "src/features/seat-sold-alerts/store.ts":
+  "src/features/bookings/seat-sold-alerts.ts":
     "its sales read carries `notRehearsal()`, so a practice run's seats email nobody",
-  "src/features/lost-items/store.ts":
+  "src/features/day/lost-items/store.ts":
     "its tell reads the departure with `notRehearsal()`, so nobody is told",
   "src/db/trip-rescheduled.ts":
     "its hold and its send read the departure with `notRehearsal()`, so no email or text",
-  "src/features/course-certified/store.ts":
+  "src/features/training/course-certified.ts":
     "its departure read carries `notRehearsal()`, so a practice run certifies nobody and tells nobody",
-  "src/features/desk-pings/store.ts": NOT_ABOUT_A_DEPARTURE,
-  "src/features/stripe-restricted/store.ts": NOT_ABOUT_A_DEPARTURE,
-  "src/features/shore-alert-tokens/store.ts": NOT_ABOUT_A_DEPARTURE,
+  "src/features/messages/desk-pings.ts": NOT_ABOUT_A_DEPARTURE,
+  "src/features/money/stripe-restricted.ts": NOT_ABOUT_A_DEPARTURE,
+  "src/features/safety/shore-alert-tokens.ts": NOT_ABOUT_A_DEPARTURE,
   "src/db/staff-reply.ts": NOT_ABOUT_A_DEPARTURE,
   "src/db/package-gifts.ts": NOT_ABOUT_A_DEPARTURE,
-  "src/features/weekly-digest/digest.ts": "its counts carry `notRehearsal()`",
-  "src/features/work-order-follow-up/store.ts": NOT_ABOUT_A_DEPARTURE,
+  "src/features/reports/weekly-digest/digest.ts": "its counts carry `notRehearsal()`",
+  "src/features/gear/work-order-follow-up/store.ts": NOT_ABOUT_A_DEPARTURE,
   "src/app/actions/demo-instrumentation.ts": NOT_ABOUT_A_DEPARTURE,
   "src/app/actions/inquiry.ts": NOT_ABOUT_A_DEPARTURE,
   "src/app/forgot-password/actions.ts": NOT_ABOUT_A_DEPARTURE,
-  "src/features/email-sign-in/store.ts": NOT_ABOUT_A_DEPARTURE,
+  "src/features/accounts/email-sign-in.ts": NOT_ABOUT_A_DEPARTURE,
   "src/app/onboard/actions.ts": NOT_ABOUT_A_DEPARTURE,
   "src/app/(token)/reset-password/[token]/actions.ts": NOT_ABOUT_A_DEPARTURE,
   "src/app/shop/[shopSlug]/settings/boat-actions.ts": NOT_ABOUT_A_DEPARTURE,
@@ -346,7 +347,7 @@ const SENDERS: Record<string, string> = {
   // The bookkeeper's month-end files (fifth loop, r5-5): the owner's notices,
   // the address's confirmation and the month's files, all to the shop's own
   // people about a month. The files are Reports' own downloads.
-  "src/features/bookkeeper/store.ts": NOT_ABOUT_A_DEPARTURE,
+  "src/features/money/bookkeeper/store.ts": NOT_ABOUT_A_DEPARTURE,
   "src/app/api/cron/bookkeeper/month-end-pass.ts": NOT_ABOUT_A_DEPARTURE,
   "src/app/shop/[shopSlug]/reports/bookkeeper-actions.ts": NOT_ABOUT_A_DEPARTURE,
 };

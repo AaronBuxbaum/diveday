@@ -6,7 +6,7 @@ import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import type { NotificationProvider } from "@/lib/notifications";
 import type { CourtesyProviders } from "@/lib/notifications/courtesy";
 import { fileScopedShopContext } from "@/test/db";
-import { anonymizeDiver } from "../features/anonymize/store";
+import { anonymizeDiver } from "../features/records/anonymize";
 import { openOnDevice, shopStaffer } from "../test/substrate-fixtures/db/waivers-test-fixtures";
 import { mintCapability } from "./capabilities";
 import { revokeLinksSentToOldContact } from "./contact-change";

@@ -1,4 +1,4 @@
-import type { ReadyPageData } from "@/features/ready";
+import type { ReadyPageData } from "@/features/boarding/ready";
 import type { DiverMessageKey } from "@/i18n/messages";
 
 /**

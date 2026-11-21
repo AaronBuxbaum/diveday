@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { nowMs } from "@/lib/clock";
-import { forgetWebhookRefusalReports } from "../../../../features/webhook-refusal/rules";
+import { forgetWebhookRefusalReports } from "../../../../features/platform/webhook-refusal";
 import { eventPayload, secret, signedHeader, webhookRequest } from "./webhook-request.test-support";
 
 vi.mock("@/db/client", async (importOriginal) => {
@@ -20,11 +20,11 @@ vi.mock("@/db/orders", () => ({
   recordOrderPaymentIntent: vi.fn(),
 }));
 vi.mock("@/db/refunds", () => ({ recordStripeChargeRefund: vi.fn() }));
-vi.mock("../../../../features/refund-failures/store", () => ({
+vi.mock("../../../../features/money/refund-failures", () => ({
   recordStripeRefundFailure: vi.fn(),
 }));
-vi.mock("../../../../features/payment-disputes/store", () => ({ recordStripeDispute: vi.fn() }));
-vi.mock("../../../../features/payouts/store", () => ({
+vi.mock("../../../../features/money/payment-disputes", () => ({ recordStripeDispute: vi.fn() }));
+vi.mock("../../../../features/money/payouts/store", () => ({
   recordStripePayout: vi.fn(),
   summarizeStripePayout: vi.fn(),
 }));
@@ -33,7 +33,7 @@ vi.mock("next/server", async (importOriginal) => ({
   ...(await importOriginal<typeof import("next/server")>()),
   after: vi.fn(),
 }));
-vi.mock("../../../../features/stripe-restricted/store", () => ({
+vi.mock("../../../../features/money/stripe-restricted", () => ({
   tellOwnersPaymentsRestricted: vi.fn(),
 }));
 vi.mock("@/db/stripe-accounts", () => ({
@@ -41,13 +41,13 @@ vi.mock("@/db/stripe-accounts", () => ({
   disconnectShopStripeAccount: vi.fn(),
   stripeAccountHolder: vi.fn(),
 }));
-vi.mock("../../../../features/webhook-events/store", () => ({
+vi.mock("../../../../features/platform/webhook-events", () => ({
   claimStripeWebhookEvent: vi.fn(),
   hasNewerAccountUpdate: vi.fn(),
   releaseStripeWebhookEventClaim: vi.fn(),
 }));
 // The routes report only where a DSN is configured; the suite runs without one.
-vi.mock("../../../../features/sentry-dsn/rules", () => ({
+vi.mock("../../../../features/platform/sentry-dsn", () => ({
   SENTRY_DSN: "https://key@sentry.invalid/1",
 }));
 vi.mock("@sentry/nextjs", () => ({ captureException: vi.fn() }));
@@ -64,17 +64,17 @@ const { applyInvoicePaid, markOrderVoidedByInvoiceId, recordOrderPaymentIntent }
   "@/db/orders"
 );
 const { recordStripeChargeRefund } = await import("@/db/refunds");
-const { recordStripeRefundFailure } = await import("../../../../features/refund-failures/store");
-const { recordStripeDispute } = await import("../../../../features/payment-disputes/store");
+const { recordStripeRefundFailure } = await import("../../../../features/money/refund-failures");
+const { recordStripeDispute } = await import("../../../../features/money/payment-disputes");
 const { recordStripePayout, summarizeStripePayout } = await import(
-  "../../../../features/payouts/store"
+  "../../../../features/money/payouts/store"
 );
 const { after } = await import("next/server");
 const { applyStripeAccountStatus, disconnectShopStripeAccount, stripeAccountHolder } = await import(
   "@/db/stripe-accounts"
 );
 const { claimStripeWebhookEvent, hasNewerAccountUpdate, releaseStripeWebhookEventClaim } =
-  await import("../../../../features/webhook-events/store");
+  await import("../../../../features/platform/webhook-events");
 const Sentry = await import("@sentry/nextjs");
 const { POST } = await import("./route");
 
@@ -511,7 +511,7 @@ describe("POST /api/webhooks/stripe — event dispatch", () => {
 
   it("account.updated tells the owners when it is the write that turned payments off", async () => {
     const { tellOwnersPaymentsRestricted } = await import(
-      "../../../../features/stripe-restricted/store"
+      "../../../../features/money/stripe-restricted"
     );
     const restrictedAt = new Date("2026-10-14T12:00:00Z");
     vi.mocked(tellOwnersPaymentsRestricted).mockReset();

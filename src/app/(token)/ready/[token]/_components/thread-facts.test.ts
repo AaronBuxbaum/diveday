@@ -4,7 +4,7 @@ import { diverTranslator } from "@/i18n/messages";
 import { DIVER_LOCALES } from "@/i18n/settings";
 import { nowDate } from "@/lib/clock";
 import type { ThreadStep } from "@/lib/thread-steps";
-import type { ReadyPageData } from "../../../../../features/ready/store";
+import type { ReadyPageData } from "../../../../../features/boarding/ready";
 import { boatStageLine, readyBoatStageLine, readyStepLine, readyThreadFacts } from "./thread-facts";
 
 const [ENGLISH] = DIVER_LOCALES;

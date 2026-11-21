@@ -6,7 +6,7 @@
 // manifests, roll call, readiness, cert gating, medical flags and erasure; `security-reviewer`
 // for auth, tokens, personal or medical data, and export/import. Nothing checked it. Between
 // 2026-10-07 and 2026-10-10, 17 of 85 merged pull requests mentioned a reviewer anywhere, while
-// `src/lib/manifests.ts`, `src/features/seat-diver/store.ts` and the course-form seal all changed. A launch
+// `src/lib/manifests.ts`, `src/features/bookings/seat-diver.ts` and the course-form seal all changed. A launch
 // that is not written down cannot be told from one that never happened, so the body is where
 // it is recorded (`.github/pull_request_template.md`), and this reads it.
 //
@@ -63,9 +63,9 @@ const WAIVER_SURFACES = {
 
 /** The security reviewer's waiver modules (their tests are not security surfaces). */
 const FEATURE_SAFETY_MODULES =
-  /^src\/features\/(?:check-in|aboard-at-sea|guardian[^/]*|course-certified[^/]*|pre-departure[^/]*|staff-gates[^/]*|signatures[^/]*|depth-ceiling[^/]*|requirement[^/]*|bookings|booking-gates[^/]*|course-admission[^/]*|cert-actions[^/]*|card-(?:restore|undo)[^/]*)(?:\/|$)/;
+  /^src\/features\/(?:check-in|aboard-at-sea|guardian[^/]*|course-certified[^/]*|pre-departure[^/]*|staff-gates[^/]*|signatures[^/]*|depth-ceiling[^/]*|requirement[^/]*|bookings|booking-gates[^/]*|course-admission[^/]*|cert-actions[^/]*|card-(?:restore|undo)[^/]*)(?:[./]|$)/;
 const FEATURE_SECURITY_MODULES =
-  /^src\/features\/(?:auth|authz|auth-secret|session|card-(?:restore|undo)[^/]*|export[^/]*|import[^/]*|payments|waivers?[^/]*)(?:\/|$)/;
+  /^src\/features\/(?:auth|authz|auth-secret|session|card-(?:restore|undo)[^/]*|export[^/]*|import[^/]*|payments|waivers?[^/]*)(?:[./]|$)/;
 
 const WAIVER_MODULES = /^src\/(db|lib)\/waivers?[^/]*\.ts$/;
 
@@ -86,7 +86,7 @@ export const REVIEWS = [
     surface:
       "safety-critical (manifests, roll call, readiness, cert gating, medical, waivers, erasure, the booking transaction)",
     patterns: [
-      /^src\/features\/check-in\//,
+      /^src\/features\/check-in[./]/,
       /manifest/,
       /roll-?call/,
       /readiness/,
@@ -100,7 +100,7 @@ export const REVIEWS = [
       /nitrox/,
       WAIVER_SURFACES,
       FEATURE_SAFETY_MODULES,
-      /^src\/features\/cert-scan\/.*\.ts$/,
+      /^src\/features\/cert-scan(?:[./].*)?\.ts$/,
       // Modules that decide a seat's or a signature's standing without naming a waiver or a
       // manifest (reviews 1, 2026-11-01).
       /^src\/(db|lib)\/check-in[^/]*\.ts$/,
@@ -135,7 +135,7 @@ export const REVIEWS = [
       /\[token\]\/(actions|route|page|layout)\.tsx?$/,
       /^src\/app\/(invite|claim)\//,
       /^src\/(db|lib)\/(export|import)[^/]*\.ts$/,
-      /^src\/features\/backup-export\//,
+      /^src\/features\/backup-export[./]/,
       /^src\/app\/api\/cron\/(backup-export|platform-backup)\//,
       /^src\/db\/schema\/(accounts|core|waivers|certifications|erasure|activity)\.ts$/,
       /(^|\/)card-(restore|undo)[^/]*\.ts$/,
@@ -212,13 +212,23 @@ export function seenFilledAnswered(section, screens = []) {
   });
 }
 
+/**
+ * The path the reviewer patterns read: lowercased, with a feature's area folder left out, so
+ * `src/features/certifications/cert-scan.ts` reads as `src/features/cert-scan.ts`. The area names
+ * a part of the shop; a pattern is about the concept, and an area called `waivers` must not make
+ * every file in it a waiver surface (ADR 20261121-feature-areas).
+ */
+export function reviewPath(file) {
+  return file.toLowerCase().replace(/^src\/features\/[^/]+\/(?=[^/])/, "src/features/");
+}
+
 /** For each reviewer, the changed paths that need it. Reviewers with none are left out. */
 export function reviewsNeeded(files) {
   const needed = [];
   for (const review of REVIEWS) {
     const hits = files.filter((file) => {
       if (!file.startsWith("src/") || NOT_SURFACES.some((re) => re.test(file))) return false;
-      const lower = file.toLowerCase();
+      const lower = reviewPath(file);
       return review.patterns.some((re) => re.test(lower));
     });
     if (hits.length > 0) needed.push({ ...review, files: hits });

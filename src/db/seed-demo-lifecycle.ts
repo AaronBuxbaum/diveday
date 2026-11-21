@@ -406,7 +406,7 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
    * final `delete(shops)` throw 23503 and stranded that shop past its TTL —
    * forever, since every later reap hit the same row. Not hypothetical: staff
    * seating a diver writes an `activity_events` row on the way through
-   * (src/features/seat-diver/store.ts), so *any* demo where someone used the Guests tab was
+   * (src/features/bookings/seat-diver.ts), so *any* demo where someone used the Guests tab was
    * already unreapable.
    *
    * All seven were invisible to `reap-demos.test.ts`, whose cases are
@@ -548,7 +548,7 @@ export async function purgeMintedDemoShops(
   /**
    * How one shop goes, inside its own transaction. The e2e reset passes one
    * that runs this same cascade with its foreign-key triggers settled by set
-   * (`src/features/demo-reset-snapshot/store.ts`).
+   * (`src/features/demo/demo-reset-snapshot.ts`).
    */
   deleteShop: (tx: DbExecutor, shopId: string) => Promise<void> = deleteDemoShopCascade,
 ): Promise<number> {

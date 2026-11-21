@@ -1,8 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { and, count, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { anonymizeDiver } from "../features/anonymize/store";
-import { markBookingNoShow, undoBookingNoShow } from "../features/no-show/store";
+import { markBookingNoShow, undoBookingNoShow } from "../features/boarding/no-show";
+import { anonymizeDiver } from "../features/records/anonymize";
 import { MINUTE_MS } from "../lib/clock";
 import { fileScopedShopContext } from "../test/db";
 import {

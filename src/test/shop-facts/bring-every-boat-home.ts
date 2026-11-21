@@ -19,7 +19,7 @@ import {
 } from "../../db/schema/index";
 import { bringDemoBoatsAtSeaHome } from "../../db/seed-boat-at-sea";
 import { listStaff, liveTrip, seatNotCancelled } from "../../db/trips";
-import { recordTripStage } from "../../features/trip-stages/store";
+import { recordTripStage } from "../../features/trips/trip-stages";
 import { HOUR_MS, nowDate } from "../../lib/clock";
 import { tripReservationWindow } from "../../lib/gear";
 import { SIZED_RENTAL_FIT_COLUMN, sizedRentalKindOfGearKind } from "../../lib/rentals";
@@ -245,7 +245,7 @@ type CloseOutcome =
  * A **no-show** — `not_boarded` at the dock with nothing after it — is a
  * recorded answer, so it stands. It is not an open count: it is a closed one
  * whose answer was "they never came", and `inAfterDivePopulation`
- * (`src/features/today/today-reader.ts`) leaves those bookings out of every after-dive scan, so
+ * (`src/features/day/today/today-reader.ts`) leaves those bookings out of every after-dive scan, so
  * nothing is waiting on them. A diver marked not-boarded at the dock who
  * nevertheless carries a later result is a different person entirely — they
  * joined at the second site — and they *are* in that population, so they are
@@ -484,7 +484,7 @@ async function returnOneUnitFitAdjusted(
     .where(and(eq(bookings.shopId, shopId), eq(bookings.tripId, trip.id), seatNotCancelled))
     // The first seat by the diver's name: without an order this is whichever
     // row the heap returns first, which a fresh re-seed and a replayed reset
-    // (`src/features/demo-reset-snapshot/store.ts`) lay out differently, so the evening
+    // (`src/features/demo/demo-reset-snapshot.ts`) lay out differently, so the evening
     // captures named two different divers for the same question. A name, not
     // `created_at`: under the frozen clock every seat shares one instant.
     .orderBy(asc(people.fullName), asc(bookings.id))

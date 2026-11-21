@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { DAY_MS, nowDate } from "@/lib/clock";
 import { hasReturned } from "@/lib/trips";
 import { fileScopedShopContext } from "@/test/db";
-import { getRecapPageData } from "../features/recap/store";
+import { getRecapPageData } from "../features/after-the-dive/recap/store";
 import { returnTheConservationRecap } from "../test/shop-facts/recap-states";
 import { bookings, tripConservation, trips } from "./schema";
 import { DEMO_RECAP_BOOKING_ID } from "./seed-identifiers";

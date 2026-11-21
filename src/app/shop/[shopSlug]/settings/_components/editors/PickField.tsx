@@ -1,6 +1,6 @@
 import { controlClass, Field } from "@/components/ui/form";
 import { getDb } from "@/db/client";
-import { pickChoices } from "@/features/shop-pick";
+import { pickChoices } from "@/features/public-site/shop-pick";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { formatShortDate } from "@/lib/format";

@@ -70,7 +70,7 @@ export async function collectSubstrateLeaves(
   for (const [file, importers] of incoming) {
     if (file.startsWith("src/db/schema/") || primitives[file] || importers.size > 0) continue;
     violations.set(file, [
-      `${file}: no production substrate importer — move the use case into src/features/<concept> with its twin and tests, or document the shared primitive in scripts/substrate-primitives.json`,
+      `${file}: no production substrate importer — move the use case into its feature area, src/features/<area>/<concept>, with its tests, or document the shared primitive in scripts/substrate-primitives.json`,
     ]);
   }
   return violations;

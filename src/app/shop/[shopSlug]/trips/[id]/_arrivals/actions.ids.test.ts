@@ -42,11 +42,12 @@ vi.mock("@/db/bookings", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/bookings")>();
   return { ...actual, getShopBookingTripId: vi.fn() };
 });
-vi.mock("../../../../../../features/check-in/store", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../../../../../features/check-in/store")>();
+vi.mock("../../../../../../features/boarding/check-in/store", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("../../../../../../features/boarding/check-in/store")>();
   return { ...actual, checkInBooking: vi.fn() };
 });
-vi.mock("../../../../../../features/session/rules", () => {
+vi.mock("../../../../../../features/accounts/session", () => {
   const requireStaffSession = vi.fn();
   return {
     requireStaffSession,
@@ -56,8 +57,8 @@ vi.mock("../../../../../../features/session/rules", () => {
 
 const { getDb } = await import("@/db/client");
 const { getShopBookingTripId } = await import("@/db/bookings");
-const { checkInBooking } = await import("../../../../../../features/check-in/store");
-const { requireStaffSession } = await import("../../../../../../features/session/rules");
+const { checkInBooking } = await import("../../../../../../features/boarding/check-in/store");
+const { requireStaffSession } = await import("../../../../../../features/accounts/session");
 const { checkInAction, markNoShowAction, turnAwayAction, undoCheckInAction, undoNoShowAction } =
   await import("./actions");
 

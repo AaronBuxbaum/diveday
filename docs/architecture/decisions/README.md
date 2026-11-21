@@ -455,7 +455,7 @@ script again.
 | 20261105-ci-runs-on-the-top-of-the-stack | Only the top layer of… |
 | 20261105-gh-stack-is-the-stack | Stacks are made and moved… |
 | 20261105-waiver-folds-into-the-thread | Hand a seat's release over… |
-| 20261108-concept-leaves | Move substrate leaves by concept… |
+| 20261108-concept-leaves | ~~Move substrate leaves by concept…~~ → 20261121-feature-areas |
 | 20261108-configured-pricing | Configure one monthly and percentage… |
 | 20261109-evidence-key-history | Keep signing key identity with… (proposed) |
 | 20261109-operator-browser-and-email-sign-in | Separate database operators from account… |
@@ -485,5 +485,6 @@ script again.
 | 20261120-course-session-progress | Which sessions of a course… |
 | 20261120-demo-mint-replays-a-template | A visitor's demo is written… |
 | 20261120-e2e-purge-settles-by-set | Delete the e2e reset's minted… |
+| 20261121-feature-areas | Group feature concepts into areas,… |
 
 <!-- adr-index:end -->

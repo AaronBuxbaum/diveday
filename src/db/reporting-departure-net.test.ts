@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
-import { getMonthlyReport } from "../features/reporting/store";
+import { getMonthlyReport } from "../features/reports/reporting/store";
 import type { AppDb } from "./client";
 import { paymentEntries } from "./payments";
 import {

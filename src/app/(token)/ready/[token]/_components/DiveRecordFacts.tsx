@@ -1,4 +1,4 @@
-import type { AfterStateProps } from "@/features/recap-after-state";
+import type { AfterStateProps } from "@/features/after-the-dive/recap-after-state";
 import { fieldGuideCards } from "@/i18n/marine-life-labels";
 import { DIVER_CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { depthText, temperatureText } from "@/i18n/unit-labels";
@@ -65,7 +65,7 @@ export function RecordFacts({
       <Fact label={t("recap.diverLabel")}>{diverName}</Fact>
       {/* **The peak of a course, where the diver keeps it** (fourth review,
           item 55). Only from the card this shop issued from this session
-          and marked verified (`src/features/recap/store.ts`, the same guard
+          and marked verified (`src/features/after-the-dive/recap/store.ts`, the same guard
           `CourseAfterState` keeps), so the logbook sheet carries it too:
           it is something the shop wrote down, not something inferred. */}
       {course?.certification ? (

@@ -2,7 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { HOUR_MS, MINUTE_MS } from "@/lib/clock";
 import { seededShopContext } from "@/test/db";
-import { listRollCallGaps } from "../features/roll-call-gaps/store";
+import { listRollCallGaps } from "../features/boarding/roll-call-gaps";
 import { people, tripAssignments, tripStageEvents, trips } from "./schema";
 import { DEMO_COMPLETED_TRIP_TITLE } from "./seed-more-trips";
 import { demoStageTaps } from "./seed-trip-stage";

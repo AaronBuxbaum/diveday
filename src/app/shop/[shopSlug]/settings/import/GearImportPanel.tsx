@@ -2,7 +2,7 @@ import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import type { NoticeTone } from "@/components/ui/tone";
-import { GEAR_IMPORT_ALIASES, GEAR_IMPORT_COLUMNS } from "@/features/gear-import";
+import { GEAR_IMPORT_ALIASES, GEAR_IMPORT_COLUMNS } from "@/features/gear/gear-import";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import { noticeFromParam } from "@/lib/staff-notices";
 import { ExistingImportReview } from "./ExistingImportReview";

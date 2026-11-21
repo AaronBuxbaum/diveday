@@ -1,6 +1,6 @@
 import { getDb } from "@/db/client";
-import { BOOKKEEPER_CRON_CRONTAB } from "@/features/bookkeeper";
-import { cronRoute } from "@/features/cron-route";
+import { BOOKKEEPER_CRON_CRONTAB } from "@/features/money/bookkeeper";
+import { cronRoute } from "@/features/platform/cron-route";
 import { nowDate } from "@/lib/clock";
 import { sendDueMonthEndEmails } from "./month-end-pass";
 

@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { BookingRequestContext } from "@/components/seat-diver/BookingRequestCards";
 import type { AppDb } from "@/db/client";
-import { getBookableDiver } from "@/features/divers";
+import { getBookableDiver } from "@/features/people/divers";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";

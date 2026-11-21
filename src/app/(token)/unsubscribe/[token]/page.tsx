@@ -7,7 +7,7 @@ import { buttonClass } from "@/components/ui/button";
 import { ShopNotice } from "@/components/ui/outcome";
 import { noticeRole } from "@/components/ui/tone";
 import { getDb } from "@/db/client";
-import { resolveUnsubscribeToken, type UnsubscribeKind } from "@/features/unsubscribe";
+import { resolveUnsubscribeToken, type UnsubscribeKind } from "@/features/messages/unsubscribe";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { confirmUnsubscribe } from "./actions";

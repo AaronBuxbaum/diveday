@@ -2,10 +2,10 @@
 
 import { z } from "zod";
 import { getDb } from "@/db/client";
-import { dispatchIntegrationsAfterResponse } from "@/features/integrations";
-import { recordLocalOrderReceipt, voidLocalOrder } from "@/features/local-orders";
-import { revalidateAndRedirect } from "@/features/navigation";
-import { requireStaffSession } from "@/features/session";
+import { requireStaffSession } from "@/features/accounts/session";
+import { recordLocalOrderReceipt, voidLocalOrder } from "@/features/money/local-orders";
+import { revalidateAndRedirect } from "@/features/platform/navigation";
+import { dispatchIntegrationsAfterResponse } from "@/features/shop-setup/integrations";
 import { purchaseAmount } from "@/lib/purchase-lines";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { isUuid } from "@/lib/uuid";

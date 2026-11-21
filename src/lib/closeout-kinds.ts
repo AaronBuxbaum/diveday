@@ -2,7 +2,7 @@
  * **The close-out's shapes, as codes** — what the evening's copy
  * (`src/i18n/closeout-labels.ts`, `src/i18n/load-out-labels.ts`) needs to name
  * without importing the close-out itself, which lives above the graph in
- * `src/features/today`.
+ * `src/features/day/today`.
  */
 import type { PlanChangeReason } from "./plan-change";
 
@@ -22,7 +22,7 @@ import type { PlanChangeReason } from "./plan-change";
  *   "everyone is home" while it isn't.
  * - `count_open` — a dock-count gap (`departure_uncounted` / `no_roll_call`).
  *   Paperwork, toned as such — see DOM-H3's wallpaper lesson in
- *   `src/features/today/today.ts`.
+ *   `src/features/day/today/today.ts`.
  * - `not_departed` — closing before a boat has even left. Stated, quietly.
  * - `all_home` — the head count closed clean and the staff boat reading allows
  *   return. A completed count alone does not establish return to the dock.

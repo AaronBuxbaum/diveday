@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { getDb } from "@/db/client";
 import { shopByIdCached } from "@/db/shops";
-import type { requireStaffSession } from "@/features/session";
+import type { requireStaffSession } from "@/features/accounts/session";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { CallPanel, type CallPanelSearch } from "./CallPanel";

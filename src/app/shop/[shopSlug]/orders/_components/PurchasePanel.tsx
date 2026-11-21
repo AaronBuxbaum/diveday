@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { AddPanel } from "@/components/AddPanel";
-import { getPurchaseForm } from "@/features/recorded-purchases";
-import type { ShopSurface } from "@/features/session";
+import type { ShopSurface } from "@/features/accounts/session";
+import { getPurchaseForm } from "@/features/money/recorded-purchases";
 import { ORDER_COLLECTION_KEYS } from "@/i18n/order-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { currencyFractionDigits } from "@/lib/money";

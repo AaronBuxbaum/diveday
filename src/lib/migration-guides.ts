@@ -223,7 +223,7 @@ export const IMPORT_SCOPE_ROW_KEYS: Record<
  * Shared by every guide (see `CutoverSection` above). The bundle text is
  * verified against the importer's actual behavior, not aspirational: the
  * re-import claim matches `findOrCreatePerson`'s email-match update-in-place
- * (src/features/import/store.ts) and `priorVisitDedupeKey`'s idempotent history key
+ * (src/features/records/import/store.ts) and `priorVisitDedupeKey`'s idempotent history key
  * (src/lib/import.ts).
  *
  * `crewFirst` leads, and is deliberately not called `step5` even though it is

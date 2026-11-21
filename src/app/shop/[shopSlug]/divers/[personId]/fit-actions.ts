@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { canPersonOverrideGearRequest, loadActiveStaffRoles } from "@/db/authz";
 import { getRentalFit, recordRentalFit, setNeedsStaffFit } from "@/db/rental-fit";
-import { revalidateAndRedirect } from "@/features/navigation";
+import { revalidateAndRedirect } from "@/features/platform/navigation";
 import { canOverrideGearRequest, isStaff } from "@/lib/authz";
 import { RENTAL_FIT_TEXT_LIMITS, suitFlagsFromPost } from "@/lib/rentals";
 import { backTo, requireDiverActionContext } from "./action-helpers";

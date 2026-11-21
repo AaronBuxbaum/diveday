@@ -107,7 +107,7 @@ What stays out is only what is a credential or a capability link, and both are c
   that still has them, along with the `cookie`, `authorization` and `stripe-signature` headers;
 - capability tokens in URLs, query strings and the referer (`redactCapabilityUrl`).
 
-Handlers report with plain `sentry.captureException(error, { tags })` (`src/features/sentry-server`).
+Handlers report with plain `sentry.captureException(error, { tags })` (`src/features/platform/sentry-server.ts`).
 Local variables in stack frames and database query values stay off.
 
 ### If the Sentry dashboard still shows `[redacted]`, or masks values

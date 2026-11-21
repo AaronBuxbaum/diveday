@@ -2,7 +2,7 @@ import type { Role } from "./authz";
 
 /**
  * **What a Today row can be, and who may act on it.** The two tables below the
- * queue's whole vocabulary: `src/features/today/today.ts` ranks and groups rows, but a
+ * queue's whole vocabulary: `src/features/day/today/today.ts` ranks and groups rows, but a
  * module that only asks "may this role act on this kind?" (`src/db/authz.ts`,
  * the weekly digest, the label bundles) reads this small file and not the
  * 2,000-line queue.

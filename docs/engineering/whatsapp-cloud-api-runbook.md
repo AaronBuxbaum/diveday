@@ -145,7 +145,7 @@ Inbound messages are built: see [ADR 20260907-two-way-inbox](../architecture/dec
 
 The verified webhook now records observed deliveries, including courtesy sends without a tracked
 notification row. `readWhatsAppDeliveredUsage(db, { shopId, start, end })` from
-`@/features/whatsapp-webhook` returns account/category/pricing-type counts for an inclusive start
+`@/features/messages/whatsapp-webhook` returns account/category/pricing-type counts for an inclusive start
 and exclusive end. The shop export carries `whatsapp_delivered_usage.csv` for reconciliation.
 
 These are webhook observations since deployment, not complete historical account usage or an

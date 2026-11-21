@@ -11,7 +11,7 @@ import { fileScopedShopContext } from "@/test/db";
 import { findElements } from "@/test/jsx-inspect";
 import { nextHeadersStub } from "@/test/next-headers";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
-import type { StaffMember } from "../../../../../features/staff-accounts/store";
+import type { StaffMember } from "../../../../../features/accounts/staff-accounts";
 import { StaffIdentity } from "./_components/StaffIdentity";
 
 const ctx = fileScopedShopContext();

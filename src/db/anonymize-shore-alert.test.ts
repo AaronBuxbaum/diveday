@@ -1,11 +1,11 @@
 import { and, eq, inArray } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { seededShopContext } from "@/test/db";
-import { anonymizeDiver } from "../features/anonymize/store";
+import { anonymizeDiver } from "../features/records/anonymize";
 import {
   issueShoreAlertConfirmation,
   issueShoreAlertStopToken,
-} from "../features/shore-alert-tokens/store";
+} from "../features/safety/shore-alert-tokens";
 import { capabilities, people, personRoles, shops } from "./schema";
 import { setShopShoreAlertContact } from "./shops";
 

@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { personRoles } from "@/db/schema";
 import { fileScopedShopContext } from "@/test/db";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId, staffSession } from "@/test/staff-session";
-import { readFormDraft } from "../../../../features/form-drafts/store";
+import { readFormDraft } from "../../../../features/platform/form-drafts";
 
 const ctx = fileScopedShopContext();
 
@@ -19,11 +19,11 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
 });
-vi.mock("../../../../features/session/rules", () => ({ requireStaffSession: vi.fn() }));
-vi.mock("@/features/inbox-assists", () => ({ draftReplyToMessage: vi.fn() }));
-const { draftReplyToMessage } = await import("@/features/inbox-assists");
+vi.mock("../../../../features/accounts/session", () => ({ requireStaffSession: vi.fn() }));
+vi.mock("@/features/ai/inbox-assists", () => ({ draftReplyToMessage: vi.fn() }));
+const { draftReplyToMessage } = await import("@/features/ai/inbox-assists");
 const { getDb } = await import("@/db/client");
-const { requireStaffSession } = await import("../../../../features/session/rules");
+const { requireStaffSession } = await import("../../../../features/accounts/session");
 const { draftInboxResponseAction } = await import("./assist-actions");
 
 const MESSAGE_ID = "8f000000-1111-4222-8333-444444444444";

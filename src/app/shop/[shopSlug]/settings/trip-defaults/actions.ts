@@ -2,8 +2,8 @@
 
 import { z } from "zod";
 import { getShopById, setShopTripDefaults } from "@/db/shops";
-import { defineAction, land } from "@/features/server-action";
-import { getTripLens } from "@/features/trip-lenses";
+import { defineAction, land } from "@/features/platform/server-action";
+import { getTripLens } from "@/features/trips/trip-lenses";
 import { MAX_PRICE_MINOR_UNITS, majorToMinor } from "@/lib/money";
 import { SETTINGS_GATE } from "../action-gates";
 

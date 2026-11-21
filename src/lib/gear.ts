@@ -482,7 +482,7 @@ function outranks(a: GearServiceState, b: GearServiceState): boolean {
  * The 30-day window is not applied here: {@link gearServiceState} has already
  * spent {@link GEAR_SERVICE_DUE_SOON_DAYS} deciding that `due_soon` means
  * "inside the next service run". Today's queue narrows further to six days on
- * its own (`src/features/today/today-reader.ts`) because it is a *today* list; the register is
+ * its own (`src/features/day/today/today-reader.ts`) because it is a *today* list; the register is
  * where the month-ahead heads-up lives, and a tank's hydro or visual
  * inspection is a compliance clock a fill station enforces, so losing that
  * distance costs a boat its air.
@@ -503,8 +503,8 @@ export function gearServiceIsDue(
  * that has run out, or a return flagged as a service concern that nobody has
  * answered with care since (`serviceConcernStillOpen`). The one reading for
  * both places that ask it: the departure's proposals never propose such a unit
- * (`src/features/gear-proposals/rules.ts`), and the counter refuses to lend it as life
- * support (`src/features/gear-counter-rentals/store.ts`), where no crew checks it at a
+ * (`src/features/gear/gear-proposals.ts`), and the counter refuses to lend it as life
+ * support (`src/features/gear/gear-counter-rentals.ts`), where no crew checks it at a
  * dock before it is used.
  */
 export function gearServiceKeepsUnitBack(unit: {

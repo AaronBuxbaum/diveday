@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { buttonClass } from "@/components/ui/button";
-import type { DiverFilter, DiverSort } from "@/features/divers";
+import type { DiverFilter, DiverSort } from "@/features/people/divers";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 
 /**

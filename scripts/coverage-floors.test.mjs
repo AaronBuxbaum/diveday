@@ -142,14 +142,14 @@ describe("coverage-floors", () => {
     const fixture = [
       "src/db/readiness.ts",
       "src/db/readiness.test.ts",
-      "src/features/seat-diver/store.ts",
+      "src/features/bookings/seat-diver.ts",
       "src/db/seed-nitrox.ts",
       "src/db/seed-medical-alert.ts",
-      "src/features/waiver-guardian-copy/store.ts",
+      "src/features/waivers/waiver-guardian-copy.ts",
       "src/test/substrate-fixtures/db/erasure-coverage-keeps.test-support.ts",
-      "src/features/guardian-erasure/store.ts",
+      "src/features/records/guardian-erasure.ts",
       "src/db/schema/erasure.ts",
-      "src/features/anonymization/rules.ts",
+      "src/features/records/anonymization.ts",
       "src/lib/payments/erasure-failure.ts",
       "src/lib/waiver-copy.ts",
       "src/lib/format-date.ts",
@@ -161,10 +161,10 @@ describe("coverage-floors", () => {
     expect(matchedSafetyFiles(fixture)).toEqual([
       "src/db/readiness.ts",
       "src/db/schema/erasure.ts",
-      "src/features/anonymization/rules.ts",
-      "src/features/guardian-erasure/store.ts",
-      "src/features/seat-diver/store.ts",
-      "src/features/waiver-guardian-copy/store.ts",
+      "src/features/bookings/seat-diver.ts",
+      "src/features/records/anonymization.ts",
+      "src/features/records/guardian-erasure.ts",
+      "src/features/waivers/waiver-guardian-copy.ts",
       "src/lib/payments/erasure-failure.ts",
     ]);
   });
@@ -183,15 +183,15 @@ describe("feature safety ownership", () => {
   it("keeps moved and future feature logic under coverage floors", () => {
     expect(
       matchedSafetyFiles([
-        "src/features/check-in/store.ts",
-        "src/features/card-restore/store.ts",
-        "src/features/future-medical/store.ts",
-        "src/features/future-medical/store.test.ts",
+        "src/features/boarding/check-in/store.ts",
+        "src/features/certifications/card-restore.ts",
+        "src/features/safety/future-medical/store.ts",
+        "src/features/safety/future-medical/store.test.ts",
       ]),
     ).toEqual([
-      "src/features/card-restore/store.ts",
-      "src/features/check-in/store.ts",
-      "src/features/future-medical/store.ts",
+      "src/features/boarding/check-in/store.ts",
+      "src/features/certifications/card-restore.ts",
+      "src/features/safety/future-medical/store.ts",
     ]);
   });
 });

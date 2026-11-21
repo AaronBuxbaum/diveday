@@ -5,7 +5,7 @@ import { getBookingPickupTime } from "@/db/bookings";
 import { getDb } from "@/db/client";
 import { getShopBySlug } from "@/db/shops";
 import { getTripWithBooked, listTripScheduleDays } from "@/db/trips";
-import { arrivalCardDocument, escapeHtml } from "@/features/arrival-card-document";
+import { arrivalCardDocument, escapeHtml } from "@/features/boarding/arrival-card-document";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { courseDaysForMeetings } from "@/lib/courses";

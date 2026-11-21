@@ -1,7 +1,7 @@
 import { SiteMark } from "@/components/illustration/SiteMark";
 import { buttonClass } from "@/components/ui/button";
 import { SUB_TITLE_CLASS } from "@/components/ui/typography";
-import type { AfterStateProps } from "@/features/recap-after-state";
+import type { AfterStateProps } from "@/features/after-the-dive/recap-after-state";
 import { formatOrdinal } from "@/lib/format";
 import { visitMilestone } from "@/lib/visit-milestones";
 import { AFTER_STATE_TEST_IDS } from "./after-state-test-ids";

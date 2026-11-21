@@ -4,7 +4,7 @@ import { DAY_MS, HOUR_MS, nowDate } from "@/lib/clock";
 import type { Notification, NotificationProvider } from "@/lib/notifications";
 import { describePostgres, postgresTestDb } from "@/test/postgres";
 import { raceShop } from "@/test/postgres-shop";
-import { pruneExpiredRecords } from "../features/retention/store";
+import { pruneExpiredRecords } from "../features/records/retention/store";
 import { createBooking } from "./bookings";
 import { drainNotificationRetries, sendNotification } from "./notifications";
 import { notificationSendQueue } from "./schema";

@@ -3,7 +3,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { controlClass, Field } from "@/components/ui/form";
-import type { StepUpPurpose } from "@/features/security-step-up";
+import type { StepUpPurpose } from "@/features/accounts/security-step-up";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { verifyStepUpAction } from "../actions";
 

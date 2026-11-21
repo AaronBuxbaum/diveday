@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { expect, it } from "vitest";
-import { lastSafetyDrills, listSafetyDrills } from "@/features/safety-drills";
+import { lastSafetyDrills, listSafetyDrills } from "@/features/safety/safety-drills";
 import { calendarDateInTimezone, shiftCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { DRILL_KINDS } from "@/lib/safety-drills";

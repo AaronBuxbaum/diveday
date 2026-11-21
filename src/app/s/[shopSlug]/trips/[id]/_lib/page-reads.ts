@@ -22,13 +22,13 @@ import {
   pagedUpcomingTripsWithCounts,
   tripCrewSpokenLanguages,
 } from "@/db/trips";
-import { readKnownDiver } from "@/features/booking-handoff";
-import { diverCrewWithAway } from "@/features/crew-away-diver";
-import { getShopReviewAggregate, listSiteReviews } from "@/features/reviews";
-import { publicRunOf } from "@/features/series-next";
-import { isLiveShopStaff } from "@/features/session";
-import type { shopBySlugCached } from "@/features/shops-cached";
-import { siteSightings } from "@/features/trip-sightings";
+import { isLiveShopStaff } from "@/features/accounts/session";
+import { getShopReviewAggregate, listSiteReviews } from "@/features/after-the-dive/reviews";
+import { readKnownDiver } from "@/features/bookings/booking-handoff";
+import { diverCrewWithAway } from "@/features/crew-and-boats/crew-away-diver";
+import type { shopBySlugCached } from "@/features/platform/shops-cached";
+import { siteSightings } from "@/features/sites/trip-sightings";
+import { publicRunOf } from "@/features/trips/series-next";
 import { requestLocale } from "@/i18n/request";
 import type { auth } from "@/lib/auth";
 import { readinessLinkPath } from "@/lib/booking-capabilities";

@@ -44,7 +44,7 @@ export const CAPABILITY_ROUTE_PREFIXES = [
   // identity-takeover link for that seat until it is used or revoked.
   "claim",
   // Staff calendar-subscription feed token (ADR
-  // 20260730-calendar-feed-subscriptions, owned by src/features/calendar-sync).
+  // 20260730-calendar-feed-subscriptions, owned by src/features/crew-and-boats/calendar-sync).
   // `/calendar/[token]` sits outside `/shop` so no session gate applies and the
   // URL *is* the capability — its own route handler says so verbatim. It is the
   // longest-lived credential of the set: a calendar client re-fetches the same
@@ -131,7 +131,7 @@ const CAPABILITY_QUERY_PARAMS = [
    */
   "setup",
   /**
-   * The founder's demo-quiet key (`src/features/quiet-demo-device/rules.ts`), carried as
+   * The founder's demo-quiet key (`src/features/demo/quiet-demo-device.ts`), carried as
    * `/api/demo/quiet?key=<key>`. It opens nothing but a quiet browser, and it is
    * still a standing secret. `quiet-demo-device.test.ts` asserts it is blanked.
    */

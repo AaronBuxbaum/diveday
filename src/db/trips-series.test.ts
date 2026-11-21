@@ -8,7 +8,7 @@ import { queryTimingLogger, withQueryStats } from "@/lib/observability/query-tim
 import { EVERY_WEEKDAY, weekdaySetFrom } from "@/lib/recurrence";
 import { fileScopedShopContext, seededShopContext } from "@/test/db";
 import { fakeCheckout, fakeEmail } from "@/test/fakes";
-import { createTripLens } from "../features/trip-lenses/store";
+import { createTripLens } from "../features/trips/trip-lenses";
 import { callTripBlowout, getTripBlowout } from "./blowouts";
 import { createBookingParty } from "./bookings";
 import { listDiveSites } from "./dive-sites";

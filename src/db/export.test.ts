@@ -4,9 +4,9 @@ import { DEV_STAFF_LOGINS } from "@/db/dev-credentials";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext, seededShopContext } from "@/test/db";
 import { schemaTableNames } from "@/test/schema-tables";
-import { ANONYMIZED_PERSON_NAME } from "../features/anonymization/rules";
-import { anonymizeDiver } from "../features/anonymize/store";
-import { createDiver, deleteDiver } from "../features/divers/store";
+import { createDiver, deleteDiver } from "../features/people/divers/store";
+import { ANONYMIZED_PERSON_NAME } from "../features/records/anonymization";
+import { anonymizeDiver } from "../features/records/anonymize";
 import {
   EXCLUDED_COLUMNS,
   SHOP_SCOPED,

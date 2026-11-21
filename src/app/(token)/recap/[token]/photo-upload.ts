@@ -3,15 +3,15 @@ import { z } from "zod";
 import { getDb } from "@/db/client";
 import { recordDiverOwnLocaleForBooking } from "@/db/people";
 import { openRecapLink } from "@/db/recap-links";
-import { parseForm } from "@/features/form-parse";
-import { revalidateAndRedirect } from "@/features/navigation";
 import {
   addRecapPhoto,
   canAddRecapPhoto,
   isRecapOpen,
   MAX_RECAP_PHOTOS_PER_BOOKING,
   retireRejectedRecapPhoto,
-} from "@/features/recap";
+} from "@/features/after-the-dive/recap";
+import { parseForm } from "@/features/platform/form-parse";
+import { revalidateAndRedirect } from "@/features/platform/navigation";
 import { requestFirstHandLocale } from "@/i18n/request";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";

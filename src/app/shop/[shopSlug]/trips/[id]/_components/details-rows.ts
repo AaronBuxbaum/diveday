@@ -1,6 +1,6 @@
 import type { AppDb } from "@/db/client";
-import { getTripOpenSeatsDebrief, openSeatsDebriefText } from "@/features/open-seats";
-import { lastAtSites, siteHistoryText } from "@/features/site-history";
+import { getTripOpenSeatsDebrief, openSeatsDebriefText } from "@/features/bookings/open-seats";
+import { lastAtSites, siteHistoryText } from "@/features/sites/site-history";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { formatShortDate } from "@/lib/format";

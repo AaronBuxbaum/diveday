@@ -2,7 +2,11 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { buttonClass } from "@/components/ui/button";
 import { LedgerRow } from "@/components/ui/ledger";
-import type { DiverStatusKind, DiverStatusRow, DiverStatusTarget } from "@/features/diver-status";
+import type {
+  DiverStatusKind,
+  DiverStatusRow,
+  DiverStatusTarget,
+} from "@/features/people/diver-status";
 import { readinessBlockerText } from "@/i18n/readiness-labels";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import { formatShortDate, formatTime } from "@/lib/format";

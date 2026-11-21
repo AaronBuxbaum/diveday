@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { Role } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
-import { listShopStaff, setStaffEmergencyContact } from "../features/staff-accounts/store";
+import { listShopStaff, setStaffEmergencyContact } from "../features/accounts/staff-accounts";
 import type { AppDb } from "./client";
 import { people, personRoles, shops, userAccounts } from "./schema";
 

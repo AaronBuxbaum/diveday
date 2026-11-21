@@ -8,8 +8,8 @@ import {
   crewYearFacts,
   getMonthlyReport,
   getShopYear,
-} from "../features/reporting/store";
-import { summarizeShopYear } from "../features/shop-year/rules";
+} from "../features/reports/reporting/store";
+import { summarizeShopYear } from "../features/reports/shop-year";
 import { weatherCallsInWindow } from "./blowouts";
 import type { AppDb } from "./client";
 import { paymentEntries } from "./payments";

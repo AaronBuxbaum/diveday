@@ -11,7 +11,7 @@ import {
 } from "@/lib/secret-box";
 import { recoveryCodeHashes, TOTP_STEP_SECONDS, totpCode } from "@/lib/totp";
 import { fileScopedShopContext } from "@/test/db";
-import { hasRequiredStepUp } from "../features/step-up/store";
+import { hasRequiredStepUp } from "../features/accounts/step-up";
 import {
   beginTotpEnrollment,
   enableTotp,

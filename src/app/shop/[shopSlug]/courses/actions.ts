@@ -5,10 +5,10 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getDb } from "@/db/client";
 import { deliverSeatOffer } from "@/db/interest-offers";
-import { CARD_KINDS, setCardProcessed } from "@/features/agency-processing";
-import { ladderInviteRefusal } from "@/features/course-ladder";
-import { createInvitationUnderCooldown } from "@/features/invite-suggestions";
-import { requireShopSurface } from "@/features/session";
+import { requireShopSurface } from "@/features/accounts/session";
+import { CARD_KINDS, setCardProcessed } from "@/features/certifications/agency-processing";
+import { createInvitationUnderCooldown } from "@/features/crew-and-boats/invite-suggestions";
+import { ladderInviteRefusal } from "@/features/training/course-ladder";
 import { nowDate } from "@/lib/clock";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 

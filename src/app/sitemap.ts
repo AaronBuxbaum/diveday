@@ -5,7 +5,7 @@ import { cacheLife } from "next/cache";
 import { getDb } from "@/db/client";
 import { listDiveSitesForSitemap } from "@/db/dive-sites";
 import { listShopsForSitemap } from "@/db/shops";
-import { listActiveCoursesForSitemap } from "@/features/courses";
+import { listActiveCoursesForSitemap } from "@/features/training/courses";
 import { FEATURE_PAGE_SLUGS, featurePagePath } from "@/lib/feature-pages";
 import { MIGRATION_GUIDE_SLUGS } from "@/lib/migration-guides";
 import { publicAppUrl } from "@/lib/notifications";

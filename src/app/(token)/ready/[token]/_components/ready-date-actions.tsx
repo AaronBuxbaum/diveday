@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import type { AppDb } from "@/db/client";
-import { getReadyPageData } from "@/features/ready";
-import { issueGroupSeatClaim, issuePartySeatClaims } from "@/features/seat-claims";
+import { getReadyPageData } from "@/features/boarding/ready";
+import { issueGroupSeatClaim, issuePartySeatClaims } from "@/features/bookings/seat-claims";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { theBoatIsHome } from "@/lib/thread-steps";

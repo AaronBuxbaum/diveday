@@ -2,7 +2,7 @@ import { AddSeat } from "@/app/(token)/ready/[token]/_components/AddSeat";
 import { Copyable } from "@/components/Copyable";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { SettledCheck } from "@/components/ui/SettledCheck";
-import type { issuePartySeatClaims } from "@/features/seat-claims";
+import type { issuePartySeatClaims } from "@/features/bookings/seat-claims";
 import type { DiverTranslator } from "@/i18n/messages";
 import { claimLinkPath, groupClaimLinkPath } from "@/lib/booking-capabilities";
 import { publicAppUrl } from "@/lib/notifications";

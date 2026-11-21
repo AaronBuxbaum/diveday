@@ -5,8 +5,12 @@ import { Pager, staffPagerWords } from "@/components/Pager";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { LedgerGroup } from "@/components/ui/ledger";
 import type { NoticeTone } from "@/components/ui/tone";
-import { awaitsTriage, getInboxPage, triageInboundMessagesSafely } from "@/features/inbox-page";
-import { requireShopSurface } from "@/features/session";
+import { requireShopSurface } from "@/features/accounts/session";
+import {
+  awaitsTriage,
+  getInboxPage,
+  triageInboundMessagesSafely,
+} from "@/features/messages/inbox-page";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";

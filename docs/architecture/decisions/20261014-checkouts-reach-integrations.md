@@ -24,7 +24,7 @@ same transaction that records them, on the existing outbox (`integration_events`
   (`checkout:<id>:refund:<cents>`), so a DiveDay refund and a dashboard refund reconciled to the
   same total send once. A paid-after-close refund is not sent: nothing was sold on that checkout.
 - **The ledger text names the source**: "DiveDay booking <id>", "DiveDay tip <id>"
-  (`src/features/integrations/sale-reference.ts`); order text is unchanged.
+  (`src/features/shop-setup/integrations/sale-reference.ts`); order text is unchanged.
 - Rehearsal and incomplete checkouts send nothing.
 
 ## Alternatives considered

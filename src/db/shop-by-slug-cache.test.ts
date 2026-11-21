@@ -13,7 +13,7 @@ import { describe, expect, it } from "vitest";
  * `src/app/s/[shopSlug]/_components/PublicShopShell.tsx` sit behind three
  * *separate* `<Suspense>` boundaries, and this repository has already measured
  * one place where React's `cache()` does **not** bridge a gap that looks just
- * like it — `inHorizonReadiness` (`src/features/blockers/store.ts`, issue #1121), where the
+ * like it — `inHorizonReadiness` (`src/features/boarding/blockers.ts`, issue #1121), where the
  * staff shell and the page under it turned out to be two scopes and a memo
  * bought nothing. Shipping a second memo on that evidence without checking
  * which kind of gap this one is would be guessing.
@@ -34,10 +34,10 @@ const REPO = path.join(__dirname, "..", "..");
 const PROBE = path.join(REPO, "src/test/request-cache-scope.probe.mjs");
 const SHOPS = [
   readFileSync(path.join(__dirname, "shops.ts"), "utf8"),
-  readFileSync(path.join(REPO, "src/features/shops-cached/store.ts"), "utf8"),
+  readFileSync(path.join(REPO, "src/features/platform/shops-cached.ts"), "utf8"),
 ].join("\n");
 const CACHED_READER_ENTRY = readFileSync(
-  path.join(REPO, "src/features/shops-cached/index.ts"),
+  path.join(REPO, "src/features/platform/shops-cached.ts"),
   "utf8",
 );
 
@@ -85,7 +85,7 @@ describe("React's cache() across the public shell's boundaries", () => {
 
   it("reads again in a second pass, which is why five became two and not one", () => {
     // The honest ceiling. Under Cache Components the App Shell and the page it
-    // wraps render in separate passes (`src/features/blockers/store.ts`), so the layout's
+    // wraps render in separate passes (`src/features/boarding/blockers.ts`), so the layout's
     // one read and the page's one read stay two. Anything that claimed one
     // query per public render would be claiming this number is 1.
     expect(counts.twoPasses).toBe(2);

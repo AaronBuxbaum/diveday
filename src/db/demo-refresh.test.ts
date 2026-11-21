@@ -4,7 +4,7 @@ import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
 import { DAY_MS, nowDate } from "@/lib/clock";
 import { shopDayBounds } from "@/lib/zoned";
 import { fileScopedShopContext, unseededTestDb } from "@/test/db";
-import { createBoat } from "../features/boats/store";
+import { createBoat } from "../features/crew-and-boats/boats/store";
 import { captureDepartureBoatSafety } from "./boat-safety";
 import type { AppDb } from "./client";
 import {

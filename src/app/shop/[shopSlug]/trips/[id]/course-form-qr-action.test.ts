@@ -8,7 +8,7 @@ import { courseFormsLinkPath } from "@/lib/booking-capabilities";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { staffSession } from "@/test/staff-session";
-import { issueCounterCourseForms } from "../../../../../features/course-counter-qr/store";
+import { issueCounterCourseForms } from "../../../../../features/training/course-counter-qr";
 
 vi.mock("next/navigation", () => ({
   notFound: () => {
@@ -19,11 +19,11 @@ vi.mock("@/db/client", async (load) => ({
   ...(await load<typeof import("@/db/client")>()),
   getDb: vi.fn(),
 }));
-vi.mock("../../../../../features/session/rules", async () =>
+vi.mock("../../../../../features/accounts/session", async () =>
   (await import("@/test/staff-session")).sessionMockOverStaffSession(),
 );
 const { getDb } = await import("@/db/client");
-const { requireStaffSession } = await import("../../../../../features/session/rules");
+const { requireStaffSession } = await import("../../../../../features/accounts/session");
 const { issueCourseFormQrAction } = await import("./course-form-qr-action");
 const ctx = fileScopedShopContext();
 

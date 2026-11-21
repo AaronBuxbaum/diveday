@@ -12,9 +12,9 @@ import { type RollCallCheckpoint, rollCallCompleteness } from "@/lib/manifests";
 import { serializeManifests } from "@/lib/offline-manifests";
 import type { RollCallCausalContext } from "@/lib/roll-call-causality";
 import { markArrived } from "@/test/arrivals";
-import { checkInBooking, undoCheckInBooking } from "../features/check-in/store";
-import { markBookingNoShow } from "../features/no-show/store";
-import { listRollCallGaps } from "../features/roll-call-gaps/store";
+import { checkInBooking, undoCheckInBooking } from "../features/boarding/check-in/store";
+import { markBookingNoShow } from "../features/boarding/no-show";
+import { listRollCallGaps } from "../features/boarding/roll-call-gaps";
 import {
   clearAnswers,
   ctx,
@@ -473,7 +473,7 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
   });
 
   it("answers 'who is aboard' the same way for the counter and for the departure board", async () => {
-    // One reader, two shapes. `boardedCountsByTrip` (src/features/today/today-reader.ts) used to
+    // One reader, two shapes. `boardedCountsByTrip` (src/features/day/today/today-reader.ts) used to
     // be a second hand-written copy of this query, and the copies had already
     // drifted: only one of them carried the cancelled-booking guard. Both
     // derive from `listDepartureBoardedByTrip` now, so a head count and a
@@ -564,7 +564,7 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
   it("answers one seat's own departure result, for the diver's own page", async () => {
     // `departureRollCallForBooking` is what keeps the thread's after-state
     // from asserting that somebody dived on the strength of a clock
-    // (`isAfterTheDive`, src/features/seat-ladder/rules.ts). Null is the ordinary answer
+    // (`isAfterTheDive`, src/features/bookings/seat-ladder.ts). Null is the ordinary answer
     // — plenty of shops record nothing — and it is the answer that makes that
     // page wait for the four-hour recap floor instead of opening at the
     // one-hour late-arrival buffer.
@@ -609,7 +609,7 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
     // The counter's `already_boarded` refusal reads this rather than the dock
     // alone: a diver who joined at the second site has no departure event at
     // all, and the desk must not be able to call them absent
-    // (`inAfterDivePopulation`, src/features/today/today-reader.ts).
+    // (`inAfterDivePopulation`, src/features/day/today/today-reader.ts).
     const { db, shop, reef, booking, staff } = await manifestContext();
     expect(await onTheWaterByRollCall(db, shop.id, reef.id, booking.booking.id)).toBeNull();
 
@@ -646,7 +646,7 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
    * At `departure` it is "never left the dock" — the benign half, and the
    * ordinary absence the counter exists to record. At `after_dive_n` it is "did
    * not come back from the dive", which is the missing-diver row
-   * (`isAccountedForAfterDive`, src/features/today/today-reader.ts; **sailed** in the glossary).
+   * (`isAccountedForAfterDive`, src/features/day/today/today-reader.ts; **sailed** in the glossary).
    * A reader that ignored the checkpoint would be wrong in the direction that
    * stops a shop doing its work: every walk-away carries a dock `not_boarded`,
    * so the desk could never release a seat again.

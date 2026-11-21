@@ -7,7 +7,7 @@ import {
   latestTripStage,
   readDepartureStage,
   recordTripStage,
-} from "../features/trip-stages/store";
+} from "../features/trips/trip-stages";
 import {
   boardAtDeparture,
   HOUR,

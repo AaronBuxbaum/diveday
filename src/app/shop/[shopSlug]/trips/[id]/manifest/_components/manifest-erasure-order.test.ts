@@ -2,11 +2,11 @@ import { expect, it, vi } from "vitest";
 import { getShopOfflineErasureEpoch } from "@/db/shops";
 import { getTripRoster, listStaff } from "@/db/trips";
 import { upcomingTripsWithCounts } from "@/db/trips-queries.test-support";
-import { anonymizeDiver } from "@/features/anonymize/store";
 import {
   signRosterConfirmation,
   verifyRosterConfirmation,
-} from "@/features/offline-manifest-snapshots";
+} from "@/features/boarding/offline-manifest-snapshots";
+import { anonymizeDiver } from "@/features/records/anonymize";
 import { seededShopContext } from "@/test/db";
 import { readManifestPage } from "./manifest-reads";
 

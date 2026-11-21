@@ -1,5 +1,5 @@
-import type { HandledHelpRequest } from "@/features/help-requests";
-import type { TodayAction } from "@/features/today";
+import type { TodayAction } from "@/features/day/today";
+import type { HandledHelpRequest } from "@/features/messages/help-requests";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { handledHelpRequestText, helpRequestMeetingText } from "@/i18n/today-labels";
 import { formatTime } from "@/lib/format";

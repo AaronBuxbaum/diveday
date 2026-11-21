@@ -6,13 +6,13 @@ import { setShopPassThroughFee } from "../../db/shops";
 import { setShopTaxEnabled } from "../../db/shops.test-support";
 import { getShopCurrency } from "../../db/stripe-accounts";
 import { createTrip, listStaff } from "../../db/trips";
-import { recordPurchase, recordPurchaseRefund } from "../../features/recorded-purchases";
+import { seatDiver } from "../../features/bookings/seat-diver";
+import { recordPurchase, recordPurchaseRefund } from "../../features/money/recorded-purchases";
+import { grantTripCredit, redeemTripCredit } from "../../features/money/trip-credit";
 import {
   createRecoveryActivity,
   transitionRecoveryActivity,
-} from "../../features/recovery-activities/store";
-import { seatDiver } from "../../features/seat-diver/store";
-import { grantTripCredit, redeemTripCredit } from "../../features/trip-credit";
+} from "../../features/trips/recovery-activities/store";
 import { HOUR_MS } from "../../lib/clock";
 import { fakeEmail } from "../fakes";
 import { prepareWeatherAlternatives } from "./prepare-weather-alternatives";

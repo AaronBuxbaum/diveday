@@ -10,12 +10,12 @@ import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { controlClass, FormStatus } from "@/components/ui/form";
 import { FIGURE_INLINE_CLASS } from "@/components/ui/typography";
+import { requireShopSurface } from "@/features/accounts/session";
 import {
   getOrderDetailPage,
   isStaleCounterClaim,
   pendingCounterPayment,
-} from "@/features/order-detail-page";
-import { requireShopSurface } from "@/features/session";
+} from "@/features/money/order-detail-page";
 import { ORDER_STATUS_TONES } from "@/i18n/order-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";

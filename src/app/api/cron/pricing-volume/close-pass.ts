@@ -1,5 +1,5 @@
 import type { AppDb } from "@/db/client";
-import type { BillingProvider, PercentBillingConfig } from "@/features/billing";
+import type { BillingProvider, PercentBillingConfig } from "@/features/money/billing";
 import {
   closePricingMonth,
   collectionCurrencies,
@@ -7,14 +7,14 @@ import {
   markPricingReportAttempted,
   markPricingStatementReported,
   pricingMonthsToClose,
-} from "@/features/pricing-volume";
+} from "@/features/money/pricing-volume";
 import {
   holdsLiveSubscription,
   type ShopSubscriptionRow,
   shopPricing,
   soldPricing,
-} from "@/features/shop-subscriptions";
-import { trialEndsAt } from "@/features/trial";
+} from "@/features/money/shop-subscriptions";
+import { trialEndsAt } from "@/features/shop-setup/trial";
 import type { PricingConfig } from "@/lib/billing/pricing-plans";
 import { freePeriodEndsAt } from "@/lib/billing/standing";
 import { addMonths, type MonthRef, monthKey } from "@/lib/calendar";

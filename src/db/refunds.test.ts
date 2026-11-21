@@ -5,7 +5,7 @@ import type { CheckoutProvider, RefundCheckoutResult } from "@/lib/payments/chec
 import { dbNowPlus, fileScopedShopContext } from "@/test/db";
 import { sendDeal } from "@/test/deal";
 import { fakePromotions } from "@/test/fakes";
-import { getActiveTripPromoByCode } from "../features/trip-promos/store";
+import { getActiveTripPromoByCode } from "../features/money/trip-promos";
 import { cancelBooking, createBookingParty } from "./bookings";
 import { markCheckoutPaidBySessionId, startBookingCheckout } from "./checkouts";
 import type { AppDb } from "./client";

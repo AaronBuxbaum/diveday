@@ -1,1 +1,0 @@
-export { sendMagicSignInMail } from "./store";

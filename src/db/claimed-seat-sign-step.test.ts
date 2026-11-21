@@ -7,7 +7,7 @@ import {
   claimPartySeatRecord,
   issuePartySeatClaims,
   settleClaimedSeat,
-} from "../features/seat-claims/store";
+} from "../features/bookings/seat-claims/store";
 import { createBookingParty } from "./bookings";
 import * as readinessDb from "./readiness";
 import { bookings, waiverRecords } from "./schema";

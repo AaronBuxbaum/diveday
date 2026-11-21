@@ -2,7 +2,7 @@ import { and, eq, gte, isNull } from "drizzle-orm";
 import type { AppDb } from "../../db/client";
 import { bookings, people, trips } from "../../db/schema/index";
 import { heldSeatCounts, seatNotCancelled, setTripParticipantTerms } from "../../db/trips";
-import { seatDiver } from "../../features/seat-diver/store";
+import { seatDiver } from "../../features/bookings/seat-diver";
 import { REEF_TRIP_TITLE } from "./reef-trip-title";
 
 /**

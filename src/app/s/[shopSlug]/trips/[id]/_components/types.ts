@@ -2,7 +2,7 @@ import type { getBookingForTrip } from "@/db/bookings";
 import type { getBookingReadiness, getTripRequirements } from "@/db/readiness";
 import type { DiverRentalFit } from "@/db/rental-fit";
 import type { getTripWithBooked, listTripDives, listTripScheduleDays } from "@/db/trips";
-import type { shopBySlugCached } from "@/features/shops-cached";
+import type { shopBySlugCached } from "@/features/platform/shops-cached";
 import type { MarineLifeCard } from "@/i18n/marine-life-labels";
 import type { DiverMessageKey } from "@/i18n/messages";
 import type { fetchAutomatedMarineForecast } from "@/lib/marine-forecast";

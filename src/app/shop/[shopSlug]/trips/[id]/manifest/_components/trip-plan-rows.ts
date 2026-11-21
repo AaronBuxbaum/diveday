@@ -1,5 +1,5 @@
-import type { SiteHistory } from "@/features/site-history";
-import { siteHistoryText } from "@/features/site-history";
+import type { SiteHistory } from "@/features/sites/site-history";
+import { siteHistoryText } from "@/features/sites/site-history";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import {

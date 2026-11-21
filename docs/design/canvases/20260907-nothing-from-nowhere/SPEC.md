@@ -70,7 +70,7 @@ which is why it is stored.
 | Slot (Apple `generic` style) | Content | Source |
 | --- | --- | --- |
 | `logoText` | the shop's name | `shops.name` |
-| `headerFields[0]` | the crew-set stage word, or absent | `latestTripStage` (`src/features/trip-stages/store.ts`), `diver.json` stage keys |
+| `headerFields[0]` | the crew-set stage word, or absent | `latestTripStage` (`src/features/trips/trip-stages.ts`), `diver.json` stage keys |
 | `primaryFields[0]` | the departure's title | `trips.title` |
 | `secondaryFields` | date · dock call · departs | `trips.startsAt`, `shops.dockCallMinutes` |
 | `auxiliaryFields` | boat · diver's name | trip boat, `people` |
@@ -93,12 +93,12 @@ the plan sentence, `hexBackgroundColor` the theme primary, `state: ACTIVE | INAC
 
 ### Interfaces
 
-A feature module, `src/features/wallet-pass/`, with `index.ts` as its whole public surface and a
-`README.md` in the shape of `src/features/calendar-sync/README.md`. It may import `@/lib/**` and
+A feature module, `src/features/boarding/wallet-pass/`, with `index.ts` as its whole public surface and a
+`README.md` in the shape of `src/features/crew-and-boats/calendar-sync/README.md`. It may import `@/lib/**` and
 `@/db/**`, never `@/app/**` (`pnpm check:architecture`).
 
 ```ts
-// src/features/wallet-pass/index.ts — the whole public surface
+// src/features/boarding/wallet-pass/index.ts — the whole public surface
 export type WalletPlatform = "apple" | "google";
 
 /** Which platforms have credentials. Empty means the feature is dark everywhere. */
@@ -216,12 +216,12 @@ and an alarm at the runbook's usual threshold; `docs/engineering/cloudwatch-obse
 gains the row.
 
 Retention: `wallet_pass_registrations` older than 30 days past their pass's expiration are pruned
-by the weekly retention cron (`src/features/retention/rules.ts` gains the window; `src/features/retention/store.ts` the
+by the weekly retention cron (`src/features/records/retention/rules.ts` gains the window; `src/features/records/retention/store.ts` the
 prune); `wallet_passes` are soft-deleted with their booking and never pruned by this slice.
 
 ### Acceptance tests
 
-Unit (Vitest), all under `src/features/wallet-pass/` unless said:
+Unit (Vitest), all under `src/features/boarding/wallet-pass/` unless said:
 
 1. `buildPassContent` is deterministic and pure: same input, same JSON; two inputs differing only
    in `trips.startsAt` differ only in the three time fields; a set stage adds exactly one header

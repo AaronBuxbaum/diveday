@@ -1,7 +1,7 @@
 import { eq, sql } from "drizzle-orm";
 import { expect, it } from "vitest";
-import { assembleEveningClose } from "@/features/today/closeout";
-import { getDayCloseout } from "@/features/today/closeout-reader";
+import { assembleEveningClose } from "@/features/day/today/closeout";
+import { getDayCloseout } from "@/features/day/today/closeout-reader";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { describePostgres, postgresTestDb } from "@/test/postgres";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";

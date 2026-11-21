@@ -3,7 +3,7 @@ import {
   OFFLINE_MANIFEST_NO_STORE,
 } from "@/app/api/offline-manifests/staff-context";
 import { listTripIdsInOfflineManifestWindow } from "@/db/trips";
-import { buildOfflineManifestCopies } from "@/features/offline-manifest-snapshots";
+import { buildOfflineManifestCopies } from "@/features/boarding/offline-manifest-snapshots";
 import { nowDate } from "@/lib/clock";
 import { withE2EApiTiming } from "@/lib/observability/query-timing";
 import { supportsCausalRollCall } from "@/lib/roll-call-protocol";

@@ -3,9 +3,7 @@
 import { z } from "zod";
 import { getDb } from "@/db/client";
 import { getShopById, shopHasFeatureOn } from "@/db/shops";
-import { parseForm, single } from "@/features/form-parse";
-import { revalidateAndRedirect } from "@/features/navigation";
-import { requireStaffSession } from "@/features/session";
+import { requireStaffSession } from "@/features/accounts/session";
 import {
   addCustomerGearItem,
   addWorkOrderLine,
@@ -19,7 +17,9 @@ import {
   restoreWorkOrder,
   setWorkOrderStatus,
   type WorkOrderCareInput,
-} from "@/features/work-orders";
+} from "@/features/gear/work-orders";
+import { parseForm, single } from "@/features/platform/form-parse";
+import { revalidateAndRedirect } from "@/features/platform/navigation";
 import { ADD_ONE, addPanelHref } from "@/lib/add-panel";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";

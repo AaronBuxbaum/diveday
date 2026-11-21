@@ -2,12 +2,12 @@ import { and, eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { seededShopContext } from "@/test/db";
 
-vi.mock("../features/bookkeeper/store", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../features/bookkeeper/store")>();
+vi.mock("../features/money/bookkeeper/store", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../features/money/bookkeeper/store")>();
   return { ...actual, tellOwnersAboutBookkeeper: vi.fn(async () => 1) };
 });
 
-const { anonymizeDiver } = await import("../features/anonymize/store");
+const { anonymizeDiver } = await import("../features/records/anonymize");
 const {
   claimBookkeeperMonth,
   consumeBookkeeperConfirmation,
@@ -15,7 +15,7 @@ const {
   readBookkeeper,
   setBookkeeper,
   tellOwnersAboutBookkeeper,
-} = await import("../features/bookkeeper/store");
+} = await import("../features/money/bookkeeper/store");
 const { capabilities, people, personRoles, shops } = await import("./schema");
 
 beforeEach(() => {

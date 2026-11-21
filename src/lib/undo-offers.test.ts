@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { readUndoOffer } from "../features/undo/rules";
+import { readUndoOffer } from "../features/platform/undo";
 
 const trip = "ad7edead-0000-4000-8000-000000000001";
 const record = "ad7edead-0000-4000-8000-000000000002";

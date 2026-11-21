@@ -4,8 +4,8 @@ import { nowDate } from "@/lib/clock";
 import { prepareContactImport } from "@/test/import-fixture";
 import { describePostgres, holdRowLock, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
 import { commitContactImport } from "@/test/words-wiring";
-import { anonymizeDiver } from "../features/anonymize/store";
-import { restoreCard } from "../features/card-restore/store";
+import { restoreCard } from "../features/certifications/card-restore";
+import { anonymizeDiver } from "../features/records/anonymize";
 import {
   formBuddyTeam,
   formPartyTeams,

@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { readTripBlowout } from "@/db/blowouts";
-import { waitForNavigationGate } from "@/features/e2e-test-routes";
-import { requireShopSurface } from "@/features/session";
+import { requireShopSurface } from "@/features/accounts/session";
+import { waitForNavigationGate } from "@/features/platform/e2e-test-routes";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { runtimeMode } from "@/lib/runtime-mode";

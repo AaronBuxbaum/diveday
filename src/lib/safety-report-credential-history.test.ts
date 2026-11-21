@@ -3,7 +3,7 @@ import {
   type SafetyCredential,
   type SafetyMonthInput,
   summarizeSafetyMonth,
-} from "../features/safety-report/rules";
+} from "../features/safety/safety-report/rules";
 
 const sailing = new Date("2026-10-03T13:00:00Z");
 const input = (credentials: SafetyCredential[]): SafetyMonthInput => ({

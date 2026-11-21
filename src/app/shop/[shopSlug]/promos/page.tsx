@@ -11,12 +11,12 @@ import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { SubmitButton } from "@/components/SubmitButton";
 import { UndoToast } from "@/components/UndoToast";
 import { buttonClass } from "@/components/ui/button";
+import { requireShopSurface } from "@/features/accounts/session";
 import {
   canAcceptPayments,
   canPersonManagePaymentSettings,
   getPromosPage,
-} from "@/features/promos-page";
-import { requireShopSurface } from "@/features/session";
+} from "@/features/money/promos-page";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { addPanelCloseHref, addPanelHref, addPanelOpen } from "@/lib/add-panel";

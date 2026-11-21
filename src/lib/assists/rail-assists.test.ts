@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { RECAP_LINE_SYSTEM, recapLine, recapLineCall } from "../../features/recap-line/rules";
+import {
+  RECAP_LINE_SYSTEM,
+  recapLine,
+  recapLineCall,
+} from "../../features/after-the-dive/recap-line";
 
 describe("recap line", () => {
   const log = {

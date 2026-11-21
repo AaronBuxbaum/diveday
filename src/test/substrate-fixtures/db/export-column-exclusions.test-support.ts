@@ -180,7 +180,7 @@ export const EXCLUDED_COLUMNS: Record<string, string[]> = {
     // A DiveDay-side discriminator, not a fact about the diver: it separates a
     // row that states a fit from one holding only their note (schema.ts,
     // `fit_stated_at`). The import rebuilds it correctly on its own — a row
-    // carrying any size is a stated fit and `src/features/import/store.ts` stamps it — so
+    // carrying any size is a stated fit and `src/features/records/import/store.ts` stamps it — so
     // exporting it would carry an internal flag out and re-derive it anyway.
     "fit_stated_at",
   ],

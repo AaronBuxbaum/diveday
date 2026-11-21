@@ -1,8 +1,8 @@
 import type { ReactElement } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { ReadyPageData } from "../../../../features/ready/store";
+import type { ReadyPageData } from "../../../../features/boarding/ready";
 
-vi.mock("../../../../features/render-connection/rules", () => ({
+vi.mock("../../../../features/platform/render-connection", () => ({
   connectionForRoute: vi.fn(async () => undefined),
 }));
 vi.mock("@/db/client", async (original) => ({
@@ -17,17 +17,17 @@ vi.mock("@/db/booking-capabilities", async (original) => ({
     delivered: true,
   })),
 }));
-vi.mock("../../../../features/ready/store", () => ({
+vi.mock("../../../../features/boarding/ready", () => ({
   getBookedCard: vi.fn(),
   getReadyPageData: vi.fn(),
 }));
-vi.mock("../../../../features/seat-claims/store", async (original) => ({
-  ...(await original<typeof import("../../../../features/seat-claims/store")>()),
+vi.mock("../../../../features/bookings/seat-claims/store", async (original) => ({
+  ...(await original<typeof import("../../../../features/bookings/seat-claims/store")>()),
   issuePartySeatClaims: vi.fn(async () => []),
 }));
 vi.mock("@/i18n/request", () => ({ requestLocale: vi.fn(async () => "en-US") }));
-const { getBookedCard, getReadyPageData } = await import("../../../../features/ready/store");
-const { issuePartySeatClaims } = await import("../../../../features/seat-claims/store");
+const { getBookedCard, getReadyPageData } = await import("../../../../features/boarding/ready");
+const { issuePartySeatClaims } = await import("../../../../features/bookings/seat-claims/store");
 const { ReadyBookedShell } = await import("./_components/ReadyBookedShell");
 const { default: ReadyTokenPage } = await import("./page");
 const trip = {

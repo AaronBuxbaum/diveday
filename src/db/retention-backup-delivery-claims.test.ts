@@ -1,8 +1,8 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
-import { RETENTION_DAYS } from "../features/retention/rules";
-import { pruneExpiredRecords } from "../features/retention/store";
+import { RETENTION_DAYS } from "../features/records/retention/rules";
+import { pruneExpiredRecords } from "../features/records/retention/store";
 import { shopBackupDeliveryClaims } from "./schema";
 
 const context = fileScopedShopContext();

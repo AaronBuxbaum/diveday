@@ -13,8 +13,8 @@ import {
   getShopRatingDistribution,
   getShopReviewAggregate,
   listPublishedShopReviewsPage,
-} from "@/features/reviews";
-import { shopBySlugCached } from "@/features/shops-cached";
+} from "@/features/after-the-dive/reviews";
+import { shopBySlugCached } from "@/features/platform/shops-cached";
 import { requestTranslator } from "@/i18n/request";
 import { cachedFormatter } from "@/lib/intl-cache";
 import { publicReviewsPath } from "@/lib/public-routes";

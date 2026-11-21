@@ -4,12 +4,12 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
 });
-vi.mock("@/features/integrations", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/features/integrations")>();
+vi.mock("@/features/shop-setup/integrations", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/features/shop-setup/integrations")>();
   return { ...actual, dispatchDueIntegrationDeliveries: vi.fn() };
 });
 // The routes report only where a DSN is configured; the suite runs without one.
-vi.mock("../../../../features/sentry-dsn/rules", () => ({
+vi.mock("../../../../features/platform/sentry-dsn", () => ({
   SENTRY_DSN: "https://key@sentry.invalid/1",
 }));
 vi.mock("@sentry/nextjs", () => ({
@@ -19,7 +19,7 @@ vi.mock("@sentry/nextjs", () => ({
 
 const { getDb } = await import("@/db/client");
 const { dispatchDueIntegrationDeliveries, INTEGRATIONS_CRON_BUDGET_MS } = await import(
-  "@/features/integrations"
+  "@/features/shop-setup/integrations"
 );
 const Sentry = await import("@sentry/nextjs");
 const { GET } = await import("./route");

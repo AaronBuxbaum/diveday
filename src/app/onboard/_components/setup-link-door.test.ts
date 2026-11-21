@@ -8,8 +8,8 @@ vi.mock("@/db/client", async (importOriginal) => {
 });
 
 const { getDb } = await import("@/db/client");
-const { recordSetupRequest } = await import("../../../features/funnel/store");
-const { issueSetupLink, spendSetupLink } = await import("../../../features/setup-links/store");
+const { recordSetupRequest } = await import("../../../features/reports/funnel");
+const { issueSetupLink, spendSetupLink } = await import("../../../features/shop-setup/setup-links");
 const { unseededTestDb } = await import("@/test/db");
 const { setupLinkDoor } = await import("./setup-link-door");
 const { cookies } = await import("next/headers");

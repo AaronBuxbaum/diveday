@@ -1,5 +1,5 @@
 import { RowLink, Table, TBody, Td, THead, Th, Tr } from "@/components/ui/table";
-import type { getOrdersIndex } from "@/features/orders-index";
+import type { getOrdersIndex } from "@/features/money/orders-index";
 import type { StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { formatCalendarDate } from "@/lib/calendar-date";
 import { isManagedStorageUrl } from "@/lib/storage";

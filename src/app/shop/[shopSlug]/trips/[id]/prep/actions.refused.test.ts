@@ -10,12 +10,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
  */
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
-vi.mock("@/features/navigation", () => ({
+vi.mock("@/features/platform/navigation", () => ({
   revalidateAndRedirect: vi.fn((_path: string, to: string) => {
     throw new Error(`redirect:${to}`);
   }),
 }));
-vi.mock("../../../../../../features/session/rules", () => ({
+vi.mock("../../../../../../features/accounts/session", () => ({
   requireStaffSession: vi.fn(async () => ({ user: { shopSlug: "reef", shopId: "shop" } })),
 }));
 

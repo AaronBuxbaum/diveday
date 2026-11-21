@@ -13,7 +13,7 @@ import {
   ITEM_TITLE_CLASS,
   SUB_TITLE_CLASS,
 } from "@/components/ui/typography";
-import { planCopyParams } from "@/features/billing";
+import { planCopyParams } from "@/features/money/billing";
 import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
 import type { PlanTerms } from "@/lib/billing/pricing-plans";

@@ -1,0 +1,265 @@
+import { randomUUID } from "node:crypto";
+import { and, eq } from "drizzle-orm";
+import { canPersonReadMedicalAlertOnTrip } from "@/db/authz";
+import { lockBoardingCertificationEvidence } from "@/db/boarding-certification-snapshot";
+import { departureBoatSafetyFor } from "@/db/boat-safety";
+import type { AppDb } from "@/db/client";
+import { getTripManifests } from "@/db/manifests";
+import { latestPreDepartureChecksForTrip, listChecklistItems } from "@/db/pre-departure-check";
+import { bookings, tripAssignments } from "@/db/schema";
+import type { getShopById } from "@/db/shops";
+import { getShopOfflineErasureEpoch } from "@/db/shops";
+import { departureVessels } from "@/features/crew-and-boats/boats";
+import { boatSafetySection } from "@/i18n/boat-safety-labels";
+import { depthWarningText } from "@/i18n/depth-labels";
+import { crewBlockerText } from "@/i18n/identity-check-labels";
+import { requestLocale } from "@/i18n/request";
+import { staffTranslator } from "@/i18n/staff-messages";
+import { departureCrewCount } from "@/lib/boat-safety";
+import { nowDate } from "@/lib/clock";
+import { emergencyReferenceForDeparture } from "@/lib/emergency-reference";
+import { manifestPhysicalCounts } from "@/lib/manifests";
+import { mapWithLimit } from "@/lib/map-limit";
+import { signOfflineErasureEpoch } from "@/lib/offline-erasure-epoch";
+import type {
+  OfflineManifestPayload,
+  OfflineManifestUpcomingResponse,
+} from "@/lib/offline-manifests";
+import { serializeManifests } from "@/lib/offline-manifests";
+import {
+  offlineRollCallWitnessEnabled,
+  signRollCallWitness,
+} from "@/lib/offline-roll-call-witness";
+import { rollCallDayBoundariesOf } from "@/lib/trip-days";
+import { nextOfflineManifestSnapshotWithWindows } from "./store";
+
+/** Shared complete, fenced roster refresh for priming and causal sync receipts. */
+export async function buildOfflineManifestCopies(
+  db: AppDb,
+  shop: NonNullable<Awaited<ReturnType<typeof getShopById>>>,
+  personId: string,
+  tripIds: readonly string[],
+): Promise<OfflineManifestUpcomingResponse> {
+  const user = { personId };
+  const locale = await requestLocale(shop.defaultLocale);
+  const t = staffTranslator(locale);
+  const now = nowDate();
+  const MANIFEST_BUILD_CONCURRENCY = 3;
+  const shopIdentity = {
+    slug: shop.slug,
+    name: shop.name,
+    timezone: shop.timezone,
+    // Primed with the board, because the whole point is that it is already on
+    // the device when the signal goes (issue #688).
+    emergencyReference: shop.emergencyReference,
+  };
+  const payloads = await mapWithLimit(
+    tripIds,
+    MANIFEST_BUILD_CONCURRENCY,
+    async (tripId): Promise<OfflineManifestPayload | null> =>
+      db.transaction(async (tx) => {
+        // The snapshot id, shop epoch, roster, and free-text evidence are read
+        // under one shared fence. Erasure either follows and sweeps everything
+        // read here, or precedes it and the token carries the new epoch.
+        await lockBoardingCertificationEvidence(tx, shop.id, "boarding");
+        const epoch = await getShopOfflineErasureEpoch(tx, shop.id);
+        if (epoch === null) return null;
+        const snapshot = await nextOfflineManifestSnapshotWithWindows(tx, shop.id, tripId);
+        if (snapshot === null) return null;
+        const { revision: snapshotRevision } = snapshot;
+        const meetingWindows = snapshot.meetingWindows.length
+          ? snapshot.meetingWindows.map((day) => ({
+              startsAt: new Date(day.startsAt),
+              endsAt: new Date(day.endsAt),
+            }))
+          : undefined;
+        const snapshotId = randomUUID();
+        const witnessEnabled = offlineRollCallWitnessEnabled();
+        // Read generations before the roster. A concurrent seat edit can make
+        // a witness stale, never make a stale roster appear current.
+        const seatGenerations = new Map(
+          (witnessEnabled
+            ? await tx
+                .select({ id: bookings.id, generation: bookings.offlineAssignmentGeneration })
+                .from(bookings)
+                .where(and(eq(bookings.shopId, shop.id), eq(bookings.tripId, tripId)))
+            : []
+          ).map((seat) => [seat.id, seat.generation]),
+        );
+        const crewIncarnations = new Map(
+          (witnessEnabled
+            ? await tx
+                .select({
+                  personId: tripAssignments.personId,
+                  incarnation: tripAssignments.offlineIncarnation,
+                })
+                .from(tripAssignments)
+                .where(eq(tripAssignments.tripId, tripId))
+            : []
+          ).map((crew) => [crew.personId, crew.incarnation]),
+        );
+        // PGlite's database type includes its client handle while the
+        // transaction executor intentionally does not. The manifest readers
+        // use only Drizzle query methods, which both objects implement.
+        const manifests = await getTripManifests(tx as unknown as AppDb, shop.id, tripId);
+        if (!manifests) return null;
+        const checklistItems = await listChecklistItems(tx, shop.id);
+        const checks = checklistItems.length
+          ? await latestPreDepartureChecksForTrip(tx, shop.id, tripId)
+          : new Map();
+        const vessels = await departureVessels(tx, shop.id, [tripId]);
+        // The boat's papers and kit, worded as the Boat tab words them.
+        const departure = manifests[0];
+        const boatSafety = departure
+          ? boatSafetySection(
+              t,
+              locale,
+              await departureBoatSafetyFor(tx, shop.id, {
+                tripId,
+                startsAt: departure.trip.startsAt,
+                timeZone: shop.timezone,
+                now,
+                passengers: {
+                  booked: departure.summary.totalDivers,
+                  boarded: departure.summary.boarded,
+                },
+                crew: departureCrewCount(departure.crew),
+                persons: manifestPhysicalCounts(departure),
+              }),
+            )
+          : null;
+        const payload = serializeManifests(
+          manifests,
+          {
+            ...shopIdentity,
+            buddyTeamsEnabled: shop.buddyTeamsEnabled,
+            emergencyReference: emergencyReferenceForDeparture(
+              shop.emergencyReference,
+              vessels.get(tripId) ?? null,
+            ),
+          },
+          (blocker, diver) => crewBlockerText(t, diver, blocker),
+          checklistItems.map((item) => ({
+            id: item.id,
+            label: item.label,
+            check: checks.get(item.id),
+          })),
+          boatSafety,
+          undefined,
+          (advisory) =>
+            advisory.params.verificationReasons?.length
+              ? t("shared.offlineManifest.juniorCheckRequired")
+              : depthWarningText(t, advisory),
+        );
+        const boundaries = rollCallDayBoundariesOf(meetingWindows);
+        const rollCallWitnesses: Record<string, string> = {};
+        const meetingDay = payload.rollCallMeetingDay ?? 0;
+        for (const manifest of witnessEnabled ? manifests : []) {
+          for (const crew of manifest.crew) {
+            const incarnation = crewIncarnations.get(crew.id);
+            const context = crew.rollCallContext;
+            const frontier = context?.observedEvidenceIds ?? [];
+            if (
+              !incarnation ||
+              context?.unknownMeetingDay ||
+              (context && context.meetingDay !== meetingDay) ||
+              frontier.length > 200
+            )
+              continue;
+            rollCallWitnesses[`crew:${crew.id}:${manifest.checkpoint}`] = signRollCallWitness({
+              shopId: shop.id,
+              tripId,
+              snapshotId,
+              subjectKind: "crew",
+              subjectId: crew.id,
+              checkpoint: manifest.checkpoint,
+              meetingDay,
+              meetingGeneration: snapshot.meetingGeneration,
+              assignmentGeneration: 0,
+              originalPersonId: incarnation,
+              frontier,
+            });
+          }
+          for (const diver of manifest.divers) {
+            const generation = seatGenerations.get(diver.bookingId);
+            const context = diver.rollCallContext;
+            const frontier = context?.observedEvidenceIds ?? [];
+            if (
+              generation === undefined ||
+              context?.unknownMeetingDay ||
+              (context && context.meetingDay !== meetingDay) ||
+              frontier.length > 200
+            )
+              continue;
+            rollCallWitnesses[`seat:${diver.bookingId}:${manifest.checkpoint}`] =
+              signRollCallWitness({
+                shopId: shop.id,
+                tripId,
+                snapshotId,
+                subjectKind: "seat",
+                subjectId: diver.bookingId,
+                checkpoint: manifest.checkpoint,
+                meetingDay,
+                meetingGeneration: snapshot.meetingGeneration,
+                assignmentGeneration: generation,
+                frontier,
+                ...(!diver.identityWithheld && diver.personId
+                  ? { originalPersonId: diver.personId }
+                  : {}),
+              });
+          }
+        }
+        return {
+          ...payload,
+          ...(witnessEnabled ? { rollCallWitnesses } : {}),
+          ...(boundaries ? { rollCallDayBoundaries: boundaries } : {}),
+          rollCallMeetingDays: meetingWindows?.map((day) => ({
+            startsAt: day.startsAt.toISOString(),
+            endsAt: day.endsAt.toISOString(),
+          })),
+          snapshotId,
+          erasureEpochToken: signOfflineErasureEpoch({
+            shopId: shop.id,
+            tripId,
+            snapshotId,
+            epoch,
+            snapshotRevision,
+          }),
+        };
+      }),
+  );
+
+  const served = payloads.filter((payload): payload is OfflineManifestPayload => payload !== null);
+  // Read live per departure, so a refresh drops words this viewer saved and
+  // may no longer hold (security review 2, L3).
+  const mayHoldMedicalAlertWords: Record<string, boolean> = {};
+  for (const payload of served) {
+    const tripId = payload.manifests[0]?.trip.id;
+    if (!tripId) continue;
+    mayHoldMedicalAlertWords[tripId] = await canPersonReadMedicalAlertOnTrip(
+      db,
+      shop.id,
+      user.personId,
+      tripId,
+    );
+  }
+
+  const body: OfflineManifestUpcomingResponse = {
+    // Always returned, even with zero trips in the window: a caller that is
+    // already paying for the roster gets the server-verified "who am I signed
+    // in as" signal in the same response rather than a second request, and uses
+    // it to purge any other shop's leftover device records — see ADR
+    // 20260726-shopwide-offline-manifest-priming's cross-tenant-device
+    // addendum. A payload can never carry a shop.slug the caller doesn't own
+    // (serializeManifests only ever receives this same session-derived shop).
+    // A caller that wants *only* this asks `/api/offline-manifests/identity`,
+    // which is the same string without the board attached.
+    shop: shopIdentity,
+    payloads: served,
+    // Who asked, so the device wipes medical alert words someone else saved
+    // (H-20261023-medical-alert-for-the amendment). The board itself never carries those words.
+    viewer: { personId: user.personId },
+    mayHoldMedicalAlertWords,
+  };
+  return body;
+}

@@ -11,14 +11,14 @@ const mocks = vi.hoisted(() => ({
   flush: vi.fn(),
 }));
 vi.mock("@/db/client", () => ({ getDb: mocks.getDb }));
-vi.mock("@/features/wallet-pass", () => ({
+vi.mock("@/features/boarding/wallet-pass", () => ({
   configuredWalletPlatforms: mocks.platforms,
   pushChangedWalletPasses: mocks.push,
 }));
-vi.mock("@/features/sentry-server", () => ({
+vi.mock("@/features/platform/sentry-server", () => ({
   sentry: { captureCheckIn: mocks.checkIn, captureException: mocks.capture },
 }));
-vi.mock("@/features/log-shipping", () => ({ flushLogs: mocks.flush }));
+vi.mock("@/features/platform/log-shipping", () => ({ flushLogs: mocks.flush }));
 
 import { GET, maxDuration } from "./route";
 

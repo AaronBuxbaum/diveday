@@ -19,7 +19,7 @@ import type { ProfileNotice } from "./website-actions";
  * The maps stay *here* rather than in each page for the reason `team/notices.ts`
  * does: the action and the page have to agree on the spelling of a code. Each
  * map is typed to the codes its actions can land with (`NoticeOf`,
- * `src/features/server-action`), so a code with no words, or words for a code no action
+ * `src/features/platform/server-action.ts`), so a code with no words, or words for a code no action
  * sends, is a compile error here.
  *
  * Each is built inside the request, not at module scope, so the text tracks the

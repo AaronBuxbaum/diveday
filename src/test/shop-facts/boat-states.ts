@@ -7,7 +7,7 @@ import { bookings, people, rollCallEvents, trips, waiverRecords } from "../../db
 import { seedArrivals } from "../../db/seed-arrivals";
 import { DEMO_COMPLETED_TRIP_TITLE } from "../../db/seed-more-trips";
 import { livePerson, liveTrip } from "../../db/trips-live";
-import { checkInBooking } from "../../features/check-in/store";
+import { checkInBooking } from "../../features/boarding/check-in/store";
 import { HOUR_MS } from "../../lib/clock";
 import { anActiveStaffPerson } from "./active-staff";
 

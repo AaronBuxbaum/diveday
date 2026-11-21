@@ -6,7 +6,7 @@ vi.mock("next/navigation", () => ({
   }),
 }));
 vi.mock("@/db/client", () => ({ getDb: vi.fn(async () => ({})) }));
-vi.mock("@/features/unsubscribe", () => ({ unsubscribeByToken: vi.fn() }));
+vi.mock("@/features/messages/unsubscribe", () => ({ unsubscribeByToken: vi.fn() }));
 vi.mock("@/lib/request-ip", () => ({ clientIp: vi.fn(async () => "203.0.113.7") }));
 vi.mock("@/lib/rate-limit", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/rate-limit")>();
@@ -14,7 +14,7 @@ vi.mock("@/lib/rate-limit", async (importOriginal) => {
 });
 
 const { checkRateLimit } = await import("@/lib/rate-limit");
-const { unsubscribeByToken } = await import("@/features/unsubscribe");
+const { unsubscribeByToken } = await import("@/features/messages/unsubscribe");
 const { confirmUnsubscribe } = await import("./actions");
 
 async function landing(): Promise<string> {

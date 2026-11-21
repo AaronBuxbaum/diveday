@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { buttonClass } from "@/components/ui/button";
 import { canPersonManageShopSettings } from "@/db/authz";
-import { requireShopSurface } from "@/features/session";
+import { requireShopSurface } from "@/features/accounts/session";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { publicSchedulePath } from "@/lib/public-routes";

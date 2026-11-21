@@ -1,5 +1,5 @@
 import { AGENCY_KEYS } from "@/app/shop/[shopSlug]/divers/[personId]/_components/shared";
-import { agencyVerificationPage } from "@/features/agency-verification";
+import { agencyVerificationPage } from "@/features/certifications/agency-verification";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { AGENCY_CHECKS, type CheckableAgency } from "@/lib/agency-check";
 import { SUPPORT_EMAIL } from "@/lib/platform-mail";

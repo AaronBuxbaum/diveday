@@ -1,6 +1,6 @@
 import type { AppDb } from "@/db/client";
-import { getShopYear } from "@/features/reporting";
-import { type ShopYearSummary, summarizeShopYear } from "@/features/shop-year";
+import { getShopYear } from "@/features/reports/reporting";
+import { type ShopYearSummary, summarizeShopYear } from "@/features/reports/shop-year";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { isoDate, type MonthRef } from "@/lib/calendar";
 import { StripLegend } from "./StripLegend";

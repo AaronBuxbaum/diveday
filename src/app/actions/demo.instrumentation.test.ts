@@ -6,7 +6,7 @@ import { getShopBySlug } from "@/db/shops";
 import { ALERT_EMAIL } from "@/lib/platform-mail";
 import { fileScopedShopContext } from "@/test/db";
 import { nextHeadersStub } from "@/test/next-headers";
-import { QUIET_DEMO_COOKIE, quietDemoToken } from "../../features/quiet-demo-device/rules";
+import { QUIET_DEMO_COOKIE, quietDemoToken } from "../../features/demo/quiet-demo-device";
 
 const ctx = fileScopedShopContext();
 

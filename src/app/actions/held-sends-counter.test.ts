@@ -13,13 +13,13 @@ vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
 });
-vi.mock("../../features/session/rules", () => ({ requireStaffSession: vi.fn() }));
+vi.mock("../../features/accounts/session", () => ({ requireStaffSession: vi.fn() }));
 vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn() }));
-vi.mock("../../features/step-up/store", () => ({ hasRequiredStepUp: vi.fn() }));
+vi.mock("../../features/accounts/step-up", () => ({ hasRequiredStepUp: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
-const { requireStaffSession } = await import("../../features/session/rules");
-const { hasRequiredStepUp } = await import("../../features/step-up/store");
+const { requireStaffSession } = await import("../../features/accounts/session");
+const { hasRequiredStepUp } = await import("../../features/accounts/step-up");
 const { releaseHeldSendAction, undoHeldSendAction } = await import("./held-sends");
 
 /**

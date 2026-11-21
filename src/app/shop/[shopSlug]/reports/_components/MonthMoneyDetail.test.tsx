@@ -2,7 +2,7 @@
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
-import type { MonthMoneyDetail as Detail } from "../../../../../features/report-lines/store";
+import type { MonthMoneyDetail as Detail } from "../../../../../features/reports/report-lines/store";
 import { BuddyReferrerLines, MoneyByLine, MonthFootnotes } from "./MonthMoneyDetail";
 
 afterEach(cleanup);

@@ -1,7 +1,10 @@
 import { and, eq } from "drizzle-orm";
 import type { AppDb } from "../../db/client";
 import { tripReviews } from "../../db/schema/index";
-import { getShopReviewAggregate, setReviewPublished } from "../../features/reviews/store";
+import {
+  getShopReviewAggregate,
+  setReviewPublished,
+} from "../../features/after-the-dive/reviews/store";
 import { MAX_SUPPRESSED_SHARE_FOR_RATING } from "../../lib/reviews";
 
 /**

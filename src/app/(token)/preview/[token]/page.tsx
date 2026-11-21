@@ -13,8 +13,8 @@ import {
   previewIdFrom,
   previewIsOpen,
   recordPreviewFetch,
-} from "@/features/demo-preview";
-import { isQuietDemoDevice, QUIET_DEMO_COOKIE } from "@/features/quiet-demo-device";
+} from "@/features/demo/demo-preview";
+import { isQuietDemoDevice, QUIET_DEMO_COOKIE } from "@/features/demo/quiet-demo-device";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { nowDate } from "@/lib/clock";

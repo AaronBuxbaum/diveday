@@ -1,5 +1,5 @@
-import { isLiveShopStaff, requireShopSurface } from "@/features/session";
-import { previewWeeklyDigest } from "@/features/weekly-digest";
+import { isLiveShopStaff, requireShopSurface } from "@/features/accounts/session";
+import { previewWeeklyDigest } from "@/features/reports/weekly-digest";
 import { recipientLocale } from "@/lib/notifications";
 import { publicAppUrl } from "@/lib/notifications/app-url";
 import { wrapEmailHtml } from "@/lib/notifications/email";

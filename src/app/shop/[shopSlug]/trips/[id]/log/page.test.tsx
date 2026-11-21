@@ -7,7 +7,7 @@ const TRIP_ID = "5a5bd26d-553a-4c5c-9609-ca048049f010";
 const exportRead = vi.hoisted(() => vi.fn());
 const mayExport = vi.hoisted(() => vi.fn());
 
-vi.mock("../../../../../../features/incident-export/store", () => ({
+vi.mock("../../../../../../features/safety/incident-export", () => ({
   getTripLogPage: async (...args: unknown[]) => {
     if (!(await mayExport(...args.slice(1)))) return { allowed: false };
     return { allowed: true, doc: await exportRead(...args.slice(1)) };
@@ -15,7 +15,7 @@ vi.mock("../../../../../../features/incident-export/store", () => ({
 }));
 vi.mock("@/db/authz", () => ({ canPersonExportIncidentRecord: mayExport }));
 vi.mock("@/i18n/request", () => ({ requestLocale: vi.fn(async () => "en-US") }));
-vi.mock("../../../../../../features/session/rules", () => ({ requireShopSurface: vi.fn() }));
+vi.mock("../../../../../../features/accounts/session", () => ({ requireShopSurface: vi.fn() }));
 vi.mock("next/navigation", () => ({
   notFound: vi.fn(() => {
     throw new Error("notFound");
@@ -27,7 +27,7 @@ vi.mock("next/navigation", () => ({
 // An async Server Component with its own read; the trail it prints is its own test's.
 vi.mock("./_components/CrewAwayWorkingLog", () => ({ CrewAwayWorkingLog: () => null }));
 
-const { requireShopSurface } = await import("../../../../../../features/session/rules");
+const { requireShopSurface } = await import("../../../../../../features/accounts/session");
 const { default: IncidentExportPage } = await import("./page");
 const { default: IncidentPrintPage } = await import("./print/page");
 

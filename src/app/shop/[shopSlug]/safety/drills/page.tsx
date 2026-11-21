@@ -4,8 +4,8 @@ import { StaffSectionTabs } from "@/app/shop/[shopSlug]/_components/StaffSection
 import { FlashParams } from "@/components/FlashParams";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
-import { canPersonViewShopReports } from "@/features/safety-report";
-import { requireShopSurface } from "@/features/session";
+import { requireShopSurface } from "@/features/accounts/session";
+import { canPersonViewShopReports } from "@/features/safety/safety-report";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { noticeFromParam } from "@/lib/staff-notices";

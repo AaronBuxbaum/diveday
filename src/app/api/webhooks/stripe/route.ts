@@ -20,23 +20,23 @@ import {
   stripeAccountHolder,
 } from "@/db/stripe-accounts";
 import { paymentSourceLookupFromEnvironment } from "@/db/stripe-providers";
-import { dispatchIntegrationsAfterResponse } from "@/features/integrations";
-import { sendPartyPaymentReceipt } from "@/features/party-payment-receipt";
-import { recordStripeDispute } from "@/features/payment-disputes";
+import { sendPartyPaymentReceipt } from "@/features/money/party-payment-receipt";
+import { recordStripeDispute } from "@/features/money/payment-disputes";
 import {
   refundFailureReasonOf,
   type StripeWebhookEvent,
   verifyStripeWebhook,
-} from "@/features/payments";
-import { recordStripeRefundFailure } from "@/features/refund-failures";
-import { sentry } from "@/features/sentry-server";
-import { tellOwnersPaymentsRestricted } from "@/features/stripe-restricted";
+} from "@/features/money/payments";
+import { recordStripeRefundFailure } from "@/features/money/refund-failures";
+import { tellOwnersPaymentsRestricted } from "@/features/money/stripe-restricted";
+import { sentry } from "@/features/platform/sentry-server";
 import {
   claimStripeWebhookEvent,
   hasNewerAccountUpdate,
   releaseStripeWebhookEventClaim,
-} from "@/features/webhook-events";
-import { logWebhookRefusal } from "@/features/webhook-refusal";
+} from "@/features/platform/webhook-events";
+import { logWebhookRefusal } from "@/features/platform/webhook-refusal";
+import { dispatchIntegrationsAfterResponse } from "@/features/shop-setup/integrations";
 import { nowDate } from "@/lib/clock";
 import { errorCauseTokens, errorClassToken } from "@/lib/error-token";
 import { type LogContext, log } from "@/lib/log";

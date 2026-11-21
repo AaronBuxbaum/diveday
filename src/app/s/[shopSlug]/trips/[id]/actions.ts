@@ -15,14 +15,17 @@ import { getRedeemableShopPromo } from "@/db/shop-promos";
 import { getShopBySlug } from "@/db/shops";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
 import { getTripWithBooked } from "@/db/trips";
-import { consumeBookingHandoff, offerBookingHandoffByEmail } from "@/features/booking-handoff";
-import { BUDDY_COOKIE, buddyReferralFromCookie } from "@/features/buddy-links";
-import { recordBuddyReferral, resolveBuddyReferral } from "@/features/buddy-referrals";
-import { formValue, parseForm, readForm, trimmedText } from "@/features/form-parse";
-import { recordShopMilestone } from "@/features/founder-metrics";
-import { revalidateAndRedirect } from "@/features/navigation";
-import { sentry } from "@/features/sentry-server";
-import { getActiveTripPromoByCode } from "@/features/trip-promos";
+import {
+  consumeBookingHandoff,
+  offerBookingHandoffByEmail,
+} from "@/features/bookings/booking-handoff";
+import { BUDDY_COOKIE, buddyReferralFromCookie } from "@/features/bookings/buddy-links";
+import { recordBuddyReferral, resolveBuddyReferral } from "@/features/bookings/buddy-referrals";
+import { getActiveTripPromoByCode } from "@/features/money/trip-promos";
+import { formValue, parseForm, readForm, trimmedText } from "@/features/platform/form-parse";
+import { revalidateAndRedirect } from "@/features/platform/navigation";
+import { sentry } from "@/features/platform/sentry-server";
+import { recordShopMilestone } from "@/features/reports/founder-metrics";
 import { diverTranslator } from "@/i18n/messages";
 import { describeCheckoutLine } from "@/i18n/participant-labels";
 import { tripRequirementList } from "@/i18n/readiness-labels";

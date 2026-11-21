@@ -4,7 +4,7 @@ import { buttonClass } from "@/components/ui/button";
 import { FactLine } from "@/components/ui/FactLine";
 import { controlClass, DateField, Field, FieldActions, FieldGrid } from "@/components/ui/form";
 import { InsetGroup } from "@/components/ui/ledger";
-import type { ConnectionState } from "@/features/connections";
+import type { ConnectionState } from "@/features/shop-setup/connections";
 import { nowDate } from "@/lib/clock";
 import { deskTimeOn, deskTimeValue } from "@/lib/desk-hours";
 import { formatTime } from "@/lib/format";

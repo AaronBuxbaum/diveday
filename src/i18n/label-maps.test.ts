@@ -37,14 +37,14 @@ import type { TemperatureUnit } from "@/lib/temperature-units";
 import { WORK_ORDER_OUTCOMES, WORK_ORDER_STATUSES } from "@/lib/work-orders";
 import { stripComments } from "@/test/source";
 import { labelModuleSources, messageKeyMaps } from "../../scripts/label-map-source.mjs";
-import { boatWorkText } from "../features/boat-work/labels";
-import type { BoatWorkCode } from "../features/boat-work/rules";
+import { boatWorkText } from "../features/crew-and-boats/boat-work/labels";
+import type { BoatWorkCode } from "../features/crew-and-boats/boat-work/rules";
 import {
   DIVER_DIVE_INTENT_KEYS,
   DIVER_RE_ENTRY_KEYS,
   STAFF_RE_ENTRY_KEYS,
   staffDiveIntentLine,
-} from "../features/dive-intent/labels";
+} from "../features/trips/dive-intent/labels";
 import { SHOP_ACTIVITY_KIND_KEYS, shopActivityLineText } from "./activity-labels";
 import { boatSafetyNoticeText } from "./boat-safety-labels";
 import {
@@ -457,7 +457,7 @@ const CASES: readonly LabelMapCase[] = [
     ),
   },
   {
-    module: "../features/boat-work/labels.ts",
+    module: "../features/crew-and-boats/boat-work/labels.ts",
     map: "BOAT_WORK_KEYS",
     rows: codeRows(BOAT_WORK_CODES, (locale, code) =>
       boatWorkText(staffTranslator(locale), { code, count: 2, tone: "work" }),
@@ -534,28 +534,28 @@ const CASES: readonly LabelMapCase[] = [
     ),
   },
   {
-    module: "../features/dive-intent/labels.ts",
+    module: "../features/trips/dive-intent/labels.ts",
     map: "DIVER_DIVE_INTENT_KEYS",
     rows: codeRows(keysOf(DIVER_DIVE_INTENT_KEYS), (locale, intent) =>
       diverTranslator(locale)(DIVER_DIVE_INTENT_KEYS[intent]),
     ),
   },
   {
-    module: "../features/dive-intent/labels.ts",
+    module: "../features/trips/dive-intent/labels.ts",
     map: "DIVER_RE_ENTRY_KEYS",
     rows: codeRows(keysOf(DIVER_RE_ENTRY_KEYS), (locale, ask) =>
       diverTranslator(locale)(DIVER_RE_ENTRY_KEYS[ask]),
     ),
   },
   {
-    module: "../features/dive-intent/labels.ts",
+    module: "../features/trips/dive-intent/labels.ts",
     map: "STAFF_RE_ENTRY_KEYS",
     rows: codeRows(keysOf(STAFF_RE_ENTRY_KEYS), (locale, ask) =>
       staffTranslator(locale)(STAFF_RE_ENTRY_KEYS[ask]),
     ),
   },
   {
-    module: "../features/dive-intent/labels.ts",
+    module: "../features/trips/dive-intent/labels.ts",
     map: "STAFF_DIVE_INTENT_KEYS",
     rows: codeRows(DIVE_INTENTS, (locale, intent) =>
       staffDiveIntentLine(staffTranslator(locale), [{ intent, count: 2 }], locale),

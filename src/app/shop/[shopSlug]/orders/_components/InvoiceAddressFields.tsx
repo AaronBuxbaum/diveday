@@ -1,5 +1,5 @@
 import { controlClass, Field, FieldGrid, legendClass } from "@/components/ui/form";
-import { CUSTOMER_ADDRESS_FIELDS } from "@/features/payments";
+import { CUSTOMER_ADDRESS_FIELDS } from "@/features/money/payments";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 
 /**

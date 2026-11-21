@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import type { TripLastMinutePromo } from "../../../../../../features/trip-promos/store";
+import type { TripLastMinutePromo } from "../../../../../../features/money/trip-promos";
 import { LastMinuteDealSection } from "./LastMinuteDealSection";
 
 afterEach(cleanup);

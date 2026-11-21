@@ -1,7 +1,7 @@
 import {
   signRosterConfirmation,
   signRosterHistoryScope,
-} from "@/features/offline-manifest-snapshots";
+} from "@/features/boarding/offline-manifest-snapshots";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatDateTimeTz } from "@/lib/format";
 import { ManifestRosterFreshness } from "./ManifestRosterFreshness";

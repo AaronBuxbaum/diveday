@@ -3,9 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { addDiverNote, deleteDiverNote } from "@/db/operations";
-import { readForm, text } from "@/features/form-parse";
-import { revalidateAndRedirect } from "@/features/navigation";
-import { undoParams } from "@/features/undo";
+import { readForm, text } from "@/features/platform/form-parse";
+import { revalidateAndRedirect } from "@/features/platform/navigation";
+import { undoParams } from "@/features/platform/undo";
 import { noticeUrl } from "@/lib/staff-notices";
 import { backTo, requireDiverActionContext } from "./action-helpers";
 
@@ -40,7 +40,7 @@ export async function addDiverNoteAction(shopSlug: string, personId: string, for
   revalidatePath(base);
 }
 
-/** Delete a person-scoped note, softly, and offer it back by id as a one-tap Undo (`src/features/undo/rules.ts`). */
+/** Delete a person-scoped note, softly, and offer it back by id as a one-tap Undo (`src/features/platform/undo.ts`). */
 export async function deleteDiverNoteAction(
   shopSlug: string,
   personId: string,

@@ -10,10 +10,10 @@ import {
   markInboundAnswered,
   reopenInboundMessage,
 } from "@/db/inbound-messages";
-import { parseForm } from "@/features/form-parse";
-import { revalidateAndRedirect } from "@/features/navigation";
-import { markMessageRunningLate } from "@/features/running-late";
-import { requireStaffSession } from "@/features/session";
+import { requireStaffSession } from "@/features/accounts/session";
+import { markMessageRunningLate } from "@/features/boarding/running-late";
+import { parseForm } from "@/features/platform/form-parse";
+import { revalidateAndRedirect } from "@/features/platform/navigation";
 import { nowDate } from "@/lib/clock";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";

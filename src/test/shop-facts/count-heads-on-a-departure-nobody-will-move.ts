@@ -9,7 +9,7 @@ import { anActiveStaffPerson } from "./active-staff";
  * `already_sailed` half of `MovePreflight["blocked"]`, which is the one state
  * of that preview with no baseline.
  *
- * `blockedReason` (`src/features/move-preflight/rules.ts`) keys on **roll-call evidence**,
+ * `blockedReason` (`src/features/bookings/move-preflight/rules.ts`) keys on **roll-call evidence**,
  * not on a window that has passed: a scheduled departure the crew have counted
  * heads against is one `moveTrip` refuses. So this records one boarding through
  * `recordRollCall` — the product's own door — rather than writing

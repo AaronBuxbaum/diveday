@@ -8,14 +8,14 @@ import type { AboardHold } from "@/db/aboard-at-sea";
 import type { SameNameHeldSeat } from "@/db/bookings";
 import type { listBookingNotes } from "@/db/operations";
 import type { TrainingMarkRosterSeat } from "@/db/training-marks";
-import type { IssuedCard } from "@/features/agency-processing";
-import type { CourseMaterialsDone } from "@/features/course-materials";
-import type { CourseStepDone } from "@/features/course-progress";
-import type { TodayHelpRequest } from "@/features/help-requests";
-import type { SameNamePerson } from "@/features/identity-repoint";
-import type { PaymentMarkFacts } from "@/features/payment-marks";
-import { rosterRowIsBlocked } from "@/features/roster-filters";
-import type { OpenOrderFact } from "@/features/trip-guests";
+import { rosterRowIsBlocked } from "@/features/boarding/roster-filters";
+import type { IssuedCard } from "@/features/certifications/agency-processing";
+import type { TodayHelpRequest } from "@/features/messages/help-requests";
+import type { PaymentMarkFacts } from "@/features/money/payment-marks";
+import type { SameNamePerson } from "@/features/people/identity-repoint";
+import type { CourseMaterialsDone } from "@/features/training/course-materials";
+import type { CourseStepDone } from "@/features/training/course-progress";
+import type { OpenOrderFact } from "@/features/trips/trip-guests";
 import { depthWarningText } from "@/i18n/depth-labels";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import type { AgencyCheckableCard } from "@/lib/agency-check-queue";
@@ -404,7 +404,7 @@ export type RosterArrival = {
  * **A finished departure's Trip page is its record** (UX review 2026-10-10,
  * item 10): once the boat is home there is nothing to clear, check in or sell,
  * so the list says who sailed and who did not, seat by seat, by the evening
- * count's own rule (`seatSailed`, src/features/seat-sailed/rules.ts).
+ * count's own rule (`seatSailed`, src/features/bookings/seat-sailed.ts).
  */
 export type RosterRecord = {
   /** Each seat's standing result at the dock (`listDepartureRollCallByTrip`). */
@@ -747,7 +747,7 @@ export function groupRoster({
       Boolean(booking.identityUnconfirmedAt) ||
       Boolean(readiness?.blockers.some((blocker) => blocker.code === "identity_unconfirmed"));
     // A name with no number reads as "on file" but is unreachable in an
-    // incident — same both-fields rule Today's nudge uses (src/features/today/today-reader.ts).
+    // incident — same both-fields rule Today's nudge uses (src/features/day/today/today-reader.ts).
     const hasEmergencyContact = Boolean(
       person.emergencyContactName && person.emergencyContactPhone,
     );
@@ -821,7 +821,7 @@ export function groupRoster({
       : hereBoarded === here.length
         ? t("checkIn.settledAllBoarded")
         : t("checkIn.settledSomeBoarded", { count: hereBoarded });
-  // The queue's own rule, stated once (src/features/roster-filters/rules.ts): an absent
+  // The queue's own rule, stated once (src/features/boarding/roster-filters.ts): an absent
   // readiness row is not a blocked diver.
   //
   // Deliberately narrower than the "Still to clear" group above it: the

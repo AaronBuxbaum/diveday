@@ -1,6 +1,6 @@
-import { COURSE_PREVIEW_PARAM, signCoursePreview } from "@/features/course-preview-gate";
-import { getCourseBySlug } from "@/features/courses";
-import { isLiveShopStaff, requireShopSurface } from "@/features/session";
+import { isLiveShopStaff, requireShopSurface } from "@/features/accounts/session";
+import { COURSE_PREVIEW_PARAM, signCoursePreview } from "@/features/training/course-preview-gate";
+import { getCourseBySlug } from "@/features/training/courses";
 import { publicCoursePath } from "@/lib/public-routes";
 
 /**
@@ -11,7 +11,7 @@ import { publicCoursePath } from "@/lib/public-routes";
  * 404 — and course slugs come from a shared template catalogue, so a dozen
  * guesses read a shop's unpublished drafts off the status line. The previewer
  * gets through by carrying a signed parameter the proxy can check without a
- * database (`src/features/course-preview-gate/rules.ts`).
+ * database (`src/features/training/course-preview-gate.ts`).
  *
  * **Minted on the tap rather than into the page.** The editor could have
  * embedded the token in its Preview link, and that was the first shape; this

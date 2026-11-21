@@ -35,7 +35,7 @@ vi.mock("@/db/client", async (importOriginal) => {
 });
 // The packet compares the shop it was handed with the shop's identity rows, so
 // this surface needs the whole shop row, not the id and slug the shared mock hands back.
-vi.mock("../../../../../../features/session/rules", async () => {
+vi.mock("../../../../../../features/accounts/session", async () => {
   const base = await (await import("@/test/staff-session")).sessionMockOverStaffSession();
   const requireShopSurface = vi.fn(async (shopSlug: string) => ({
     ...(await base.requireShopSurface(shopSlug)),
@@ -43,22 +43,22 @@ vi.mock("../../../../../../features/session/rules", async () => {
   }));
   return { ...base, requireShopSurface };
 });
-vi.mock("../../../../../../features/trip-paper-identity/store", async (importOriginal) => {
+vi.mock("../../../../../../features/trips/trip-paper-identity", async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import("../../../../../../features/trip-paper-identity/store")>();
+    await importOriginal<typeof import("../../../../../../features/trips/trip-paper-identity")>();
   return { ...actual, readTripPaperIdentity: vi.fn(actual.readTripPaperIdentity) };
 });
-vi.mock("../../../../../../features/trip-overview/store", async (importOriginal) => {
+vi.mock("../../../../../../features/trips/trip-overview", async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import("../../../../../../features/trip-overview/store")>();
+    await importOriginal<typeof import("../../../../../../features/trips/trip-overview")>();
   return { ...actual, getTripOverview: vi.fn(actual.getTripOverview) };
 });
 const { getDb } = await import("@/db/client");
 const { readTripPaperIdentity } = await import(
-  "../../../../../../features/trip-paper-identity/store"
+  "../../../../../../features/trips/trip-paper-identity"
 );
-const { getTripOverview } = await import("../../../../../../features/trip-overview/store");
-const { requireStaffSession } = await import("../../../../../../features/session/rules");
+const { getTripOverview } = await import("../../../../../../features/trips/trip-overview");
+const { requireStaffSession } = await import("../../../../../../features/accounts/session");
 const { MedicalAlertsPacketSheet } = await import("./MedicalAlertsPacketSheet");
 
 async function ownerOnTheAlertDeparture() {

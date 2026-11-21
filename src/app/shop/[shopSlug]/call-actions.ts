@@ -4,10 +4,16 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { addToWaitlistAction } from "@/app/shop/[shopSlug]/trips/[id]/roster-seating-actions";
 import { askForDate } from "@/db/interests";
-import { discardFormDraft, recordFormDraft } from "@/features/form-drafts";
-import { blankAsAbsent, formValue, parseForm, readForm, single } from "@/features/form-parse";
-import { revalidateAndRedirect } from "@/features/navigation";
-import { requireShopSurface } from "@/features/session";
+import { requireShopSurface } from "@/features/accounts/session";
+import { discardFormDraft, recordFormDraft } from "@/features/platform/form-drafts";
+import {
+  blankAsAbsent,
+  formValue,
+  parseForm,
+  readForm,
+  single,
+} from "@/features/platform/form-parse";
+import { revalidateAndRedirect } from "@/features/platform/navigation";
 import { isValidCalendarDate } from "@/lib/calendar-date";
 import { blankableDiverEmailSchema, diverNameSchema, diverPhoneSchema } from "@/lib/person-fields";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";

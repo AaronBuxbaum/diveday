@@ -8,20 +8,23 @@ import {
   BUDDY_COOKIE_PATH,
   buddyReferralFromSearchParams,
   encodeBuddyCookie,
-} from "@/features/buddy-links";
+} from "@/features/bookings/buddy-links";
 import {
   type CspOptions,
   enforcedPolicy,
   reportingEndpointsHeader,
-} from "@/features/content-security-policy";
-import { COURSE_PREVIEW_PARAM, coursePreviewIsValid } from "@/features/course-preview-gate";
-import { classifyDatabaseFailure } from "@/features/db-failure";
-import { rememberedPublicRouteLookup } from "@/features/public-route-existence";
+} from "@/features/platform/content-security-policy";
+import { classifyDatabaseFailure } from "@/features/platform/db-failure";
+import { rememberedPublicRouteLookup } from "@/features/public-site/public-route-existence";
 import {
   type PublicRouteQuery,
   type PublicRouteShape,
   publicRouteShape,
-} from "@/features/public-route-shape";
+} from "@/features/public-site/public-route-shape";
+import {
+  COURSE_PREVIEW_PARAM,
+  coursePreviewIsValid,
+} from "@/features/training/course-preview-gate";
 import { isStaff, type Role } from "@/lib/authz";
 import { arcgisApiKey } from "@/lib/basemap";
 import { MINUTE_MS, nowMs } from "@/lib/clock";
@@ -127,7 +130,7 @@ async function authGateResponse(req: NextRequest): Promise<Response | undefined>
     if (shopSlug) return NextResponse.redirect(new URL(`/shop/${shopSlug}`, req.nextUrl));
   }
   // Skipped for `?session=ended`: that param is only ever set by
-  // `requireStaffSession()` (src/features/session/rules.ts) after a live database check
+  // `requireStaffSession()` (src/features/accounts/session.ts) after a live database check
   // found the session stale — disabled, deleted, or demoted off every staff
   // role since it was minted. The cookie cache can still read `isStaff` for
   // up to its own maxAge (or the underlying session's full life, if the
@@ -501,7 +504,7 @@ async function refusedPublicRoute(
     // they are: the editor mints the parameter where it already knows the
     // reader is this shop's live staff, and the check here is one HMAC over the
     // two segments the route resolved — no database, no session, no cookie
-    // cache. The `src/features/public-route-existence/store.ts` header summarizes this
+    // cache. The `src/features/public-site/public-route-existence.ts` header summarizes this
     // capability boundary and why session-cookie heuristics cannot replace it.
     //
     // The parameter is not an authorisation and is not treated as one. The page
@@ -722,7 +725,7 @@ export async function proxy(req: NextRequest, _ctx: unknown): Promise<Response |
   if (!isEmbedRequest) {
     res.headers.set("X-Frame-Options", "DENY");
   }
-  // The rest of the policy lives in `src/features/content-security-policy/rules.ts` and is
+  // The rest of the policy lives in `src/features/platform/content-security-policy.ts` and is
   // stamped here rather than in `next.config.ts`'s `headers()` for the same
   // reason `frame-ancestors` always was: it varies per request on the embed
   // exception (issue #718).

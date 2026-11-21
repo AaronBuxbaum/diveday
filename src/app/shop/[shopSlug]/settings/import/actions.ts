@@ -4,14 +4,14 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getDb } from "@/db/client";
 import { getShopById } from "@/db/shops";
-import { parseForm } from "@/features/form-parse";
+import { requireStaffSession } from "@/features/accounts/session";
+import { parseForm } from "@/features/platform/form-parse";
 import {
   canPersonImportShopData,
   commitContactImport,
   type ImportSummary,
   previewContactImportMatches,
-} from "@/features/import";
-import { requireStaffSession } from "@/features/session";
+} from "@/features/records/import";
 import { declinedSizeNote } from "@/i18n/import-notes";
 import { parseImportAssist } from "@/lib/assists/import-mapping";
 import { calendarDateInTimezone } from "@/lib/calendar-date";

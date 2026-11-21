@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { signRecapToken } from "@/lib/recap-links";
 import { fileScopedShopContext } from "@/test/db";
-import { anonymizeDiver } from "../features/anonymize/store";
-import { createDiver, editDiver } from "../features/divers/store";
+import { createDiver, editDiver } from "../features/people/divers/store";
+import { anonymizeDiver } from "../features/records/anonymize";
 import { shopStaffer } from "../test/substrate-fixtures/db/waivers-test-fixtures";
 import { createBooking } from "./bookings";
 import { openRecapLink, recapTokenFor } from "./recap-links";

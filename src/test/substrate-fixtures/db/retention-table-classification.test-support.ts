@@ -62,8 +62,8 @@ export const OUTSIDE_RETENTION: readonly string[] = [
   // stop (ADR 20261007-sms-stop-and-help).
   "sms_opt_outs",
   // People, and what a shop knows about one. The standing decision at the top
-  // of src/features/retention/rules.ts is that this data is kept until somebody asks for
-  // it gone: the erasure path is the requested one (`src/features/anonymize/store.ts`),
+  // of src/features/records/retention/rules.ts is that this data is kept until somebody asks for
+  // it gone: the erasure path is the requested one (`src/features/records/anonymize.ts`),
   // never a dormancy timer.
   "people",
   "person_roles",
@@ -97,7 +97,7 @@ export const OUTSIDE_RETENTION: readonly string[] = [
   // the departure's crew, read with it, and gone when the person comes off it.
   "crew_away_acknowledgements",
   "trip_help_requests",
-  // Interests: contact data, kept until erasure (src/features/retention/rules.ts).
+  // Interests: contact data, kept until erasure (src/features/records/retention/rules.ts).
   "interests",
   // Seat-level links are removed with either referenced record; they need no independent clock.
   "date_request_offer_bookings",
@@ -158,7 +158,7 @@ export const OUTSIDE_RETENTION: readonly string[] = [
   // Course forms (ADR 20261008-course-forms): the same signed evidence as the
   // release, on the same footing. The forms, their versions and a course's
   // list of them are the shop's own configuration; a signed record is erased
-  // by the erasure path (`src/features/anonymize/store.ts`), never aged out.
+  // by the erasure path (`src/features/records/anonymize.ts`), never aged out.
   "course_forms",
   "course_form_versions",
   "course_form_requirements",
@@ -234,7 +234,7 @@ export const OUTSIDE_RETENTION: readonly string[] = [
 export const UNCLASSIFIED_HELP =
   "a table in src/db/schema/ that retention classifies as nothing. Give it a window " +
   "in RETENTION_DAYS if it is a trail that should be pruned; add it to " +
-  "UNBOUNDED_BY_DECISION *and write the paragraph in src/features/retention/rules.ts saying who " +
+  "UNBOUNDED_BY_DECISION *and write the paragraph in src/features/records/retention/rules.ts saying who " +
   "decided it is kept forever and when*, the way gear_service_events and " +
   "trip_stage_events do; or add it to OUTSIDE_RETENTION if a clock is the wrong " +
   "instrument for it at all. Adding a bare name to whichever list makes this test go " +

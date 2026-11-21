@@ -1,11 +1,11 @@
 import { GroupLabel } from "@/components/ui/group-label";
 import { LedgerRow } from "@/components/ui/ledger";
-import type { PartOfDay, WorthALookReason } from "@/features/worth-a-look";
+import type { PartOfDay, WorthALookReason } from "@/features/bookings/worth-a-look";
 import { type DiverMessageKey, diverTranslator } from "@/i18n/messages";
 
 /**
  * The reason a departure is offered, as a sentence in the reader's own
- * language. `src/features/worth-a-look/rules.ts` returns codes; this is where they become
+ * language. `src/features/bookings/worth-a-look.ts` returns codes; this is where they become
  * words.
  *
  * Every key is spelled out rather than built with a template literal, so the

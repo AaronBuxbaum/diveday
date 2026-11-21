@@ -1,5 +1,5 @@
 import type { captureRequestError } from "@sentry/nextjs";
-import { SENTRY_DSN } from "@/features/sentry-dsn";
+import { SENTRY_DSN } from "@/features/platform/sentry-dsn";
 import { runtimeMode } from "@/lib/runtime-mode";
 
 /**
@@ -26,7 +26,7 @@ export async function register() {
   // reaches this function above and returns.
   const [{ after }, { recordLogLine, setFlushDeferrer }, { setLogSink }] = await Promise.all([
     import("next/server"),
-    import("@/features/log-shipping"),
+    import("@/features/platform/log-shipping"),
     import("@/lib/log"),
   ]);
   setFlushDeferrer((task) => {

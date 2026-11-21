@@ -1,4 +1,4 @@
-import { stepUpChallengeUrl } from "@/features/security-step-up";
+import { stepUpChallengeUrl } from "@/features/accounts/security-step-up";
 import { diverTranslator } from "../src/i18n/messages";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { TOTP_DRIFT_STEPS, TOTP_STEP_SECONDS, totpCode } from "../src/lib/totp";

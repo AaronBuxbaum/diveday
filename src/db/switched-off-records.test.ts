@@ -10,9 +10,9 @@ import {
   deleteRecapPhoto,
   getRecapPageData,
   listRecapPhotosForTrips,
-} from "../features/recap/store";
-import { getMonthlyReport } from "../features/reporting/store";
-import { getTripGuests } from "../features/trip-guests/store";
+} from "../features/after-the-dive/recap/store";
+import { getMonthlyReport } from "../features/reports/reporting/store";
+import { getTripGuests } from "../features/trips/trip-guests/store";
 import { createBookingParty } from "./bookings";
 import {
   createDiveSite,

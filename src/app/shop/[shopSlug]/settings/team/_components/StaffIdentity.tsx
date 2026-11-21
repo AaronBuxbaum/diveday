@@ -1,5 +1,5 @@
 import { StoredPhoto } from "@/components/StoredPhoto";
-import type { StaffMember } from "@/features/staff-accounts";
+import type { StaffMember } from "@/features/accounts/staff-accounts";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatDateWithYear } from "@/lib/format";
 import { publicName } from "../public-name";

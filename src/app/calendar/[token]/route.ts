@@ -8,7 +8,7 @@ import {
   tokenFromFeedSegment,
   touchCalendarFeed,
   verifyCalendarFeed,
-} from "@/features/calendar-sync";
+} from "@/features/crew-and-boats/calendar-sync";
 import { toDiverLocale } from "@/i18n/settings";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";

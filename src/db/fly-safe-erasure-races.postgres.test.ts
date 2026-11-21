@@ -4,8 +4,8 @@ import { HOUR_MS } from "@/lib/clock";
 import type { NotificationProvider } from "@/lib/notifications";
 import { fakeEmail } from "@/test/fakes";
 import { describePostgres, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
-import { anonymizeDiver } from "../features/anonymize/store";
-import { repointHeldBooking } from "../features/identity-repoint/store";
+import { repointHeldBooking } from "../features/people/identity-repoint";
+import { anonymizeDiver } from "../features/records/anonymize";
 import { createBookingParty } from "./bookings";
 import {
   acknowledgeFlySafeFollowUp,

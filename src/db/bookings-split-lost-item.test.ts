@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
 import { fakeEmail } from "@/test/fakes";
-import { recordLostItem, tellLostItemOwner } from "../features/lost-items/store";
+import { recordLostItem, tellLostItemOwner } from "../features/day/lost-items/store";
 import { createBooking, splitBookingIdentity } from "./bookings";
 import { lostItems } from "./schema";
 import { listStaff } from "./trips";

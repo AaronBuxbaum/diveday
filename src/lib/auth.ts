@@ -556,7 +556,7 @@ export async function readSessionFrom(
 
 /**
  * Kept the same name and shape as the old next-auth `auth()` export so
- * `src/features/session/rules.ts`'s `requireStaffSession()` and every test that mocks
+ * `src/features/accounts/session.ts`'s `requireStaffSession()` and every test that mocks
  * `@/lib/auth` need no changes — only where the fields come from changed
  * (a better-auth session row, not a JWT).
  */

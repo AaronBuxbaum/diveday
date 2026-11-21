@@ -5,7 +5,7 @@ import { nowDate } from "@/lib/clock";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { DEFAULT_WAIVER_BODY, WAIVER_SIGNATURE_VALIDITY_MS } from "@/lib/waivers";
 import { fileScopedShopContext } from "@/test/db";
-import { getDiverProfile } from "../features/divers/store";
+import { getDiverProfile } from "../features/people/divers/store";
 import { shopStaffer } from "../test/substrate-fixtures/db/waivers-test-fixtures";
 import { revokeBookingCapabilities, verifyBookingCapability } from "./booking-capabilities";
 import { createBooking } from "./bookings";

@@ -20,7 +20,7 @@ const SHOP = "blue-mantis";
  * him away three days out (`seedCrewAway`), so the spec rosters him on
  * a departure of its own that day and goes to the board,
  * where the shop plans the week. Informs, never gates: the assignment stands.
- * The owner's Today row (`crew_away`) is pinned in `src/features/today/today-reader.test.ts`: a
+ * The owner's Today row (`crew_away`) is pinned in `src/features/day/today/today-reader.test.ts`: a
  * departure three days out is counted in Today's "This week" line, not named.
  */
 test("a crew member away on a day they are rostered is named on the board", async ({ page }) => {

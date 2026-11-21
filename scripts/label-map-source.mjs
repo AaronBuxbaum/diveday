@@ -7,7 +7,7 @@ export function labelModuleName(file) {
   if (/^src\/i18n\/[^/]+\.ts$/.test(source) && !/\.(?:test|d)\.ts$/.test(source)) {
     return source.slice("src/i18n/".length);
   }
-  return /^src\/features\/[^/]+\/labels\.ts$/.test(source)
+  return /^src\/features\/[^/]+\/[^/]+\/labels\.ts$/.test(source)
     ? `../${source.slice("src/".length)}`
     : null;
 }
@@ -15,12 +15,18 @@ export function labelModuleName(file) {
 /** Discover every owner, including an unregistered future feature; never load its runtime. */
 export async function labelModuleSources(root) {
   const files = (await readdir(path.join(root, "src/i18n"))).map((file) => `src/i18n/${file}`);
-  const features = await readdir(path.join(root, "src/features"), { withFileTypes: true });
-  files.push(
-    ...features
-      .filter((entry) => entry.isDirectory())
-      .map((entry) => `src/features/${entry.name}/labels.ts`),
-  );
+  // A label map lives in a concept folder: src/features/<area>/<concept>/labels.ts.
+  const areas = await readdir(path.join(root, "src/features"), { withFileTypes: true });
+  for (const area of areas.filter((entry) => entry.isDirectory())) {
+    const concepts = await readdir(path.join(root, "src/features", area.name), {
+      withFileTypes: true,
+    });
+    files.push(
+      ...concepts
+        .filter((entry) => entry.isDirectory())
+        .map((entry) => `src/features/${area.name}/${entry.name}/labels.ts`),
+    );
+  }
   const modules = [];
   for (const file of files.sort()) {
     const module = labelModuleName(file);

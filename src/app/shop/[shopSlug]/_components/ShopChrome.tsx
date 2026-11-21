@@ -12,15 +12,15 @@ import { StaffActivity } from "@/components/StaffActivity";
 import { getDb } from "@/db/client";
 import { DEMO_SHOP_SLUG } from "@/db/demo-shop";
 import { shopRenderFacts } from "@/db/shop-render-facts";
-import { DEMO_STARTS, demoStartFrom } from "@/features/demo-starts";
-import { shopClock } from "@/features/shop-clock";
-import { listShopRolesPresent } from "@/features/shop-roles";
-import { shopBySlugCached } from "@/features/shops-cached";
+import { listShopRolesPresent } from "@/features/accounts/shop-roles";
+import { shopClock } from "@/features/day/shop-clock";
 import {
   countBlockedDiversNextBoatDay,
   nextOfTodaysDepartures,
   todaysDepartures,
-} from "@/features/today";
+} from "@/features/day/today";
+import { DEMO_STARTS, demoStartFrom } from "@/features/demo/demo-starts";
+import { shopBySlugCached } from "@/features/platform/shops-cached";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -56,7 +56,7 @@ import { settingsShortcutsFor } from "../settings/settings-groups";
  * **The tenant gate moved with it, and that is safe because it was never the
  * only copy** — not because this component is careful. Every staff *page*
  * below gates itself: 43 of the 47 call `requireShopSurface`
- * (`src/features/session/rules.ts`), which `notFound()`s when the session's shop
+ * (`src/features/accounts/session.ts`), which `notFound()`s when the session's shop
  * disagrees with the slug; `courses` asserts the same two conditions inline; and the shop home does now too. The home is
  * worth naming because it did **not** before this change — it resolved its own
  * shop by `session.user.shopId` and never compared the slug, because this
@@ -91,7 +91,7 @@ const loadShopChrome = cache(async (shopSlug: string) => {
   // where a later line happens to sit in this file.
   //
   // `shopBySlugCached`, the per-request memo every other reader of the shop by
-  // its slug shares (`src/features/shops-cached/store.ts`), so a page beside the chrome
+  // its slug shares (`src/features/platform/shops-cached.ts`), so a page beside the chrome
   // that asks for the same slug in the same pass costs no second read (code
   // review 2026-10-10, item 26).
   const [shop, session] = await Promise.all([shopBySlugCached(shopSlug), auth()]);
@@ -117,7 +117,7 @@ const loadShopChrome = cache(async (shopSlug: string) => {
   // under a foreign-looking URL — not a leak, but a phishing-shaped breach of
   // the "slug and session agree" invariant above.
   if (session?.user && !shop) notFound();
-  // The shell renders in a pass of its own (`src/features/blockers/store.ts`), so it
+  // The shell renders in a pass of its own (`src/features/boarding/blockers.ts`), so it
   // reports its own line; see `src/lib/observability/query-timing.ts`.
   if (ownShop) reportRenderQueries("/shop/[shopSlug] (chrome)", after, { fallback: true });
 
@@ -166,7 +166,7 @@ const loadShopChrome = cache(async (shopSlug: string) => {
   //
   // **The count stays here rather than streaming into the badge separately.**
   // It is the chrome's one expensive read — about ten queries and ~37ms on the
-  // seeded fixture (`src/features/blockers/store.ts`) — so a slot was the obvious next
+  // seeded fixture (`src/features/boarding/blockers.ts`) — so a slot was the obvious next
   // optimisation, and it is the wrong one: the number is also the `{count}` of
   // the badge's pluralised accessible label (`shared.shopNavLinks.badgeBlocked`
   // in `ShopNavLinks`), so an opaque ReactNode would leave a screen reader

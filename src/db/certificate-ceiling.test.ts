@@ -3,14 +3,14 @@ import { and, asc, eq, gt, isNull } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { weekdaySetFrom } from "@/lib/recurrence";
 import { fileScopedShopContext } from "@/test/db";
-import { seatsOpen } from "../features/availability/rules";
-import { publicAvailabilityTrips } from "../features/availability/store";
+import { markBookingNoShow, undoBookingNoShow } from "../features/boarding/no-show";
+import { seatsOpen } from "../features/bookings/availability/rules";
+import { publicAvailabilityTrips } from "../features/bookings/availability/store";
 import {
   bookedDepartures,
   NEXT_DIVE_CANDIDATE_WINDOW,
   nextDiveForBooking,
-} from "../features/next-dive/store";
-import { markBookingNoShow, undoBookingNoShow } from "../features/no-show/store";
+} from "../features/people/next-dive";
 import { cancelBooking, createBooking, createBookingParty, restoreBooking } from "./bookings";
 import type { AppDb } from "./client";
 import { listUpcomingDeparturesForSite } from "./dive-sites";

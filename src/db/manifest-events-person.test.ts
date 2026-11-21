@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { DAY_MS, HOUR_MS, nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
-import { undoAgencyCheck } from "../features/agency-check/store";
+import { undoAgencyCheck } from "../features/certifications/agency-check";
 import { createBookingParty } from "./bookings";
 import { subscribeManifestEvents } from "./manifest-events";
 import {

@@ -8,8 +8,8 @@ import {
 import { EyebrowWayUp } from "@/components/EyebrowWayUp";
 import { buttonClass } from "@/components/ui/button";
 import { PAGE_TITLE_CLASS } from "@/components/ui/typography";
-import { getPartyWaiverQueue, type PartyWaiverState } from "@/features/party-waiver-queue";
-import { requireShopSurface } from "@/features/session";
+import { requireShopSurface } from "@/features/accounts/session";
+import { getPartyWaiverQueue, type PartyWaiverState } from "@/features/waivers/party-waiver-queue";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { shopPath } from "@/lib/staff-notices";

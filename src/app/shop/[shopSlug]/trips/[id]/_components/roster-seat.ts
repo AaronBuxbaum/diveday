@@ -1,4 +1,4 @@
-import type { PaymentMarkFacts } from "@/features/payment-marks";
+import type { PaymentMarkFacts } from "@/features/money/payment-marks";
 import { depthWarningOrNull } from "@/i18n/depth-labels";
 import { identityReasonText } from "@/i18n/identity-check-labels";
 import { readinessBlockerText } from "@/i18n/readiness-labels";

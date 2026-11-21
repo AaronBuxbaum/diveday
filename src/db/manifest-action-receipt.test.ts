@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { expect, it, vi } from "vitest";
-import { shopClock } from "@/features/shop-clock";
+import { shopClock } from "@/features/day/shop-clock";
 import { nowDate } from "@/lib/clock";
 import { advanceClock } from "@/test/clock";
 import { manifestContext } from "@/test/substrate-fixtures/db/manifests-test-fixtures";
@@ -8,14 +8,14 @@ import { getTripManifest } from "./manifests";
 import { rollCallEvents } from "./schema";
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
-vi.mock("@/features/session", () => ({ requireShopSurface: vi.fn() }));
+vi.mock("@/features/accounts/session", () => ({ requireShopSurface: vi.fn() }));
 vi.mock("@/db/client", async (original) => ({
   ...(await original<typeof import("@/db/client")>()),
   getDb: vi.fn(),
 }));
 
 const { getDb } = await import("./client");
-const { requireShopSurface } = await import("@/features/session");
+const { requireShopSurface } = await import("@/features/accounts/session");
 const { crewRollCallAction, rollCallAction } = await import(
   "@/app/shop/[shopSlug]/trips/[id]/manifest/actions"
 );

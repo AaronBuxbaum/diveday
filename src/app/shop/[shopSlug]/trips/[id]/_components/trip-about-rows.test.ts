@@ -7,9 +7,9 @@ import { upcomingTripsWithCounts } from "@/db/trips-queries.test-support";
 import { staffTranslator } from "@/i18n/staff-messages";
 import type { CoursePricing } from "@/lib/courses";
 import { fileScopedShopContext } from "@/test/db";
-import { listBoats } from "../../../../../../features/boats/store";
-import { listTripLenses } from "../../../../../../features/trip-lenses/store";
-import { getTripOverview } from "../../../../../../features/trip-overview/store";
+import { listBoats } from "../../../../../../features/crew-and-boats/boats/store";
+import { listTripLenses } from "../../../../../../features/trips/trip-lenses";
+import { getTripOverview } from "../../../../../../features/trips/trip-overview";
 import { tripAboutRows } from "./trip-about-rows";
 
 const ctx = fileScopedShopContext();

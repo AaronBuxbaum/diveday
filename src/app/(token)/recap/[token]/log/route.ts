@@ -6,8 +6,8 @@ import {
   diveLogDisposition,
   diveLogFormat,
   diveLogUddf,
-} from "@/features/dive-log-export";
-import { recapPageStateCached } from "@/features/recap";
+} from "@/features/after-the-dive/dive-log-export";
+import { recapPageStateCached } from "@/features/after-the-dive/recap";
 import { nowDate } from "@/lib/clock";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";

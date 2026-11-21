@@ -4,7 +4,7 @@ import { nowDate } from "@/lib/clock";
 import type { InvoicingProvider } from "@/lib/payments/invoicing";
 import { fileScopedShopContext } from "@/test/db";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
-import { recordStripeRefundFailure } from "../features/refund-failures/store";
+import { recordStripeRefundFailure } from "../features/money/refund-failures";
 import { createOrder, recordOrderPaymentIntent, refundOrder } from "./orders";
 import { markOrderPaidByInvoiceId } from "./orders.test-support";
 import { recordStripeChargeRefund } from "./refunds";

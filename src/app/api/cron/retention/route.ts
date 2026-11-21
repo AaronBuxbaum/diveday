@@ -1,7 +1,7 @@
 import { getDb } from "@/db/client";
-import { cronRoute } from "@/features/cron-route";
-import { pruneExpiredRecords } from "@/features/retention";
-import { sentry } from "@/features/sentry-server";
+import { cronRoute } from "@/features/platform/cron-route";
+import { sentry } from "@/features/platform/sentry-server";
+import { pruneExpiredRecords } from "@/features/records/retention";
 import { log } from "@/lib/log";
 
 /** The 45s batch-admission budget is intended to leave room under the 60s
@@ -10,7 +10,7 @@ import { log } from "@/lib/log";
 export const maxDuration = 60;
 
 /**
- * Weekly pruning applies the HD-11 windows in `src/features/retention/rules.ts` (DATA-M4/PAY-L2;
+ * Weekly pruning applies the HD-11 windows in `src/features/records/retention/rules.ts` (DATA-M4/PAY-L2;
  * ADR 20260803-append-only-retention). Authorization fails closed: missing
  * configuration returns 503, and a missing or wrong bearer token returns 401;
  * the gate precedes Sentry check-in and all deletion. Per-table outcomes go in

@@ -15,9 +15,7 @@ import {
   reviewStaffCredential,
   STAFF_CREDENTIAL_KINDS,
 } from "@/db/staff-credentials";
-import { formValue, readForm, text } from "@/features/form-parse";
-import { revalidateAndRedirect } from "@/features/navigation";
-import { requireStaffSession } from "@/features/session";
+import { requireStaffSession } from "@/features/accounts/session";
 import {
   cancelStaffInvite,
   getStaffRoles,
@@ -29,7 +27,9 @@ import {
   setStaffEmergencyContact,
   setStaffLanguages,
   setStaffRoles,
-} from "@/features/staff-accounts";
+} from "@/features/accounts/staff-accounts";
+import { formValue, readForm, text } from "@/features/platform/form-parse";
+import { revalidateAndRedirect } from "@/features/platform/navigation";
 import { toDiverLocale } from "@/i18n/settings";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { inviteLinkPath } from "@/lib/account-tokens";

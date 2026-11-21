@@ -94,14 +94,14 @@ code back, leave the schema".
 (add/rename/archive) and a boat picker on the trip form (`trips/new`, `trips/[id]`,
 `ScheduleBuilder` add panel) that prefills capacity from `default_capacity` and shows a *warning*
 (never a refusal) when typed capacity exceeds `max_passengers`. Impact: `src/db/schema.ts`, one
-new `src/features/boats/store.ts`, trip create/edit actions, new i18n keys in every locale, unit tests, one
+new `src/features/crew-and-boats/boats/store.ts`, trip create/edit actions, new i18n keys in every locale, unit tests, one
 settings visual capture. **Nothing else changes**: booking transaction, readiness, Today, public
 pages, seed, and all existing baselines untouched. A boat-less shop sees nothing new outside the
 optional picker.
 
 **Slice 2 — the board sees boats (roadmap §4's ask).** Boat chip on schedule-board cards
 (`ScheduleBuilder.tsx`), Today's by-departure headers (`BlockerGroups.tsx`), calendar-feed event
-titles (`src/features/calendar-sync`), offline-manifest header (`src/lib/offline-manifests.ts`),
+titles (`src/features/crew-and-boats/calendar-sync`), offline-manifest header (`src/lib/offline-manifests.ts`),
 trips CSV export column (`src/db/export.ts` — added here, *before* the read-API ADR freezes the
 export schema). Soft same-boat overlap warning on add/move/copy (`src/db/trips-schedule.ts`
 returns a warning code; the board renders it) — warning, never refusal, because deliberate

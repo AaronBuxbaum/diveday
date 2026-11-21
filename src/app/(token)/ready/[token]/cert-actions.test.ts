@@ -6,8 +6,8 @@ import { bookings, cards, people, trips } from "@/db/schema";
 import { DAY_MS, nowDate } from "@/lib/clock";
 import { buildDiverChecklist } from "@/lib/readiness-summary";
 import { fileScopedShopContext } from "@/test/db";
-import { firstActiveIntroCourse } from "../../../../features/courses/store";
-import { getReadyPageData } from "../../../../features/ready/store";
+import { getReadyPageData } from "../../../../features/boarding/ready";
+import { firstActiveIntroCourse } from "../../../../features/training/courses/store";
 
 /**
  * **"I'm not certified yet" on `/ready`** (third UX review, item 23), against a

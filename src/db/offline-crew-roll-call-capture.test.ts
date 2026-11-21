@@ -2,9 +2,9 @@ import { afterAll, beforeAll, expect, it, vi } from "vitest";
 import {
   buildOfflineManifestCopies,
   readOfflineManifestRosterWithWindows,
-} from "@/features/offline-manifest-snapshots";
-import { listRollCallGaps } from "@/features/roll-call-gaps";
-import { getDayCloseout } from "@/features/today/closeout-reader";
+} from "@/features/boarding/offline-manifest-snapshots";
+import { listRollCallGaps } from "@/features/boarding/roll-call-gaps";
+import { getDayCloseout } from "@/features/day/today/closeout-reader";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { getTripManifest, recordCrewRollCall, recordRollCall } from "./manifests";

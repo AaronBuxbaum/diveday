@@ -3,7 +3,7 @@ import {
   stationDistanceInUnit,
   stationLabel,
   type TideStationEcho,
-} from "@/features/tide-stations";
+} from "@/features/sites/tide-stations";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { DepthUnit } from "@/lib/depth-units";
 import { TIDE_PREFERENCES } from "@/lib/tides";

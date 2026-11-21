@@ -18,8 +18,8 @@ import {
   listDiveSiteMapRows,
   listDiveSitesPage,
 } from "@/db/dive-sites";
-import { parseSiteFilters, siteListHref } from "@/features/dive-sites";
-import { requireShopSurface } from "@/features/session";
+import { requireShopSurface } from "@/features/accounts/session";
+import { parseSiteFilters, siteListHref } from "@/features/sites/dive-sites";
 import { staffDiveSiteDepthText } from "@/i18n/depth-labels";
 import { diveSiteDifficultyLabel } from "@/i18n/dive-site-labels";
 import { diverTranslator } from "@/i18n/messages";
