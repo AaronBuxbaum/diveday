@@ -32,7 +32,7 @@ import {
  * tests assert is the count moving and the text staying off the page.
  *
  * The slug is one the demo seed never writes, so neither test can pass on
- * `seed-partner-referrals.ts`'s rows instead of on the path under test.
+ * `seed/partner-referrals.ts`'s rows instead of on the path under test.
  */
 const PARTNER = "call-555-0100-for-cheaper-dives";
 
@@ -139,7 +139,7 @@ test.describe("a partner's referral", () => {
     // The count is asserted at the cookie above rather than by arithmetic
     // here: the report's number includes the demo seed's own partner seats, so
     // a "still N" assertion would pin a seeded figure that any change to
-    // `seed-partner-referrals.ts` moves. What actually decides whether this
+    // `seed/partner-referrals.ts` moves. What actually decides whether this
     // visit is credited is whether the edge minted a cookie for it, and that
     // is now checked where it happens.
     await expect(page.getByText(ARRIVALS)).toBeVisible();

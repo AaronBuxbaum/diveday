@@ -2,7 +2,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
+import { seedRollCallEvidence } from "@/db/seed/roll-call-evidence";
 import { HOUR_MS } from "@/lib/clock";
 import { FLY_SAFE_MULTI_DAY_LOOKBACK_DAYS } from "@/lib/fly-safe";
 import { fileScopedShopContext } from "@/test/db";
@@ -234,33 +234,33 @@ const GATES: { file: string; holds: string; times?: number; why: string }[] = [
     why: "no push subscription and no push",
   },
   {
-    file: "src/db/export.ts",
+    file: "src/db/export/index.ts",
     holds: "withoutRehearsals(",
     times: 2,
     why: "the shop's bundle and a diver's bundle leave it out",
   },
   {
-    file: "src/db/export.ts",
+    file: "src/db/export/index.ts",
     holds: "exportCountScope(db, shopId, specification(file), table)",
     why: "the settings page's counts apply the SQL rehearsal scope",
   },
   {
-    file: "src/db/export-count-scope.ts",
+    file: "src/db/export/count-scope.ts",
     holds: "rehearsalExportColumns(file.file, file.header)",
     why: "count SQL uses the same file/header exclusion policy as the bundle",
   },
   {
-    file: "src/db/export-count-scope.ts",
+    file: "src/db/export/count-scope.ts",
     holds: "eq(trips.shopId, shopId), eq(trips.isRehearsal, true)",
     why: "the excluded departure set belongs to this shop, including historical rehearsals",
   },
   {
-    file: "src/db/export-count-scope.ts",
+    file: "src/db/export/count-scope.ts",
     holds: "eq(bookings.shopId, shopId), inArray(bookings.tripId, rehearsalTrips)",
     why: "the excluded booking set belongs to the same shop and rehearsal departures",
   },
   {
-    file: "src/db/export-count-scope.ts",
+    file: "src/db/export/count-scope.ts",
     holds: "notInArray(column, excluded)",
     why: "the shared-policy exclusion is applied to each applicable SQL column",
   },

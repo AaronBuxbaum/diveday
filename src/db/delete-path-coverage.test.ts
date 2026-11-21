@@ -23,8 +23,8 @@ import {
 
 /**
  * The structural guard on the two hand-maintained delete orderings —
- * `resetDemoSchedule` (src/db/seed.ts) and `deleteDemoShopCascade`
- * (src/db/seed-demo-lifecycle.ts).
+ * `resetDemoSchedule` (src/db/seed/index.ts) and `deleteDemoShopCascade`
+ * (src/db/seed/demo-lifecycle.ts).
  *
  * Both are topological sorts of the foreign-key graph, written by hand because
  * the shop-scoped FKs carry no `ON DELETE CASCADE`. Their existing guard is
@@ -39,7 +39,7 @@ import {
  * This closes the class rather than patching instances. Every table carrying a
  * `shop_id` must either be deleted by a path, or carry a written reason here
  * for why that path leaves it standing — the same "decide it or fail" ratchet
- * `src/db/export.test.ts` applies to the export bundle. Adding a table without
+ * `src/db/export/index.test.ts` applies to the export bundle. Adding a table without
  * deciding its fate fails, and the failure names the table.
  *
  * **It records what the code actually did**, not what a grep found: each path

@@ -1,5 +1,5 @@
-import { DEMO_SHOP_TIMEZONE } from "../src/db/seed-clock";
-import { DEMO_TODAY_TRIP_ID } from "../src/db/seed-identifiers";
+import { DEMO_SHOP_TIMEZONE } from "../src/db/seed/clock";
+import { DEMO_TODAY_TRIP_ID } from "../src/db/seed/identifiers";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { MINUTE_MS } from "../src/lib/clock";
 import { toDateInputValue, toTimeInputValue, utcToWallTime } from "../src/lib/zoned";

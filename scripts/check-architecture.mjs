@@ -39,11 +39,14 @@ import { isDataModule, surfaceReaders } from "./surface-readers.mjs";
  *      (`reminder-text.ts`, `staff-push.ts`, `reply-keyword-text.ts`, …), which
  *      the db sender calls with a locale and the facts. Today's queue still
  *      words its rows and is banked until the Today move (issue #2756).
- *    - Anything outside `src/db` → `@/db/trips-*` or `@/db/seed-*`. The trips
- *      modules are reached through the `@/db/trips` barrel and the seed
- *      scenarios through `@/db/seed` (AGENTS.md route map), so a sibling can be
- *      split or merged without a repo-wide edit. A trip page's surface reader
- *      (`trip-overview.ts`, …) is not a trips sibling and is imported by name.
+ *    - Anything outside `src/db` → `@/db/trips-*`. The trips modules are
+ *      reached through the `@/db/trips` barrel (AGENTS.md route map), so a
+ *      sibling can be split or merged without a repo-wide edit. A trip page's
+ *      surface reader (`trip-overview.ts`, …) is not a trips sibling and is
+ *      imported by name. They stay flat beside the rest of `src/db` because
+ *      about a hundred db modules read `trips-live` and `trips-queries` by file,
+ *      which a folder's door (rule 5) would refuse. The seed scenarios are a
+ *      folder, `src/db/seed/`, and rule 5 keeps them behind its index.
  *    - `src/lib` and `src/db` → `src/i18n` *value* imports (issue #2772). Words are chosen
  *      in a renderer: the page, the message (`src/lib/notifications/**`) and the file.
  *      The rest returns codes and keys. A type is a shape and passes.
@@ -170,7 +173,7 @@ export const seams = [
   {
     // Words are chosen in a renderer and nowhere else (issue #2772, ADR
     // 20260731-domain-layer-copy-leaks): the page, the message (the notification
-    // senders), the file (`src/db/export.ts`) and the palette's spoken answer (`src/lib/palette-answer.ts`). Everything else in `src/lib` and `src/db` hands back
+    // senders), the file (`src/db/export/index.ts`) and the palette's spoken answer (`src/lib/palette-answer.ts`). Everything else in `src/lib` and `src/db` hands back
     // codes and keys, so a translator defaulting to "en-US" cannot hide in a domain
     // function. A type (`StaffMessageKey`, `StaffTranslator`) is a shape and passes.
     roots: ["src/lib", "src/db"],
@@ -180,7 +183,7 @@ export const seams = [
       // The fourth is the palette answer: a sentence written for the asker, in the asker's language.
       return (
         normal.startsWith("src/lib/notifications/") ||
-        normal === "src/db/export.ts" ||
+        normal === "src/db/export/index.ts" ||
         normal === "src/lib/palette-answer.ts"
       );
     },
@@ -222,12 +225,10 @@ export const seams = [
       target !== null &&
       path.dirname(target) === "src/db" &&
       !/\.test-support$/.test(target) &&
-      /^(?:trips|seed)-/.test(path.basename(target)),
+      /^trips-/.test(path.basename(target)),
     typeOnlyAllowed: false,
     message: (file, specifier) =>
-      /\/seed-/.test(specifier)
-        ? `${file}: imports ${specifier} — reach the seed scenarios through the "@/db/seed" barrel`
-        : `${file}: imports ${specifier} — reach the trips modules through the "@/db/trips" barrel`,
+      `${file}: imports ${specifier} — reach the trips modules through the "@/db/trips" barrel`,
   },
 ];
 

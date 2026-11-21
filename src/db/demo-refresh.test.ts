@@ -1,6 +1,6 @@
 import { and, asc, eq, gte, inArray, sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
+import { seedRollCallEvidence } from "@/db/seed/roll-call-evidence";
 import { DAY_MS, nowDate } from "@/lib/clock";
 import { shopDayBounds } from "@/lib/zoned";
 import { fileScopedShopContext, unseededTestDb } from "@/test/db";
@@ -36,10 +36,10 @@ import {
   AT_SEA_DUSK_TITLE,
   bringDemoBoatsAtSeaHome,
   seedBoatAtSea,
-} from "./seed-boat-at-sea";
-import { LEAD_INSTRUCTOR_NAME, RELIEF_INSTRUCTOR_NAME, staffDefs } from "./seed-cast";
-import { DEMO_SHOP_TIMEZONE } from "./seed-clock";
-import { DEMO_COMPLETED_TRIP_TITLE } from "./seed-more-trips";
+} from "./seed/boat-at-sea";
+import { LEAD_INSTRUCTOR_NAME, RELIEF_INSTRUCTOR_NAME, staffDefs } from "./seed/cast";
+import { DEMO_SHOP_TIMEZONE } from "./seed/clock";
+import { DEMO_COMPLETED_TRIP_TITLE } from "./seed/more-trips";
 import { upcomingScheduleRange } from "./trips";
 import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 

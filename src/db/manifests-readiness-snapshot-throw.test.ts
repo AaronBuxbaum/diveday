@@ -1,6 +1,6 @@
 import { desc, eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
-import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
+import { seedRollCallEvidence } from "@/db/seed/roll-call-evidence";
 import { fileScopedShopContext } from "@/test/db";
 import { recordRollCall } from "./manifests";
 import { rollCallEvents } from "./schema";

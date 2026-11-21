@@ -4,7 +4,7 @@ import { fileScopedShopContext } from "@/test/db";
 import { charterContext } from "@/test/training-mark-context";
 import { crewSubject } from "./roll-call-subject";
 import { tripAssignments, tripScheduleDays } from "./schema";
-import { seedRollCallEvidence } from "./seed-roll-call-evidence";
+import { seedRollCallEvidence } from "./seed/roll-call-evidence";
 import { trustedCrewOfTrips } from "./training-mark-resolve";
 
 const fileCtx = fileScopedShopContext();

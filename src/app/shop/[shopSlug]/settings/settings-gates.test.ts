@@ -203,10 +203,12 @@ describe("every settings page names its own gate", () => {
 
 const fixtures = {
   "/repo/src/features/accounts/session.ts": "export function requireShopSurface() {}",
-  "/repo/src/features/accounts/access/index.ts": 'export { OWNER_GATE as SETTINGS_GATE } from "./policy";',
+  "/repo/src/features/accounts/access/index.ts":
+    'export { OWNER_GATE as SETTINGS_GATE } from "./policy";',
   "/repo/src/features/accounts/access/policy.ts":
     'import { canManage } from "./permissions"; export const OWNER_GATE = { allow: canManage } as const;',
-  "/repo/src/features/accounts/access/permissions.ts": "export function canManage() { return false; }",
+  "/repo/src/features/accounts/access/permissions.ts":
+    "export function canManage() { return false; }",
 };
 function guarded(source: string, additional: Record<string, string> = {}) {
   const files: Record<string, string> = { ...fixtures, "/repo/page.tsx": source, ...additional };

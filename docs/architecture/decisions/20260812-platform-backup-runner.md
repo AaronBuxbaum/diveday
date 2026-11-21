@@ -9,7 +9,7 @@
 recovery layers: Neon PITR, and a scheduled logical export into a private, versioned S3 bucket that
 DiveDay controls. The second one was built as far as its edges and no further —
 `infra/lib/infra-stack.ts` §11 has the bucket, the lifecycle rules, and a write-only
-`diveday-backup-uploader` IAM user; `src/db/export.ts` → `src/lib/export.ts` has the bundle seam;
+`diveday-backup-uploader` IAM user; `src/db/export/index.ts` → `src/lib/export.ts` has the bundle seam;
 `src/features/records/backup-export/` has an S3 client and the shop-owned weekly delivery built on both.
 
 Nothing called one from the other. The runbook said so plainly, in two places: a `TODO(owner)` on

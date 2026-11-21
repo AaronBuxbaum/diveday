@@ -93,7 +93,8 @@ describe("check-assist-prompts", () => {
 describe("feature prompt ownership", () => {
   it("refuses medical readers from moved and future feature prompt modules", () => {
     const result = runGuard(GUARD, {
-      "src/features/ai/assists/future.ts": 'import { data } from "@/features/waivers/waivers-medical";\n',
+      "src/features/ai/assists/future.ts":
+        'import { data } from "@/features/waivers/waivers-medical";\n',
       "src/features/ai/future-assist/store.ts": 'import { waiverRecords } from "@/db/schema";\n',
     });
     expect(result.status).toBe(1);

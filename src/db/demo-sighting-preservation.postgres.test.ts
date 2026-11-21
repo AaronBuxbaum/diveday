@@ -10,7 +10,7 @@ import {
   deleteDemoShopCascade,
   enforceMintedDemoCap,
   reapExpiredDemoShops,
-} from "./seed-demo-lifecycle";
+} from "./seed/demo-lifecycle";
 import { getShopBySlug } from "./shops";
 import { getTripRoster, listStaff } from "./trips";
 import { upcomingTripsWithCounts } from "./trips-queries.test-support";

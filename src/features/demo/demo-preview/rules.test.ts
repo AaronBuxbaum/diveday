@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DEMO_SHOP_BRAND } from "../../../db/seed-shop-brand";
+import { DEMO_SHOP_BRAND } from "../../../db/seed/shop-brand";
 import { PREVIEW_TTL_MS, parsePreviewInput, previewIdFrom, previewIsOpen } from "./rules";
 
 /** Any real brand colour; the canonical demo's own, so no hex is typed here. */

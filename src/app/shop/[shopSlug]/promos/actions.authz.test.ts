@@ -42,7 +42,7 @@ const { getDb } = await import("@/db/client");
 const { requireStaffSession } = await import("../../../../features/accounts/session");
 const { deletePromoAction, setPromoEnabledAction } = await import("./actions");
 
-/** The standing "REEF10" code seed.ts gives the demo shop. */
+/** The standing "REEF10" code seed/index.ts gives the demo shop. */
 async function seededPromo(db: AppDb, shopId: string) {
   const [promo] = await db
     .select()

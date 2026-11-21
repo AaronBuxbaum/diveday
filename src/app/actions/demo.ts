@@ -197,7 +197,7 @@ export async function enterDemoAction(formData?: FormData) {
   let targetEmail = ownerEmail;
   if (role !== "owner") {
     // Every minted demo seeds exactly one instructor, divemaster, and captain
-    // (src/db/seed.ts), so this always resolves in practice; the owner
+    // (src/db/seed/index.ts), so this always resolves in practice; the owner
     // fallback just means a picker click can never dead-end even if that changes.
     targetEmail = (shop ? await demoRoleEmail(db, shop.id, role) : null) ?? ownerEmail;
   }

@@ -135,6 +135,7 @@ export const REVIEWS = [
       /\[token\]\/(actions|route|page|layout)\.tsx?$/,
       /^src\/app\/(invite|claim)\//,
       /^src\/(db|lib)\/(export|import)[^/]*\.ts$/,
+      /^src\/db\/export\/[^/]*\.ts$/,
       /^src\/features\/backup-export[./]/,
       /^src\/app\/api\/cron\/(backup-export|platform-backup)\//,
       /^src\/db\/schema\/(accounts|core|waivers|certifications|erasure|activity)\.ts$/,

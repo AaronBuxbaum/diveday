@@ -455,7 +455,7 @@ test.describe("capture harness", () => {
    *    not match `::details-content`, so the explicit selector is load-bearing
    *    and silently droppable.
    *
-   * Priya's record rather than a built one: `seed-diver-trail.ts` gives her the
+   * Priya's record rather than a built one: `seed/diver-trail.ts` gives her the
    * file groups whose bodies are what the `40rem` rule lays out, and a seeded
    * diver costs no form-filling. The frame samples need no timeout — 25 frames
    * outlast a 200ms transition on any renderer that is drawing at all, and a

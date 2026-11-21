@@ -54,7 +54,7 @@ const { requireStaffSession } = await import("../../../../features/accounts/sess
 const { deleteInboxMessageAction, markInboxSenderLateAction, setInboxMessageDoneAction } =
   await import("./actions");
 
-/** The seeded row from an address nobody on the roster holds (`src/db/seed-inbox.ts`). */
+/** The seeded row from an address nobody on the roster holds (`src/db/seed/inbox.ts`). */
 async function strangerMessageId(db: AppDb, shopId: string): Promise<string> {
   const [row] = await db
     .select({ id: inboundMessages.id })
@@ -316,7 +316,7 @@ describe("marking a message's sender running late", () => {
     return { late, seat };
   }
 
-  /** Diego's WhatsApp, written in his own words (`src/db/seed-inbox.ts`). */
+  /** Diego's WhatsApp, written in his own words (`src/db/seed/inbox.ts`). */
   async function lateMessage(db: AppDb, shopId: string) {
     const [row] = await db
       .select({

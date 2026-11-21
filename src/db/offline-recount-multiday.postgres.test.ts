@@ -12,7 +12,7 @@ import {
 import { effectiveCausalRowsForDb } from "./roll-call-causal-store";
 import { boats, rollCallEvents, tripAssignments, trips } from "./schema";
 import { seedDemo } from "./seed";
-import { seedRollCallEvidence } from "./seed-roll-call-evidence";
+import { seedRollCallEvidence } from "./seed/roll-call-evidence";
 import { getShopBySlug } from "./shops";
 import { editTripSection, getTripRoster, listStaff } from "./trips";
 import { upcomingTripsWithCounts } from "./trips-queries.test-support";

@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { recordRollCall } from "@/db/manifests";
 import { listTripReadiness } from "@/db/readiness";
 import { bookings as bookingsTable, rollCallEvents, trips as tripsTable } from "@/db/schema";
-import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
+import { seedRollCallEvidence } from "@/db/seed/roll-call-evidence";
 import { listStaff } from "@/db/trips";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate, nowMs } from "@/lib/clock";

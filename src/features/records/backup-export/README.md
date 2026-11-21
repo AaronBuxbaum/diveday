@@ -22,7 +22,7 @@ Operational posture: [backup-and-restore runbook](../../../../docs/engineering/b
 
 - The `shop_backup_destinations` and `shop_backup_deliveries` tables' lifecycles — save,
   disconnect, verify; begin/finish/list deliveries; which shops a weekly run still owes.
-- The bundle: the existing full-shop export zip (`src/db/export.ts` → `src/lib/export.ts`,
+- The bundle: the existing full-shop export zip (`src/db/export/index.ts` → `src/lib/export.ts`,
   photos included) with the shop-wide `trips.ics` calendar document riding along. Assembled once
   in `bundle.ts` and shared by both runners, so the two copies of a shop's data are the same
   artifact and the runbook's restore procedure is correct for whichever one is at hand.
@@ -40,7 +40,7 @@ Operational posture: [backup-and-restore runbook](../../../../docs/engineering/b
 ## Does not own
 
 - The table *definitions*, which live in `src/db/schema/` (ADR-0005).
-- What the export bundle contains — `src/db/export.ts` / `src/lib/export.ts` stay authoritative;
+- What the export bundle contains — `src/db/export/index.ts` / `src/lib/export.ts` stay authoritative;
   this module reuses them byte for byte so the backup is the same tested artifact staff download.
 - The iCalendar rendering (`calendar-sync`'s `feedDocument`) or its no-divers invariant.
 - Route wiring (`src/app/api/cron/backup-export/`, `src/app/api/cron/platform-backup/`) and the

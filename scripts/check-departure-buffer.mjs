@@ -65,6 +65,8 @@ import process from "node:process";
 
 const ROOT = process.cwd();
 const GUARDED_ROOTS = ["src/app", "src/components", "src/db", "src/features", "src/lib"];
+/** A seed scenario writes the demo, not a read a person sees: the whole `src/db/seed/` folder is skipped. */
+const SEED_DIRECTORY = path.normalize("src/db/seed/");
 const SOURCE_EXTENSIONS = new Set([".ts", ".tsx"]);
 
 /**
@@ -225,7 +227,7 @@ async function main() {
     for (const file of await walk(root)) {
       const normalized = path.normalize(file);
       if (SKIPPED_FILES.has(normalized) || IS_TEST.test(file)) continue;
-      if (path.basename(file).startsWith("seed-")) continue;
+      if (normalized.startsWith(SEED_DIRECTORY)) continue;
       const source = await readFile(path.join(ROOT, file), "utf8");
       const result = findUnbufferedDepartureChecks(source, { isHome: normalized === HOME });
       checked += result.checked;

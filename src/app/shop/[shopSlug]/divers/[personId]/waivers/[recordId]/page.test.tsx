@@ -3,7 +3,7 @@ import { isValidElement } from "react";
 import { describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
 import { personRoles, shops, waiverRecords, waiverTemplates } from "@/db/schema";
-import { DEMO_SHOP_QUESTIONS } from "@/db/seed-waiver-questions";
+import { DEMO_SHOP_QUESTIONS } from "@/db/seed/waiver-questions";
 import { getShopBySlug } from "@/db/shops";
 import { staffTranslator } from "@/i18n/staff-messages";
 import type { DiveDaySession } from "@/lib/auth";
@@ -40,7 +40,7 @@ const { MedicalAnswers } = await import("./_components/MedicalAnswers");
 const { ShopAnswersCard } = await import("./_components/ShopAnswersCard");
 const { MedicalAlertCard } = await import("./_components/MedicalAlertCard");
 
-/** The seeded refusal (`seed-medical-review.ts`) names this physician. */
+/** The seeded refusal (`seed/medical-review.ts`) names this physician. */
 const PHYSICIAN = "Dr. Imani Reyes";
 const FLAGGED = RSTC_QUESTIONNAIRE.questions.find((q) => q.id === "q3");
 const UNFLAGGED = RSTC_QUESTIONNAIRE.questions.find((q) => q.id === "q4");

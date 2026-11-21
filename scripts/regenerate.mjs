@@ -49,7 +49,7 @@ export function steps({ root = ROOT, snapshot = true } = {}) {
           {
             label: "export-bundle snapshot",
             command: "pnpm",
-            args: ["exec", "vitest", "run", "src/db/export-bundle.snapshot.test.ts", "-u"],
+            args: ["exec", "vitest", "run", "src/db/export/bundle.snapshot.test.ts", "-u"],
             timeoutMs: SUBPROCESS_TIMEOUTS.regenerateSnapshot,
           },
         ]

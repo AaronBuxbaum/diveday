@@ -30,7 +30,7 @@ const clearAnswers = emptyMedicalAnswers(RSTC_QUESTIONNAIRE);
  * 2026-09-02 its first test tripped Vitest's 20s ceiling on CI — a timeout
  * inside `seededShopContext()`, not an assertion, on a shard whose workers were
  * contending. That is the same "flake with a runway" #1271 described for
- * `seed.test.ts`: nothing is wrong with the test, it simply pays a per-test
+ * `seed/index.test.ts`: nothing is wrong with the test, it simply pays a per-test
  * cost big enough that a loaded runner can push it over.
  *
  * The file qualifies on every count the helper's own docstring requires: it
@@ -74,7 +74,7 @@ describe("today's work queue (in-memory PGlite)", () => {
     expect(work.departures).toHaveLength(1);
     const [departure] = work.departures;
     expect(departure?.title).toBe("Two-Tank Reef — Molasses & French");
-    // Nine divers plus the snorkeler and the rider (`seed-mixed-boat.ts`), on
+    // Nine divers plus the snorkeler and the rider (`seed/mixed-boat.ts`), on
     // a boat two places larger for them.
     expect(departure?.booked).toBe(11);
     expect(departure?.capacity).toBe(14);

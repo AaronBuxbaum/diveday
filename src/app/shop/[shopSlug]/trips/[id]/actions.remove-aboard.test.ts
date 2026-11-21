@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
 import { setBookingPayment } from "@/db/payments";
 import { activityEvents, bookings, notificationDeliveries, trips } from "@/db/schema";
-import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
+import { seedRollCallEvidence } from "@/db/seed/roll-call-evidence";
 import { nowMs } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import {

@@ -100,10 +100,10 @@ export const SMOKE = [
 const MIN_FRAGMENT = 12;
 
 /** Files whose string literals are copy a spec may assert on, beyond the locale bundles. */
-const LITERAL_SOURCES = /^src\/(?:db\/seed[^/]*\.ts|content\/)/;
+const LITERAL_SOURCES = /^src\/(?:db\/seed\/[^/]*\.ts|content\/)/;
 
 /** The demo seed's modules: what they name, specs assert on by name and by count. */
-const SEED_SOURCE = /^src\/db\/seed[^/]*\.ts$/;
+const SEED_SOURCE = /^src\/db\/seed\/[^/]*\.ts$/;
 
 /**
  * A seeded proper name — a person, a boat, a site — is shorter than {@link MIN_FRAGMENT}
@@ -297,11 +297,11 @@ export function seedTouches(files, values = new Map()) {
   return { names, constants };
 }
 
-/** The names a source imports from the seed's modules (`../src/db/seed-booth`, `@/db/seed`). */
+/** The names a source imports from the seed's modules (`../src/db/seed/booth`, `@/db/seed`). */
 export function seedImports(source) {
   const names = new Set();
   const pattern =
-    /import\s+(?:type\s+)?\{([^}]*)\}\s*from\s*["'](?:(?:\.\.\/)+src|@)\/db\/seed[\w-]*["']/g;
+    /import\s+(?:type\s+)?\{([^}]*)\}\s*from\s*["'](?:(?:\.\.\/)+src|@)\/db\/seed(?:\/[\w-]+)?["']/g;
   for (const match of source.matchAll(pattern)) {
     for (const part of match[1].split(",")) {
       const name = part

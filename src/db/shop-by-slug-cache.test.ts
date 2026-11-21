@@ -36,10 +36,6 @@ const SHOPS = [
   readFileSync(path.join(__dirname, "shops.ts"), "utf8"),
   readFileSync(path.join(REPO, "src/features/platform/shops-cached.ts"), "utf8"),
 ].join("\n");
-const CACHED_READER_ENTRY = readFileSync(
-  path.join(REPO, "src/features/platform/shops-cached.ts"),
-  "utf8",
-);
 
 /**
  * The substrate reader and cached feature implementation lines that mention either reader or
@@ -98,9 +94,6 @@ describe("React's cache() across the public shell's boundaries", () => {
 
 describe("the shipped reader has the shape the measurement covers", () => {
   it("is memoized with React's cache and takes only the slug", () => {
-    expect(CACHED_READER_ENTRY).toMatch(
-      /export\s*\{\s*shopBySlugCached\s*\}\s*from\s*["']\.\/store["']/,
-    );
     expect(READER_LINES).toContain('import { cache } from "react";');
     expect(READER_LINES).toContain('import { connection } from "next/server";');
     expect(READER_LINES).toMatch(

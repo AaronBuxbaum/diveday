@@ -4,7 +4,7 @@
  * One of the per-feature `e2e/visual-*.spec.ts` files; the capture mechanics are
  * `e2e/visual-harness.ts`, and the procedure is the e2e-and-visual skill.
  */
-import { AT_SEA_DAY_TITLE } from "../src/db/seed-identifiers";
+import { AT_SEA_DAY_TITLE } from "../src/db/seed/identifiers";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import {
   addFoundGuest,
@@ -639,7 +639,7 @@ for (const scheme of ["light", "dark"] as const) {
        * is exactly the kind of change that reads as fine in a diff and wrong on
        * the screen.
        *
-       * The seeded scenarios come from `src/db/seed-cert-gates.ts`, whose whole
+       * The seeded scenarios come from `src/db/seed/cert-gates.ts`, whose whole
        * point is that each of these boats can be refused for exactly one reason.
        */
       test(`the roster's level refusal renders true to the design (${scheme})`, async ({

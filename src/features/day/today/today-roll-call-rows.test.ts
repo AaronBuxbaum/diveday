@@ -4,7 +4,7 @@ import { cancelBooking } from "@/db/bookings";
 import { getTripManifest, recordCrewRollCall, recordRollCall } from "@/db/manifests";
 import { crewSubject } from "@/db/roll-call-subject";
 import { rollCallEvents as rollCallEventsTable, tripAssignments } from "@/db/schema";
-import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
+import { seedRollCallEvidence } from "@/db/seed/roll-call-evidence";
 import { listStaff } from "@/db/trips";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowMs } from "@/lib/clock";

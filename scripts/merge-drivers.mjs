@@ -9,7 +9,7 @@ import { runBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
  *
  * Restacking merges every layer into the one above, and on 2026-10-05..12 the files that
  * conflicted most were not anyone's code: `scripts/ratchets.json` (30 merges),
- * `src/db/__snapshots__/export-bundle.shop.snap` (10), the generated glossary and ADR indexes.
+ * `src/db/export/__snapshots__/bundle.shop.snap` (10), the generated glossary and ADR indexes.
  * Each stop cost a session a conflict read, a hand resolution and often a red CI round. Every
  * one of these files is rewritten by a command, so the right resolution is mechanical:
  *

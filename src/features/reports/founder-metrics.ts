@@ -30,7 +30,7 @@ import {
  * fixture (both `is_demo`) are left out of every number here, or the north
  * star would read the demo's seeded roll calls as a shop running its days. So
  * is any shop nobody can sign into: the two listed shops the seed puts beside
- * the demo (`src/db/seed-listed-shops.ts`) are real rows with no staff and no
+ * the demo (`src/db/seed/listed-shops.ts`) are real rows with no staff and no
  * login, and a shop opened through `/onboard` always has its owner's account.
  * A sign-in is the line between a shop and a row, which is why it is the test
  * rather than a list of seeded slugs that a new seed would silently outgrow.

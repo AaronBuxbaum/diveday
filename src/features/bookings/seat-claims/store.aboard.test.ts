@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
-import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
+import { seedRollCallEvidence } from "@/db/seed/roll-call-evidence";
 import { createBookingParty, previewPartyCancel } from "../../../db/bookings";
 import { listStaff } from "../../../db/trips";
 import { upcomingTripsWithCounts } from "../../../db/trips-queries.test-support";

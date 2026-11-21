@@ -1,4 +1,4 @@
-import { OWNER_NAME } from "../src/db/seed-cast";
+import { OWNER_NAME } from "../src/db/seed/cast";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import { chooseOrderCustomer, chosenOrderCustomer } from "./order-customer";

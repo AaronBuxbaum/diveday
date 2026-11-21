@@ -2017,7 +2017,7 @@ async function scrubImportedHistory(
   // references are that system's own handles on them, and
   // `receipt_document_url` points at a re-stored receipt document that will
   // usually render the buyer's name. `imported_payment_history` is also carried
-  // out of the shop by `src/db/export.ts` in both bundles, so an unerased row
+  // out of the shop by `src/db/export/index.ts` in both bundles, so an unerased row
   // here leaves the building with the next export — the same failure the
   // last-minute deal log had (issue #1607).
   //
@@ -2229,7 +2229,7 @@ async function scrubOrders(
     .update(orders)
     // `description` goes with them. It is staff-typed free text on the invoice
     // form, and this repository already treats it as third-party-naming
-    // elsewhere: `src/db/export.ts` excludes it from both bundles' order files
+    // elsewhere: `src/db/export/index.ts` excludes it from both bundles' order files
     // with that reason written at the exclusion, and `diver-export.test.ts`
     // pins the header with a seeded "Split with <name>'s buddy this trip".
     // Excluded from an export and left on the row after an erasure is not a

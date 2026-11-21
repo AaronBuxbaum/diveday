@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { createBookingParty } from "@/db/bookings";
-import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
+import { seedRollCallEvidence } from "@/db/seed/roll-call-evidence";
 import { createTripSeries, getTripSeriesById } from "@/db/trips";
 import { calendarDateInTimezone, shiftCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";

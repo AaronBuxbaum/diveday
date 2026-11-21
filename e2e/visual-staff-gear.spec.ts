@@ -4,7 +4,7 @@
  * One of the per-feature `e2e/visual-*.spec.ts` files; the capture mechanics are
  * `e2e/visual-harness.ts`, and the procedure is the e2e-and-visual skill.
  */
-import { DEMO_SHOP_TIMEZONE } from "../src/db/seed-clock";
+import { DEMO_SHOP_TIMEZONE } from "../src/db/seed/clock";
 import { calendarDateInTimezone, formatCalendarDate } from "../src/lib/calendar-date";
 import { DAY_MS } from "../src/lib/clock";
 import { expect, signedInAsOwner, test } from "./fixtures";

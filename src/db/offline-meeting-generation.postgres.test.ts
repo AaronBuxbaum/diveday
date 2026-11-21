@@ -22,7 +22,7 @@ import {
   trips,
 } from "./schema";
 import { seedDemo } from "./seed";
-import { seedRollCallEvidence } from "./seed-roll-call-evidence";
+import { seedRollCallEvidence } from "./seed/roll-call-evidence";
 import { getShopBySlug } from "./shops";
 import { editTripSection, getTripRoster, listStaff, moveTrip } from "./trips";
 import { upcomingTripsWithCounts } from "./trips-queries.test-support";

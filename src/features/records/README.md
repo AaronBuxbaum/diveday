@@ -12,7 +12,7 @@ erasure.
 
 ## Does not own
 
-The tables and their coverage lists (`src/db/schema/`, `src/db/export.ts`), and the person record
+The tables and their coverage lists (`src/db/schema/`, `src/db/export/index.ts`), and the person record
 itself (`people`).
 
 ## Invariants

@@ -265,7 +265,7 @@ test("a diver seated off the name prompt is blocked until staff confirm it is th
   await openNewGuestForm(page);
 
   // One letter off "Marisol Vega", who is in the demo shop's trailing quarter
-  // of sailed departures (src/db/seed-history.ts) — so she has a dive day and
+  // of sailed departures (src/db/seed/history.ts) — so she has a dive day and
   // the prompt has something to say beyond repeating the typed name back.
   await page.getByLabel("Full name").fill("Marisol Vegas");
   await page.getByLabel("Email").fill(`marisol-${e2eNow().getTime()}@example.com`);

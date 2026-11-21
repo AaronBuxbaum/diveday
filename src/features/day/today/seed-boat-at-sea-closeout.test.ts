@@ -8,7 +8,7 @@ import {
   AT_SEA_DAY_TITLE,
   AT_SEA_DUSK_TITLE,
   AT_SEA_STILL_DOWN,
-} from "@/db/seed-boat-at-sea";
+} from "@/db/seed/boat-at-sea";
 import { getShopBySlug } from "@/db/shops";
 import { nowDate } from "@/lib/clock";
 import { utcToWallTime } from "@/lib/zoned";

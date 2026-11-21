@@ -10,7 +10,7 @@ import { fileScopedShopContext } from "@/test/db";
 import { getTripManifest, recordCrewRollCall, recordRollCall } from "./manifests";
 import { crewSubject } from "./roll-call-subject";
 import { boats } from "./schema";
-import { seedRollCallEvidence } from "./seed-roll-call-evidence";
+import { seedRollCallEvidence } from "./seed/roll-call-evidence";
 import { editTripSection, getTripRoster, listStaff } from "./trips";
 import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 

@@ -146,7 +146,7 @@ found two related problems in `src/lib/storage/index.ts` and its callers:
   `claimBookingsForCheckout`'s `staleBefore` convention (CR-005) — so tests don't depend on real
   wall-clock time passing.
 - `media_deletion_attempts` is an internal reconciliation ledger, not a shop record — excluded from
-  the full-shop export (`src/db/export.test.ts`), same reasoning as `payment_operation_intents`.
+  the full-shop export (`src/db/export/index.test.ts`), same reasoning as `payment_operation_intents`.
 
 ## Amendment 2026-11-03: one reader for unfinished work (issue #2703)
 

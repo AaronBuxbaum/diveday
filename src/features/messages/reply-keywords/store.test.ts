@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { seedRollCallEvidence } from "@/db/seed-roll-call-evidence";
+import { seedRollCallEvidence } from "@/db/seed/roll-call-evidence";
 import { createBooking, createBookingParty } from "../../../db/bookings";
 import type { AppDb } from "../../../db/client";
 import { recordInboundMessage } from "../../../db/inbound-messages";

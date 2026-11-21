@@ -976,7 +976,7 @@ describe("retention classification", () => {
     const tableNames = schemaTableNames();
     // A floor, not a census: an enumeration that silently stopped finding
     // tables would leave `unclassified` empty and read green. The same reason
-    // export.test.ts carries this line, and the same reason it is a low number
+    // export/index.test.ts carries this line, and the same reason it is a low number
     // — the reverse assertion below is what actually notices a table leaving.
     expect(tableNames.length).toBeGreaterThan(20);
 

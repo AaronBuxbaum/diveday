@@ -413,7 +413,7 @@ describe("counter check-in", () => {
      *
      * A **delta**, not an absolute count: this is the seeded shop's busiest
      * seat — the first booking on today's reef boat — and the demo's own desk
-     * trail writes against it (`seed-desk-trail.ts`, `seed-diver-trail.ts`).
+     * trail writes against it (`seed/desk-trail.ts`, `seed/diver-trail.ts`).
      * Asserting `toHaveLength(2)` made this test a tripwire on how much history
      * the demo happens to carry, which is not what it is about: what it pins is
      * that a check-in and its correction are *two* events, and that a refused
@@ -567,7 +567,7 @@ describe("the counter check-in recorder must be live staff (defense in depth)", 
      *
      * This is the seeded shop's busiest seat — the first booking on today's
      * reef boat — and the demo writes real desk history against it
-     * (`seed-desk-trail.ts`, `seed-diver-trail.ts`). Asserting an empty trail
+     * (`seed/desk-trail.ts`, `seed/diver-trail.ts`). Asserting an empty trail
      * outright made these tests a tripwire on how much history the demo happens
      * to carry, which is not what they are about: what they pin is that a
      * refused check-in writes **nothing**, and a permitted one writes exactly

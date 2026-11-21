@@ -237,7 +237,7 @@ test("one waiver button sends a resumable link and a medical yes surfaces follow
   // reads the last thing on the page is the one who never chases the sign-off
   // and turns up at the dock unboardable.
   // Four steps, because the demo shop asks its own questions
-  // (`seed-waiver-questions.ts`): Release, Questions and Sign settle; Medical
+  // (`seed/waiver-questions.ts`): Release, Questions and Sign settle; Medical
   // stays open.
   await expect(page.getByTestId("waiver-step-rail")).toContainText("3 of 4 done");
 
@@ -967,7 +967,7 @@ test("staff edit the single shop waiver and each edit is kept as a version", asy
   await page.goto("/shop/blue-mantis/settings/waivers");
 
   // The current version is shown under the title. The demo shop ships with two
-  // superseded wordings already on file (src/db/seed-waiver-versions.ts), the
+  // superseded wordings already on file (src/db/seed/waiver-versions.ts), the
   // way a trading shop's paperwork looks, so its live release is version 3
   // rather than a bare version 1.
   await expect(page.getByText(/Version 3 ·/)).toBeVisible();

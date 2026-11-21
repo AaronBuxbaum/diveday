@@ -657,7 +657,7 @@ test("the counter releases a no-show's seat, offers it to the wait list, and the
   const counter = counterPath("blue-mantis", tripId);
 
   // Odile Marchand is seeded carded and deliberately booked on nothing
-  // (`src/db/seed-cert-gates.ts`), so she clears this trip's Open Water
+  // (`src/db/seed/cert-gates.ts`), so she clears this trip's Open Water
   // baseline and is the only diver on this boat.
   await seatFromRoster(page, tripId, "Odile Marchand");
 
@@ -813,7 +813,7 @@ test("the desk turns a blocked diver away before the boat leaves, says why, and 
   const tripId = await seededTripId(page, "blue-mantis", title);
   const counter = counterPath("blue-mantis", tripId);
 
-  // Odile Marchand is carded and booked on nothing (`src/db/seed-cert-gates.ts`),
+  // Odile Marchand is carded and booked on nothing (`src/db/seed/cert-gates.ts`),
   // so on this boat she is blocked on the release alone.
   await seatFromRoster(page, tripId, "Odile Marchand");
 

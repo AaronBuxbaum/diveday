@@ -9,7 +9,7 @@ import {
   personRoles,
   shops,
 } from "@/db/schema";
-import { DEMO_SHOP_BRAND } from "@/db/seed-shop-brand";
+import { DEMO_SHOP_BRAND } from "@/db/seed/shop-brand";
 import { findPreview, issuePreview, type PreviewInput } from "@/features/demo/demo-preview";
 import { nowDate } from "@/lib/clock";
 import { DEMO_BYPASS_PASSWORD } from "@/lib/demo-bypass";

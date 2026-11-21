@@ -161,7 +161,7 @@ describe("the scanner's own blind spots", () => {
     // The guard's docblock has always promised this, and it was false. A
     // template literal with a substitution left the scanner mid-template, so
     // the closing backtick opened a phantom template that ran to the next
-    // backtick anywhere in the file — and `src/db/seed-trip-legs.ts` had one in
+    // backtick anywhere in the file — and `src/db/seed/trip-legs.ts` had one in
     // a comment reading "Sequential, never `Promise.all`". The guard reported a
     // violation against a comment saying the opposite of a violation.
     const findings = findTransactionFanOut(`
@@ -267,6 +267,11 @@ describe("a real-Postgres suite", () => {
 
   it("leaves alone a *.postgres.test.ts in src/db, and the harness that defines it", () => {
     expect(findMisplacedRealServerSuites("src/db/seat-locks.postgres.test.ts", suite)).toEqual([]);
+    expect(
+      findMisplacedRealServerSuites("src/db/seed/boat-at-sea.postgres.test.ts", suite),
+    ).toEqual([]);
+    const workflow = readFileSync(".github/workflows/ci.yml", "utf8");
+    expect(workflow).toContain(" src/db/*/*.postgres.test.ts ");
     expect(findMisplacedRealServerSuites("src/test/postgres.ts", suite)).toEqual([]);
   });
 

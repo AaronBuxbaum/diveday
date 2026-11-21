@@ -45,7 +45,7 @@ overuses. It left the shapes. Measured over the five marketing pages' bundle str
 Every sample below keeps the claims policy: shipped-only, no invented proof, the price shown as the
 literal it renders from `src/lib/marketing.ts`, founder facts only where confirmed. A bracketed
 `[…]` is a fact only the owner can supply. The sample shop's names (Blue Mantis Divers, Mantis I,
-Molasses Reef, the seeded divers and crew) come from `src/db/seed.ts` and are used only where the
+Molasses Reef, the seeded divers and crew) come from `src/db/seed/index.ts` and are used only where the
 page says it is the sample shop.
 
 ## 1. The Letter

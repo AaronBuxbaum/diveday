@@ -8,7 +8,7 @@ import {
   DEMO_MEDICAL_ALERT,
   DEMO_MEDICAL_ALERT_DIVER,
   DEMO_MEDICAL_ALERT_TRIP,
-} from "@/db/seed-medical-alert";
+} from "@/db/seed/medical-alert";
 import { listStaff } from "@/db/trips";
 import { upcomingTripsWithCounts } from "@/db/trips-queries.test-support";
 import { nowDate } from "@/lib/clock";

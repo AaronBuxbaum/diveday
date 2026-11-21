@@ -53,7 +53,7 @@ const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/g;
  */
 const NONDETERMINISTIC: Record<string, string> = {
   "waiver_records.integrity_hash":
-    "the seal hashes the record including its own id (src/db/seed-waiver-evidence.ts)",
+    "the seal hashes the record including its own id (src/db/seed/waiver-evidence.ts)",
   "course_form_records.integrity_hash": "the seal hashes the record including its own id",
   // Theo Lindqvist signs two course forms, and which of the two takes the
   // earlier of the two stamps varies between two real resets from the same
@@ -216,7 +216,7 @@ async function mutate(db: AppDb, shopId: string, boatName?: string): Promise<voi
 /**
  * The modules under test, loaded into a registry of their own. The re-seed
  * stamps `created_at` from a per-process counter (`nextCreatedAt`,
- * src/db/seed-clock.ts) that never goes back to zero, so two real resets in one
+ * src/db/seed/clock.ts) that never goes back to zero, so two real resets in one
  * process write the same rows a few hundred milliseconds apart. A fresh
  * registry starts the counter where a fresh server's does, so the reset each
  * side of a comparison runs is the first that process ever ran.

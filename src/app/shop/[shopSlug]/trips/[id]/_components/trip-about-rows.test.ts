@@ -247,7 +247,7 @@ describe("tripAboutRows (in-memory PGlite)", () => {
 
   /**
    * Domain review F8: closing the snorkeler seats does not take the booked
-   * snorkeler (`seed-mixed-boat.ts`) off the reef boat, so the line still says
+   * snorkeler (`seed/mixed-boat.ts`) off the reef boat, so the line still says
    * every planned site is marked not good for snorkeling.
    */
   it("warns about a booked snorkeler over unsuitable sites, seats closed", async () => {

@@ -400,7 +400,7 @@ describe("listOutstandingLastMinutePromos", () => {
     if (!outcome.ok) throw new Error("expected success");
 
     // The seeded demo shop already carries its own outstanding deal on a
-    // different trip (src/db/seed.ts) — assert this one is present rather
+    // different trip (src/db/seed/index.ts) — assert this one is present rather
     // than that it's the only row, so the test doesn't depend on the seed's
     // shape.
     const { deals: outstanding } = await listOutstandingLastMinutePromos(db, shop.id);

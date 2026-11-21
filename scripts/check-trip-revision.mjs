@@ -52,6 +52,8 @@ import { filesUnder } from "./files-under.mjs";
 
 const ROOT = process.cwd();
 const GUARDED_ROOTS = ["src/db", "src/features", "src/app", "src/lib"];
+/** A seed scenario writes the demo, not a read a person sees: the whole `src/db/seed/` folder is skipped. */
+const SEED_DIRECTORY = path.normalize("src/db/seed/");
 const SOURCE_EXTENSIONS = new Set([".ts", ".tsx"]);
 
 /**
@@ -182,7 +184,7 @@ async function main() {
     for (const file of await filesUnder(root, listDirectory, (relative) =>
       SOURCE_EXTENSIONS.has(path.extname(relative)),
     )) {
-      if (IS_TEST.test(file) || path.basename(file).startsWith("seed-")) continue;
+      if (IS_TEST.test(file) || path.normalize(file).startsWith(SEED_DIRECTORY)) continue;
       const source = await readFile(path.join(ROOT, file), "utf8");
       const result = findFlatRevisionWrites(source);
       guarded += result.guarded;

@@ -47,6 +47,8 @@ import { filesUnder } from "./files-under.mjs";
 
 const ROOT = process.cwd();
 const GUARDED_ROOTS = ["src/db", "src/features", "src/app", "src/lib"];
+/** A seed scenario writes the demo, not a read a person sees: the whole `src/db/seed/` folder is skipped. */
+const SEED_DIRECTORY = path.normalize("src/db/seed/");
 const SOURCE_EXTENSIONS = new Set([".ts", ".tsx"]);
 
 /**
@@ -81,16 +83,14 @@ const IS_TEST = /\.test\.tsx?$/;
  * per query would be eight copies of one sentence.
  *
  * - The seeds and the demo refresh write the board rather than reading it.
- * - `src/db/export.ts` is the shop taking everything it owns. A departure they
+ * - `src/db/export/index.ts` is the shop taking everything it owns. A departure they
  *   deleted is still their row, and a backup that quietly drops rows is not a
  *   backup — the bundle's own child joins read through its trip set rather than
  *   through the board, so they inherit the same answer. The reasoning is
  *   written at the two query sites as well, where a reader will meet it.
  */
 const SKIPPED_FILES = new Set(
-  ["src/db/seed.ts", "src/db/demo-refresh.ts", "src/db/export.ts"].map((file) =>
-    path.normalize(file),
-  ),
+  ["src/db/demo-refresh.ts", "src/db/export/index.ts"].map((file) => path.normalize(file)),
 );
 
 /**
@@ -139,7 +139,7 @@ async function main() {
       const normalized = path.normalize(file);
       if (SKIPPED_FILES.has(normalized) || IS_TEST.test(file)) continue;
       if (normalized.startsWith(SKIPPED_DIRECTORY)) continue;
-      if (path.basename(file).startsWith("seed-")) continue;
+      if (normalized.startsWith(SEED_DIRECTORY)) continue;
       const source = await readFile(path.join(ROOT, file), "utf8");
       const result = findUnfilteredTripReads(source);
       guarded += result.guarded;

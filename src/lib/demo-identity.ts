@@ -18,7 +18,7 @@
  * ({@link DEMO_NAME_COMBINATIONS}, > 10,000) that collisions stay rare against
  * the small live minted-demo population, and a caller that regenerates on the
  * unique violation rather than pretending they cannot happen
- * (`createDemoShop`, src/db/seed.ts). Uniqueness is now the database's job,
+ * (`createDemoShop`, src/db/seed/index.ts). Uniqueness is now the database's job,
  * enforced, instead of probability's job, assumed.
  *
  * Randomness comes from `crypto`, not `Math.random`; nothing here reads the
