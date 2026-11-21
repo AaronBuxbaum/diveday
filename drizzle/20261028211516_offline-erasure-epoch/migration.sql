@@ -1,2 +1,0 @@
-ALTER TABLE "shops" ADD COLUMN "offline_erasure_epoch" integer DEFAULT 0 NOT NULL;--> statement-breakpoint
-ALTER TABLE "shops" ADD CONSTRAINT "shops_offline_erasure_epoch_nonnegative" CHECK ("offline_erasure_epoch" >= 0);

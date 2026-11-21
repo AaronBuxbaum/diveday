@@ -1,1 +1,0 @@
-ALTER TABLE "people" ADD COLUMN "staff_photo_path" text;

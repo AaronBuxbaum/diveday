@@ -1,2 +1,0 @@
-ALTER TABLE "trip_stage_events" ADD COLUMN "not_counted" integer;--> statement-breakpoint
-ALTER TABLE "trip_stage_events" ADD CONSTRAINT "trip_stage_events_not_counted_home_only" CHECK ("not_counted" is null or ("stage" = 'home' and "not_counted" > 0));

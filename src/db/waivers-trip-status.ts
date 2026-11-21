@@ -46,7 +46,7 @@ export async function listTripWaiverStatuses(db: DbExecutor, shopId: string, tri
  * `defaultRandom()` uuid, so the documented order was "seat time, then
  * whichever uuid the database happened to mint" — unpredictable to a reader
  * and different in every freshly seeded database. `people.full_name` carries
- * `COLLATE "und-x-icu"` (`drizzle/20260911200158_person-name-collation`), so
+ * `COLLATE "und-x-icu"` (the baseline migration's collation block), so
  * the name key is locale-sensible without the query saying so.
  */
 export async function listTripsWaiverStatuses(db: DbExecutor, shopId: string, tripIds: string[]) {

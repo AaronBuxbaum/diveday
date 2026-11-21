@@ -1,1 +1,0 @@
-ALTER TABLE "setup_requests" ADD COLUMN "current_system_guide" text;

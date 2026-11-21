@@ -1,1 +1,0 @@
-ALTER TABLE "shops" ADD COLUMN "demo_starts_dismissed_at" timestamp with time zone;

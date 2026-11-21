@@ -1,1 +1,0 @@
-ALTER TABLE "shops" ALTER COLUMN "offers_hotel_pickup" SET DEFAULT true;

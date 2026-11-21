@@ -1,1 +1,0 @@
-ALTER TABLE "people" ADD COLUMN "last_dive_on" date;

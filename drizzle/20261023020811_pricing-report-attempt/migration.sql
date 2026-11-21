@@ -1,1 +1,0 @@
-ALTER TABLE "pricing_volume_statements" ADD COLUMN "first_report_attempt_at" timestamp with time zone;

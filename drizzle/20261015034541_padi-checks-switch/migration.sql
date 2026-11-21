@@ -1,1 +1,0 @@
-ALTER TABLE "shops" ADD COLUMN "padi_checks_enabled" boolean DEFAULT false NOT NULL;

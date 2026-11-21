@@ -683,7 +683,7 @@ const partyLead = alias(bookings, "party_lead");
  * seat of every party a spec books shares one instant.
  *
  * `people.full_name` carries `COLLATE "und-x-icu"`
- * (`drizzle/20260911200158_person-name-collation`), so the name key orders
+ * (the baseline migration's collation block), so the name key orders
  * sensibly in any language without the query saying so. It is *not*
  * alphabetical in the sense an organizer would search — `full_name` is one
  * free-text box — which is why the panel's copy never calls it a sorted list.

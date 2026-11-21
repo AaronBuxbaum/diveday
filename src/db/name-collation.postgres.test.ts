@@ -10,7 +10,7 @@ import { courses, diveSites, gearItems, people, shops } from "./schema";
  * `name-collation.test.ts` proves the same thing on PGlite, and that is the
  * half that cannot settle it: PGlite is a wasm build of Postgres 18 with ICU
  * compiled in, and the engine that ships is whatever CI's image and Neon
- * provide. `drizzle/20260911200158_person-name-collation` hard-fails with
+ * provide. The baseline migration's collation block hard-fails with
  * `collation "und-x-icu" for encoding "UTF8" does not exist` on a server built
  * without ICU, so this file is where that question gets an answer before a
  * deploy asks it — `postgresTestDb()` applies the committed migrations, so

@@ -26,8 +26,8 @@ pnpm db:merge
 That writes one migration folder whose SQL is empty and whose snapshot names every open head as a
 parent, closing the diamond — drizzle compares open heads only, and this leaves one. drizzle-kit
 1.0.0-rc.5 refuses `generate --ignore-conflicts`, and its `--fix-conflicts` deletes migrations
-production already ran, so the script writes the folder itself. Commit it alongside whatever provoked it. `drizzle/20260822212616_merge-migration-heads`
-is the worked example, and its SQL comment explains itself to whoever opens it next.
+production already ran, so the script writes the folder itself (`<timestamp>_merge-migration-heads`).
+Commit it alongside whatever provoked it; its SQL comment explains itself to whoever opens it next.
 
 `pnpm db:merge` then **probes with a plain `generate`**, and that is not decoration. A merge
 folder once kept one head's state whole when the two heads **shared a parent**, and the next

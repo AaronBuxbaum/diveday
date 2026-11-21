@@ -1,2 +1,0 @@
-ALTER TABLE "inbound_messages" ADD COLUMN "sender_authenticated" boolean DEFAULT false NOT NULL;--> statement-breakpoint
-ALTER TABLE "inbound_messages" ADD COLUMN "spam_flagged" boolean DEFAULT false NOT NULL;

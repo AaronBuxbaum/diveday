@@ -1,1 +1,0 @@
-ALTER TABLE "shops" ADD COLUMN "shopfront_photo_urls" jsonb DEFAULT '[]' NOT NULL;

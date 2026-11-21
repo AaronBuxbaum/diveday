@@ -1,2 +1,0 @@
-CREATE TYPE "nitrox_fill_method" AS ENUM('blending', 'membrane_premix');--> statement-breakpoint
-ALTER TABLE "shops" ADD COLUMN "nitrox_fill_method" "nitrox_fill_method" DEFAULT 'blending'::"nitrox_fill_method" NOT NULL;

@@ -997,7 +997,7 @@ export const people = pgTable(
       .references(() => shops.id),
     /**
      * **`COLLATE "und-x-icu"` in the database**, set by
-     * `drizzle/20260911200158_person-name-collation`. The type here is plain
+     * the baseline migration's collation block. The type here is plain
      * `text` because drizzle-orm's pg-core has no way to say it — and because
      * drizzle-kit only *reports* a collation delta rather than modelling one,
      * a later `pnpm db:generate` will not take it back off.

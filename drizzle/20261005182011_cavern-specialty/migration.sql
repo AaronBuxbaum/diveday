@@ -1,1 +1,0 @@
-ALTER TYPE "dive_specialty" ADD VALUE 'cavern';

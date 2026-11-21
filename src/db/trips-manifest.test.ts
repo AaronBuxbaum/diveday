@@ -112,7 +112,7 @@ describe("getTripRoster", () => {
    *
    * The names are accented on purpose: `Ángel` sorts before `Zoe` under the
    * ICU collation `people.full_name` carries
-   * (`drizzle/20260911200158_person-name-collation`) and *after* it under the
+   * (the baseline migration's collation block) and *after* it under the
    * byte order PGlite would otherwise default to, so this also pins that the
    * roster inherits the collation without naming it
    * (`src/db/name-collation.test.ts` owns that property itself).

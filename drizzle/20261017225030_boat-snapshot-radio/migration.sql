@@ -1,1 +1,0 @@
-ALTER TABLE "departure_boat_safety_snapshots" ADD COLUMN "radio" jsonb DEFAULT '{"callSign":null,"mmsi":null,"workingChannel":null}' NOT NULL;

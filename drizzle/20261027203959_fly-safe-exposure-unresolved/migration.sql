@@ -1,1 +1,0 @@
-ALTER TABLE "bookings" ADD COLUMN "fly_safe_recipient_unknown" boolean DEFAULT false NOT NULL;

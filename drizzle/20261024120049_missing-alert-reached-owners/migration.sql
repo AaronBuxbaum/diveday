@@ -1,1 +1,0 @@
-ALTER TABLE "incident_reports" ADD COLUMN "missing_alert_reached_person_ids" jsonb DEFAULT '[]' NOT NULL;

@@ -1,1 +1,0 @@
-ALTER TABLE "boats" ADD COLUMN "hull_color" text;

@@ -1,3 +1,0 @@
-ALTER TABLE "trip_blowouts" ADD COLUMN "same_call_trip_ids" uuid[] DEFAULT '{}'::uuid[] NOT NULL;--> statement-breakpoint
-ALTER TABLE "trip_blowouts" ADD COLUMN "preferred_alternative_trip_ids" uuid[] DEFAULT '{}'::uuid[] NOT NULL;--> statement-breakpoint
-ALTER TABLE "trip_blowouts" ADD CONSTRAINT "trip_blowouts_preferred_alternatives_cap" CHECK (cardinality("preferred_alternative_trip_ids") <= 3);

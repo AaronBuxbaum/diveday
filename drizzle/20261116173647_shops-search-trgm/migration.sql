@@ -1,2 +1,0 @@
-CREATE INDEX "shops_name_trgm_idx" ON "shops" USING gin ("name" gin_trgm_ops);--> statement-breakpoint
-CREATE INDEX "shops_address_locality_trgm_idx" ON "shops" USING gin ("address_locality" gin_trgm_ops);

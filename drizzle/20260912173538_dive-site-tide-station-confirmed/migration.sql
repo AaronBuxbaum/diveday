@@ -1,1 +1,0 @@
-ALTER TABLE "dive_sites" ADD COLUMN "tide_station_confirmed" boolean DEFAULT false NOT NULL;

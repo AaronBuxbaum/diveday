@@ -68,8 +68,8 @@ const ARGS = ["check", "--dialect", "postgresql", "--out", MIGRATIONS_DIR];
 // and the silence is loudest exactly where it matters: `scripts/vercel-build.mjs`
 // runs this inside the production deploy.
 //
-// The concrete way that happens is not hypothetical. `drizzle/` is 80 MB of
-// snapshots and 3.3 MB of the gzipped upload, and excluding it is the obvious
+// The concrete way that happens is not hypothetical. Snapshots are most of
+// `drizzle/`'s bytes in the deploy upload, and excluding them is the obvious
 // saving the first time somebody reads the build log. `.vercelignore` says at
 // its foot why the exclusion is refused; this is what makes the refusal
 // enforced rather than merely written down.
