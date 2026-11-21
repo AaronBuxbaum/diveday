@@ -3,7 +3,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { DEMO_RECAP_BOOKING_ID, LISTED_SHOP_SLUGS, MINTED_DEMO_BRAND_COLOR } from "./identifiers";
 
-const root = path.resolve(__dirname, "../..");
+const root = path.resolve(__dirname, "../../..");
 
 describe("browser seed identifiers", () => {
   it("preserves the pinned links, listed shops and branded colour", () => {
@@ -21,7 +21,7 @@ describe("browser seed identifiers", () => {
     expect(visualSpecs.length).toBeGreaterThan(0);
     for (const spec of ["recap", "reviews", "review-replies", "storefront-brand", ...visualSpecs]) {
       const source = readFileSync(path.join(root, "e2e", `${spec}.spec.ts`), "utf8");
-      expect(source, spec).not.toMatch(/from\s+["']\.\.\/src\/db\/(?:seed|seed-listed-shops)["']/);
+      expect(source, spec).not.toMatch(/from\s+["']\.\.\/src\/db\/seed(?:\/(?:index|listed-shops))?["']/);
     }
   });
 });
