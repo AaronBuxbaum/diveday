@@ -128,7 +128,6 @@ describe("DiverDetailsGroup", () => {
       ),
     ).toBeInTheDocument();
     expect(getByText("Booked as under 18, no date on file")).toBeInTheDocument();
-    expect(getByText("Emergency contact: Ana Castellanos")).toHaveClass("text-warning-strong");
     expect(container.querySelector("details")).toHaveAttribute("open");
 
     // A date on file is the answer: the prompt goes, whatever the seat says.
@@ -158,22 +157,20 @@ describe("DiverDetailsGroup", () => {
     expect(details?.querySelector("form")).not.toBeNull();
   });
 
-  it("names the emergency contact when there is one", () => {
-    const { getByText, queryByText } = renderGroup({
+  it("says nothing on the closed row when the contact is complete", () => {
+    const { container, queryByText } = renderGroup({
       emergency: "Ana Castellanos",
       emergencyPhone: "+13055550199",
     });
-    expect(getByText("Emergency contact: Ana Castellanos")).toHaveClass("text-muted");
     expect(queryByText("No emergency contact")).toBeNull();
+    expect(container.querySelector("summary")).toHaveTextContent(/^Contact details$/);
   });
 
   // "On file" needs a name and a number (glossary — Emergency contact): a name
   // alone is still the gap, and the row says which half is missing.
   it("says a contact with no number is half there", () => {
     const { getByText } = renderGroup({ emergency: "Ana Castellanos" });
-    expect(getByText("Emergency contact: Ana Castellanos, no phone number")).toHaveClass(
-      "text-warning-strong",
-    );
+    expect(getByText("No phone number")).toHaveClass("text-warning-strong");
   });
 
   it("opens for a refused save and keeps the refusal with the form", () => {
