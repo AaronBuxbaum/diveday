@@ -50,4 +50,49 @@ describe("PayStepBody", () => {
     expect(screen.queryByRole("button")).toBeNull();
     expect(screen.queryByText("terms")).toBeNull();
   });
+
+  const breakdown = {
+    summary: "Your package dives",
+    rows: ["3 dives · Courses not included", "2 dives · Courses included"],
+    note: "Used soonest-ending first, one dive per tank.",
+  };
+
+  it("is the whole body of a settled step, which the diver opens to read it (issue 4309)", () => {
+    render(
+      <PayStepBody
+        token="tok"
+        payable={false}
+        depositBalanceLine={null}
+        packageBreakdown={breakdown}
+        actionButton="btn"
+        fullShop={shop}
+        fullTrip={trip}
+        locale="en-US"
+        t={t}
+      />,
+    );
+    expect(screen.getByRole("region", { name: "Your package dives" })).toBeTruthy();
+    expect(screen.getByText("3 dives · Courses not included")).toBeTruthy();
+    expect(screen.getByText("Used soonest-ending first, one dive per tank.")).toBeTruthy();
+    expect(screen.queryByRole("button")).toBeNull();
+  });
+
+  it("stays shut behind its own disclosure beside the pay button", () => {
+    render(
+      <PayStepBody
+        token="tok"
+        payable
+        depositBalanceLine={null}
+        packageBreakdown={breakdown}
+        actionButton="btn"
+        fullShop={shop}
+        fullTrip={trip}
+        locale="en-US"
+        t={t}
+      />,
+    );
+    const details = screen.getByText("Your package dives").closest("details");
+    expect(details?.open).toBe(false);
+    expect(screen.getByRole("button", { name: t("ready.payForTrip") })).toBeTruthy();
+  });
 });

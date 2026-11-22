@@ -160,6 +160,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       // Off unless the shop said yes: a restore must not publish its counts
       // for a shop that never chose to.
       "public_year_enabled",
+      "safety_record_enabled",
       // The shop's own yes to the PADI checks (H-20261014-padi-divechek): a restore must not
       // run them under a PADI membership whose shop never chose to.
       "padi_checks_enabled",
@@ -315,6 +316,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         shop.lastMinuteListEnabled,
         shop.tipsEnabled,
         shop.publicYearEnabled,
+        shop.safetyRecordEnabled,
         shop.padiChecksEnabled,
         shop.claudeSuggestionsEnabled,
         shop.recapAssistAutoApprove,

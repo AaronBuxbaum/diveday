@@ -24,7 +24,10 @@ describe("the public schedule's Our year panel", () => {
     expect(routeSource(import.meta.dirname, "embed/calendar/page.tsx")).not.toContain(
       "OurYearSection",
     );
-    expect(positionOf("<OurYearSection")).toBeGreaterThan(positionOf("<ScheduleReviewsSection"));
+    expect(routeSource(import.meta.dirname, "_components/ShopfrontCounts.tsx")).toContain(
+      "<OurYearSection",
+    );
+    expect(positionOf("<ShopfrontCounts")).toBeGreaterThan(positionOf("<ScheduleReviewsSection"));
   });
 });
 

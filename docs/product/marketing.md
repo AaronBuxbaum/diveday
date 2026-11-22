@@ -252,6 +252,11 @@ reviewed as a page, which is the right unit for copy and the wrong one for hiera
   (`marketing.price.item4`) is **the demo shop**, DiveDay's one sample shop that "Try the live
   demo" opens, and promises no practice copy of a shop's own (Aaron Buxbaum, 2026-10-05, #1959).
   Until that date it said "a practice shop", which nothing in the code built.
+- **The safety record is numbers and nothing else** (#4255). The owner turns the shopfront's
+  record on (off for a new shop). It shows four computed counts and the dates they cover, with no
+  minimum count and nothing when there is no history. A page never turns them into a claim: no
+  "safest", "certified safe", rate, ranking or comparison with another shop, and no sentence that
+  reads the counts as a promise to a diver.
 - **The certification-check extension is described as what it is** (Aaron, 2026-11-18). DiveDay
   has no agency account, roster sync or live connection of its own, and a page may say so; it may
   not say DiveDay "connects to no agency" or that staff must check every card by hand, because the

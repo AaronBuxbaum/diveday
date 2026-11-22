@@ -1,0 +1,47 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "2b46cbf6-36b3-4af4-9da8-0f8802b4477d",
+  "prevIds": [
+    "a05e46e8-4162-4f23-a39a-4e12b7ea1a54"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "shops",
+        "safety_record_enabled"
+      ],
+      "writes": [
+        "s|col|public.shops.safety_record_enabled",
+        "n|col|public.shops.safety_record_enabled",
+        "e|col|public.shops.safety_record_enabled"
+      ],
+      "reads": [
+        "n|tbl|public.shops",
+        "n|sch|public"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "shops",
+        "name": "safety_record_enabled",
+        "type": "boolean",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "false",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    }
+  ]
+}

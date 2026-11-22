@@ -194,6 +194,53 @@ export function spendableCountForTrip(
   ).length;
 }
 
+/** One row of {@link packageDiveGroups}: how many dives share a scope and an end date. */
+export type PackageDiveGroup = {
+  scope: DivePackageScope;
+  /** The inclusive calendar date they can be used until; null never lapses. */
+  useBy: string | null;
+  count: number;
+};
+
+/**
+ * **The dives a diver still holds, by what they cover and when they end**
+ * (issue #4309): the optional detail under `/ready`'s compact "N package dives
+ * left", for a diver whose packages differ.
+ *
+ * The same dives {@link spendableCount} counts, so the groups always add up to
+ * the balance beside them. Soonest to end first, which is the order
+ * {@link entitlementToSpend} spends them in; dives that never lapse last.
+ * Within one end date, fun dives only come before dives that also cover
+ * courses. A row says what a dive *may* pay for, never that a seat is held.
+ *
+ * `useBy` is read back from the stamp {@link entitlementExpiry} wrote (the last
+ * instant of that UTC date), so it is the date the shop sold, not a guess.
+ */
+export function packageDiveGroups(
+  held: readonly SpendableEntitlement[],
+  now = nowDate(),
+): PackageDiveGroup[] {
+  const groups = new Map<string, PackageDiveGroup>();
+  for (const row of held) {
+    if (row.consumedAt !== null) continue;
+    if (row.expiresAt !== null && row.expiresAt.getTime() <= now.getTime()) continue;
+    const useBy = row.expiresAt === null ? null : row.expiresAt.toISOString().slice(0, 10);
+    const key = `${row.scope}|${useBy ?? ""}`;
+    const group = groups.get(key);
+    if (group) group.count += 1;
+    else groups.set(key, { scope: row.scope, useBy, count: 1 });
+  }
+  return [...groups.values()].sort((a, b) => {
+    if (a.useBy !== b.useBy) {
+      if (a.useBy === null) return 1;
+      if (b.useBy === null) return -1;
+      return a.useBy < b.useBy ? -1 : 1;
+    }
+    if (a.scope === b.scope) return 0;
+    return a.scope === "fun_dives" ? -1 : 1;
+  });
+}
+
 /**
  * Whether a package can still be sold to a diver online.
  *

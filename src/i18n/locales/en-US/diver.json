@@ -1161,6 +1161,8 @@
     "gearOnFile": "Your sizes are with the crew.",
     "packageDivesUsed": "{line} · Uses {used, plural, one {# package dive} other {# package dives}} ({left} left), one per tank",
     "packageDivesLeft": "{line} · {count, plural, one {# package dive left} other {# package dives left}}",
+    "packageBreakdownSummary": "Your package dives",
+    "packageBreakdownNote": "Used soonest-ending first, one dive per tank.",
     "partyClaimedSeatsPayOwn": "{count, plural, one {# claimed seat is paid from its own page.} other {# claimed seats are paid from their own pages.}}",
     "changesSizesLabel": "Sizes",
     "changesTanksLabel": "Tanks",
@@ -5015,6 +5017,15 @@
       "heading": "Our year",
       "sentenceNoSites": "{divers, plural, one {# diver} other {# divers}}. {boats, plural, one {# boat out} other {# boats out}}."
     }
+  },
+  "safetyRecord": {
+    "heading": "Our departure record",
+    "range": "Counted from our own records, {range}.",
+    "count": "{count, number}",
+    "departures": "{count, plural, one {Departure run} other {Departures run}}",
+    "divers": "{count, plural, one {Boarding} other {Boardings}}",
+    "rollCalls": "{count, plural, one {Departure with every head count closed} other {Departures with every head count closed}}",
+    "readiness": "{count, plural, one {Departure with every diver cleared to board} other {Departures with every diver cleared to board}}"
   },
   "participants": {
     "type": {

@@ -187,6 +187,18 @@ export const HISTORY_DIVER_NAMES: readonly string[] = [
 ];
 
 /**
+ * A seat counted aboard at one checkpoint. A dock count carries what the live
+ * recorder writes with it, `ready` (the gate refuses a blocked diver there).
+ */
+function countedAboardAt(checkpoint: string) {
+  return {
+    status: "boarded" as const,
+    checkpoint,
+    readinessStatus: checkpoint === "departure" ? ("ready" as const) : null,
+  };
+}
+
+/**
  * The months behind today. Owner reporting ("how's your month") is hollow over a
  * shop that opened yesterday, so this back-fills a realistic trailing quarter:
  * past regulars plus a cohort of divers who only ever appear in history, booked
@@ -816,8 +828,7 @@ export async function seedHistory(
     // the ordering is stable and every event lands inside the trip's window.
     return rollCallCheckpoints(trip.plannedDives).map((checkpoint, index) => ({
       ...base,
-      status: "boarded" as const,
-      checkpoint,
+      ...countedAboardAt(checkpoint),
       occurredAt: new Date(trip.startsAt.getTime() + index * 90 * 60 * 1000),
     }));
   });

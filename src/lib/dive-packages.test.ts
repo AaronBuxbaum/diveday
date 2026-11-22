@@ -4,6 +4,7 @@ import {
   entitlementToSpend,
   MAX_PACKAGE_DIVE_COUNT,
   packageCoversTrip,
+  packageDiveGroups,
   packageOnSale,
   packageSavingCents,
   type SpendableEntitlement,
@@ -255,5 +256,76 @@ describe("packageSavingCents", () => {
     expect(packageSavingCents({ priceCents: 25000, diveCount: 5 }, 4750)).toBeNull();
     expect(packageSavingCents({ priceCents: 23750, diveCount: 5 }, 4750)).toBeNull();
     expect(packageSavingCents({ priceCents: 20000, diveCount: 5 }, null)).toBeNull();
+  });
+});
+
+describe("which package dives are left, by what they cover and when they end (issue 4309)", () => {
+  const ending = (n: number) => new Date(`${days(n).toISOString().slice(0, 10)}T23:59:59.999Z`);
+
+  it("splits dives that cover courses from fun dives only", () => {
+    const groups = packageDiveGroups(
+      [
+        entitlement({ id: "a", scope: "fun_dives" }),
+        entitlement({ id: "b", scope: "fun_dives" }),
+        entitlement({ id: "c", scope: "all" }),
+      ],
+      NOW,
+    );
+    expect(groups).toEqual([
+      { scope: "fun_dives", useBy: null, count: 2 },
+      { scope: "all", useBy: null, count: 1 },
+    ]);
+  });
+
+  it("lists the soonest to end first, the ones that never lapse last", () => {
+    const groups = packageDiveGroups(
+      [
+        entitlement({ id: "a", expiresAt: null }),
+        entitlement({ id: "b", expiresAt: ending(40) }),
+        entitlement({ id: "c", expiresAt: ending(5) }),
+        entitlement({ id: "d", expiresAt: ending(5) }),
+      ],
+      NOW,
+    );
+    expect(groups.map((group) => [group.useBy, group.count])).toEqual([
+      [days(5).toISOString().slice(0, 10), 2],
+      [days(40).toISOString().slice(0, 10), 1],
+      [null, 1],
+    ]);
+  });
+
+  it("puts first the group the next covering booking would spend from", () => {
+    // The breakdown reads in redemption order: its first fun-dive-covering row
+    // is the one entitlementToSpend picks for a fun dive.
+    const held = [
+      entitlement({ id: "open", scope: "all", expiresAt: null }),
+      entitlement({ id: "soon", scope: "fun_dives", expiresAt: ending(3) }),
+    ];
+    const [first] = packageDiveGroups(held, NOW);
+    expect(first?.scope).toBe("fun_dives");
+    expect(entitlementToSpend(held, { courseId: null }, NOW)?.id).toBe("soon");
+  });
+
+  it("leaves out spent and lapsed dives, so the groups add up to the balance", () => {
+    const held = [
+      entitlement({ id: "a" }),
+      entitlement({ id: "spent", consumedAt: days(-1) }),
+      entitlement({ id: "lapsed", expiresAt: days(-1) }),
+    ];
+    const groups = packageDiveGroups(held, NOW);
+    expect(groups).toEqual([{ scope: "all", useBy: null, count: 1 }]);
+    expect(groups.reduce((sum, group) => sum + group.count, 0)).toBe(spendableCount(held, NOW));
+  });
+
+  it("is empty once every dive is spent", () => {
+    expect(
+      packageDiveGroups(
+        [
+          entitlement({ id: "a", consumedAt: days(-2) }),
+          entitlement({ id: "b", consumedAt: days(-1) }),
+        ],
+        NOW,
+      ),
+    ).toEqual([]);
   });
 });

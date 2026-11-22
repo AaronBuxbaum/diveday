@@ -59,6 +59,7 @@ export const STAFF_DESTINATION_COVERAGE: Record<StaffDestinationId, FeatureCover
   reviews: "reviews",
   requests: "dateRequests",
   reports: { core: "the money record" },
+  ownerStats: { core: "the owner's read of the shop's own rows; nothing to run" },
   // Money's Discounts tab holds three prices: codes, the last-minute deals and
   // the door to dive packages. It stays while any of them is on, and shows
   // only those (`promos/page.tsx`).
@@ -92,6 +93,7 @@ export const SHOP_BOOLEAN_COVERAGE: Record<string, FeatureCoverage> = {
   lastMinuteListEnabled: "lastMinuteList",
   tipsEnabled: "tips",
   publicYearEnabled: "publicYear",
+  safetyRecordEnabled: "safetyRecord",
   padiChecksEnabled: "padiChecks",
   claudeSuggestionsEnabled: "claudeSuggestions",
   recapAssistAutoApprove: "recapAutoApprove",

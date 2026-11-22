@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { diverTranslator } from "@/i18n/messages";
-import { atShopMoneyLine, atShopRentalLines, payStepLines } from "./pay-step-lines";
+import {
+  atShopMoneyLine,
+  atShopRentalLines,
+  packageDiveBreakdown,
+  payStepIsPayable,
+  payStepLines,
+} from "./pay-step-lines";
 
 const t = diverTranslator("en-US");
 const money = (cents: number) => `$${cents / 100}`;
@@ -195,4 +201,72 @@ it("states promotional fare coverage and remaining credit instead of a zero-doll
   );
   expect(line.paidLine).toBe("$180 trip credit applied · $50 credit left");
   expect(line.depositBalanceLine).toBeNull();
+});
+
+describe("packageDiveBreakdown (issue 4309)", () => {
+  const plain = (text: string) => text.replace(/\u00A0/g, " ");
+
+  it("lists mixed packages by what they cover and when they end, soonest first", () => {
+    const breakdown = packageDiveBreakdown(t, "en-US", [
+      { scope: "fun_dives", useBy: "2026-12-30", count: 3 },
+      { scope: "all", useBy: null, count: 2 },
+    ]);
+    expect(breakdown?.summary).toBe("Your package dives");
+    expect(breakdown?.rows.map(plain)).toEqual([
+      "3 dives · Courses not included · Use by Dec 30, 2026",
+      "2 dives · Courses included · No expiry date",
+    ]);
+    // One dive is one tank, and the soonest to end is spent first.
+    expect(breakdown?.note).toBe("Used soonest-ending first, one dive per tank.");
+  });
+
+  it("opens on one package when it has an end date", () => {
+    const breakdown = packageDiveBreakdown(t, "en-US", [
+      { scope: "all", useBy: "2027-01-15", count: 4 },
+    ]);
+    expect(breakdown?.rows.map(plain)).toEqual([
+      "4 dives · Courses included · Use by Jan 15, 2027",
+    ]);
+  });
+
+  it("adds nothing to the compact balance when there is nothing to tell apart", () => {
+    // One open-ended package: the "N package dives left" line already says it all.
+    expect(
+      packageDiveBreakdown(t, "en-US", [{ scope: "fun_dives", useBy: null, count: 5 }]),
+    ).toBeNull();
+    // Every dive spent or taken back: nothing held, nothing to break down.
+    expect(packageDiveBreakdown(t, "en-US", [])).toBeNull();
+  });
+
+  it("never says a held total covers a course or holds a seat", () => {
+    const breakdown = packageDiveBreakdown(t, "en-US", [
+      { scope: "fun_dives", useBy: "2026-12-30", count: 1 },
+      { scope: "fun_dives", useBy: null, count: 6 },
+    ]);
+    const words = plain(
+      [breakdown?.summary, ...(breakdown?.rows ?? []), breakdown?.note].join(" "),
+    );
+    expect(words).not.toMatch(/7/);
+    expect(words).not.toMatch(/seat|guarante|reserv/i);
+    expect(breakdown?.rows.every((row) => row.includes("Courses not included"))).toBe(true);
+  });
+
+  it("speaks Spanish", () => {
+    const es = diverTranslator("es-ES");
+    const breakdown = packageDiveBreakdown(es, "es-ES", [
+      { scope: "fun_dives", useBy: "2026-12-30", count: 1 },
+      { scope: "all", useBy: null, count: 2 },
+    ]);
+    expect(breakdown?.rows.map(plain)[0]).toContain("1 inmersión · No incluye cursos");
+    expect(breakdown?.note).toBe("Se usan primero las que vencen antes, una inmersión por tanque.");
+  });
+});
+
+describe("payStepIsPayable", () => {
+  it("asks for money only when the diver can pay and the step owes it", () => {
+    expect(payStepIsPayable(true, "payment_due")).toBe(true);
+    expect(payStepIsPayable(true, "payment_refunded")).toBe(true);
+    expect(payStepIsPayable(false, "payment_due")).toBe(false);
+    expect(payStepIsPayable(true, undefined)).toBe(false);
+  });
 });

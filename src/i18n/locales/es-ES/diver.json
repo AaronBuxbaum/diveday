@@ -1161,6 +1161,8 @@
     "gearOnFile": "La tripulación ya tiene tus tallas.",
     "packageDivesUsed": "{line} · Usa {used, plural, one {# inmersión del paquete} other {# inmersiones del paquete}} ({left, plural, one {te queda #} other {te quedan #}}), una por tanque",
     "packageDivesLeft": "{line} · {count, plural, one {te queda # inmersión del paquete} other {te quedan # inmersiones del paquete}}",
+    "packageBreakdownSummary": "Tus inmersiones del paquete",
+    "packageBreakdownNote": "Se usan primero las que vencen antes, una inmersión por tanque.",
     "partyClaimedSeatsPayOwn": "{count, plural, one {# plaza reclamada se paga desde su propia página.} other {# plazas reclamadas se pagan desde sus propias páginas.}}",
     "changesSizesLabel": "Tallas",
     "changesTanksLabel": "Tanques",
@@ -5015,6 +5017,15 @@
       "heading": "Nuestro año",
       "sentenceNoSites": "{divers, plural, one {# buceador} other {# buceadores}}. {boats, plural, one {# salida} other {# salidas}}."
     }
+  },
+  "safetyRecord": {
+    "heading": "El registro de nuestras salidas",
+    "range": "Contado de nuestros propios registros, {range}.",
+    "count": "{count, number}",
+    "departures": "{count, plural, one {Salida realizada} other {Salidas realizadas}}",
+    "divers": "{count, plural, one {Embarque} other {Embarques}}",
+    "rollCalls": "{count, plural, one {Salida con el pase de lista cerrado} other {Salidas con todos los pases de lista cerrados}}",
+    "readiness": "{count, plural, one {Salida con el buceador autorizado a embarcar} other {Salidas con todos los buceadores autorizados a embarcar}}"
   },
   "participants": {
     "type": {

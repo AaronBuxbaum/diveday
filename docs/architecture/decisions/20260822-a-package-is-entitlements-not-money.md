@@ -150,6 +150,19 @@ lost dispute takes back the recipient's unspent dives as it would the buyer's, a
 date it also means no email. A package the shop stops selling before that date still sends it,
 because the dives were bought and granted already.
 
+## Amendment, 2026-11-21: which dives are left, on request
+
+Issue #4309. The compact "N package dives left" on `/ready`'s Pay step stays the line. Under it,
+when the diver holds two kinds of dive to tell apart or an end date the line does not say, the Pay
+step opens on the dives by cover and end date: "3 dives · Courses not included · Use by Dec 30,
+2026", soonest to end first, which is the order `entitlementToSpend` spends them in, and one
+sentence saying so and that a dive is one tank. Beside a pay button or a balance it stays behind its
+own disclosure. `packageDiveGroups` (`src/lib/dive-packages.ts`) builds the rows from the same
+spendable entitlements `countSpendableDives` counts, so a refunded or lost-dispute order's dives
+leave the breakdown with the balance, and the rows always add up to it. Each row names its own
+cover, so no total reads as covering a course, and nothing says a seat is held. Expiry, the
+redemption order and the backing rule are unchanged.
+
 ## What this decision does not settle
 
 Two questions in the originating issue are **not** engineering calls and are deliberately left open

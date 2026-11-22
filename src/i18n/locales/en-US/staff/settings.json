@@ -438,6 +438,11 @@
         "label": "Show “Our year” on your schedule",
         "description": "The year so far in counts at the foot of your public schedule."
       },
+      "safetyRecord": {
+        "heading": "Departure record",
+        "label": "Show your departure record on your schedule",
+        "description": "Four counts from your own records: departures run, boardings, head counts closed, divers cleared to board. Off until you turn it on."
+      },
       "padiChecks": {
         "heading": "PADI checks (beta)",
         "label": "Check PADI certifications and eLearning with the extension",

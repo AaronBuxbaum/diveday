@@ -16,6 +16,8 @@ import {
   type DivePackageDefinition,
   entitlementExpiry,
   entitlementToSpend,
+  type PackageDiveGroup,
+  packageDiveGroups,
   packageOnSale,
   type SpendableEntitlement,
   singleDivePrice,
@@ -399,18 +401,23 @@ export async function countDivesSpentOnBooking(
 }
 
 /**
- * The two package numbers `/ready`'s Pay step says: what the diver still
- * holds (`countSpendableDives`) and what this booking used (H-20261014-package-dive-is-a).
+ * What `/ready`'s Pay step says about packages: what the diver still holds
+ * (`countSpendableDives`), what this booking used (H-20261014-package-dive-is-a),
+ * and the held dives by cover and end date for the optional breakdown
+ * (`packageDiveGroups`, issue #4309). One read of the entitlements, so `left`
+ * is always the sum of the groups.
  */
 export async function packageDivesForBooking(
   db: DbExecutor,
   input: { shopId: string; personId: string; bookingId: string },
-): Promise<{ left: number; usedHere: number }> {
-  const [left, usedHere] = await queryAll(db, [
-    () => countSpendableDives(db, input.shopId, input.personId),
+  now = nowDate(),
+): Promise<{ left: number; usedHere: number; groups: PackageDiveGroup[] }> {
+  const [held, usedHere] = await queryAll(db, [
+    () => listSpendableEntitlements(db, input.shopId, input.personId),
     () => countDivesSpentOnBooking(db, input.shopId, input.bookingId),
   ]);
-  return { left, usedHere };
+  const groups = packageDiveGroups(held, now);
+  return { left: groups.reduce((sum, group) => sum + group.count, 0), usedHere, groups };
 }
 
 /**

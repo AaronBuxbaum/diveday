@@ -438,6 +438,11 @@
         "label": "Mostrar “Nuestro año” en tu calendario",
         "description": "El año hasta hoy en cifras al pie de tu calendario público."
       },
+      "safetyRecord": {
+        "heading": "Registro de salidas",
+        "label": "Mostrar el registro de tus salidas en tu calendario",
+        "description": "Cuatro cifras de tus propios registros: salidas realizadas, embarques, pases de lista cerrados, buceadores autorizados a embarcar. Desactivado hasta que lo actives."
+      },
       "padiChecks": {
         "heading": "Verificación con PADI (beta)",
         "label": "Verificar certificaciones y eLearning de PADI",

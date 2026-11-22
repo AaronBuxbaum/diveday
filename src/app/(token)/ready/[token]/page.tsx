@@ -49,7 +49,7 @@ import { readyDeadLink } from "./_components/dead-link";
 import { UnavailableReadyLink } from "./_components/ExpiredLink";
 import { OwnPhotoAndDays } from "./_components/OwnPhoto";
 import { PayStepBody } from "./_components/PayStepBody";
-import { payStepLines } from "./_components/pay-step-lines";
+import { packageDiveBreakdown, payStepIsPayable, payStepLines } from "./_components/pay-step-lines";
 import { resolvePaymentReceipt } from "./_components/payment-receipt";
 import * as ReadyCards from "./_components/ReadyBookedShell";
 import { ReadyFitForm } from "./_components/ReadyFitForm";
@@ -409,6 +409,7 @@ async function DiverReadinessPage({
     /** A money figure in the currency it was actually charged in, never today's shop setting. */
     const money = (cents: number, currency: string) => formatMoneyCents(cents, currency, locale);
     const paid = payStepLines(t, money, paymentReceipt, packageDives, data.shop.deskPayment);
+    const packageBreakdown = packageDiveBreakdown(t, locale, packageDives.groups);
 
     /** One step's fact, and one step's form. The two things the spine cannot derive. */
     const stepLine = (step: ThreadStep): string | null =>
@@ -473,15 +474,14 @@ async function DiverReadinessPage({
             />
           );
         case "pay": {
-          const payable =
-            data.canPay &&
-            (step.item?.code === "payment_due" || step.item?.code === "payment_refunded");
-          if (!payable && !paid.depositBalanceLine) return null;
+          const payable = payStepIsPayable(data.canPay, step.item?.code);
+          if (!payable && !paid.depositBalanceLine && !packageBreakdown) return null;
           return (
             <PayStepBody
               token={token}
               payable={payable}
               depositBalanceLine={paid.depositBalanceLine}
+              packageBreakdown={packageBreakdown}
               actionButton={actionButton}
               fullShop={fullShop}
               fullTrip={fullTrip}
