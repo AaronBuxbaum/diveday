@@ -11,7 +11,7 @@ const record = {
   startsOn: "2026-03-03",
   endsOn: "2026-11-18",
   departures: 40,
-  diversBoarded: 1204,
+  boardings: 1204,
   rollCallsCompleted: 38,
   readinessCompleted: 31,
 };
@@ -22,9 +22,13 @@ describe("SafetyRecordPanel", () => {
     const panel = screen.getByRole("region", { name: "Our departure record" });
     expect(within(panel).getByText(/Mar 3.*Nov 18, 2026/)).toBeInTheDocument();
     expect(within(panel).getByText("Departures run").nextSibling).toHaveTextContent("40");
-    expect(within(panel).getByText("Divers boarded").nextSibling).toHaveTextContent("1,204");
-    expect(within(panel).getByText("Roll calls completed").nextSibling).toHaveTextContent("38");
-    expect(within(panel).getByText("Readiness completed").nextSibling).toHaveTextContent("31");
+    expect(within(panel).getByText("Boardings").nextSibling).toHaveTextContent("1,204");
+    expect(
+      within(panel).getByText("Departures with every head count closed").nextSibling,
+    ).toHaveTextContent("38");
+    expect(
+      within(panel).getByText("Departures with every diver cleared to board").nextSibling,
+    ).toHaveTextContent("31");
   });
 
   it("shows one departure as one, with no minimum, and a real zero as zero", () => {
@@ -33,7 +37,7 @@ describe("SafetyRecordPanel", () => {
         record={{
           ...record,
           departures: 1,
-          diversBoarded: 6,
+          boardings: 6,
           rollCallsCompleted: 0,
           readinessCompleted: 1,
         }}
@@ -42,13 +46,15 @@ describe("SafetyRecordPanel", () => {
       />,
     );
     expect(screen.getByText("Departure run").nextSibling).toHaveTextContent("1");
-    expect(screen.getByText("Roll calls completed").nextSibling).toHaveTextContent("0");
+    expect(
+      screen.getByText("Departures with every head count closed").nextSibling,
+    ).toHaveTextContent("0");
   });
 
   it("speaks Spanish with the same numbers", () => {
     render(<SafetyRecordPanel record={record} locale="es-ES" t={diverTranslator("es-ES")} />);
     expect(screen.getByText("Salidas realizadas").nextSibling).toHaveTextContent("40");
-    expect(screen.getByText("Pases de lista completados")).toBeInTheDocument();
+    expect(screen.getByText("Salidas con todos los pases de lista cerrados")).toBeInTheDocument();
   });
 });
 

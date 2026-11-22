@@ -5023,9 +5023,9 @@
     "range": "Counted from our own records, {range}.",
     "count": "{count, number}",
     "departures": "{count, plural, one {Departure run} other {Departures run}}",
-    "divers": "{count, plural, one {Diver boarded} other {Divers boarded}}",
-    "rollCalls": "{count, plural, one {Roll call completed} other {Roll calls completed}}",
-    "readiness": "Readiness completed"
+    "divers": "{count, plural, one {Boarding} other {Boardings}}",
+    "rollCalls": "{count, plural, one {Departure with every head count closed} other {Departures with every head count closed}}",
+    "readiness": "{count, plural, one {Departure with every diver cleared to board} other {Departures with every diver cleared to board}}"
   },
   "participants": {
     "type": {

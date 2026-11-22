@@ -71,8 +71,8 @@ export function SafetyRecordPanel({
     },
     {
       key: "divers",
-      count: record.diversBoarded,
-      label: t("safetyRecord.divers", { count: record.diversBoarded }),
+      count: record.boardings,
+      label: t("safetyRecord.divers", { count: record.boardings }),
     },
     {
       key: "rollCalls",

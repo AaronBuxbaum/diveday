@@ -439,9 +439,9 @@
         "description": "The year so far in counts at the foot of your public schedule."
       },
       "safetyRecord": {
-        "heading": "Safety record",
+        "heading": "Departure record",
         "label": "Show your departure record on your schedule",
-        "description": "Four counts from your own records: departures run, divers boarded, roll calls completed, readiness completed. Off until you turn it on."
+        "description": "Four counts from your own records: departures run, boardings, head counts closed, divers cleared to board. Off until you turn it on."
       },
       "padiChecks": {
         "heading": "PADI checks (beta)",

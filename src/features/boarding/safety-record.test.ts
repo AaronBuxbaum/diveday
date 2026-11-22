@@ -83,10 +83,47 @@ describe("the safety record", () => {
     const record = await readSafetyRecord(f.db, f.shop.id, f.shop.timezone, f.now);
     expect(record).toMatchObject({
       departures: f.withSeats.length,
-      diversBoarded: 0,
+      boardings: 0,
       rollCallsCompleted: 0,
       readinessCompleted: 0,
     });
+  });
+
+  it("leaves out a departure where every diver the crew counted stayed ashore", async () => {
+    const f = await fixture();
+    const [trip] = f.withSeats;
+    if (!trip) throw new Error("fixture missing a departure");
+    const base = (await readSafetyRecord(f.db, f.shop.id, f.shop.timezone, f.now))?.departures;
+    const recorder = await recorderId(f);
+    for (const bookingId of f.byTrip.get(trip.id) ?? []) {
+      await seedRollCallEvidence(f.db, {
+        shopId: f.shop.id,
+        tripId: trip.id,
+        bookingId,
+        recordedByPersonId: recorder,
+        status: "not_boarded",
+        checkpoint: "departure",
+        source: "live",
+        occurredAt: trip.startsAt,
+      });
+    }
+    const record = await readSafetyRecord(f.db, f.shop.id, f.shop.timezone, f.now);
+    expect(record?.departures).toBe((base ?? 0) - 1);
+    expect(record?.rollCallsCompleted).toBe(0);
+    expect(record?.boardings).toBe(0);
+  });
+
+  it("counts no snorkeler or rider as a boarding", async () => {
+    const f = await fixture();
+    const [trip] = f.withSeats;
+    if (!trip) throw new Error("fixture missing a departure");
+    await countEveryone(f, trip);
+    const seats = f.byTrip.get(trip.id) ?? [];
+    const [guest] = seats;
+    if (!guest) throw new Error("fixture missing a seat");
+    await f.db.update(bookings).set({ participantType: "snorkeler" }).where(eq(bookings.id, guest));
+    const record = await readSafetyRecord(f.db, f.shop.id, f.shop.timezone, f.now);
+    expect(record?.boardings).toBe(seats.length - 1);
   });
 
   it("counts one fully counted, fully ready departure as one of each, with its day as the range", async () => {
@@ -96,7 +133,7 @@ describe("the safety record", () => {
     await countEveryone(f, trip);
     const record = await readSafetyRecord(f.db, f.shop.id, f.shop.timezone, f.now);
     expect(record).toMatchObject({
-      diversBoarded: f.byTrip.get(trip.id)?.length,
+      boardings: f.byTrip.get(trip.id)?.length,
       rollCallsCompleted: 1,
       readinessCompleted: 1,
     });
@@ -127,7 +164,7 @@ describe("the safety record", () => {
     });
     const record = await readSafetyRecord(f.db, f.shop.id, f.shop.timezone, f.now);
     expect(record?.rollCallsCompleted).toBe(0);
-    expect(record?.diversBoarded).toBe(f.byTrip.get(trip.id)?.length);
+    expect(record?.boardings).toBe(f.byTrip.get(trip.id)?.length);
   });
 
   it("does not count readiness complete for a diver counted aboard while blocked, or with no readiness recorded", async () => {
@@ -173,7 +210,7 @@ describe("the safety record", () => {
     if (!gone) throw new Error("fixture missing a seat");
     await f.db.update(bookings).set({ status: "cancelled" }).where(eq(bookings.id, gone));
     const record = await readSafetyRecord(f.db, f.shop.id, f.shop.timezone, f.now);
-    expect(record?.diversBoarded).toBe(seats.length - 1);
+    expect(record?.boardings).toBe(seats.length - 1);
   });
 
   it("counts a diver the crew un-counted at the dock as nobody", async () => {
@@ -198,6 +235,6 @@ describe("the safety record", () => {
       { observesPrevious: true },
     );
     const record = await readSafetyRecord(f.db, f.shop.id, f.shop.timezone, f.now);
-    expect(record?.diversBoarded).toBe((f.byTrip.get(trip.id)?.length ?? 0) - 1);
+    expect(record?.boardings).toBe((f.byTrip.get(trip.id)?.length ?? 0) - 1);
   });
 });

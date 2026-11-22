@@ -5023,9 +5023,9 @@
     "range": "Contado de nuestros propios registros, {range}.",
     "count": "{count, number}",
     "departures": "{count, plural, one {Salida realizada} other {Salidas realizadas}}",
-    "divers": "{count, plural, one {Buceador embarcado} other {Buceadores embarcados}}",
-    "rollCalls": "{count, plural, one {Pase de lista completado} other {Pases de lista completados}}",
-    "readiness": "Preparación completada"
+    "divers": "{count, plural, one {Embarque} other {Embarques}}",
+    "rollCalls": "{count, plural, one {Salida con el pase de lista cerrado} other {Salidas con todos los pases de lista cerrados}}",
+    "readiness": "{count, plural, one {Salida con el buceador autorizado a embarcar} other {Salidas con todos los buceadores autorizados a embarcar}}"
   },
   "participants": {
     "type": {
