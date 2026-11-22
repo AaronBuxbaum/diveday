@@ -80,6 +80,39 @@ export default async function globalSetup() {
   // the same line measures the browser (issue #2624).
   await warmServers();
   await warmBrowser();
+  await warmDemoEntry();
+}
+
+/**
+ * A server's first demo entry builds the shop from scratch (about 5.5s of
+ * seeding) and only later entries replay the copy it leaves behind
+ * (src/features/demo/demo-template.ts). Left to the tests, whichever spec
+ * enters the demo first on each worker pays that on its own 15s budget, and
+ * `demo.spec.ts` "landing demo CTA" read 15.7s on main. Enter once per worker
+ * server here, where no test's clock is running. Best-effort, like the warm-ups
+ * above: a miss costs the first demo test its old cold start, not the run.
+ */
+async function warmDemoEntry() {
+  const browser = await chromium.launch(chromiumLaunchOptions());
+  try {
+    await Promise.all(
+      e2eWorkerIndexes.map(async (i) => {
+        const context = await browser.newContext({ baseURL: e2eBaseURL(i) });
+        try {
+          const page = await context.newPage();
+          await page.goto("/", { timeout: 30_000 });
+          await page.getByRole("button", { name: "Try the live demo" }).first().click();
+          await page.waitForURL(/\/shop/, { timeout: 60_000 });
+        } catch (error) {
+          console.warn(`e2e: demo-entry warm-up failed on worker ${i} — ${error}`);
+        } finally {
+          await context.close();
+        }
+      }),
+    );
+  } finally {
+    await browser.close();
+  }
 }
 
 async function warmServers() {
