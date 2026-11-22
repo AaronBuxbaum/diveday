@@ -93,6 +93,67 @@ describe("atShopMoneyLine (fourth UX review, item 5)", () => {
     expect(atShopMoneyLine(t, "en-US", "usd", { ...owes, owesAtShop: false }, trip, [])).toBeNull();
     expect(atShopMoneyLine(t, "en-US", "usd", owes, null, [])).toBeNull();
   });
+
+  it("still states an unpaid unclaimed guest's fare when the lead has paid", () => {
+    const guest = {
+      claimed: false,
+      participantType: "diver" as const,
+      paymentStatus: "unpaid",
+      seatHeld: true,
+      differentDeparture: false,
+    };
+    const paid = { ...guest, paymentStatus: "paid" };
+    expect(
+      atShopMoneyLine(
+        t,
+        "en-US",
+        "usd",
+        { ...owes, owesAtShop: false, paymentsAtShop: true },
+        trip,
+        [guest, paid],
+      ),
+    ).toBe("1 guest: $95.00, due at the shop.");
+  });
+
+  it("includes a refunded unclaimed guest when the lead has paid", () => {
+    const guest = {
+      claimed: false,
+      participantType: "diver" as const,
+      paymentStatus: "refunded",
+      seatHeld: true,
+      differentDeparture: false,
+    };
+    expect(
+      atShopMoneyLine(
+        t,
+        "en-US",
+        "usd",
+        { ...owes, owesAtShop: false, paymentsAtShop: true },
+        trip,
+        [guest],
+      ),
+    ).toBe("1 guest: $95.00, due at the shop.");
+  });
+
+  it("does not invent a total when an unclaimed guest paid a deposit", () => {
+    const guest = {
+      claimed: false,
+      participantType: "diver" as const,
+      paymentStatus: "deposit_paid",
+      seatHeld: true,
+      differentDeparture: false,
+    };
+    expect(
+      atShopMoneyLine(
+        t,
+        "en-US",
+        "usd",
+        { ...owes, owesAtShop: false, paymentsAtShop: true },
+        trip,
+        [guest],
+      ),
+    ).toBe("Check with the shop about your guests’ remaining balance.");
+  });
 });
 
 describe("saved rental estimate beside the seat amount", () => {

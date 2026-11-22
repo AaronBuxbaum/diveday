@@ -143,6 +143,7 @@ export function atShopMoneyLine(
   currency: string,
   data: {
     owesAtShop: boolean;
+    paymentsAtShop?: boolean;
     participantType: ParticipantType;
     shop: { deskPayment: DeskPayment | null };
   },
@@ -150,18 +151,39 @@ export function atShopMoneyLine(
     | (Parameters<typeof partyMoneyTerms>[0] & { course: Parameters<typeof partyMoneyTerms>[1] })
     | null
     | undefined,
-  partySeats: readonly { claimed: boolean; participantType: ParticipantType }[],
+  partySeats: readonly {
+    claimed: boolean;
+    participantType: ParticipantType;
+    paymentStatus?: string | null;
+    seatHeld?: boolean;
+    differentDeparture?: boolean;
+  }[],
 ): string | null {
-  if (!data.owesAtShop || !trip) return null;
+  if (!trip || (!data.owesAtShop && !data.paymentsAtShop)) return null;
+  const ownGuests = partySeats.filter(
+    (seat) => !seat.claimed && seat.seatHeld !== false && !seat.differentDeparture,
+  );
+  const partialPayment = ownGuests.some(
+    (seat) => seat.paymentStatus === "deposit_paid" || seat.paymentStatus === "partly_refunded",
+  );
   const types = [
-    data.participantType,
-    ...partySeats.filter((seat) => !seat.claimed).map((seat) => seat.participantType),
+    ...(data.owesAtShop ? [data.participantType] : []),
+    ...ownGuests
+      .filter(
+        (seat) =>
+          seat.paymentStatus == null ||
+          seat.paymentStatus === "unpaid" ||
+          seat.paymentStatus === "refunded",
+      )
+      .map((seat) => seat.participantType),
   ];
+  if (types.length === 0) return partialPayment ? t("ready.partyPaymentsCheck") : null;
   const terms = partyMoneyTerms(trip, trip.course, types, false);
   if (terms?.due !== "at_shop") return null;
   const amount = formatMoneyCents(terms.amountCents, toShopCurrency(currency), locale);
-  const line =
-    terms.seats > 1
+  const line = !data.owesAtShop
+    ? t("ready.partyGuestsAtShop", { count: terms.seats, amount })
+    : terms.seats > 1
       ? t("notifications.bookingConfirmation.moneyPartyAtShop", { seats: terms.seats, amount })
       : t("notifications.bookingConfirmation.moneyAtShop", { amount });
   // The figure drops when a seat is claimed; say why, so the lead does not
@@ -171,6 +193,7 @@ export function atShopMoneyLine(
   return [
     line,
     claimed > 0 ? t("ready.partyClaimedSeatsPayOwn", { count: claimed }) : null,
+    partialPayment ? t("ready.partyPaymentsCheck") : null,
     deskPaymentSentence(t, data.shop.deskPayment),
   ]
     .filter(Boolean)
