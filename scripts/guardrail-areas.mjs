@@ -71,8 +71,8 @@ const RULE_FILES = [
   ["mutation", "the breakage drills", /^scripts\/mutation\/[^/]+\.(?:mjs|json)$/],
   [
     "allowlist",
-    "the list of database functions the cross-shop sweep skips",
-    /^src\/test\/cross-shop\/not-shop-scoped\.ts$/,
+    "the list of database functions the cross-shop sweep skips, excuses or calls by hand",
+    /^src\/test\/cross-shop\/(?:not-shop-scoped|caller-checked-links|hand-filled)\.ts$/,
   ],
   [
     "verdict",

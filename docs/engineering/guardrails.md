@@ -91,11 +91,15 @@ These are the holes. Each is something a person would otherwise have to catch.
    their answers for another shop's ids and marked names. It does not call a function whose
    parameters it cannot fill yet (the count is banked and can only fall), or one that takes no shop
    and trusts its caller to have checked an id (the reviewed list in
-   `src/test/cross-shop/not-shop-scoped.ts`; a few functions that do take a shop sit there until the
-   sweep can read their parameters, the public booking write among them). It cannot see a count or
-   a yes/no worked out over another shop's rows, a new row of the second shop that points at the
-   first shop's record (a leak by insert), a leak through a route, a server action or a link that
-   skips `src/db`, or a foreign value it neither marked nor knows the id of. Those rely on the staff-page scan, the
+   `src/test/cross-shop/not-shop-scoped.ts`). A list of requests is read (the public booking write
+   is swept), and a function whose type cannot be read is called with arguments written by hand
+   (`src/test/cross-shop/hand-filled.ts`, the notification senders). After a write as the second
+   shop it also counts that shop's rows whose foreign key points at the first shop's (a leak by
+   insert); a writer that ties a row to whatever id it is handed is named, with the reason its
+   callers cannot pass another shop's, in `src/test/cross-shop/caller-checked-links.ts`. That check
+   reads single-column foreign keys only. It cannot see a count or a yes/no worked out over another
+   shop's rows, a leak through a route, a server action or a link that skips `src/db`, or a foreign
+   value it neither marked nor knows the id of. Those rely on the staff-page scan, the
    end-to-end tenant test and the risk card's "mentions the shop in fewer places" signal. There is
    no database-level lock between shops (row-level security); ADR 20261122-cross-shop-sweep says
    what it would add, and the first shop that is not a friend is when to revisit it.
@@ -104,7 +108,7 @@ These are the holes. Each is something a person would otherwise have to catch.
    remains, and the reason this page says "closely watched" rather than "impossible". Two
    things narrow it: the referee and the risk card run from the base branch's copy of their
    scripts, so a pull request cannot edit the rule that reads it, and an edit to the card, the CI
-   verdict, the drill block-or-warn setting or the sweep's skip list always asks a person. A line
+   verdict, the drill block-or-warn setting or the sweep's skip list, its list of caller-checked writers or its hand-written calls always asks a person. A line
    only added to the workflow, the verdict or the drills is shown as something to watch and never
    as protection, because `continue-on-error` is an added line. The CI workflow file itself runs from the
    pull request, so one that deletes a guard's step silences that guard for its own run, and

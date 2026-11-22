@@ -4,7 +4,8 @@ import { type DbFunction, type Param, SHOP_SLOT_NAMES, takesDb, takesShop } from
  * **What the sweep does with each exported database function.**
  *
  * - `swept`: it takes a shop, and the sweep can fill every other required
- *   parameter by name;
+ *   parameter by name, or its arguments are written by hand
+ *   (`src/test/cross-shop/hand-filled.ts`) because its type cannot be read;
  * - `notShopScoped`: it takes no shop, and the allowlist says why;
  * - `notFillable`: it takes a shop, but a required parameter has a name the
  *   sweep does not know (listed in `missing`);
@@ -13,7 +14,7 @@ import { type DbFunction, type Param, SHOP_SLOT_NAMES, takesDb, takesShop } from
  * - `staleAllowlist`: the allowlist names it but it takes a shop now.
  */
 export type Verdict =
-  | { kind: "swept"; fn: DbFunction }
+  | { kind: "swept"; fn: DbFunction; handFilled?: HandFill }
   | { kind: "notShopScoped"; fn: DbFunction; reason: string }
   | { kind: "notFillable"; fn: DbFunction; missing: string[] }
   | { kind: "unclassified"; fn: DbFunction }
@@ -43,12 +44,26 @@ function missingSlots(fn: DbFunction, fillable: ReadonlySet<string>): string[] {
   return missing;
 }
 
+/**
+ * The arguments after `db` for a function whose parameter type discovery cannot
+ * read (a type inferred from a schema, say), written by hand per caller.
+ */
+export type HandFill = (perspective: Perspective) => unknown[];
+
 export function classify(
   fn: DbFunction,
   fillable: ReadonlySet<string>,
   allowlist: ReadonlyMap<string, string>,
+  handFilled: ReadonlyMap<string, HandFill> = new Map(),
 ): Verdict {
   const reason = allowlist.get(functionKey(fn));
+  const byHand = handFilled.get(functionKey(fn));
+  if (byHand) {
+    // Swept by hand, so it cannot also be excused from the sweep.
+    return reason === undefined
+      ? { kind: "swept", fn, handFilled: byHand }
+      : { kind: "staleAllowlist", fn };
+  }
   if (!takesShop(fn)) {
     return reason === undefined
       ? { kind: "unclassified", fn }
@@ -64,8 +79,9 @@ export function classifyAll(
   functions: DbFunction[],
   fillable: ReadonlySet<string>,
   allowlist: ReadonlyMap<string, string>,
+  handFilled: ReadonlyMap<string, HandFill> = new Map(),
 ): Verdict[] {
-  return functions.filter(takesDb).map((fn) => classify(fn, fillable, allowlist));
+  return functions.filter(takesDb).map((fn) => classify(fn, fillable, allowlist, handFilled));
 }
 
 /** The values one call is made with: the caller's shop, and a value for each known name. */
@@ -84,7 +100,8 @@ function fillParam(param: Param, perspective: Perspective): unknown {
         object[field.name] = perspective.values[field.name];
       else if (!field.optional) throw new Error(`no value for ${param.name}.${field.name}`);
     }
-    return object;
+    // A list parameter gets one request: enough to reach the write.
+    return param.each ? [object] : object;
   }
   if (param.name in perspective.values) return perspective.values[param.name];
   if (param.optional) return undefined;
