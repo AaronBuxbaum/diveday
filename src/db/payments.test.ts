@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { paymentTransitionRefusal } from "@/lib/payment-transition";
 import { advanceClock } from "@/test/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { cancelBooking } from "./bookings";
@@ -9,6 +10,7 @@ import {
   setBookingPaymentIfNotFinal,
 } from "./payments";
 import { getBookingReadiness, upsertTripRequirements } from "./readiness";
+import { type PaymentStatus, paymentStatus } from "./schema";
 import { getTripRoster } from "./trips";
 import { upcomingTripsWithCounts } from "./trips-queries.test-support";
 
@@ -98,6 +100,56 @@ describe("booking payments", () => {
 });
 
 describe("setBookingPaymentIfNotFinal", () => {
+  // The rule lives in `paymentTransitionRefusal` (src/lib/payment-transition.ts)
+  // and its properties attack it there. This is the other half: for every
+  // current status, provider and attempted status, the locked writer leaves the
+  // status alone exactly when the rule refuses, and writes it otherwise.
+  it("agrees with the transition rule for every pair of statuses", async () => {
+    const { db, shop, entry } = await paymentContext();
+    const rollback = new Error("rollback one pair");
+    const disagreements: string[] = [];
+    for (const provider of [null, "stripe", "mixed"]) {
+      for (const currentStatus of paymentStatus.enumValues) {
+        for (const next of paymentStatus.enumValues) {
+          let after: PaymentStatus | undefined;
+          let returned: PaymentStatus | undefined;
+          await db
+            .transaction(async (tx) => {
+              const shared = {
+                shopId: shop.id,
+                bookingId: entry.booking.id,
+                currency: "usd",
+                amountCents: 10_000,
+                manualHeldCents: 0,
+                provider,
+                // One source throughout, so only the status rule can decide.
+                providerRef: "pi_same_source",
+              };
+              await setBookingPayment(tx, { ...shared, status: currentStatus });
+              const row = await setBookingPaymentIfNotFinal(tx, { ...shared, status: next });
+              returned = row?.status;
+              after = (await getBookingPayment(tx, shop.id, entry.booking.id))?.status;
+              throw rollback;
+            })
+            .catch((error) => {
+              if (error !== rollback) throw error;
+            });
+          const refusal = paymentTransitionRefusal({ status: currentStatus, provider }, next);
+          // A deposit event replayed after the balance settled keeps "paid".
+          const written = currentStatus === "paid" && next === "deposit_paid" ? "paid" : next;
+          const expected = refusal === null ? written : currentStatus;
+          // A refusal still answers with the payment as it stands.
+          if (after !== expected || returned !== expected) {
+            disagreements.push(
+              `${provider ?? "by hand"}: ${currentStatus} -> ${next} gave ${after} (returned ${returned}), rule says ${expected}`,
+            );
+          }
+        }
+      }
+    }
+    expect(disagreements).toEqual([]);
+  });
+
   it("refuses to write a lesser status over a refunded or waived row", async () => {
     const { db, shop, entry } = await paymentContext();
     await setBookingPayment(db, {
@@ -120,6 +172,33 @@ describe("setBookingPaymentIfNotFinal", () => {
     expect(result?.status).toBe("refunded");
     expect(result?.providerRef).toBe("re_original");
     expect((await getBookingPayment(db, shop.id, entry.booking.id))?.status).toBe("refunded");
+  });
+
+  // A refund or a waive is not reconciled against the payment's source: it
+  // ends the history whatever provider reference it arrives with.
+  it("writes a final status from a different provider source without holding it", async () => {
+    const { db, shop, entry } = await paymentContext();
+    for (const final of ["refunded", "waived"] as const) {
+      const result = await db.transaction(async (tx) => {
+        const shared = { shopId: shop.id, bookingId: entry.booking.id, currency: "usd" };
+        await setBookingPayment(tx, {
+          ...shared,
+          status: "paid",
+          amountCents: 18_000,
+          provider: "mixed",
+          providerRef: "pi_original",
+        });
+        const row = await setBookingPaymentIfNotFinal(tx, {
+          ...shared,
+          status: final,
+          amountCents: 0,
+          provider: "stripe",
+          providerRef: "re_other_source",
+        });
+        return { returned: row?.status, providerRef: row?.providerRef };
+      });
+      expect(result, final).toEqual({ returned: final, providerRef: "re_other_source" });
+    }
   });
 
   it("writes normally when there is no existing row or the existing row is not final", async () => {

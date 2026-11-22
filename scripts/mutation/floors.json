@@ -5,6 +5,7 @@
   "src/lib/money.ts": 79,
   "src/lib/nitrox-fill.ts": 100,
   "src/lib/pass-through-fee.ts": 95,
+  "src/lib/payment-transition.ts": 100,
   "src/lib/promo-codes.ts": 88,
   "src/lib/readiness.ts": 93,
   "src/lib/roll-call-days.ts": 79,
