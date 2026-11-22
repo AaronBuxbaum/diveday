@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Certification, SpecialtyCertification } from "@/db/schema";
 import { nowDate } from "@/lib/clock";
-import { checkDepthCeiling, diverDepthLimit } from "./depth-ceiling";
+import { checkDepthCeiling, diverDepthLimit, juniorAgeCeiling } from "./depth-ceiling";
 import { feetToMeters } from "./depth-units";
 import type { CertificationLevel } from "./readiness";
 
@@ -98,6 +98,14 @@ describe("diverDepthLimit", () => {
   });
 
   describe("junior age bands", () => {
+    // The figure a booking form quotes before any card is known (#4897).
+    it("quotes 12 m for a 10- or 11-year-old and 18 m from 12, the Open Water bands", () => {
+      expect(juniorAgeCeiling(10)).toEqual({ meters: 12, feet: 40 });
+      expect(juniorAgeCeiling(11)).toEqual({ meters: 12, feet: 40 });
+      expect(juniorAgeCeiling(12)).toEqual({ meters: 18, feet: 60 });
+      expect(juniorAgeCeiling(14)).toEqual({ meters: 18, feet: 60 });
+    });
+
     it("caps 10- and 11-year-olds at 12 m whatever they hold", () => {
       expect(diverDepthLimit([card("open_water")], [], "2015-01-01", TODAY)).toEqual({
         ceiling: { meters: 12, feet: 40 },

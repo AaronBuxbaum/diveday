@@ -13,8 +13,10 @@ describe("decide", () => {
     expect(result.run).toBe(false);
     expect(result.why).toContain("CI runs on #3");
   });
-  it("names the bottom layer so the diff base can be the stack's own", () => {
-    expect(decide({ number: 3, baseIsDefault: false, stacks: [stack(9, 1, 2, 3)] }).bottom).toBe(1);
+  it("names the layers bottom to top so the diff base can be the stack's own", () => {
+    expect(decide({ number: 3, baseIsDefault: false, stacks: [stack(9, 1, 2, 3)] }).layers).toEqual(
+      [1, 2, 3],
+    );
   });
   it("runs a lower layer that carries the ci-now label", () => {
     const stacks = [stack(9, 1, 2, 3)];
@@ -112,6 +114,32 @@ describe("change-detection scope", () => {
         return { base: { sha, ref: "main" } };
       }),
     ).toMatchObject({ forceFull: false, diffBase: sha });
+  });
+  // #4904: layers 1 and 2 merged, the stack's record still listed them, and the top was diffed
+  // against the default branch as it was before they landed, so their rule edits were its own.
+  it("skips merged layers and uses the lowest open layer's base", async () => {
+    const decision = decide({ number: 3, stacks: [stack(9, 1, 2, 3)] });
+    const stale = "b".repeat(40);
+    const read = [];
+    expect(
+      await resolveDiffScope(decision, env, async (number) => {
+        read.push(number);
+        if (number === 1) return { merged: true, base: { sha: stale, ref: "main" } };
+        if (number === 2)
+          return { merged_at: "2026-11-22T20:43:18Z", base: { sha: stale, ref: "main" } };
+        return { merged: false, merged_at: null, base: { sha, ref: "main" } };
+      }),
+    ).toMatchObject({ forceFull: false, diffBase: sha });
+    expect(read).toEqual([1, 2, 3]);
+  });
+  it("runs every check when every layer reads as merged, never a blank base", async () => {
+    const decision = decide({ number: 3, stacks: [stack(9, 1, 2, 3)] });
+    expect(
+      await resolveDiffScope(decision, env, async () => ({
+        merged: true,
+        base: { sha, ref: "main" },
+      })),
+    ).toMatchObject({ run: true, forceFull: true, diffBase: "" });
   });
   it("forces full scope for failed, malformed or nondefault bottom-base lookups", async () => {
     const decision = decide({ number: 3, stacks: [stack(9, 1, 2, 3)] });

@@ -4,6 +4,14 @@
 // re-exports it, plus the colocated `<name>.test.*` and `<name>.*.test.*` siblings. Direct
 // importers only, never transitive: a readiness change would otherwise run most of the suite.
 //
+// A hub is a module more test files name than a run can finish (`src/db/bookings.ts`: 239, of
+// which 231 open a database). Its unbroken baseline alone outran its five minutes on CI, and a
+// break run against all of them would hit the per-break ceiling and be counted as caught without
+// one assertion failing. Past `HUB_TEST_LIMIT` importers, the tests named after the module
+// (`bookings.test.ts`, `bookings-capacity.test.ts`) are the whole selection, when it has any.
+// `src/lib/readiness.ts` sits nearest the limit (about 40 importers, about 15 named tests); the
+// run prints a line whenever a module is narrowed, so the day it crosses is seen.
+//
 // Never selected: `*.postgres.test.*` (they need a server), the source-text `guards` project
 // (it reads files, it does not run the module) and this directory's own tests.
 
@@ -11,6 +19,9 @@ import { globSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { classifyTestFile } from "../../src/test/projects.ts";
 import { isReexportOnlyContract } from "../coverage-safety-files.mjs";
+
+/** More importing test files than this, and a module is drilled against the tests named after it. */
+export const HUB_TEST_LIMIT = 40;
 
 const TEST_GLOBS = [
   "src/**/*.test.{ts,tsx,mts}",
@@ -116,14 +127,19 @@ export function buildTestIndex(root) {
       const base = path.posix.basename(file);
       return base.startsWith(`${name}.`) && /\.test\.[cm]?[jt]sx?$/.test(base);
     };
-    const chosen = entries.filter((entry) => entry.reached.has(target) || sibling(entry.file));
+    const importers = entries.filter((entry) => entry.reached.has(target) || sibling(entry.file));
     // The tests named after the module (`readiness.test.ts`, `readiness-edges.test.ts`) are the
     // likeliest to catch a break, so the runner tries them first.
     const near = (file) =>
       path.posix.dirname(file) === dir &&
       /^[.-]/.test(path.posix.basename(file).slice(name.length)) &&
       path.posix.basename(file).startsWith(name);
+    const named = importers.filter((entry) => near(entry.file));
+    const narrowed = importers.length > HUB_TEST_LIMIT && named.length > 0;
+    const chosen = narrowed ? named : importers;
     return {
+      // How many test files name a hub, when only the ones named after it run: the run says so.
+      narrowedFrom: narrowed ? importers.length : undefined,
       files: chosen.map((entry) => entry.file),
       db: chosen.filter((entry) => entry.db).map((entry) => entry.file),
       near: chosen.filter((entry) => !entry.db && near(entry.file)).map((entry) => entry.file),
