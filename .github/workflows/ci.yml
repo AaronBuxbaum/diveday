@@ -930,6 +930,7 @@ jobs:
         run: |
           set -o pipefail
           status=0
+          mkdir -p e2e-durations
           pnpm exec playwright test e2e/visual --test-list visual-tests.txt 2>&1 | tee capture.log || status=$?
           # Recorded from the first attempt, which ran the whole list; a
           # `--last-failed` rerun below rewrites the report with only its few.
