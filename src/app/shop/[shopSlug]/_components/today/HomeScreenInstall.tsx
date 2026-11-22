@@ -140,9 +140,13 @@ export function HomeScreenInstall({ copy }: { copy: HomeScreenInstallCopy }) {
       aria-label={copy.install}
       className={sectionCardClass({ className: "mt-10 print:hidden" })}
     >
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <p className="min-w-0 text-base font-medium text-balance">{copy.body}</p>
-        <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2">
+      {/* The buttons drop under the sentence when the row cannot hold both, at any text size: the
+          sentence keeps a 24-character floor, so a large device body never squeezes it into a column. */}
+      <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-4">
+        <p className="min-w-0 flex-1 basis-[24ch] text-base font-medium text-balance">
+          {copy.body}
+        </p>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
           <button
             type="button"
             disabled={busy}
