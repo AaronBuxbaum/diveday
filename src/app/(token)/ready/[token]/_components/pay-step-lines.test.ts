@@ -203,6 +203,16 @@ it("states promotional fare coverage and remaining credit instead of a zero-doll
   expect(line.depositBalanceLine).toBeNull();
 });
 
+it("shows only this booking's coverage when the remaining balance is private", () => {
+  const line = payStepLines(
+    t,
+    money,
+    { ...receipt, amountCents: 0, tripCredit: { amountCents: 18_000, balanceCents: null } },
+    none,
+  );
+  expect(line.paidLine).toBe("$180 trip credit applied");
+});
+
 describe("packageDiveBreakdown (issue 4309)", () => {
   const plain = (text: string) => text.replace(/\u00A0/g, " ");
 

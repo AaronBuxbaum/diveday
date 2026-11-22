@@ -41,6 +41,7 @@ export async function resolvePaymentReceipt(
    * reinterpret it.
    */
   shopCurrency: ShopCurrency,
+  maySeeCreditBalance = false,
 ): Promise<PaymentReceipt> {
   const receipt = async (
     settled: Awaited<ReturnType<typeof getBookingPayment>>,
@@ -57,7 +58,10 @@ export async function resolvePaymentReceipt(
             currency: settled.currency,
             isDeposit: false,
             balanceDueCents: 0,
-            tripCredit: { amountCents: credit.amountCents, balanceCents: credit.balanceCents },
+            tripCredit: {
+              amountCents: credit.amountCents,
+              balanceCents: maySeeCreditBalance ? credit.balanceCents : null,
+            },
           }
         : null;
     }
@@ -87,7 +91,7 @@ export async function resolvePaymentReceipt(
 
 /** A settled charge, as this page states it back. Null when nothing has settled. */
 export type PaymentReceipt = {
-  tripCredit?: { amountCents: number; balanceCents: number };
+  tripCredit?: { amountCents: number; balanceCents: number | null };
   amountCents: number | null;
   currency: string;
   /** True when only a deposit has been paid; a balance is still owed. */

@@ -85,16 +85,36 @@ it("states only verified promotional coverage and never refreshes Stripe for its
     provider: "trip_credit",
     providerRef: "credit-debit",
   });
-  expect(await resolvePaymentReceipt(handle, "shop", "booking", true, 18_000, "usd")).toMatchObject(
-    {
-      amountCents: 0,
-      isDeposit: false,
-      balanceDueCents: 0,
-      tripCredit: { amountCents: 18_000, balanceCents: 5_000 },
-    },
-  );
+  expect(
+    await resolvePaymentReceipt(handle, "shop", "booking", true, 18_000, "usd", true),
+  ).toMatchObject({
+    amountCents: 0,
+    isDeposit: false,
+    balanceDueCents: 0,
+    tripCredit: { amountCents: 18_000, balanceCents: 5_000 },
+  });
   expect(db.getLatestCheckoutForBooking).not.toHaveBeenCalled();
   expect(db.refreshCheckoutFromStripe).not.toHaveBeenCalled();
   vi.mocked(tripCreditReceipt).mockResolvedValue(null);
   expect(await resolvePaymentReceipt(handle, "shop", "booking", false, 18_000, "usd")).toBeNull();
+});
+
+it("does not expose the diver's remaining credit to a booking-browser link", async () => {
+  db.tripCreditReceipt.mockResolvedValue({
+    amountCents: 18_000,
+    balanceCents: 5_000,
+    currency: "usd",
+  });
+  db.getBookingPayment.mockResolvedValue({
+    status: "paid",
+    amountCents: 0,
+    currency: "usd",
+    provider: "trip_credit",
+    providerRef: "credit-debit",
+  });
+  expect(
+    await resolvePaymentReceipt(handle, "shop", "booking", false, 18_000, "usd"),
+  ).toMatchObject({
+    tripCredit: { amountCents: 18_000, balanceCents: null },
+  });
 });
