@@ -20,6 +20,7 @@ import {
   DIVEDAY_BRAND_COLOR,
   deriveBrandTheme,
   deriveDarkBrandTheme,
+  WELCOME_TEXT_MAX,
 } from "@/lib/brand";
 import { MAX_IMAGE_MB } from "@/lib/storage/limits";
 import { saveProfileAction } from "../../website-actions";
@@ -68,7 +69,7 @@ export function ProfileForm({
         <textarea
           name="welcomeText"
           rows={3}
-          maxLength={1000}
+          maxLength={WELCOME_TEXT_MAX}
           defaultValue={shop.welcomeText ?? ""}
           className={textareaClassFor(3)}
         />
@@ -200,6 +201,8 @@ export function ProfileForm({
         shopName={shop.name}
         brandColor={shop.brandColor}
         brandDisplayFont={shop.brandDisplayFont}
+        welcomeText={shop.welcomeText}
+        welcomeSigner={shop.welcomeSigner}
         label={t("settings.main.profile.brandPreview")}
         nightLabel={t("settings.main.profile.brandPreviewNight")}
       />

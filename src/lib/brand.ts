@@ -174,6 +174,12 @@ export function mixHex(hex: string, into: string, amount: number): string {
 }
 
 /** DiveDay's own blue — what a shop with no brand colour wears, and the picker's resting value. */
+/**
+ * **The welcome note's length** (#4387): two or three sentences in the owner's voice, so the
+ * profile form's box and its save action stop at the same 280 characters.
+ */
+export const WELCOME_TEXT_MAX = 280;
+
 export const DIVEDAY_BRAND_COLOR = "#0064d2";
 
 export const AA_TEXT_CONTRAST = 4.5;
