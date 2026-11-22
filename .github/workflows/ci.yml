@@ -1628,3 +1628,42 @@ jobs:
           PR_IS_FORK: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository }}
           GH_TOKEN: ${{ github.token }}
         run: node scripts/ci-merge-verdict.mjs
+
+  # The risk card (scripts/risk-card.mjs; docs/engineering/guardrails.md): what this stack changed,
+  # in plain words, and whether anything needs Aaron's decision. Advisory by design: it never fails
+  # the run and `ci-result` does not wait for it; the checks that block a merge are their own jobs.
+  # It runs after `ci-result` so the drills and the referee guard have already reported. Bare node
+  # and git, no install, so it still says something when install is what broke. Top of a stack only:
+  # the stack's base is the diff base, so the card covers every layer under it.
+  risk-card:
+    name: Risk card
+    needs: [stack-gate, ci-result]
+    if: ${{ !cancelled() && github.event_name == 'pull_request' && needs.stack-gate.outputs.run != 'false' && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Write the risk card
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          BASE_REF: ${{ github.base_ref }}
+          STACK_BASE_SHA: ${{ needs.stack-gate.outputs.diff_base }}
+        run: |
+          gh pr view "$PR_NUMBER" --json body --jq .body > "$RUNNER_TEMP/pr-body.md" 2>/dev/null || printf '%s' "$PR_BODY" > "$RUNNER_TEMP/pr-body.md"
+          node scripts/risk-card.mjs --post --base "${STACK_BASE_SHA:-origin/$BASE_REF}" --head "$PR_HEAD_SHA" --body-file "$RUNNER_TEMP/pr-body.md"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: risk-card
+          path: .agent-out/risk-card.*
+          if-no-files-found: ignore
+          retention-days: 30

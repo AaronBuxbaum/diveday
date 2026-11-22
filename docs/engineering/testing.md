@@ -18,6 +18,7 @@ every other section stands.
 | Screenshots | reg-suit + S3, `e2e/visual-*.spec.ts` | a surface's populated and trouble states, per [captures.md](../../.claude/skills/e2e-and-visual/captures.md): light at phone and desktop, dark at desktop only, plus print ([ADR 20260729](../architecture/decisions/20260729-reg-suit-visual-regression.md)) | proving behavior |
 | Repo checks | `pnpm check:repo` (`scripts/check-*.mjs`) and the Vitest `guards` project | every rule that reads source: "every X has Y", no raw colour, one way imports | a single page's markup |
 | Coverage floors | `@vitest/coverage-v8`, ci.yml's `coverage-floors` ([below](#coverage-floors)) | branch coverage of every safety file never falling | a coverage target for the rest of the tree |
+| Risk card | `scripts/risk-card.mjs`, ci.yml's `risk-card` ([guardrails.md](guardrails.md)) | the plain-words verdict on a stack: which areas changed, what protects them, what needs a person | blocking a merge (the jobs it reports on do that) |
 | Nightly and weekly | `simulate-day.yml`, `persona-bots.yml`, ci.yml's schedule | a whole shop day, persona walks, real Postgres against what other branches merged | blocking a PR |
 
 Almost every page in `src/app/` is an `async function Page()` reading the database directly, which

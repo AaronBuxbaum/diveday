@@ -22,13 +22,28 @@ function resultNeeds(text) {
 }
 
 /**
+ * Jobs that wait for `ci-result` (`needs: [..., ci-result]`). They report after the verdict and
+ * never gate it, like the risk card, so the verdict cannot list them in its own `needs`.
+ */
+function afterVerdict(text) {
+  const body = text.slice(text.indexOf("\njobs:\n"));
+  return [
+    ...body.matchAll(
+      /^ {2}([a-z0-9-]+):\n(?:(?! {2}[a-z0-9-]+:\n)[\s\S])*?^ {4}needs: \[[^\]]*\bci-result\b/gmu,
+    ),
+  ].map((match) => match[1]);
+}
+
+/**
  * `CI result` is the stable check to require in main's ruleset. The current
  * visible ruleset does not require it yet. A job left out of its `needs:` could
  * fail while the aggregate went green, so every other job must be listed.
  */
 describe("the CI result job", () => {
   it("needs every other job in ci.yml", () => {
-    const others = jobIds(CI).filter((id) => id !== "ci-result");
+    const reportsAfter = afterVerdict(CI);
+    expect(reportsAfter).toEqual(["risk-card"]);
+    const others = jobIds(CI).filter((id) => id !== "ci-result" && !reportsAfter.includes(id));
     expect(others.length).toBeGreaterThan(5);
     expect(resultNeeds(CI).sort()).toEqual(others.sort());
     // `stack-gate` decides whether the run happens at all and skips every lower layer, so the
