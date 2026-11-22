@@ -936,9 +936,19 @@ jobs:
           node scripts/e2e-durations.mjs record e2e-durations/results.json --kind=visual --out=e2e-durations/visual-${{ matrix.shard }}.json \
             || echo "::warning::Could not record this shard's visual durations; the next refresh will miss them."
           if [ "$status" -eq 0 ]; then
+            rm -f e2e-durations/browser-attempt.log
             exit 0
           fi
           cp e2e-durations/results.json e2e-durations/first-attempt.json
+          # What the runner looked like when the capture failed, kept beside the
+          # browser's own log so a wedge can be attributed (it never has been).
+          {
+            uptime
+            nproc
+            free -m
+            for f in cpu memory io; do echo "pressure/$f: $(tr '\n' ' ' < /proc/pressure/$f 2>/dev/null)"; done
+            ps -eo pid,stat,pcpu,pmem,rss,etime,args --sort=-rss | head -25
+          } > e2e-durations/system-attempt.txt 2>&1 || true
           wedge=true
           if ! node scripts/e2e-retry-policy.mjs e2e-durations/first-attempt.json; then
             wedge=false
@@ -965,6 +975,10 @@ jobs:
           # A push or dispatched run of main: the runs that publish the baseline.
           ON_MAIN: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' }}
           E2E_WORKERS: "2"
+          # Chromium's own stderr and launch lines, for the renderer wedge's
+          # attribution; uploaded with the attempts only when a capture failed.
+          DEBUG: pw:browser
+          DEBUG_FILE: e2e-durations/browser-attempt.log
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
