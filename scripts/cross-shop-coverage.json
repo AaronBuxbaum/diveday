@@ -1,4 +1,4 @@
 {
   "//": "The cross-shop sweep's banked count of database functions that take a shop but have a parameter the sweep cannot fill yet (src/db/cross-shop.sweep.test.ts). It may only fall: when the sweep fills more, lower this number to the count it prints.",
-  "notFillable": 399
+  "notFillable": 397
 }

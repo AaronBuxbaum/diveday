@@ -191,17 +191,6 @@ const GROUPS: { reason: string; functions: string[] }[] = [
   },
   {
     reason:
-      "Takes a shop inside an array or a union the sweep cannot read yet, so it is skipped for now and should be swept once it can; the booking write the public form reaches comes first",
-    functions: [
-      "bookings.ts:createBookingParty",
-      "crew-notices.ts:recordCrewNotices",
-      "notifications.ts:sendNotification",
-      "notifications.ts:sendNotificationBatch",
-      "notifications.ts:sendAndRecordNotification",
-    ],
-  },
-  {
-    reason:
       "Reads or writes by an id or a row its caller has already matched to the signed-in shop; the caller is what keeps shops apart",
     functions: [
       "bookings.ts:tripCourseCrewCounts",
@@ -225,10 +214,8 @@ const GROUPS: { reason: string; functions: string[] }[] = [
       "send-holds.ts:notificationHeldBeforeSend",
       "tips.ts:getTipCurrencyForBooking",
       "tips.ts:startTipCheckout",
-      "tips.ts:recordSeedTips",
       "trip-meeting-windows.ts:meetingWindowsByTrip",
       "trips-create.ts:replaceTripDives",
-      "trips-create.ts:insertTripInstances",
       "trips-queries.ts:tripScheduleDayCounts",
       "trips-record.ts:getTripDiveSitesPeek",
       "user-accounts.ts:isOrientationDismissed",

@@ -2,15 +2,18 @@ import type { AppDb } from "@/db/client";
 import type { DbFunction } from "./discover";
 import type { TwoShops } from "./fixture";
 import { type Evidence, findShopAValues, stringsIn } from "./oracle";
-import { argumentsFor, functionKey, type Perspective } from "./plan";
+import { argumentsFor, functionKey, type HandFill, type Perspective } from "./plan";
 
 /**
  * **One call of one database function, judged by the oracle.**
  *
  * Every call runs inside a savepoint that is always rolled back, so a writer
  * leaves nothing behind for the next call. Before the rollback, the call's
- * result is walked for shop A's ids and markers, and shop A's rows are
- * compared with the fingerprint taken when the fixture was built.
+ * result is walked for shop A's ids and markers, shop A's rows are compared
+ * with the fingerprint taken when the fixture was built, and shop B's rows are
+ * counted for new foreign keys that point into shop A's (a leak by insert: the
+ * ids the call was handed are not excused there, since handing them over is
+ * the attack).
  */
 
 export type CallOutcome = {
@@ -22,6 +25,8 @@ export type CallOutcome = {
   evidence: Evidence[];
   /** Tables whose shop A rows the call changed. */
   changed: string[];
+  /** Foreign keys on which the call left shop B a row pointing at shop A's. */
+  linked: string[];
 };
 
 class RolledBack extends Error {}
@@ -51,15 +56,17 @@ type Callable = (db: AppDb, ...args: unknown[]) => unknown;
 /** Call `fn` as `perspective` inside a rolled-back savepoint and judge the answer. */
 export async function sweepCall(
   db: AppDb,
-  fixture: Pick<TwoShops, "a" | "fingerprint" | "changedTables" | "writeCount">,
+  fixture: Pick<TwoShops, "a" | "fingerprint" | "changedTables" | "crossLinks" | "writeCount">,
   fn: DbFunction,
   call: Callable,
   perspective: Perspective,
+  /** Arguments written by hand, for a function whose type discovery cannot read. */
+  handFilled?: HandFill,
 ): Promise<CallOutcome> {
   const key = functionKey(fn);
-  const args = argumentsFor(fn, perspective);
+  const args = handFilled ? handFilled(perspective) : argumentsFor(fn, perspective);
   const excused = stringsIn(args);
-  let outcome: CallOutcome = { key, answer: "nothing", evidence: [], changed: [] };
+  let outcome: CallOutcome = { key, answer: "nothing", evidence: [], changed: [], linked: [] };
   try {
     await db.transaction(async (tx) => {
       const writesBefore = await fixture.writeCount(tx as unknown as AppDb);
@@ -71,12 +78,16 @@ export async function sweepCall(
         threw = error;
       }
       let changed: string[] = [];
+      let linked: string[] = [];
       try {
         // Shop A's own calls may write shop A's rows; only a call as B is judged on them.
         const wrote =
           perspective.shop.id !== fixture.a.id &&
           (await fixture.writeCount(tx as unknown as AppDb)) !== writesBefore;
-        if (wrote) changed = await fixture.changedTables(tx as unknown as AppDb);
+        if (wrote) {
+          changed = await fixture.changedTables(tx as unknown as AppDb);
+          linked = await fixture.crossLinks(tx as unknown as AppDb);
+        }
       } catch {
         // The call left the savepoint aborted: nothing it wrote can stand.
       }
@@ -89,6 +100,7 @@ export async function sweepCall(
             : String((threw as Error)?.message ?? threw).slice(0, 160),
         evidence: threw === undefined ? findShopAValues(value, fixture.fingerprint, excused) : [],
         changed,
+        linked,
       };
       throw new RolledBack();
     });
@@ -98,7 +110,10 @@ export async function sweepCall(
   return outcome;
 }
 
-/** True when the outcome is a leak: shop A's data reached the caller, or A's rows changed. */
+/**
+ * True when the outcome is a leak: shop A's data reached the caller, A's rows
+ * changed, or shop B was left a row that points at one of A's.
+ */
 export function leaked(outcome: CallOutcome): boolean {
-  return outcome.evidence.length > 0 || outcome.changed.length > 0;
+  return outcome.evidence.length > 0 || outcome.changed.length > 0 || outcome.linked.length > 0;
 }

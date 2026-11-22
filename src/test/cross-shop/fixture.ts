@@ -186,6 +186,26 @@ function fingerprintQuery(owned: Map<string, string>): SQL {
   return sql.raw(parts.join(" union all "));
 }
 
+/**
+ * One count per foreign key from a table shop B owns rows in to a table shop A
+ * owns rows in: B's rows whose key points at one of A's. A write that hands
+ * shop B a row tied to shop A's trip, person or site moves one of these.
+ */
+function crossLinkQuery(
+  ownedByA: Map<string, string>,
+  ownedByB: Map<string, string>,
+  foreignKeys: ForeignKey[],
+): SQL | null {
+  const parts = foreignKeys
+    // A row whose shop is A's is A's row, not a link; `shop_id` is the ownership itself.
+    .filter((fk) => fk.parent !== "shops" && ownedByB.has(fk.table) && ownedByA.has(fk.parent))
+    .map(
+      (fk) =>
+        `select '${fk.table}.${fk.column} -> ${fk.parent}' as l, count(*)::int as n from ${ident(fk.table)} x where (${ownedByB.get(fk.table)}) and x.${ident(fk.column)} in (select x.${ident(fk.parentColumn)} from ${ident(fk.parent)} x where ${ownedByA.get(fk.parent)})`,
+    );
+  return parts.length === 0 ? null : sql.raw(parts.join(" union all "));
+}
+
 export type TwoShops = {
   a: Shop;
   b: Shop;
@@ -200,6 +220,13 @@ export type TwoShops = {
   writeCount(executor: AppDb): Promise<number>;
   /** The tables whose shop A rows differ from the start, read through `executor`. */
   changedTables(executor: AppDb): Promise<string[]>;
+  /**
+   * Foreign keys (`table.column -> parent`) on which shop B now owns more rows
+   * pointing at shop A's rows than when the fixture was built.
+   */
+  crossLinks(executor: AppDb): Promise<string[]>;
+  /** How many foreign keys `crossLinks` watches. */
+  watchedLinks: number;
 };
 
 async function first(db: AppDb, query: SQL): Promise<string | undefined> {
@@ -330,6 +357,10 @@ async function callerIn(db: AppDb, shop: Shop): Promise<Record<string, unknown>>
     name: "Swept",
     fullName: "Swept",
     label: "Swept",
+    // Who is acting, where a write asks: the staff door is the less guarded one.
+    actor: "staff",
+    // A crew notice's kind of news.
+    change: "assigned",
   };
   return Object.fromEntries(Object.entries(caller).filter(([, value]) => value !== undefined));
 }
@@ -369,6 +400,19 @@ export async function buildTwoShops(db: AppDb): Promise<TwoShops> {
     new Map((await rows<{ t: string; h: string }>(executor, query)).map((row) => [row.t, row.h]));
   const baseline = await read(db);
 
+  const linkQuery = crossLinkQuery(
+    owned,
+    ownershipPredicates(b.id, columns, foreignKeys),
+    foreignKeys,
+  );
+  const readLinks = async (executor: AppDb) =>
+    new Map(
+      linkQuery
+        ? (await rows<{ l: string; n: number }>(executor, linkQuery)).map((row) => [row.l, row.n])
+        : [],
+    );
+  const linkBaseline = await readLinks(db);
+
   const targets = await targetsIn(db, a.id);
   return {
     a,
@@ -389,6 +433,11 @@ export async function buildTwoShops(db: AppDb): Promise<TwoShops> {
       const now = await read(executor);
       return [...baseline].filter(([table, hash]) => now.get(table) !== hash).map(([t]) => t);
     },
+    async crossLinks(executor) {
+      const now = await readLinks(executor);
+      return [...now].filter(([link, n]) => n > (linkBaseline.get(link) ?? 0)).map(([l]) => l);
+    },
+    watchedLinks: linkBaseline.size,
   };
 }
 
@@ -450,4 +499,6 @@ export const FILLABLE_NAMES: ReadonlySet<string> = new Set([
   "name",
   "fullName",
   "label",
+  "actor",
+  "change",
 ]);
