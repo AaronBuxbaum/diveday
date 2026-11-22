@@ -1269,6 +1269,11 @@ test("a departure this staffer has never opened shows no catch-up at all", async
 test("the crew records why the plan changed, and the plan itself does not move", async ({
   page,
 }) => {
+  // Board, trip, Manifest tab, the dive log, a refused save, a good save and a
+  // fresh load of the manifest: seven server round trips. CI shards have
+  // measured it at 12.2s to 16.1s of the default 15s, never stuck, so this
+  // is a long journey that needs its own budget (see the flows below).
+  test.setTimeout(30_000);
   await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
   await openTripTab(page, "Manifest");
