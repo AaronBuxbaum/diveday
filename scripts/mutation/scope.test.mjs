@@ -2,7 +2,12 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { floorFiles, readFloors } from "./floors.mjs";
 import { classifyScope, scopeFiles } from "./scope.mjs";
-import { buildTestIndex, resolveSpecifier, runtimeSpecifiers } from "./select-tests.mjs";
+import {
+  buildTestIndex,
+  HUB_TEST_LIMIT,
+  resolveSpecifier,
+  runtimeSpecifiers,
+} from "./select-tests.mjs";
 
 const ROOT = path.join(import.meta.dirname, "..", "..");
 
@@ -68,6 +73,24 @@ describe("test selection", () => {
     expect(select("scripts/mutation/fixtures/pinned/adult.ts").files).toEqual([
       "scripts/mutation/fixtures/pinned/adult.test.ts",
     ]);
+  });
+  // src/db/bookings.ts is named by more test files than a run can finish: its baseline outran
+  // five minutes on CI (#4904), so it is drilled against the tests named after it.
+  it("drills a hub against the tests named after it, and leaves an ordinary module alone", () => {
+    const select = buildTestIndex(ROOT);
+    const narrowed = select("src/db/bookings.ts");
+    const hub = narrowed.files;
+    expect(narrowed.narrowedFrom).toBeGreaterThan(HUB_TEST_LIMIT);
+    expect(select("src/lib/trip-admission.ts").narrowedFrom).toBeUndefined();
+    expect(hub.length).toBeGreaterThan(0);
+    expect(hub.length).toBeLessThanOrEqual(HUB_TEST_LIMIT);
+    expect(hub).toContain("src/db/bookings.test.ts");
+    expect(hub).toContain("src/db/bookings-capacity.test.ts");
+    expect(hub.every((file) => /^src\/db\/bookings[.-]/.test(file))).toBe(true);
+    // Under the limit nothing is narrowed: an importer in another folder still runs.
+    const ordinary = select("src/lib/trip-admission.ts").files;
+    expect(ordinary.length).toBeLessThanOrEqual(HUB_TEST_LIMIT);
+    expect(ordinary.some((file) => !file.startsWith("src/lib/trip-admission"))).toBe(true);
   });
 });
 

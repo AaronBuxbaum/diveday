@@ -7,8 +7,11 @@
 // stack, an API error, a registration that never arrives) answers `true`, because an untested
 // change is worse than a wasted run.
 //
-// It also names the stack's **diff base**: the base sha of the stack's bottom pull request, which
-// is where the stack left the default branch. Change detection and the pull-request body check
+// It also names the stack's **diff base**: the base sha of the stack's lowest pull request that
+// has not merged, which is where what is left of the stack leaves the default branch. A layer that
+// merged stays in the stack's record, and its base is the default branch as it was before any of
+// the stack landed: diffing against that blamed the top layer for rule edits already merged
+// (#4904, 2026-11-22). Change detection and the pull-request body check
 // diff against it instead of against the layer below, because only the top layer runs CI and a
 // diff against the layer below would never see infra, migration or safety changes in the layers
 // under it. Empty for a standalone pull request, which keeps its event-pinned base.
@@ -36,13 +39,14 @@ export function decide({ number, baseIsDefault, stacks, labels = [] }) {
   }
   const layers = stack.pull_requests;
   const top = layers[layers.length - 1].number;
-  const bottom = layers[0].number;
-  if (top === number) return { run: true, bottom, why: `top of stack #${stack.number}` };
+  // Bottom to top; the diff base is read from the lowest one still open.
+  const below = layers.map((p) => p.number);
+  if (top === number) return { run: true, layers: below, why: `top of stack #${stack.number}` };
   if (labels.includes(FORCE_LABEL))
-    return { run: true, bottom, why: `labelled \`${FORCE_LABEL}\`` };
+    return { run: true, layers: below, why: `labelled \`${FORCE_LABEL}\`` };
   return {
     run: false,
-    bottom,
+    layers: below,
     why: `layer ${layers.findIndex((p) => p.number === number) + 1} of ${layers.length} in stack #${stack.number}; CI runs on #${top}`,
   };
 }
@@ -76,11 +80,19 @@ export async function gate(env, fetchStacks, wait = sleep, fetchLabels = async (
 export async function resolveDiffScope(result, env, pull) {
   let diffBase = "";
   let forceFull = result.forceFull === true;
-  if (result.run && result.bottom) {
+  if (result.run && result.layers?.length) {
     try {
-      const base = (await pull(result.bottom)).base;
+      let base;
+      for (const number of result.layers) {
+        const layer = await pull(number);
+        // A merged layer's base is the default branch before the stack landed: skip to the
+        // lowest layer still to merge.
+        if (layer.merged || layer.merged_at) continue;
+        base = layer.base;
+        break;
+      }
       if (!/^[0-9a-f]{40}$/.test(base?.sha ?? "") || base.ref !== env.DEFAULT_BRANCH) {
-        throw new Error("bottom base is not a valid default-branch commit");
+        throw new Error("the lowest open layer has no valid default-branch base");
       }
       diffBase = base.sha;
     } catch {

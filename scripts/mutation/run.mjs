@@ -248,7 +248,12 @@ export async function runDrills({
     for (const { entry, selected } of entries.values()) {
       if (selected.files.length === 0 || !byFile.get(entry.path).some((m) => chosen.includes(m)))
         continue;
-      log(`baseline: ${entry.path} (${selected.files.length} test files)`);
+      log(
+        `baseline: ${entry.path} (${selected.files.length} test files` +
+          (selected.narrowedFrom
+            ? `, the ones named after it; ${selected.narrowedFrom} import it, too many to run per break)`
+            : ")"),
+      );
       const run = await vitest(root, workDir, "baseline", selected.files, {
         timeoutMs: SUBPROCESS_TIMEOUTS.mutationBaseline,
         workers: availableParallelism(),

@@ -472,7 +472,8 @@ safety files plus payments, billing, refunds, checkouts, trip credit, promo code
 deposits and payouts), ci.yml's `mutation-diff` job runs `pnpm mutate --diff <base>`: it breaks
 each changed line a few small ways (flip a comparison, swap and/or, drop a condition, skip a call,
 change a number, negate a check, return nothing) and reruns the tests that import the file for
-each break. A break no test notices is a survivor, printed as `path:line  <what>: <was> -> <became>  | <line>`.
+each break. A hub that more than 40 test files import (`src/db/bookings.ts`) is run against the
+tests named after it, since hundreds of database files per break cannot finish. A break no test notices is a survivor, printed as `path:line  <what>: <was> -> <became>  | <line>`.
 While `scripts/mutation/policy.json` sets the file's class to `"block"`, a survivor fails the job.
 
 The fix for a survivor is a test that fails when that line is wrong. When a break cannot change
