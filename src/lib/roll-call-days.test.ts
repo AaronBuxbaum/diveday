@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
   backAboardNow,
+  carriedMissing,
   type DayMark,
   manifestRollCallView,
   notBackAboardSince,
+  seenAfter,
   standingByDay,
   unaccountedSubjects,
 } from "./roll-call-days";
@@ -404,6 +406,163 @@ describe("roll-call results read day by day (#2557)", () => {
     expect(states(manifestRollCallView(marks, 0))).toEqual({
       "eve@departure": "boarded/0",
       "eve@after_dive_1": "boarded/0",
+    });
+  });
+});
+
+/** What the breakage drills found no test noticing (#4893): each case below breaks one line. */
+describe("roll-call days — the edges the drills found", () => {
+  const timed = (
+    subject: string,
+    checkpoint: string,
+    status: DayMark["status"],
+    day: number,
+    minute: number,
+    named: { id?: string; retracts?: string } = {},
+  ) => ({
+    ...m(subject, checkpoint, status, day, named),
+    occurredAt: new Date(Date.UTC(2026, 7, 1, 14, minute)),
+  });
+  const minute = (value: number) => new Date(Date.UTC(2026, 7, 1, 14, value));
+
+  describe("seenAfter", () => {
+    it("answers a plain false, and counts only a real dive number", () => {
+      const standing = standingByDay([m("ben", "after_dive_2", "boarded", 1)]);
+      expect(seenAfter(standing, "ben", 1, "after_dive_1")).toBe(false);
+      expect(seenAfter(standing, "ben", 0, "after_dive_1")).toBe(true);
+      // A dive number that is zero, fractional or missing is nobody's dive, so it settles nothing.
+      for (const checkpoint of ["after_dive_0", "after_dive_1.5", "after_dive_"]) {
+        expect(seenAfter(standing, "ben", 0, checkpoint), checkpoint).toBe(false);
+      }
+    });
+
+    it("reads a departure as before every dive", () => {
+      const standing = standingByDay([m("ben", "after_dive_1", "boarded", 1)]);
+      expect(seenAfter(standing, "ben", 0, "departure")).toBe(true);
+    });
+  });
+
+  describe("a cleared mark reaches back only when it should (#3995)", () => {
+    const missing = m("ben", "after_dive_1", "not_boarded", 0, { id: "x" });
+    const key = "ben\u0000after_dive_1";
+
+    it("is not undone by a mark that is not a cleared one", () => {
+      const standing = standingByDay([
+        missing,
+        m("ben", "after_dive_1", "boarded", 1, { retracts: "x" }),
+      ]);
+      expect(standing.get(0)?.get(key)?.status).toBe("not_boarded");
+    });
+
+    it("is not undone by a cleared departure count, which is not an after-dive one", () => {
+      const departureMissing = m("ben", "departure", "not_boarded", 0, { id: "x" });
+      const standing = standingByDay([
+        departureMissing,
+        m("ben", "departure", "cleared", 1, { retracts: "x" }),
+      ]);
+      expect(standing.get(0)?.get("ben\u0000departure")?.status).toBe("not_boarded");
+    });
+
+    it("is not undone by a cleared mark that names nothing", () => {
+      const standing = standingByDay([missing, m("ben", "after_dive_1", "cleared", 1)]);
+      expect(standing.get(0)?.get(key)?.status).toBe("not_boarded");
+    });
+
+    it("is never taken back by a cleared mark from an earlier day", () => {
+      const later = m("ben", "after_dive_1", "not_boarded", 1, { id: "x" });
+      const standing = standingByDay([
+        later,
+        m("ben", "after_dive_1", "cleared", 0, { retracts: "x" }),
+      ]);
+      expect(standing.get(1)?.get(key)?.status).toBe("not_boarded");
+    });
+  });
+
+  describe("carriedMissing", () => {
+    it("carries only days before today", () => {
+      const standing = standingByDay([m("ben", "after_dive_1", "not_boarded", 1)]);
+      expect(carriedMissing(standing, 1).size).toBe(0);
+      expect(carriedMissing(standing, 2).size).toBe(1);
+    });
+
+    it("keeps the newest earlier day's mark whatever order the days arrived in", () => {
+      for (const days of [
+        [2, 0],
+        [0, 2],
+      ]) {
+        const standing = standingByDay(
+          days.map((day) => m("ben", "after_dive_1", "not_boarded", day)),
+        );
+        const carried = carriedMissing(standing, 3);
+        expect(
+          [...carried.values()].map((mark) => mark.day),
+          days.join(),
+        ).toEqual([2]);
+      }
+    });
+
+    it("settles a missing diver when their own later dive that day is counted, whoever else was", () => {
+      const marks = [
+        m("ben", "after_dive_1", "not_boarded", 0),
+        m("ben", "after_dive_2", "boarded", 0),
+        m("cara", "departure", "boarded", 0),
+      ];
+      expect(carriedMissing(standingByDay(marks), 1).size).toBe(0);
+    });
+
+    it("is not settled by somebody else's later dive, or by a later dive that was not counted back", () => {
+      const others = [
+        m("ben", "after_dive_1", "not_boarded", 0),
+        m("cara", "after_dive_2", "boarded", 0),
+      ];
+      expect(carriedMissing(standingByDay(others), 1).size).toBe(1);
+      const stillMissing = [
+        m("ben", "after_dive_1", "not_boarded", 0),
+        m("ben", "after_dive_2", "not_boarded", 0),
+      ];
+      expect(
+        [...carriedMissing(standingByDay(stillMissing), 1).values()]
+          .map((x) => x.checkpoint)
+          .sort(),
+      ).toEqual(["after_dive_1", "after_dive_2"]);
+    });
+  });
+
+  it("lets a restated missing mark today replace the carried one (#3981)", () => {
+    const marks = [
+      m("ben", "after_dive_1", "not_boarded", 0),
+      m("ben", "after_dive_1", "not_boarded", 1),
+    ];
+    expect(states(manifestRollCallView(marks, 1))).toEqual({ "ben@after_dive_1": "not_boarded/1" });
+  });
+
+  describe("when a missing diver's clock starts", () => {
+    it("starts again after a count in between, and only on the same day", () => {
+      const marks = [
+        timed("ben", "after_dive_1", "not_boarded", 0, 1),
+        timed("ben", "after_dive_1", "boarded", 0, 2),
+        timed("ben", "after_dive_1", "not_boarded", 0, 3),
+      ];
+      expect(notBackAboardSince(marks, 0)).toEqual(minute(3));
+    });
+
+    it("does not reach into an earlier day's settled mark", () => {
+      const marks = [
+        timed("ben", "after_dive_1", "not_boarded", 0, 1),
+        timed("ben", "after_dive_2", "boarded", 0, 2),
+        timed("ben", "after_dive_1", "not_boarded", 1, 5),
+      ];
+      expect(notBackAboardSince(marks, 1)).toEqual(minute(5));
+    });
+
+    it("does not borrow another diver's missing time", () => {
+      // Cara was found again that day, so only Ben is red; his clock is his own.
+      const marks = [
+        timed("cara", "after_dive_2", "boarded", 0, 0),
+        timed("cara", "after_dive_1", "not_boarded", 0, 1),
+        timed("ben", "after_dive_1", "not_boarded", 0, 3),
+      ];
+      expect(notBackAboardSince(marks, 1)).toEqual(minute(3));
     });
   });
 });

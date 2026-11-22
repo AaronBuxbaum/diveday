@@ -47,6 +47,13 @@ describe("normalizePromoCode", () => {
     expect(normalizePromoCode("A".repeat(PROMO_CODE_MAX_LENGTH + 1))).toBeNull();
   });
 
+  it("keeps the exact edges: three characters is a code, forty is the longest", () => {
+    // Literals, not the exported constants, so moving either bound fails here.
+    expect(normalizePromoCode("ABC")).toBe("ABC");
+    expect(normalizePromoCode("A".repeat(40))).toHaveLength(40);
+    expect(normalizePromoCode("A".repeat(41))).toBeNull();
+  });
+
   it("rejects non-strings and empty input", () => {
     for (const value of ["", "    ", null, undefined, 42, {}]) {
       expect(normalizePromoCode(value)).toBeNull();
@@ -92,6 +99,17 @@ describe("promoWindowState", () => {
     ).toBe("not_started");
   });
 
+  it("is live at its start instant and after it, and not a moment before", () => {
+    const startsAt = new Date("2026-08-01T00:00:00Z");
+    expect(promoWindowState({ startsAt, expiresAt: null }, startsAt)).toBe("live");
+    expect(promoWindowState({ startsAt, expiresAt: null }, new Date(startsAt.getTime() + 1))).toBe(
+      "live",
+    );
+    expect(promoWindowState({ startsAt, expiresAt: null }, new Date(startsAt.getTime() - 1))).toBe(
+      "not_started",
+    );
+  });
+
   it("is dead at the expiry instant itself, not a moment after", () => {
     expect(promoWindowState({ startsAt: null, expiresAt: NOON }, NOON)).toBe("expired");
     expect(
@@ -135,6 +153,15 @@ describe("discountOffCents", () => {
     expect(discountOffCents(0, percent(50))).toBe(0);
   });
 
+  it("takes nothing off for an amount or total that is not a usable number of cents", () => {
+    expect(discountOffCents(Number.NaN, percent(10))).toBe(0);
+    expect(discountOffCents(Number.NaN, amount(500))).toBe(0);
+    expect(discountOffCents(-500, amount(100))).toBe(0);
+    expect(discountOffCents(1000, amount(Number.NaN))).toBe(0);
+    expect(discountOffCents(1000, amount(-300))).toBe(0);
+    expect(discountOffCents(1000, percent(Number.POSITIVE_INFINITY))).toBe(0);
+  });
+
   it("takes a fixed amount off exactly", () => {
     expect(discountOffCents(13000, amount(2000))).toBe(2000);
   });
@@ -166,6 +193,27 @@ describe("promoDiscountOf", () => {
     });
   });
 
+  it("treats a zero column as no discount, and lets the other column speak", () => {
+    expect(promoDiscountOf({ discountPercent: null, discountAmountCents: 0 })).toBeNull();
+    expect(promoDiscountOf({ discountPercent: 0, discountAmountCents: null })).toBeNull();
+    expect(promoDiscountOf({ discountPercent: 15, discountAmountCents: 0 })).toEqual({
+      kind: "percent",
+      percent: 15,
+    });
+    expect(promoDiscountOf({ discountPercent: 0, discountAmountCents: 700 })).toEqual({
+      kind: "amount",
+      amountCents: 700,
+    });
+    expect(promoDiscountOf({ discountPercent: 1, discountAmountCents: null })).toEqual({
+      kind: "percent",
+      percent: 1,
+    });
+    expect(promoDiscountOf({ discountPercent: null, discountAmountCents: 1 })).toEqual({
+      kind: "amount",
+      amountCents: 1,
+    });
+  });
+
   it("answers null for a row that holds neither, rather than guessing", () => {
     expect(promoDiscountOf({ discountPercent: null, discountAmountCents: null })).toBeNull();
   });
@@ -185,6 +233,7 @@ describe("promoDiscountOf", () => {
 describe("isValidPromoDiscountAmountCents", () => {
   it("takes a positive whole number of minor units and nothing else", () => {
     expect(isValidPromoDiscountAmountCents(2000)).toBe(true);
+    expect(isValidPromoDiscountAmountCents(1)).toBe(true);
     expect(isValidPromoDiscountAmountCents(0)).toBe(false);
     expect(isValidPromoDiscountAmountCents(-100)).toBe(false);
     expect(isValidPromoDiscountAmountCents(12.5)).toBe(false);

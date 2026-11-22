@@ -294,6 +294,7 @@ export function decideTripAdmission(input: TripAdmissionInput): TripAdmission {
   // missing requirement row is not "no gate": a trip with no row of its own
   // still inherits whatever its dive sites demand.
   const effective = unionRequirements(input.requirement, input.siteRequirement);
+  // mutation-ok: with nothing demanded the ladder below raises no blocker, so skipping this early admit changes no answer
   if (requirementDemandsNothing(effective)) return ADMITTED;
 
   // Deliberate, and not the inversion it looks like (security review
@@ -329,6 +330,7 @@ export function decideTripAdmission(input: TripAdmissionInput): TripAdmission {
   const certifications = evidence.certifications;
   const specialtyCertifications = evidence.specialtyCertifications;
   const nitroxCertifications = evidence.nitroxCertifications;
+  // mutation-ok: a declared level is a rung name, never falsy, so ?? and || agree
   const declaredLevel = input.declared?.level ?? null;
   const declaredNitrox = Boolean(input.declared?.nitrox);
   // Saying something is being known. A diver who names their rung on the form
@@ -365,6 +367,7 @@ export function decideTripAdmission(input: TripAdmissionInput): TripAdmission {
         input.requirement,
         input.siteRequirement,
         course,
+        // mutation-ok: the reach is the word site or default, never falsy, so ?? and || agree
         evidence.trainingDiveReach ?? "site",
       ).minimumCertificationLevel;
       return marked === null || levelStanding(marked, sale, "sale") === null;
@@ -382,19 +385,19 @@ export function decideTripAdmission(input: TripAdmissionInput): TripAdmission {
  * refusal notice into a blank one at the worst possible moment.
  */
 const LEVEL_CODES: Record<CertificationLevel, true> = {
-  open_water: true,
-  advanced_open_water: true,
-  rescue: true,
-  divemaster: true,
-  instructor: true,
+  open_water: true, // mutation-ok: only the key is read, never the value
+  advanced_open_water: true, // mutation-ok: only the key is read, never the value
+  rescue: true, // mutation-ok: only the key is read, never the value
+  divemaster: true, // mutation-ok: only the key is read, never the value
+  instructor: true, // mutation-ok: only the key is read, never the value
 };
 
 const SPECIALTY_CODES: Record<DiveSpecialty, true> = {
-  deep: true,
-  wreck: true,
-  night: true,
-  drysuit: true,
-  cavern: true,
+  deep: true, // mutation-ok: only the key is read, never the value
+  wreck: true, // mutation-ok: only the key is read, never the value
+  night: true, // mutation-ok: only the key is read, never the value
+  drysuit: true, // mutation-ok: only the key is read, never the value
+  cavern: true, // mutation-ok: only the key is read, never the value
 };
 
 /**
@@ -445,6 +448,7 @@ export function encodeTripAdmissionRefusal(refusal: TripAdmissionRefusal): strin
   return refusal
     .map((blocker) => {
       const shape = REFUSAL_CODES[blocker.code as RefusalCode];
+      // mutation-ok: a param is a non-empty code or absent, so ?? and || both give an empty string for absent
       const params = shape ? shape.params.map((name) => blocker.params?.[name] ?? "") : [];
       return [blocker.code, ...params].join(PARAM);
     })
@@ -501,6 +505,7 @@ export function decodeTripAdmissionRefusal(
 ): TripAdmissionRefusal | null {
   if (typeof value !== "string" || !value) return null;
   const refusal: ReadinessBlocker[] = [];
+  // mutation-ok: ranks start at 0, so any start below 0 orders the first blocker the same way
   let lastRank = -1;
   const specialties = new Set<string>();
   for (const item of value.split(BLOCKER)) {

@@ -107,10 +107,11 @@ export function DayStation({
   const intentLine = staffDiveIntentLine(t, station.intents ?? [], locale);
   const hello = sayHelloSentences(t, locale, station.welcome ?? []).join(" ");
   const [titleHead, titleLast] = lastWordApart(station.title);
+  // Departure's crew count: a boarding fact, so a boat that is home no longer says it.
   const crewRollCallOpen =
+    !home &&
     station.booked > 0 &&
     station.boarded === station.booked &&
-    station.blocked === 0 &&
     !station.crewAccountedFor &&
     station.crewReason !== "crew_none_assigned";
 
@@ -243,6 +244,14 @@ export function DayStation({
           </p>
         </>
       )}
+
+      {/* **Home said with people unaccounted for** (#4885): the tap is never refused, so the card
+          says so in the manifest strip's words rather than look as settled as a counted boat. */}
+      {home && stage?.notCounted ? (
+        <p className="mt-3 text-sm font-medium text-warning">
+          {t("manifest.stage.homeNotCounted", { count: stage.notCounted })}
+        </p>
+      ) : null}
 
       {crewRollCallOpen ? (
         <p className="mt-3 text-sm font-medium text-warning">

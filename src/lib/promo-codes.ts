@@ -218,6 +218,7 @@ function wholeCents(cents: number): number {
 export function discountOffCents(discountableCents: number, discount: PromoDiscount): number {
   const total = wholeCents(discountableCents);
   if (discount.kind === "amount") return Math.min(total, wholeCents(discount.amountCents));
+  // mutation-ok: any percent from 100 up is held to the total by the Math.min below, so 100 or 101 here changes nothing
   const percent = Math.min(100, wholeCents(discount.percent));
   return Math.min(total, Math.ceil((total * percent) / 100));
 }

@@ -407,6 +407,36 @@ describe("a station's safety notes", () => {
     expect(screen.getByText(/crew roll call is still open/)).toBeInTheDocument();
   });
 
+  it("says Home was tapped with people not counted, and nothing when the count was clean", () => {
+    const home = (notCounted: number | null) => ({
+      ...departure(),
+      stage: { ...stationStage("home"), notCounted },
+    });
+    renderSpine({ departures: [home(2)] });
+    expect(screen.getByText("Home was said with 2 people not counted")).toBeInTheDocument();
+    cleanup();
+    renderSpine({ departures: [home(1)] });
+    expect(screen.getByText("Home was said with 1 person not counted")).toBeInTheDocument();
+    cleanup();
+    renderSpine({ departures: [home(null)] });
+    expect(screen.queryByText(/not counted/)).not.toBeInTheDocument();
+  });
+
+  it("says the crew roll call is open when a blocked diver is aboard, but not once the boat is home", () => {
+    const open = {
+      booked: 6,
+      boarded: 6,
+      blocked: 1,
+      crewAccountedFor: false,
+      crewReason: "crew_awaiting" as const,
+    };
+    renderSpine({ departures: [departure(open)] });
+    expect(screen.getByText(/crew roll call is still open/)).toBeInTheDocument();
+    cleanup();
+    renderSpine({ departures: [{ ...departure(open), stage: stationStage("home") }] });
+    expect(screen.queryByText(/crew roll call is still open/)).toBeNull();
+  });
+
   it("says nothing about the crew roll call when the boat has no crew rostered at all", () => {
     // That is a coverage gap the spine already raises as its own row; saying it
     // twice on one screen buys nothing.

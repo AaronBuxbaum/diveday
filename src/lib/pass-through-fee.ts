@@ -18,6 +18,7 @@ export function parsePassThroughFee(value: unknown): PassThroughFee | null {
 }
 
 export function passThroughTotalCents(fee: PassThroughFee | null, diverCount: number): number {
+  // mutation-ok: a diverCount of exactly 0 gives fee * 0 = 0 either way, so `<=` and `<` agree
   if (!fee || !Number.isInteger(diverCount) || diverCount <= 0) return 0;
   return fee.amountCents * diverCount;
 }

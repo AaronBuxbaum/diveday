@@ -60,6 +60,28 @@ describe("the refusal survives a redirect", () => {
     expect(decodeTripAdmissionRefusal(encodeTripAdmissionRefusal(refusal))).toEqual(refusal);
   });
 
+  it("carries every rung and every specialty the sale can name", () => {
+    const levels = [
+      "open_water",
+      "advanced_open_water",
+      "rescue",
+      "divemaster",
+      "instructor",
+    ] as const;
+    for (const level of levels) {
+      const missing: TripAdmissionRefusal = [noLevel(level)];
+      expect(decodeTripAdmissionRefusal(encodeTripAdmissionRefusal(missing))).toEqual(missing);
+    }
+    for (const level of levels.slice(1)) {
+      const short: TripAdmissionRefusal = [levelShort(level, "open_water")];
+      expect(decodeTripAdmissionRefusal(encodeTripAdmissionRefusal(short))).toEqual(short);
+    }
+    for (const specialty of ["deep", "wreck", "night", "drysuit", "cavern"] as const) {
+      const missing: TripAdmissionRefusal = [noSpecialty(specialty)];
+      expect(decodeTripAdmissionRefusal(encodeTripAdmissionRefusal(missing))).toEqual(missing);
+    }
+  });
+
   // Branch coverage on the sale's wire (issue #3832): what the encoder writes for
   // a blocker the sale never raises or one short of its params, and what the
   // decoder then refuses.
