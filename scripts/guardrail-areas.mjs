@@ -38,6 +38,43 @@ export function isTestFile(file) {
   return TEST_FILE.test(file);
 }
 
+/** The files that decide whether a change is fine, with the plain words for each kind. */
+const RULE_FILES = [
+  ["check", "a repository check", /^scripts\/check-[^/]+\.mjs$/],
+  [
+    "registry",
+    "the list of repository checks",
+    /^scripts\/(?:rules-registry|ratchet|coverage-floors|coverage-safety-files|coverage-relevant)\.mjs$/,
+  ],
+  ["mutation", "the breakage drills", /^scripts\/mutation\/[^/]+\.(?:mjs|json)$/],
+  ["floors", "a coverage floor or allowance", /^scripts\/(?:coverage-floors|ratchets)\.json$/],
+  ["lint", "a lint rule", /^(?:biome\.json|scripts\/lint-rules\/.*)$/],
+  ["types", "the type checker's settings", /^tsconfig\.json$/],
+  [
+    "test-config",
+    "a test or build setting",
+    /^(?:vitest[\w.-]*\.config\.ts|playwright[\w.-]*\.config\.ts|regconfig[\w.]*\.json)$/,
+  ],
+  ["ci", "the CI workflow", /^\.github\/(?:workflows|actions)\//],
+  [
+    "harness",
+    "the shared test harness",
+    /^(?:src\/test\/(?:setup|projects|frozen-clock|fakes|global-setup|shard-sequencer)[^/]*\.ts|e2e\/(?:fixtures|helpers)\.ts)$/,
+  ],
+  [
+    "agent-rules",
+    "the rules agents follow",
+    /^(?:AGENTS\.md|CLAUDE\.md|\.claude\/(?:rules|agents)\/.*)$/,
+  ],
+];
+
+/** `{ kind, words }` for a rule file, or null. A test file is never a rule file (tests are read separately). */
+export function ruleFileKind(file) {
+  if (isTestFile(file)) return null;
+  for (const [kind, words, re] of RULE_FILES) if (re.test(file)) return { kind, words };
+  return null;
+}
+
 const MONEY = [
   /^src\/lib\/(?:payments|billing)\//,
   /^src\/lib\/(?:money|collection-money)\.tsx?$/,
@@ -134,6 +171,13 @@ export const AREAS = [
     sentence: "CI, hosting and the sign-in gate",
     weighty: false,
     match: (file) => DEPLOY.some((re) => re.test(file)),
+  },
+  {
+    id: "rules",
+    label: "The rules that judge changes",
+    sentence: "tests, checks, floors, CI settings and the rules agents follow",
+    weighty: false,
+    match: (file) => ruleFileKind(file) !== null,
   },
   {
     id: "screens",

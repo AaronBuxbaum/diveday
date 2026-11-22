@@ -34,7 +34,7 @@ import process from "node:process";
 import { fileURLToPath } from "node:url";
 
 import { reviewAnswered, reviewsSection } from "./check-pr-body.mjs";
-import { areasOf, isTestFile } from "./guardrail-areas.mjs";
+import { areasOf, isTestFile, ruleFileKind } from "./guardrail-areas.mjs";
 import { bodySection } from "./risk-card.mjs";
 import { readBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 import { parseNameStatus } from "./warn-untested-logic.mjs";
@@ -212,6 +212,14 @@ export function loweredFloors(before, after, exists = () => true) {
   return lowered.toSorted((a, b) => a.key.localeCompare(b.key));
 }
 
+/** A ratchet key in words: `architecture.src/lib/auth.ts` is "the architecture allowance for `src/lib/auth.ts`". */
+export function allowanceName(key) {
+  const dot = key.indexOf(".");
+  const guard = dot === -1 ? key : key.slice(0, dot);
+  const rest = (dot === -1 ? "" : key.slice(dot + 1)).replace(/^budgets\./, "");
+  return rest ? `the ${guard} allowance for \`${rest}\`` : `the ${guard} allowance`;
+}
+
 /** Ratchet allowances that rose, or appeared above zero. */
 export function raisedAllowances(before, after) {
   const was = numericLeaves(before);
@@ -243,43 +251,6 @@ export function newAbsorbedReasons(before, after) {
 }
 
 // --- rule files -------------------------------------------------------------------------------
-
-/** The files that decide whether a change is fine, with the plain words for each kind. */
-const RULE_FILES = [
-  ["check", "a repository check", /^scripts\/check-[^/]+\.mjs$/],
-  [
-    "registry",
-    "the list of repository checks",
-    /^scripts\/(?:rules-registry|ratchet|coverage-floors|coverage-safety-files|coverage-relevant)\.mjs$/,
-  ],
-  ["mutation", "the breakage drills", /^scripts\/mutation\/[^/]+\.(?:mjs|json)$/],
-  ["floors", "a coverage floor or allowance", /^scripts\/(?:coverage-floors|ratchets)\.json$/],
-  ["lint", "a lint rule", /^(?:biome\.json|scripts\/lint-rules\/.*)$/],
-  ["types", "the type checker's settings", /^tsconfig\.json$/],
-  [
-    "test-config",
-    "a test or build setting",
-    /^(?:vitest[\w.-]*\.config\.ts|playwright[\w.-]*\.config\.ts|regconfig[\w.]*\.json)$/,
-  ],
-  ["ci", "the CI workflow", /^\.github\/(?:workflows|actions)\//],
-  [
-    "harness",
-    "the shared test harness",
-    /^(?:src\/test\/(?:setup|projects|frozen-clock|fakes|global-setup|shard-sequencer)[^/]*\.ts|e2e\/(?:fixtures|helpers)\.ts)$/,
-  ],
-  [
-    "agent-rules",
-    "the rules agents follow",
-    /^(?:AGENTS\.md|CLAUDE\.md|\.claude\/(?:rules|agents)\/.*)$/,
-  ],
-];
-
-/** `{ kind, words }` for a rule file, or null. A test file is never a rule file (tests are read separately). */
-export function ruleFileKind(file) {
-  if (isTestFile(file)) return null;
-  for (const [kind, words, re] of RULE_FILES) if (re.test(file)) return { kind, words };
-  return null;
-}
 
 // --- the verdict ------------------------------------------------------------------------------
 
@@ -454,7 +425,7 @@ export function refereeReport({ changes, before, after, hunks, body }) {
       );
     } else if (edit.how === "edited") {
       watch.push(
-        `The rules changed: ${edit.words} was edited, ${edit.removed} lines removed and ${edit.added} added (\`${edit.path}\`).`,
+        `The rules changed: ${edit.words} was edited, ${plural(edit.removed, "line")} removed and ${edit.added} added (\`${edit.path}\`).`,
       );
     } else {
       protects.push(

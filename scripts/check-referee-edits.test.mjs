@@ -9,11 +9,11 @@ import {
   raisedAllowances,
   refereeProblems,
   refereeReport,
-  ruleFileKind,
   statementOf,
   testCounts,
   testLoss,
 } from "./check-referee-edits.mjs";
+import { ruleFileKind } from "./guardrail-areas.mjs";
 
 const change = (path, status = "M", added = 3, removed = 0) => ({ path, status, added, removed });
 
