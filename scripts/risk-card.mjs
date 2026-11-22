@@ -29,6 +29,7 @@ import process from "node:process";
 import { fileURLToPath } from "node:url";
 
 import { AREAS, areasOf, isLogicFile, isTestFile } from "./guardrail-areas.mjs";
+import { classifyScope } from "./mutation/scope.mjs";
 import { readBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 import { parseNameStatus } from "./warn-untested-logic.mjs";
 
@@ -269,13 +270,23 @@ export function buildRiskCard(input) {
 
   // Breakage drills.
   const mutation = input.mutation;
-  const changesMoneyOrSafety = touched.some(
-    ({ area, hitLogic }) =>
-      (area.id === "money" || area.id === "safety") &&
-      hitLogic.some((change) => isLogicFile(change.path) && change.status !== "D"),
-  );
+  // The drills break only the files `scripts/mutation/scope.mjs` names (the folders of pure rules
+  // and database functions). A money or safety file outside them, a route or a page, is never
+  // broken on purpose, and the card says so rather than letting "fine" cover it.
+  const drillable = logic.filter((change) => classifyScope(change.path));
+  const moneyOrSafetyOutOfReach = touched
+    .filter(({ area }) => area.id === "money" || area.id === "safety")
+    .flatMap(({ hitLogic }) => hitLogic)
+    .filter((change) => isLogicFile(change.path) && change.status !== "D")
+    .filter((change) => !classifyScope(change.path))
+    .map((change) => change.path);
+  if (moneyOrSafetyOutOfReach.length > 0) {
+    gaps.push(
+      `The breakage drills do not reach ${listFiles([...new Set(moneyOrSafetyOutOfReach)])}: a route, page or component is never broken on purpose.`,
+    );
+  }
   if (!mutation) {
-    if (changesMoneyOrSafety) {
+    if (drillable.length > 0) {
       gaps.push(
         "The breakage drills did not run, so nothing here shows the tests would notice a broken money or safety line.",
       );

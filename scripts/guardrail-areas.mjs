@@ -7,9 +7,13 @@
 // `dive-domain-expert` is a dive-safety file here too. Money, offline, database, outside code and
 // deploy are named here because no reviewer owns them.
 //
-// A file may belong to several areas (a refund webhook is money and privacy); `areasOf` returns all.
+// The breakage drills decide which files are money and safety logic (`scripts/mutation/scope.mjs`);
+// a file the drills break on purpose is always in the matching area here, so the card never calls a
+// drilled change "fine" without naming the area. A file may belong to several areas (a refund
+// webhook is money and privacy); `areasOf` returns all.
 
 import { REVIEWS, reviewPath } from "./check-pr-body.mjs";
+import { classifyScope } from "./mutation/scope.mjs";
 
 const DOMAIN_EXPERT = REVIEWS.find((review) => review.agent === "dive-domain-expert");
 const SECURITY = REVIEWS.find((review) => review.agent === "security-reviewer");
@@ -126,7 +130,8 @@ export const AREAS = [
     label: "Money",
     sentence: "prices, payments, refunds, credits and fees",
     weighty: true,
-    match: (file, lower) => MONEY.some((re) => re.test(file) || re.test(lower)),
+    match: (file, lower) =>
+      MONEY.some((re) => re.test(file) || re.test(lower)) || classifyScope(file) === "money",
   },
   {
     id: "safety",
@@ -135,7 +140,8 @@ export const AREAS = [
       "who may board, roll call, medical answers, certifications, waivers, nitrox and erasure",
     weighty: true,
     match: (file, lower) =>
-      /^src\//.test(file) && DOMAIN_EXPERT.patterns.some((re) => re.test(lower)),
+      (/^src\//.test(file) && DOMAIN_EXPERT.patterns.some((re) => re.test(lower))) ||
+      classifyScope(file) === "safety",
   },
   {
     id: "privacy",

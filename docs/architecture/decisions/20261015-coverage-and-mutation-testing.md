@@ -1,6 +1,6 @@
 # 20261015-coverage-and-mutation-testing — Measure the safety files with coverage-v8 and Stryker
 
-- **Status:** Accepted, **partly superseded** by [20261101-cut-mutation-testing](20261101-cut-mutation-testing.md)
+- **Status:** Accepted, **partly superseded** by [20261101-cut-mutation-testing](20261101-cut-mutation-testing.md), which [20261122-diff-mutation-testing](20261122-diff-mutation-testing.md) replaced; the coverage-floor half stands
 - **Date:** 2026-10-15
 
 ## Context

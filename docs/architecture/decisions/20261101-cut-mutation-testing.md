@@ -1,6 +1,6 @@
 # 20261101-cut-mutation-testing — Cut mutation testing until the Vitest 5 runner works
 
-- **Status:** Accepted
+- **Status:** Superseded by [20261122-diff-mutation-testing](20261122-diff-mutation-testing.md)
 - **Date:** 2026-11-01
 - **Supersedes:** the Stryker half of [20261015-coverage-and-mutation-testing](20261015-coverage-and-mutation-testing.md); its coverage-floor half stands
 

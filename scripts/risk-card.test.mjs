@@ -208,6 +208,25 @@ describe("risk card verdict", () => {
     expect(card.markdown).toContain("What this card cannot tell you");
   });
 
+  it("says which money and safety files the breakage drills cannot reach", () => {
+    const route = "src/app/api/webhooks/stripe/route.ts";
+    const card = buildRiskCard({
+      changes: [change(route), change("src/app/api/webhooks/stripe/route.test.ts")],
+      body: "",
+      mutation: drills(),
+      referee: referee(),
+    });
+    expect(card.gaps.join("\n")).toContain(`do not reach \`${route}\``);
+    expect(card.gaps.join("\n")).not.toContain("breakage drills did not run");
+    const inReach = buildRiskCard({
+      changes: [change("src/db/refunds.ts"), change("src/db/refunds.test.ts")],
+      body: "",
+      mutation: drills(),
+      referee: referee(),
+    });
+    expect(inReach.gaps.join("\n")).not.toContain("do not reach");
+  });
+
   it("says the drills were capped rather than claiming all of them ran", () => {
     const card = buildRiskCard({
       changes: [change("src/lib/readiness.ts"), change("src/lib/readiness.test.ts")],
