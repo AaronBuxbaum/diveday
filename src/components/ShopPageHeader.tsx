@@ -251,7 +251,15 @@ function ResolvedShopPageHeader({
               `text-balance` because the titles that do wrap here are boat
               names ("Two-Tank Reef — Molasses & French"), and an even two
               lines reads better than a full line plus one orphaned word. */}
-          <div className={titlePrefix || titleEnd ? "flex items-center gap-3" : undefined}>
+          <div
+            // The eyebrow's gap belongs to the row, not the heading: on the
+            // heading it pushed the name below the photo's centre.
+            className={
+              titlePrefix || titleEnd
+                ? `flex items-center gap-3${eyebrow ? " mt-2" : ""}`
+                : undefined
+            }
+          >
             {titlePrefix}
             <h1
               // The heading fades as it passes under the bar, so it and the
@@ -261,7 +269,7 @@ function ResolvedShopPageHeader({
               // which is the staff shell alone.
               data-chrome-fold-title
               lang={titleLang}
-              className={`min-w-0 font-brand-display ${display ? GREETING_TITLE_CLASS : PAGE_TITLE_CLASS}${eyebrow ? " mt-2" : ""}${titleClassName ? ` ${titleClassName}` : ""}`}
+              className={`min-w-0 font-brand-display ${display ? GREETING_TITLE_CLASS : PAGE_TITLE_CLASS}${eyebrow && !(titlePrefix || titleEnd) ? " mt-2" : ""}${titleClassName ? ` ${titleClassName}` : ""}`}
             >
               {bindTitleDash(title)}
             </h1>

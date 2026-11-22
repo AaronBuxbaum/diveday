@@ -687,9 +687,8 @@
   },
   "details": {
     "label": "Contact details",
-    "summaryEmergency": "Emergency contact: {name}",
-    "summaryEmergencyNoPhone": "Emergency contact: {name}, no phone number",
-    "summaryEmergencyNoName": "Emergency contact: {phone}, no name",
+    "summaryNoPhone": "No phone number",
+    "summaryNoName": "No contact name",
     "summaryNoEmergency": "No emergency contact",
     "minorDeclaredNoDateOfBirth": "A booking says this diver is under 18, so their waiver needs a parent or guardian’s signature. Add the date of birth to settle it."
   },

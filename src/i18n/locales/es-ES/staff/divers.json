@@ -687,9 +687,8 @@
   },
   "details": {
     "label": "Datos de contacto",
-    "summaryEmergency": "Contacto de emergencia: {name}",
-    "summaryEmergencyNoPhone": "Contacto de emergencia: {name}, sin teléfono",
-    "summaryEmergencyNoName": "Contacto de emergencia: {phone}, sin nombre",
+    "summaryNoPhone": "Sin teléfono",
+    "summaryNoName": "Sin nombre de contacto",
     "summaryNoEmergency": "Sin contacto de emergencia",
     "minorDeclaredNoDateOfBirth": "Una reserva indica que este buceador es menor de 18 años, así que su exención necesita la firma de su madre, padre o tutor. Agrega la fecha de nacimiento para resolverlo."
   },

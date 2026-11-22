@@ -146,7 +146,7 @@
   },
   "diver": {
     "heading": "Gear they own",
-    "gearEmpty": "Nothing on file",
+    "gearEmpty": "None on file",
     "onTheBench": "{count, number} on the bench",
     "deletePiece": "Delete {label}",
     "deletePieceShort": "Delete",
