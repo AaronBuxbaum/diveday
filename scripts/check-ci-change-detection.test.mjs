@@ -180,7 +180,9 @@ describe("uncertain stack scope", () => {
         },
       });
       expect((await readFile(output, "utf8")).trim().split("\n").sort()).toEqual(
-        ["browser", "code", "db", "pixel_probe", "safety"].map((key) => `${key}=${forceFull}`),
+        ["browser", "code", "db", "mutation", "pixel_probe", "safety"].map(
+          (key) => `${key}=${forceFull}`,
+        ),
       );
     }
   });

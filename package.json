@@ -12,6 +12,7 @@
     "build": "pnpm build:sw && next build && pnpm build:sw:assets",
     "start": "next start",
     "lint": "biome check .",
+    "mutate": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/mutation/run.mjs",
     "lint:fix": "biome check --write .",
     "lint:rules": "biome lint --only=plugin src",
     "typecheck": "tsc --noEmit && tsc --noEmit -p src/worker",

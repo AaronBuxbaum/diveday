@@ -21,6 +21,7 @@ every other section stands.
 | Repo checks | `pnpm check:repo` (`scripts/check-*.mjs`) and the Vitest `guards` project | every rule that reads source: "every X has Y", no raw colour, one way imports | a single page's markup |
 | Coverage floors | `@vitest/coverage-v8`, ci.yml's `coverage-floors` ([below](#coverage-floors)) | branch coverage of every safety file never falling | a coverage target for the rest of the tree |
 | Risk card | `scripts/risk-card.mjs`, ci.yml's `risk-card` ([guardrails.md](guardrails.md)) | the plain-words verdict on a stack: which areas changed, what protects them, what needs a person | blocking a merge (the jobs it reports on do that) |
+| Breakage drills | `pnpm mutate` (`scripts/mutation/`), ci.yml's `mutation-diff` and weekly `mutation.yml` ([below](#breakage-drills)) | a test going red when a changed money or safety line is broken on purpose | proving a whole file correct; files outside money and safety |
 | Nightly and weekly | `simulate-day.yml`, `persona-bots.yml`, ci.yml's schedule | a whole shop day, persona walks, real Postgres against what other branches merged | blocking a PR |
 
 Almost every page in `src/app/` is an `async function Page()` reading the database directly, which
@@ -151,12 +152,12 @@ coverage report. A behavior change edits its story in the same PR.
 | --- | --- |
 | Before a commit | the guard you touched, `pnpm lint`, `pnpm typecheck`, `pnpm test <file>`; a changed flow's specs; a changed surface's captures in light (the **verify** skill) |
 | Before a push, optional (CI is the gate) | `pnpm verify:push`: regen and a clean tree, check:repo and `guards`, every source-reading test, `vitest related`, and the specs `pnpm e2e:affected` names ([verifying.md](../agents/verifying.md#the-pre-push-gate)) |
-| Every pull request | repo checks, lint, typecheck (one job), all unit tests (6 shards) with the coverage floors, the build, every Playwright spec (6 shards), the light-mode captures `visual-affected` selects (up to 8 shards, 7 for every light capture), the fast lane; real Postgres when `src/db/**`, `src/features/**`, `drizzle/**`, the Postgres test harness or `ci.yml` changed |
+| Every pull request | repo checks, lint, typecheck (one job), all unit tests (6 shards) with the coverage floors, the breakage drills when a money or safety file changed, the build, every Playwright spec (6 shards), the light-mode captures `visual-affected` selects (up to 8 shards, 7 for every light capture), the fast lane; real Postgres when `src/db/**`, `src/features/**`, `drizzle/**`, the Postgres test harness or `ci.yml` changed |
 | Push to `main` | all of the above with every capture, light and dark: the next baseline |
 | Nightly | real Postgres (ci.yml's schedule), the one-day simulation, quarantined tests and the flake hunt (`e2e-nightly.yml`), the follow-up scan |
 | Every 6 hours | the public schedule canary (`public-schedule-canary.yml`): the demo shop's schedule draws a trip |
 | Weekly | CodeQL (`codeql.yml`, Mondays 05:30 UTC) and the mobile behavior lane (`mobile-behavior.yml`); both return to daily at the first real booking (#2987) |
-| Weekly | the persona walk, the shard-duration refresh |
+| Weekly | the persona walk, the shard-duration refresh, the whole-file breakage drills (`mutation.yml`, Sundays 04:00 UTC) |
 
 **Canceling a run stops its jobs.** Postgres, CI verdicts and the infra comment and deploy jobs use
 `!cancelled()` at job level so failed or skipped dependencies do not suppress needed work, while
@@ -459,7 +460,34 @@ records a fall with its reason. The first floors for the original eleven (2026-1
 trip-admission 97.61%, lib/waivers 93.39%, roll-call 83.33%, lib/trips and lib/authz 100%, bookings
 86.41%, checkouts 87.29%, refunds 83.15%, promo-caps 75%, account-security 81.81%; the rest were seeded on 2026-11-01 from their measured values. ADR
 [20261015-coverage-and-mutation-testing](../architecture/decisions/20261015-coverage-and-mutation-testing.md);
-mutation testing was cut by [20261101-cut-mutation-testing](../architecture/decisions/20261101-cut-mutation-testing.md).
+Stryker's mutation testing was cut by [20261101-cut-mutation-testing](../architecture/decisions/20261101-cut-mutation-testing.md) and replaced by the breakage drills below.
+
+### Breakage drills
+
+Coverage says a line ran; a breakage drill asks whether a test would notice if it were wrong. On
+every pull request that changes a money or safety file (`scripts/mutation/scope.mjs`: the coverage
+safety files plus payments, billing, refunds, checkouts, trip credit, promo codes, discounts, fees,
+deposits and payouts), ci.yml's `mutation-diff` job runs `pnpm mutate --diff <base>`: it breaks
+each changed line a few small ways (flip a comparison, swap and/or, drop a condition, skip a call,
+change a number, negate a check, return nothing) and reruns the tests that import the file for
+each break. A break no test notices is a survivor, printed as `path:line  <what>: <was> -> <became>  | <line>`.
+While `scripts/mutation/policy.json` sets the file's class to `"block"`, a survivor fails the job.
+
+The fix for a survivor is a test that fails when that line is wrong. When a break cannot change
+behavior (an equivalent mutant), mark the line, or the line above it, with
+`// mutation-ok: <why>`; a reason of at least eight characters is required, and every marked line is
+listed in the result. Logging calls, types, imports, SQL templates and object keys are never broken.
+
+Each break runs as its own Vitest process with the broken text handed to Vite by
+`scripts/mutation/vite-plugin.mjs` (`vitest.mutation.config.ts`), so no file on disk changes.
+Before any break, the selected tests run once unbroken; a red baseline stops the run. A run tries
+at most 150 breaks in 20 minutes; past either, `.agent-out/mutation-diff.json` says `capped` or
+`timeBoxed` and how many were not tried. The weekly `mutation.yml` breaks every line of each file in
+`scripts/mutation/floors.json` and holds its score (breaks caught over breaks tried) to the file's
+floor, which only rises: `pnpm mutate --file <path> --write` banks a rise, `--write --absorb "<why>"`
+records a fall. The first floors (2026-11-22, scores rounded down): readiness 93%, trip-admission 86%,
+booking-gates 92%, roll-call-days 79%, nitrox-mod 93%, nitrox-fill 100%, pass-through-fee 95%,
+money 79%, promo-codes 88%. ADR [20261122-diff-mutation-testing](../architecture/decisions/20261122-diff-mutation-testing.md).
 
 ### Why `playwright-core` is pinned in devDependencies
 

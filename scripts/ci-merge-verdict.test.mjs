@@ -27,6 +27,7 @@ const jobs = [
   "real-postgres",
   "coverage-floors",
   "visual-flakes",
+  "mutation-diff",
 ];
 const green = () => Object.fromEntries(jobs.map((id) => [id, { result: "success" }]));
 
@@ -173,6 +174,33 @@ describe("CI merge verdict", () => {
     expect(ciMergeVerdict(needs, context)).toEqual(["coverage-floors: skipped"]);
     expect(ciMergeVerdict(needs, { ...context, safety: undefined })).toEqual([
       "coverage-floors: skipped",
+    ]);
+  });
+  it("lets the breakage drills skip only when no money or safety file moved, or off a pull request", () => {
+    const needs = green();
+    needs["unit-tests-docs"].result = "skipped";
+    needs["real-postgres"].result = "skipped";
+    needs["visual-flakes"].result = "skipped";
+    needs["mutation-diff"].result = "skipped";
+    const context = { code: "true", db: "false", event: "pull_request" };
+    expect(ciMergeVerdict(needs, { ...context, mutation: "false" })).toEqual([]);
+    expect(ciMergeVerdict(needs, { ...context, mutation: "true" })).toEqual([
+      "mutation-diff: skipped",
+    ]);
+    expect(ciMergeVerdict(needs, { ...context, mutation: undefined })).toEqual([
+      "mutation-diff: skipped",
+    ]);
+    expect(
+      ciMergeVerdict(needs, {
+        ...context,
+        event: "push",
+        ref: "refs/heads/main",
+        mutation: "true",
+      }),
+    ).toEqual(["visual-flakes: skipped"]);
+    needs["mutation-diff"].result = "failure";
+    expect(ciMergeVerdict(needs, { ...context, mutation: "false" })).toEqual([
+      "mutation-diff: failure",
     ]);
   });
   it("lets the browser lanes skip only when change detection says unit-test files alone changed", () => {

@@ -209,6 +209,47 @@ jobs:
           STACK_BASE_SHA: ${{ needs.stack-gate.outputs.diff_base }}
         run: node scripts/warn-untested-logic.mjs --base "${STACK_BASE_SHA:-origin/$BASE_REF}"
 
+  # Breakage drills on the changed lines of money and safety files (ADR
+  # 20261122-diff-mutation-testing; docs/engineering/testing.md#breakage-drills): each changed
+  # line is broken a few small ways (a flipped comparison, a skipped call, a dropped condition)
+  # and a test has to go red for each. A break no test notices fails the job while
+  # scripts/mutation/policy.json sets its class to "block". Pull requests only: a push has no
+  # base to diff against. At most 150 breaks and 20 minutes; the JSON says when it was capped.
+  mutation-diff:
+    name: Breakage drills
+    needs: [changes, stack-gate]
+    if: ${{ !cancelled() && github.event_name == 'pull_request' && needs.stack-gate.outputs.run != 'false' && needs.changes.outputs.mutation == 'true' }}
+    runs-on: ${{ fromJSON(needs.changes.outputs.runner || '"ubuntu-24.04"') }}
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # The diff reaches back to the merge base with the base branch.
+          fetch-depth: 0
+      - uses: ./.github/actions/setup
+      # The PGlite template a db-backed test hydrates from, restored the way `unit-tests` does;
+      # the baseline run builds it on a miss (src/test/global-setup.ts). Never saved here.
+      - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: node_modules/.cache/diveday
+          key: ${{ runner.os }}-${{ runner.arch }}-pglite-template-${{ hashFiles('drizzle/**', 'src/**', 'config/**', 'pnpm-lock.yaml', 'package.json', '!**/*.test.*', '!**/*.spec.*', '!**/*.snap') }}
+      - name: Break the changed money and safety lines
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          # A stacked top layer is drilled against where its stack left the default branch.
+          STACK_BASE_SHA: ${{ needs.stack-gate.outputs.diff_base }}
+        run: pnpm mutate --diff "${STACK_BASE_SHA:-origin/$BASE_REF}" --summary "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: ${{ !cancelled() }}
+        with:
+          name: mutation-diff
+          path: .agent-out/mutation-diff.json
+          include-hidden-files: true
+          if-no-files-found: ignore
+          retention-days: 30
+
   unit-tests:
     name: Unit tests shard ${{ matrix.shard }}/6
     # These six shards are where the `*.postgres.test.ts` files land in the
@@ -1299,6 +1340,7 @@ jobs:
       db: ${{ steps.filter.outputs.db }}
       pixel_probe: ${{ steps.filter.outputs.pixel_probe }}
       safety: ${{ steps.filter.outputs.safety }}
+      mutation: ${{ steps.filter.outputs.mutation }}
       browser: ${{ steps.superseded.outputs.browser || steps.filter.outputs.browser }}
       runner: ${{ steps.runner.outputs.runner }}
     steps:
@@ -1358,6 +1400,7 @@ jobs:
             echo "code=true" >> "$GITHUB_OUTPUT"
             echo "pixel_probe=true" >> "$GITHUB_OUTPUT"
             echo "safety=true" >> "$GITHUB_OUTPUT"
+            echo "mutation=true" >> "$GITHUB_OUTPUT"
             echo "browser=true" >> "$GITHUB_OUTPUT"
             echo "Diff range '${base}...${head}' is uncertain or unresolvable — running everything." >> "$GITHUB_STEP_SUMMARY"
             exit 0
@@ -1390,6 +1433,16 @@ jobs:
           else
             echo "safety=false" >> "$GITHUB_OUTPUT"
             echo "Nothing the safety-file coverage floors measure changed — unit shards run without coverage and the floors job is skipped (main still runs it)." >> "$GITHUB_STEP_SUMMARY"
+          fi
+          # `mutation` — did this change touch a money or safety file the breakage drills cover
+          # (scripts/mutation/scope.mjs)? Only then does `mutation-diff` break its changed lines.
+          # Fails open like the rest: an error here answers true.
+          mutation_changed=$(git diff --name-only "${base}...${head}" | node scripts/mutation/scope.mjs || echo "unknown")
+          if [ -n "${mutation_changed}" ]; then
+            echo "mutation=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "mutation=false" >> "$GITHUB_OUTPUT"
+            echo "No money or safety file changed — the breakage drills are skipped." >> "$GITHUB_STEP_SUMMARY"
           fi
           # Three-dot, from the merge base: what this branch changed, not what
           # main did underneath it. Two dots would report every file main added
@@ -1608,6 +1661,7 @@ jobs:
       - real-postgres
       - coverage-floors
       - visual-flakes
+      - mutation-diff
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:

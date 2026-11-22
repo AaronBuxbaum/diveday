@@ -18,6 +18,7 @@ export const CI_JOBS = [
   "real-postgres",
   "coverage-floors",
   "visual-flakes",
+  "mutation-diff",
 ];
 
 const SHA = /^[0-9a-f]{40}$/i;
@@ -158,7 +159,7 @@ function readCandidateCommits(env, currentPullRequest) {
 /** The aggregate is green only when every expected result exists and required lanes ran. */
 export function ciMergeVerdict(
   needs,
-  { code, db, safety = "true", browser = "true", event, ref = "", fork = false },
+  { code, db, safety = "true", browser = "true", mutation = "true", event, ref = "", fork = false },
 ) {
   const problems = [];
   if (!["true", "false"].includes(code) || !["true", "false"].includes(db))
@@ -180,6 +181,9 @@ export function ciMergeVerdict(
   if (code === "true" && safety !== "false") required.add("coverage-floors");
   if (code === "true" && browser !== "false" && !fork) required.add("visual-publish");
   if (db === "true") required.add("real-postgres");
+  // The breakage drills run on pull requests only, and skip only when change detection says no
+  // money or safety file moved (ci.yml's `mutation` output); a missing value fails closed.
+  if (event === "pull_request" && mutation !== "false") required.add("mutation-diff");
   if (
     code === "true" &&
     browser !== "false" &&
@@ -215,6 +219,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
       db: needs?.changes?.outputs?.db,
       safety: needs?.changes?.outputs?.safety,
       browser: needs?.changes?.outputs?.browser,
+      mutation: needs?.changes?.outputs?.mutation,
       event: env.GITHUB_EVENT_NAME,
       ref: env.GITHUB_REF,
       fork: env.PR_IS_FORK === "true",
