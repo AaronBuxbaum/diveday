@@ -27,7 +27,7 @@ Read down the left column: *if this goes wrong*, the guardrail in the middle is 
 | A rule breaks (who may board, what a refund pays, who may sign in) | The tests for that rule go red. Every rule with a branch has a test, and the refusal case is mandatory | every pull request |
 | The tests are too thin to notice | **Breakage drills**: CI breaks the money and safety lines a pull request changed (flips a `<` to `<=`, drops a condition) and demands a test fail. A break that survives is named on the card and blocks the merge. A weekly run scores each whole safety file | every pull request that changes money or safety code; weekly |
 | A rule is only right for the examples someone thought of | **Rule tests** (property tests): the computer generates thousands of divers, trips, payments and roll-call taps and checks statements like "booking never refuses someone boarding would clear", "a refund never exceeds what was paid", "replaying roll-call taps in any order gives the same answer" | every pull request |
-| One shop sees another shop's data | **Cross-shop sweep**: shop A's database functions are called with shop B's ids and must return none of B's rows. A scan of every staff page checks it asks whether the shop in the address is the signed-in shop. The risk card names any change that makes a query mention the shop in fewer places | every pull request |
+| One shop sees another shop's data | **Cross-shop sweep**: every database function that takes a shop is called as a second shop with the demo shop's ids, and fails if any of the demo shop's rows or marked names come back or change. A function that takes no shop is named with its reason, or the sweep fails. A scan of every staff page checks it asks whether the shop in the address is the signed-in shop. The risk card names any change that makes a query mention the shop in fewer places | every pull request |
 | Two things happen at once (the last seat, two sign-ins, two payments) | Real-Postgres tests race real database transactions | every pull request that touches the database; nightly |
 | A safety file loses test coverage | Coverage floors: each safety file's branch coverage can only rise | every pull request |
 | A diver's or shop's data survives an erasure, or is missing from an export | Erasure and export coverage tests: every table and column is exported, folded in or excluded on purpose | every pull request |
@@ -80,11 +80,16 @@ These are the holes. Each is something a person would otherwise have to catch.
 5. **Rule tests only know the rules we wrote down.** A rule that is not in the list is not attacked.
    A rule that lives only inside a database query is pinned by the real-Postgres tests, not by a
    generated test.
-6. **The sweep covers a known shape.** It finds database functions that take a shop and checks their
-   answers for another shop's rows. A leak through a route, a link or a function of a different
-   shape relies on the staff-page scan, the end-to-end tenant test and the risk card's
-   "mentions the shop in fewer places" signal. There is no database-level lock between shops (row
-   level security). Adding one is a large change and the sweep covers most of the benefit.
+6. **The sweep covers a known shape.** It calls the database functions that take a shop and checks
+   their answers for another shop's ids and marked names. It does not call a function whose
+   parameters it cannot fill yet (the count is banked and can only fall), or one that takes no shop
+   and trusts its caller to have checked an id (the reviewed list in
+   `src/test/cross-shop/not-shop-scoped.ts`). It cannot see a count or a yes/no worked out over
+   another shop's rows, a leak through a route, a server action or a link that skips `src/db`, or a
+   foreign value it neither marked nor knows the id of. Those rely on the staff-page scan, the
+   end-to-end tenant test and the risk card's "mentions the shop in fewer places" signal. There is
+   no database-level lock between shops (row-level security); ADR 20261122-cross-shop-sweep says
+   what it would add, and the first shop that is not a friend is when to revisit it.
 7. **The referee is also written by agents.** Referee protection makes a rule change loud and puts a
    fresh reviewer on it. A change subtle enough to fool both is possible. It is the biggest risk that
    remains, and the reason this page says "closely watched" rather than "impossible".
