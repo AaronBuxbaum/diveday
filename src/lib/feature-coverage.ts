@@ -93,6 +93,7 @@ export const SHOP_BOOLEAN_COVERAGE: Record<string, FeatureCoverage> = {
   lastMinuteListEnabled: "lastMinuteList",
   tipsEnabled: "tips",
   publicYearEnabled: "publicYear",
+  safetyRecordEnabled: "safetyRecord",
   padiChecksEnabled: "padiChecks",
   claudeSuggestionsEnabled: "claudeSuggestions",
   recapAssistAutoApprove: "recapAutoApprove",

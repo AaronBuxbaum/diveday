@@ -575,8 +575,8 @@ test.describe("owner", () => {
     for (const [suffix, title, tab, tabs] of [
       ["/inbox", "Inbox", "Messages", ["Messages", "Date requests", "Reviews"]],
       ["/requests", "Inbox", "Date requests", ["Messages", "Date requests", "Reviews"]],
-      ["/orders", "Money", "Orders", ["Orders", "Discounts", "Reports"]],
-      ["/reports", "Money", "Reports", ["Orders", "Discounts", "Reports"]],
+      ["/orders", "Money", "Orders", ["Orders", "Discounts", "Reports", "Stats"]],
+      ["/reports", "Money", "Reports", ["Orders", "Discounts", "Reports", "Stats"]],
     ] as const) {
       await page.goto(`/shop/blue-mantis${suffix}`);
       await expect(page.getByRole("heading", { level: 1, name: title }), suffix).toBeVisible();

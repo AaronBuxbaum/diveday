@@ -51,6 +51,23 @@
   card's own sentence (`shopYear.card.*`). Switched by `shops.public_year_enabled` in Settings →
   Features, on for a new shop since 2026-10-23. Absent before a departure has
   sailed, and never inside the embed. Component in `src/app/s/[shopSlug]/_components/OurYear.tsx`.
+- **Departure record** — the shopfront panel under **Our year** that states four counts of how the
+  shop's departures were run, with the days they cover (issue #4255; not the staff **Dive safety
+  record** decompression flag): **departures run** (home, not cancelled, not a rehearsal, at least
+  one booked seat; one where every diver the crew counted stayed ashore is left out, one nobody
+  counted stays in), **boardings** (diver seats counted aboard at the dock, each departure on its
+  own, so a diver on three departures is three; snorkelers and riders are not counted),
+  **departures with every head count closed** (no open gap from `listRollCallGaps` in its
+  `historical` mode, and at least one diver aboard) and **departures with every diver cleared to
+  board** (at least one diver aboard and every one recorded `ready` when counted). Readiness is
+  counted only from 2026-10-15, when the roll call began recording it (ADR
+  20261015-roll-call-records-readiness), so earlier departures are never in that count. Computed
+  from existing rows (`readSafetyRecord`, `src/features/boarding/safety-record.ts`), read at most
+  once an hour per shop. Real numbers with no minimum (ADR 20260729-verified-diver-reviews); a shop
+  with no departure run shows nothing, never four zeros; the copy claims nothing beyond the counts
+  and where they come from. **Off for a new shop**: the owner publishes it by turning on
+  `shops.safety_record_enabled` in Settings → Features. Never inside the embed. Component in
+  `src/app/s/[shopSlug]/_components/SafetyRecord.tsx`.
 - **The shop's year** — the twelve months from the shop's season start
   (`shops.season_start_month`/`season_start_day`), as `ShopSeason` in `src/lib/season.ts`: the
   year page on Reports, its card, the year's money and CSV, and **Our year** all read this one
