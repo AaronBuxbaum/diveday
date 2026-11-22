@@ -7,7 +7,12 @@ import { seatCheckoutCharge } from "@/lib/deposits";
 import { unsupportedTripCreditSource } from "./sources";
 
 /** Advisory quotes only. Redemption repeats every eligibility and price check under locks. */
-export async function tripCreditBookingOptions(db: DbExecutor, shopId: string, personId: string) {
+export async function tripCreditBookingOptions(
+  db: DbExecutor,
+  shopId: string,
+  personId: string,
+  bookingId?: string,
+) {
   const rows = await db
     .select({ booking: bookings, trip: trips })
     .from(bookings)
@@ -21,7 +26,9 @@ export async function tripCreditBookingOptions(db: DbExecutor, shopId: string, p
       and(
         eq(bookings.shopId, shopId),
         eq(bookings.personId, personId),
+        bookingId ? eq(bookings.id, bookingId) : undefined,
         eq(bookings.status, "booked"),
+        or(isNull(bookings.groupHoldUntil), gt(bookings.groupHoldUntil, nowDate())),
         isNull(bookings.identityUnconfirmedAt),
         eq(bookings.wantsNitrox, false),
         eq(trips.status, "scheduled"),

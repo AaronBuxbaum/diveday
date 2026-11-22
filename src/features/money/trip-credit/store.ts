@@ -1,9 +1,10 @@
 import { and, desc, eq, sql } from "drizzle-orm";
 import { loadActiveStaffRoles } from "@/db/authz";
+import { verifyBookingCapability } from "@/db/booking-capabilities";
 import type { AppDb, DbExecutor } from "@/db/client";
 import { boundLockWaits, isLockWaitRefusal } from "@/db/lock-bounds";
 import { getBookingPayment, setBookingPayment } from "@/db/payments";
-import { bookings, shops, tripCreditEntries, trips } from "@/db/schema";
+import { bookingCapabilities, bookings, shops, tripCreditEntries, trips } from "@/db/schema";
 import { lockTripCreditPerson, tripCreditBalance } from "@/db/trip-credit-ledger";
 import { liveTrip } from "@/db/trips";
 import { isStaff } from "@/lib/authz";
@@ -129,6 +130,38 @@ export async function redeemTripCredit(
   db: AppDb,
   input: Scope & { bookingId: string; expectedFareCents: number },
 ): Promise<TripCreditResult> {
+  return redeemWithAuthority(db, input, { kind: "staff" });
+}
+
+export async function redeemOwnTripCredit(
+  db: AppDb,
+  input: { token: string; attemptId: string; currency: string; expectedFareCents: number },
+): Promise<TripCreditResult> {
+  const capability = await verifyBookingCapability(db, {
+    token: input.token,
+    purpose: "readiness",
+  });
+  if (!capability?.delivered) return refused("not_authorized");
+  return redeemWithAuthority(
+    db,
+    {
+      shopId: capability.shopId,
+      personId: capability.personId,
+      actorPersonId: capability.personId,
+      bookingId: capability.bookingId,
+      attemptId: input.attemptId,
+      currency: input.currency,
+      expectedFareCents: input.expectedFareCents,
+    },
+    { kind: "readiness", token: input.token },
+  );
+}
+
+async function redeemWithAuthority(
+  db: AppDb,
+  input: Scope & { bookingId: string; expectedFareCents: number },
+  authority: { kind: "staff" } | { kind: "readiness"; token: string },
+): Promise<TripCreditResult> {
   if (
     !validScope(input) ||
     !isUuid(input.bookingId) ||
@@ -169,10 +202,35 @@ export async function redeemTripCredit(
       if (!shop || shop.currency !== input.currency) return refused("changed");
       if (!(await lockTripCreditPerson(tx, input.shopId, input.personId)))
         return refused("not_found");
-      if (
-        !isStaff((await loadActiveStaffRoles(tx, input.shopId, input.actorPersonId)) ?? undefined)
-      )
-        return refused("not_authorized");
+      if (authority.kind === "staff") {
+        if (
+          !isStaff((await loadActiveStaffRoles(tx, input.shopId, input.actorPersonId)) ?? undefined)
+        )
+          return refused("not_authorized");
+      } else {
+        await tx
+          .select({ id: bookingCapabilities.id })
+          .from(bookingCapabilities)
+          .where(
+            and(
+              eq(bookingCapabilities.shopId, input.shopId),
+              eq(bookingCapabilities.bookingId, input.bookingId),
+            ),
+          )
+          .for("update");
+        const cap = await verifyBookingCapability(tx, {
+          token: authority.token,
+          purpose: "readiness",
+        });
+        if (
+          !cap?.delivered ||
+          cap.shopId !== input.shopId ||
+          cap.personId !== input.personId ||
+          cap.bookingId !== input.bookingId ||
+          booking.identityUnconfirmedAt
+        )
+          return refused("not_authorized");
+      }
       const balance = await tripCreditBalance(tx, input.shopId, input.personId, input.currency);
       if (balance === null) return refused("unavailable");
       const [prior] = await tx
@@ -200,6 +258,7 @@ export async function redeemTripCredit(
       if (fare !== input.expectedFareCents) return refused("changed");
       if (
         booking.status !== "booked" ||
+        (booking.groupHoldUntil !== null && booking.groupHoldUntil <= nowDate()) ||
         booking.identityUnconfirmedAt ||
         trip.status !== "scheduled" ||
         trip.startsAt <= nowDate() ||

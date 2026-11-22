@@ -1234,7 +1234,13 @@
     "groupSummary": "{total, plural, one {# plaza en tu grupo} other {# plazas en tu grupo}} · {unclaimed, plural, one {# sin reclamar} other {# sin reclamar}}",
     "doctorNeeds": "Lo que necesita tu médico",
     "waiverSigned": "Exención firmada.",
-    "tripCreditApplied": "{amount} de crédito aplicado · Quedan {balance} de crédito"
+    "tripCreditApplied": "{amount} de crédito aplicado · Quedan {balance} de crédito",
+    "tripCreditAppliedOnly": "{amount} de crédito aplicado",
+    "tripCreditAvailable": "Tienes {balance} de crédito para viajes",
+    "useTripCredit": "Aplicar {fare} de crédito",
+    "applyingTripCredit": "Aplicando crédito",
+    "partyGuestsAtShop": "{count, plural, one {# acompañante} other {# acompañantes}}: {amount}, a pagar en el centro.",
+    "partyPaymentsCheck": "Consulta con el centro el saldo restante de tus acompañantes."
   },
   "thread": {
     "stepsDone": "{done} de {total, plural, one {# paso completado} other {# pasos completados}}",

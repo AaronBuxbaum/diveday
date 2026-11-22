@@ -48,6 +48,7 @@ import { DayOfDetails } from "./_components/DayOfDetails";
 import { readyDeadLink } from "./_components/dead-link";
 import { UnavailableReadyLink } from "./_components/ExpiredLink";
 import { OwnPhotoAndDays } from "./_components/OwnPhoto";
+import { OwnTripCredit } from "./_components/OwnTripCredit";
 import { PayStepBody } from "./_components/PayStepBody";
 import { packageDiveBreakdown, payStepIsPayable, payStepLines } from "./_components/pay-step-lines";
 import { resolvePaymentReceipt } from "./_components/payment-receipt";
@@ -345,10 +346,7 @@ async function DiverReadinessPage({
       await Promise.all([
         partyClaimsPromise,
         threadTripReads,
-        // What this booking has been charged. Read on every visit, because "what did
-        // I pay?" is a question the night before too — and it is what the Pay step's
-        // settled line says, now that the receipt panel that used to say it above
-        // the checklist is gone (ADR 20260827-the-divers-thread, decision 3).
+        // What this booking has been charged (ADR 20260827-the-divers-thread).
         // The emails line went with that panel; `EmbedBookedNotice` still carries it,
         // where it is the only thing the reader gets.
         resolvePaymentReceipt(
@@ -362,6 +360,7 @@ async function DiverReadinessPage({
           justBooked || pay === "paid",
           data.trip.seatPriceCents,
           toShopCurrency(shop.currency),
+          delivered && !data.identityHeld,
         ),
         // Asked whatever `COURSE_FORMS_BLOCK_BOARDING` says: warn-only raises no blocker (#2266).
         data.asksCourseForms ? getCourseFormsForBooking(db, shop.id, bookingId) : null,
@@ -545,6 +544,7 @@ async function DiverReadinessPage({
             />
             <ThreadSpine steps={spineSteps} heading={t("ready.checklistHeading")} />
             <AtShopMoney {...{ t, locale, data, fullTrip, partySeatClaims }} />
+            <OwnTripCredit token={token} locale={locale} t={t} />
           </>
         )}
         <CourseNextStepNote db={db} shopId={shop.id} bookingId={bookingId} t={t} />

@@ -77,9 +77,9 @@ describe("the homepage walkthrough", () => {
   it("advances by itself, a beat at a time, and Pause stops it", () => {
     mockMotion(false);
     setup();
-    // The first card holds 3 s on its first frame, then a beat with nothing to do first is 0.7 s of
+    // The first card holds 7 s on its first frame, then a beat with nothing to do first is 0.7 s of
     // lead, 1.8 s of tap and 4.2 s on the finished screen.
-    act(() => void vi.advanceTimersByTime(10_000));
+    act(() => void vi.advanceTimersByTime(15_000));
     expect(screen.getByText("Second")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Pause" }));
     act(() => void vi.advanceTimersByTime(120_000));
@@ -224,7 +224,7 @@ describe("the homepage walkthrough", () => {
         "[data-walk-controls] ~ div > button > span > span:last-child",
       );
     const group = screen.getByRole("group", { name: "Walk" });
-    act(() => void vi.advanceTimersByTime(6_350));
+    act(() => void vi.advanceTimersByTime(10_350));
     const half = Number.parseFloat(fill()?.style.transform.replace("scaleX(", "") ?? "0");
     expect(half).toBeGreaterThan(0.4);
     expect(half).toBeLessThan(0.6);
@@ -262,11 +262,11 @@ describe("the homepage walkthrough", () => {
     const list = container.querySelector("[data-walk-list]") as HTMLElement;
     const phase = () => list.getAttribute("data-walk-phase");
     expect(phase()).toBe("before");
-    // The first card holds 3 s, then the tap starts 0.7 s in and the finished screen 1.8 s after that.
+    // The first card holds 7 s, then the tap starts 0.7 s in and the finished screen 1.8 s after that.
     act(() => void vi.advanceTimersByTime(1_000));
     expect(phase()).toBe("before");
     expect(list).toHaveAttribute("data-walk-idle");
-    act(() => void vi.advanceTimersByTime(3_000));
+    act(() => void vi.advanceTimersByTime(6_800));
     expect(phase()).toBe("tap");
     act(() => void vi.advanceTimersByTime(2_000));
     expect(phase()).toBe("after");
@@ -299,9 +299,9 @@ describe("the homepage walkthrough", () => {
       </HomeWalkthrough>,
     );
     const list = container.querySelector("[data-walk-list]") as HTMLElement;
-    act(() => void vi.advanceTimersByTime(7_000));
+    act(() => void vi.advanceTimersByTime(9_000));
     expect(list.getAttribute("data-walk-phase")).toBe("before");
-    act(() => void vi.advanceTimersByTime(2_000));
+    act(() => void vi.advanceTimersByTime(4_000));
     expect(list.getAttribute("data-walk-phase")).toBe("tap");
   });
 

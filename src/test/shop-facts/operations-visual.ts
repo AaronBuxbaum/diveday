@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { readActiveStaffRoles } from "../../db/authz";
 import { callTripBlowout, getTripBlowout } from "../../db/blowouts";
+import { issueBookingCapability } from "../../db/booking-capabilities";
 import type { AppDb } from "../../db/client";
 import { setShopPassThroughFee } from "../../db/shops";
 import { setShopTaxEnabled } from "../../db/shops.test-support";
@@ -162,10 +163,24 @@ export async function prepareOperationsVisual(
     refusals: "specific",
   });
   if (!nextSeat.ok) throw new Error(`visual next seat refused: ${nextSeat.reason}`);
+  const delivered = await issueBookingCapability(db, {
+    shopId: shop.id,
+    bookingId: nextSeat.bookingId,
+    purpose: "readiness",
+    delivered: true,
+  });
+  const redirect = await issueBookingCapability(db, {
+    shopId: shop.id,
+    bookingId: nextSeat.bookingId,
+    purpose: "readiness",
+  });
+  if (!delivered || !redirect) throw new Error("visual credit readiness links missing");
   return {
     ...source,
     redeemedBookingId: eligible.bookingId,
     eligibleBookingId: nextSeat.bookingId,
+    creditDelivered: delivered.token,
+    creditRedirect: redirect.token,
     orderId: purchase.order.id,
     activityId,
   };
