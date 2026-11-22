@@ -115,6 +115,47 @@ describe("foldRollCallEvidence", () => {
   );
 });
 
+describe("foldRollCallEvidence accounting", () => {
+  /**
+   * A person counts as accounted for only on an unconflicted, positive
+   * reading: never in a conflict, never on a withdrawn ("cleared") or empty
+   * result, and after a dive only when the reading is aboard.
+   */
+  property(
+    "accounted for means unconflicted, stated, and aboard after a dive",
+    [arbEvidence, arbCheckpoint],
+    (evidence, checkpoint) => {
+      const projection = foldRollCallEvidence(evidence, checkpoint);
+      if (!projection.accountedFor) return;
+      expect(projection.conflict).toBe(false);
+      expect(projection.status === null || projection.status === "cleared").toBe(false);
+      if (checkpoint !== "departure") expect(projection.status).toBe("boarded");
+    },
+    { runs: 500 },
+  );
+
+  /**
+   * Opposing evidence is never silently resolved: a frontier that still holds
+   * both an aboard and a not-aboard statement is a conflict and is not
+   * accounted for.
+   */
+  property(
+    "a frontier holding aboard and not aboard is a conflict",
+    [arbEvidence, arbCheckpoint],
+    (evidence, checkpoint) => {
+      const projection = foldRollCallEvidence(evidence, checkpoint);
+      const statuses = new Set(
+        projection.frontier.map((id) => evidence.find((item) => item.id === id)?.status),
+      );
+      if (statuses.has("boarded") && statuses.has("not_boarded")) {
+        expect(projection.conflict).toBe(true);
+        expect(projection.accountedFor).toBe(false);
+      }
+    },
+    { runs: 500 },
+  );
+});
+
 describe("causalReplayOrder", () => {
   /**
    * However a queue is stored, replay keeps every event exactly once and puts

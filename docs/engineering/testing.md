@@ -72,23 +72,25 @@ fail against a broken copy of that rule; one that cannot fail is deleted.
 | Rule | File |
 | --- | --- |
 | Admission never refuses an item readiness would clear | `src/lib/trip-admission.properties.test.ts` |
-| Readiness fails closed: no configuration blocks; only a verified card at the level clears; adding a card never blocks; an uncleared medical blocks; a minor's solo release blocks; the 18th birthday flips the guardian rule once; every blocker is a typed code | `src/lib/readiness.properties.test.ts` |
+| Readiness fails closed: no configuration blocks; only a verified card at the level clears; only a verified, confirmed specialty card and a verified nitrox card clear their gates; adding a card never blocks; an uncleared medical blocks; a minor's solo release blocks (by date of birth or the booker's "Under 18"); the guardian rule changes exactly on the 18th birthday on the shop's calendar day; a training mark never lowers a level the trip set; courses in training or ended never clear; under the course minimum age blocks; every blocker is a typed code | `src/lib/readiness.properties.test.ts` |
 | A zero-decimal currency is never divided by 100; minor units round-trip | `src/lib/money.properties.test.ts` |
 | A discount stays between 0 and the price and never rises with the discount; 100% is free; a settled total splits to exactly itself with no share above its ask | `src/lib/payments/settlement.properties.test.ts` |
 | The percent fee is between 0 and the volume and monotonic in it | `src/lib/billing/pricing-plans.properties.test.ts`, `src/features/money/fee-comparison.properties.test.ts` |
-| A cancellation refund never exceeds what was paid; a sequence of external refunds never exceeds it | `src/lib/deposits.properties.test.ts`, `src/lib/payment-marks.properties.test.ts` |
+| A cancellation refund never exceeds what was paid and moves money only before the stated deadline; a sequence of external refunds never exceeds what was paid | `src/lib/deposits.properties.test.ts`, `src/lib/payment-marks.properties.test.ts` |
 | A part's net of refund is between 0 and the part and the parts never sum above what was kept | `src/features/money/trip-money/rules.properties.test.ts` |
 | A trip-credit balance parses only to a safe integer | `src/lib/trip-credit.properties.test.ts` |
-| The boat counts everyone, the divers-only limit and the divemaster target count divers; a full boat shows no open seats | `src/lib/participant-types.properties.test.ts`, `src/lib/manifests.properties.test.ts`, `src/lib/trips.properties.test.ts` |
-| Roll call converges in any order and with repeats; a conflict stays one until reconciled; agreeing statements merge; replay puts dependencies first; a retry has the same intent key | `src/lib/roll-call-causality.properties.test.ts` |
-| Only 22 to 40% O2 has a MOD, which never exceeds the ppO2 ceiling or deepens as O2 rises | `src/features/safety/nitrox-mod.properties.test.ts` |
-| The departure phase never moves backward; `hasSailed`/`hasReturned` are monotonic; occurrence dates are strictly increasing and two rolls equal one | `src/lib/departure-clock.properties.test.ts`, `src/lib/trips.properties.test.ts`, `src/lib/recurrence.properties.test.ts` |
+| Seating counts everyone against the boat and only divers against the divers-only limit; the manifest's over-capacity counts every boarded passenger and its boat over-capacity boarded crew too; after a dive anyone unanswered or not back is unaccounted for; the divemaster gap is right for a given diver count (that callers pass divers only is their SQL, not pinned); a full boat shows no open seats | `src/lib/participant-types.properties.test.ts`, `src/lib/manifests.properties.test.ts`, `src/lib/trips.properties.test.ts` |
+| Roll call converges in any order and with repeats; a conflict stays one until reconciled; accounted for means unconflicted, stated, and aboard after a dive; agreeing statements merge; replay puts dependencies first; a retry has the same intent key | `src/lib/roll-call-causality.properties.test.ts` |
+| Only 22 to 40% O2 has a MOD, which is the deepest whole metre and foot within the ppO2 ceiling and never deepens as O2 rises; a typed fill is air or a whole 21 to 40, never rounded | `src/features/safety/nitrox-mod.properties.test.ts` |
+| The departure phase never moves backward; `hasSailed`/`hasReturned` are monotonic; occurrence dates are strictly increasing, complete, and two rolls equal one | `src/lib/departure-clock.properties.test.ts`, `src/lib/trips.properties.test.ts`, `src/lib/recurrence.properties.test.ts` |
 
 **Not pinned by a property**: a payment status only moving forward (`setBookingPaymentIfNotFinal`
 decides it under a lock in `src/db/payments.ts`, with no pure transition function), capacity under
 concurrent bookings (the booking transaction and the real-Postgres suite), "a clock never decides"
 in roll call (`RollCallEvidence` carries no timestamp, so the type pins it) and "a caller's MOD is
-never trusted" (`nitroxModFor` takes only the mix). A recreational card does not expire
+never trusted" (`nitroxModFor` takes only the mix), a fill needing a verified nitrox card
+(`authorizesNitroxFill`, SQL in `src/db/nitrox.ts`), and a course's required forms
+(`courseForms`, not generated). A recreational card does not expire
 (ADR 20260821-a-card-does-not-expire), so readiness has no card-expiry boundary to pin; the guardian
 birthday is the date boundary it has. `netOfRefund` floors each part and is not a conserving
 split; `allocateSettledTotal` is.

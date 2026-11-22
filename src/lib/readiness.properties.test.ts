@@ -21,10 +21,16 @@ import {
   arbRequirement,
   arbSpecialty,
   arbSpecialtyCertification,
+  arbTrainingCourse,
   PROPERTY_NOW,
   property,
 } from "@/test/property";
-import { shiftCalendarDate, shiftCalendarDateMonths } from "./calendar-date";
+import {
+  calendarDateInTimezone,
+  isValidCalendarDate,
+  shiftCalendarDate,
+  shiftCalendarDateMonths,
+} from "./calendar-date";
 import { PARTICIPANT_TYPES } from "./participant-types";
 import {
   BLOCKER_CATEGORY,
@@ -90,6 +96,14 @@ const arbInput: fc.Arbitrary<ReadinessInput> = fc.record({
   participantType: fc.constantFrom(...PARTICIPANT_TYPES),
   statedFree: fc.boolean(),
   waiverSealFailed: fc.boolean(),
+  trainingDive: fc.option(arbTrainingCourse, { nil: null }),
+  trainingDiveReach: fc.constantFrom<"site" | "default">("site", "default"),
+  coursesEnded: fc.array(
+    fc.record({ level: arbLevel, finishesAt: arbMoment, tripId: fc.constant("trip-ended") }),
+    { maxLength: 2 },
+  ),
+  courseDate: fc.option(arbDay, { nil: null }),
+  courseMinimumAge: fc.option(fc.integer({ min: 8, max: 18 }), { nil: null }),
 }) as fc.Arbitrary<ReadinessInput>;
 
 /** A departure that asks only for cards, with nothing else on the diver standing in the way. */
@@ -113,6 +127,7 @@ const arbCardsOnlyInput: fc.Arbitrary<ReadinessInput> = fc
     waiver: null,
     identityUnconfirmed: false,
     waiverSealFailed: false,
+    courseDate: null,
   }));
 
 type Card =
@@ -248,15 +263,19 @@ describe("calculateReadiness fails closed", () => {
   );
 
   /**
-   * A release signed by someone under 18 on the day they signed, with no
+   * A release signed by someone under 18 on the day they signed (by the date
+   * of birth on file, or with none, by the booker's "Under 18"), with no
    * guardian signature, blocks on a departure that asks for a release.
    */
   property(
     "a minor's release without a guardian signature blocks",
-    [arbInput, arbTripRequirement, fc.integer({ min: 0, max: 17 }), fc.nat(364)],
-    (input, requirement, years, days) => {
+    [arbInput, arbTripRequirement, fc.integer({ min: 0, max: 17 }), fc.nat(364), fc.boolean()],
+    (input, requirement, years, days, declaredOnly) => {
       const signedOn = "2026-07-21";
-      const dateOfBirth = shiftCalendarDate(shiftCalendarDateMonths(signedOn, -12 * years), -days);
+      // A date of birth on file decides; with none, the booker's "Under 18" does.
+      const dateOfBirth = declaredOnly
+        ? null
+        : shiftCalendarDate(shiftCalendarDateMonths(signedOn, -12 * years), -days);
       const waiver = {
         status: "completed",
         signedAt: new Date(`${signedOn}T12:00:00Z`),
@@ -272,42 +291,202 @@ describe("calculateReadiness fails closed", () => {
         requirement: { ...requirement, requiresWaiver: true },
         waiver,
         dateOfBirth,
+        minorDeclared: declaredOnly ? true : input.minorDeclared,
       });
       expect(result.blockers.map((b) => b.code)).toContain("guardian_signature_missing");
     },
   );
 
   /**
-   * The minor boundary flips exactly once: over the days around a diver's
-   * 18th birthday, a solo release signed on each day blocks before the
-   * birthday and stops blocking from it on, with one transition.
+   * The guardian rule changes exactly on the 18th birthday, measured on the
+   * shop's own calendar day: a solo release signed at any hour, in any zone,
+   * blocks when the local signing day is before the birthday and never from
+   * it on. A 29 February birth comes of age on 1 March in a common year
+   * (the later day, so the rule errs toward asking a guardian).
    */
   property(
-    "the guardian rule flips once across the 18th birthday",
-    [arbDay, fc.integer({ min: 1, max: 5 })],
-    (dateOfBirth, span) => {
-      const birthday = shiftCalendarDateMonths(dateOfBirth, 12 * 18);
-      const flags: boolean[] = [];
-      for (let offset = -span; offset <= span; offset += 1) {
-        const signedOn = shiftCalendarDate(birthday, offset);
-        const result = calculateReadiness({
-          timezone: "UTC",
-          now: PROPERTY_NOW,
-          requirement: { ...levelOnly("open_water"), requiresWaiver: true } as TripRequirement,
-          waiver: {
-            status: "completed",
-            signedAt: new Date(`${signedOn}T12:00:00Z`),
-            guardianSignedAt: null,
-          } as unknown as WaiverRecord,
-          certifications: [{ level: "open_water", status: "verified" } as Certification],
-          dateOfBirth,
-        });
-        flags.push(result.blockers.some((b) => b.code === "guardian_signature_missing"));
-      }
-      const transitions = flags.filter((flag, index) => index > 0 && flag !== flags[index - 1]);
-      expect(flags[0]).toBe(true);
-      expect(flags.at(-1)).toBe(false);
-      expect(transitions).toHaveLength(1);
+    "the guardian rule changes exactly on the 18th birthday in the shop's zone",
+    [
+      fc.oneof(
+        arbDay.map((day) => shiftCalendarDateMonths(day, -12 * 18)),
+        fc.constantFrom("2008-02-29", "2004-02-29", "2008-03-01", "2008-12-31", "2009-01-01"),
+      ),
+      fc.constantFrom(
+        "UTC",
+        "Pacific/Honolulu",
+        "Pacific/Kiritimati",
+        "America/New_York",
+        "Asia/Tokyo",
+      ),
+      fc.integer({ min: -72 * 60, max: 72 * 60 }),
+    ],
+    (dateOfBirth, timezone, minutes) => {
+      const monthDay = dateOfBirth.slice(5);
+      const year = Number(dateOfBirth.slice(0, 4)) + 18;
+      const anniversary = `${year}-${monthDay}`;
+      const adultFrom = isValidCalendarDate(anniversary) ? anniversary : `${year}-03-01`;
+      const signedAt = new Date(new Date(`${adultFrom}T12:00:00Z`).getTime() + minutes * 60_000);
+      const result = calculateReadiness({
+        timezone,
+        now: PROPERTY_NOW,
+        requirement: { ...levelOnly("open_water"), requiresWaiver: true } as TripRequirement,
+        waiver: {
+          status: "completed",
+          signedAt,
+          guardianSignedAt: null,
+        } as unknown as WaiverRecord,
+        certifications: [{ level: "open_water", status: "verified" } as Certification],
+        dateOfBirth,
+      });
+      const signedOn = calendarDateInTimezone(signedAt, timezone);
+      expect(result.blockers.some((b) => b.code === "guardian_signature_missing")).toBe(
+        signedOn < adultFrom,
+      );
+    },
+  );
+});
+
+/** A departure that asks for one thing and nothing else, for a diver with nothing else in the way. */
+function onlyDemand(demand: Partial<TripRequirement>): TripRequirement {
+  return {
+    minimumCertificationLevel: null,
+    minimumCertificationIsDefault: false,
+    requiredSpecialties: [],
+    requiresNitrox: false,
+    requiresWaiver: false,
+    requiresPayment: false,
+    ...demand,
+  } as unknown as TripRequirement;
+}
+
+describe("calculateReadiness specialty and nitrox gates", () => {
+  /**
+   * A specialty gate clears exactly when a card of that specialty is verified
+   * and, if it was imported, a staffer has confirmed it (ADR
+   * 20260725-import-specialty-cards): a pending card, an unreviewed import or
+   * another specialty's card never clears it.
+   */
+  property(
+    "only a verified, confirmed card of the specialty clears it",
+    [arbSpecialty, fc.array(arbSpecialtyCertification, { maxLength: 4 })],
+    (specialty, cards) => {
+      const result = calculateReadiness({
+        timezone: "UTC",
+        now: PROPERTY_NOW,
+        requirement: onlyDemand({ requiredSpecialties: [specialty] }),
+        waiver: null,
+        certifications: [],
+        specialtyCertifications: cards,
+      });
+      const clears = cards.some(
+        (card) =>
+          card.specialty === specialty &&
+          card.status === "verified" &&
+          (!card.importedAt || Boolean(card.reviewedAt)),
+      );
+      expect(result.status).toBe(clears ? "ready" : "blocked");
+    },
+    { runs: 1000 },
+  );
+
+  /** A nitrox gate clears exactly when a nitrox card is verified; a pending card or a bare tick never clears it. */
+  property(
+    "only a verified nitrox card clears the nitrox gate",
+    [fc.array(arbNitroxCertification, { maxLength: 3 })],
+    (cards) => {
+      const result = calculateReadiness({
+        timezone: "UTC",
+        now: PROPERTY_NOW,
+        requirement: onlyDemand({ requiresNitrox: true }),
+        waiver: null,
+        certifications: [],
+        nitroxCertifications: cards,
+      });
+      const clears = cards.some((card) => card.status === "verified");
+      expect(result.status).toBe(clears ? "ready" : "blocked");
+    },
+  );
+});
+
+describe("calculateReadiness training dives and courses", () => {
+  /**
+   * A level the trip itself sets (not the default nobody chose) is never
+   * lowered by a training mark, whatever the course, the site and the reach:
+   * a diver with no verified card at that level stays blocked on the level.
+   */
+  property(
+    "a training mark never lowers a level the trip set",
+    [arbInput, arbLevel, arbTrainingCourse],
+    (input, level, course) => {
+      const result = calculateReadiness({
+        ...input,
+        participantType: "diver",
+        requirement: onlyDemand({ minimumCertificationLevel: level }),
+        trainingDive: course,
+      });
+      const holdsLevel = input.certifications.some(
+        (card) =>
+          card.status === "verified" && certificationRank(card.level) >= certificationRank(level),
+      );
+      if (holdsLevel) return;
+      expect(result.blockers.some((b) => b.code.startsWith("certification_"))).toBe(true);
+    },
+  );
+
+  /**
+   * A course in training or a course that already ended is never evidence:
+   * adding either to a diver held on the level leaves them held on the level.
+   */
+  property(
+    "courses in training or ended never clear a level",
+    [
+      arbInput,
+      arbLevel,
+      fc.array(fc.record({ level: arbLevel, finishesAt: arbMoment }), {
+        minLength: 1,
+        maxLength: 3,
+      }),
+    ],
+    (input, level, courses) => {
+      const base = {
+        ...input,
+        participantType: "diver" as const,
+        trainingDive: null,
+        requirement: onlyDemand({ minimumCertificationLevel: level }),
+        certificationsInTraining: [],
+        coursesEnded: [],
+      };
+      const levelHeld = (result: ReturnType<typeof calculateReadiness>) =>
+        result.blockers.some((b) => b.code.startsWith("certification_"));
+      if (!levelHeld(calculateReadiness(base))) return;
+      const withCourses = calculateReadiness({
+        ...base,
+        certificationsInTraining: courses,
+        coursesEnded: courses.map((course) => ({ ...course, tripId: "trip-ended" })),
+      });
+      expect(levelHeld(withCourses)).toBe(true);
+    },
+  );
+
+  /**
+   * A diver younger than the course's minimum age on the day the course runs
+   * is blocked, on any departure, configured or not.
+   */
+  property(
+    "a diver under the course minimum age is blocked",
+    [arbInput, fc.integer({ min: 8, max: 18 }), fc.integer({ min: 1, max: 8 }), fc.nat(364)],
+    (input, minimumAge, yearsShort, days) => {
+      const courseDate = "2026-07-21";
+      const age = Math.max(0, minimumAge - yearsShort);
+      const dateOfBirth = shiftCalendarDate(shiftCalendarDateMonths(courseDate, -12 * age), -days);
+      const result = calculateReadiness({
+        ...input,
+        participantType: "diver",
+        courseDate,
+        courseMinimumAge: minimumAge,
+        dateOfBirth,
+      });
+      expect(result.blockers.map((b) => b.code)).toContain("under_minimum_age");
     },
   );
 });

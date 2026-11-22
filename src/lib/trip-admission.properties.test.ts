@@ -13,6 +13,7 @@ import {
   arbNitroxCertification,
   arbRequirement,
   arbSpecialtyCertification,
+  arbTrainingCourse,
   PROPERTY_NOW,
   property,
 } from "@/test/property";
@@ -27,12 +28,6 @@ function demandOf(blocker: ReadinessBlocker): string {
   if (blocker.code.startsWith("nitrox_")) return "nitrox";
   return blocker.code;
 }
-
-const arbCourse = fc.record({
-  minimumLevel: fc.option(arbLevel, { nil: null }),
-  certifiesLevel: fc.option(arbLevel, { nil: null }),
-  intro: fc.boolean(),
-});
 
 /**
  * One diver and one departure, as both gates see them: the cards on file, the
@@ -55,7 +50,7 @@ const arbFacts = fc.record({
     { nil: undefined },
   ),
   inTraining: fc.array(fc.record({ level: arbLevel, finishesAt: arbMoment }), { maxLength: 2 }),
-  trainingDives: fc.array(arbCourse, { maxLength: 2 }),
+  trainingDives: fc.array(arbTrainingCourse, { maxLength: 2 }),
   markedCourse: fc.nat(3),
   reach: fc.constantFrom<"site" | "default">("site", "default"),
   participantType: fc.constantFrom(...PARTICIPANT_TYPES),

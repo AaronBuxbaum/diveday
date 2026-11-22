@@ -65,4 +65,16 @@ describe("seriesOccurrenceDates", () => {
     const whole = seriesOccurrenceDates(window) ?? [];
     expect([...first, ...second]).toEqual(whole);
   });
+
+  /**
+   * Nothing is left out: every day in the window, on or after the anchor and
+   * on or before the end, on which the series fires, is in the list.
+   */
+  property("every firing day in the window is listed", [arbWindow], (window) => {
+    const dates = new Set(seriesOccurrenceDates(window) ?? []);
+    for (let day = window.from; day <= window.through; day = shiftCalendarDate(day, 1)) {
+      if (day < window.anchorDate || (window.endsOn && day > window.endsOn)) continue;
+      if (seriesFiresOn(window, day)) expect(dates.has(day), day).toBe(true);
+    }
+  });
 });

@@ -10,6 +10,7 @@ import type {
 import { type CalendarDate, shiftCalendarDate } from "@/lib/calendar-date";
 import { CERTIFICATION_LEVELS, type CertificationLevel } from "@/lib/certification-levels";
 import type { Requirement } from "@/lib/requirement";
+import type { TrainingDiveCourse } from "@/lib/training-mark";
 import { TEST_FROZEN_CLOCK } from "./frozen-clock";
 
 /**
@@ -184,4 +185,11 @@ export const arbRequirement: fc.Arbitrary<Requirement> = fc.record({
   minimumCertificationLevel: fc.option(arbLevel, { nil: null }),
   requiredSpecialties: fc.uniqueArray(arbSpecialty, { maxLength: 3 }),
   requiresNitrox: fc.boolean(),
+});
+
+/** A course a staff training mark could name: what it starts from, what it certifies, a taster or not. */
+export const arbTrainingCourse: fc.Arbitrary<TrainingDiveCourse> = fc.record({
+  minimumLevel: fc.option(arbLevel, { nil: null }),
+  certifiesLevel: fc.option(arbLevel, { nil: null }),
+  intro: fc.boolean(),
 });
