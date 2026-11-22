@@ -74,7 +74,14 @@ function CrewThanksLines({ thanks, t }: { thanks: CrewReading["thanks"]; t: Staf
   );
 }
 
-/** All the crew lines, in the spine's order: the week's tips, thanks, then the month. */
+/**
+ * All the crew lines, in the spine's order: the week's tips, thanks, then the month.
+ *
+ * **One block, so the spine's `gap-10` falls around the lines and not between them.** Each line is
+ * a single sentence; left as siblings in the spine's column they stood 40px apart, which read as
+ * three stray notes rather than one small reading. Nothing is drawn when there is nothing to say,
+ * so an empty block never costs the column a gap.
+ */
 export function CrewLines({
   crew,
   currency,
@@ -86,11 +93,12 @@ export function CrewLines({
   locale: string;
   t: StaffTranslator;
 }) {
+  if (crew.tipsCents <= 0 && crew.thanks.length === 0 && !crew.month) return null;
   return (
-    <>
+    <div className="space-y-1">
       <CrewTipsLine cents={crew.tipsCents} currency={currency} locale={locale} t={t} />
       <CrewThanksLines thanks={crew.thanks} t={t} />
       <CrewMonthLine season={crew.month} locale={locale} t={t} />
-    </>
+    </div>
   );
 }

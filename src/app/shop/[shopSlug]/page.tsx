@@ -275,8 +275,7 @@ async function TodayBody({
   }));
   const { actions, nextDeparture, crewedTripIds, crewedSessions } = work;
   const spine = assembleDaySpine(work, { departures: tomorrowDepartures, actions: [] });
-  // The day's whole board, clock order — the strip's marks and the count under the date both read
-  // it.
+  // The day's whole board, in clock order; the strip's marks and the count under the date read it.
   const dayDepartures = [...closeout.departures].sort(
     (a, b) => a.startsAt.getTime() - b.startsAt.getTime(),
   );
@@ -405,7 +404,6 @@ async function TodayBody({
           utcToWallTime(now, shop.timezone).day,
           locale,
         )}
-        // The day in one line, said once.
         summary={
           showFirstRunChecklist
             ? t("shopHome.firstRun.pageTitle")
@@ -429,6 +427,7 @@ async function TodayBody({
           shopSlug={shopSlug}
           quietDay={quietDay}
           hasStations={spine.stations.length > 0}
+          boatsToday={dayDepartures.length > 0}
           nextDeparture={nextDeparture}
           showFirstRunChecklist={showFirstRunChecklist}
           locale={locale}
@@ -520,6 +519,7 @@ async function TodayBody({
             factOfScale,
             crew: dayMoney.crew,
             evening,
+            underHeader: !counterOpen,
             needsYou,
             now,
             sessions:
@@ -551,7 +551,6 @@ async function TodayBody({
           }}
         />
       )}
-      <HomeScreenInstallSlot roles={session.user.roles} t={t} />
 
       {/* **"Your week"**: the reader's next three departures, on any day, quiet or not, at a
           shop that plans its crew in DiveDay. Any role with an assignment (fourth review, item
@@ -571,6 +570,7 @@ async function TodayBody({
           />
         </Suspense>
       ) : null}
+      <HomeScreenInstallSlot roles={session.user.roles} t={t} />
     </>
   );
 }

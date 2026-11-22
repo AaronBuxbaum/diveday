@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { Fragment } from "react";
 import { DiveDayIcon } from "@/components/DiveDayIcon";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
@@ -88,6 +89,9 @@ export function DayStation({
   const ready = station.booked - blocked;
   // The seats on sale, not the stated number (H-20261009-certificate-caps-seats, #2388).
   const open = Math.max(0, station.sellableCapacity - station.booked);
+  // **A boat that is home has no boarding left to read** (Aaron, 2026-11-22): the bar, "N of M
+  // ready", "blocked" and "seats open" are pre-departure facts; the settled card says who went.
+  const home = stage?.stage === "home";
   const meta = [
     { text: station.siteName, crew: false },
     { text: station.boatName, crew: false },
@@ -170,20 +174,26 @@ export function DayStation({
                 ? fact.text
                 : station.crew.map((person, personIndex) => (
                     // Names can repeat; the list is already ordered by person ID.
+                    // A photo and its name never part across a line; the comma follows the name
+                    // closely (no break falls before it) and the break falls after it, between people.
                     // biome-ignore lint/suspicious/noArrayIndexKey: this display has no mutable state.
-                    <span key={personIndex}>
-                      {personIndex > 0 ? ", " : ""}
-                      {person.staffPhotoPath ? (
-                        <Image
-                          src={person.staffPhotoPath}
-                          alt=""
-                          width={24}
-                          height={24}
-                          className="me-1 inline-block rounded-full align-middle"
-                        />
-                      ) : null}
-                      {person.fullName}
-                    </span>
+                    <Fragment key={personIndex}>
+                      <span className="whitespace-nowrap">
+                        {person.staffPhotoPath ? (
+                          <Image
+                            src={person.staffPhotoPath}
+                            alt=""
+                            width={24}
+                            height={24}
+                            // 24px of photo in a 20px line: the negative margin keeps the line the
+                            // text's own height, so a crew line is no taller than its neighbours.
+                            className="-my-0.5 me-1 inline-block rounded-full align-middle"
+                          />
+                        ) : null}
+                        {person.fullName}
+                      </span>
+                      {personIndex < station.crew.length - 1 ? ", " : ""}
+                    </Fragment>
                   ))}
             </span>
           ))}
@@ -208,24 +218,31 @@ export function DayStation({
       {/* **The readiness bar.** Ready, then blocked, then the open seats, as
           one bar the boat's capacity wide; the words under it are the
           accessible reading, so the bar itself is decoration. The arrival
-          desk draws the same bar (`ReadinessBar`, #2100). */}
-      <ReadinessBar
-        className="mt-4"
-        ready={ready}
-        blocked={blocked}
-        of={station.sellableCapacity}
-      />
-      <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm tabular-nums">
-        <span>{t("shopHome.spine.readyCount", { ready, booked: station.booked })}</span>
-        {blocked > 0 ? (
-          <span className="font-medium text-danger">
-            {t("shopHome.spine.blockedCount", { count: blocked })}
-          </span>
-        ) : null}
-        <span className="text-muted">
-          {open === 0 ? t("shopHome.spine.full") : t("shopHome.spine.seatsOpen", { count: open })}
-        </span>
-      </p>
+          desk draws the same bar (`ReadinessBar`, #2100). A boat that is home
+          draws neither: they are boarding facts. */}
+      {home ? null : (
+        <>
+          <ReadinessBar
+            className="mt-4"
+            ready={ready}
+            blocked={blocked}
+            of={station.sellableCapacity}
+          />
+          <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm tabular-nums">
+            <span>{t("shopHome.spine.readyCount", { ready, booked: station.booked })}</span>
+            {blocked > 0 ? (
+              <span className="font-medium text-danger">
+                {t("shopHome.spine.blockedCount", { count: blocked })}
+              </span>
+            ) : null}
+            <span className="text-muted">
+              {open === 0
+                ? t("shopHome.spine.full")
+                : t("shopHome.spine.seatsOpen", { count: open })}
+            </span>
+          </p>
+        </>
+      )}
 
       {crewRollCallOpen ? (
         <p className="mt-3 text-sm font-medium text-warning">

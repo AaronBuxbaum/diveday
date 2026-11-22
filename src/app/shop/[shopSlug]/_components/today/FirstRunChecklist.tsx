@@ -327,6 +327,7 @@ export function FirstRunChecklist({
           trailing={
             <Copyable
               layout="inline"
+              flush
               value={scheduleUrl}
               copyLabel={copy.scheduleCopy}
               copiedLabel={copy.scheduleCopied}

@@ -140,8 +140,9 @@ export function sharedInHorizonReadiness(
 
 /**
  * The blocked-diver figure for the **next boat day**: the number the Today
- * row's nav badge carries, the sum of the departure cards' "N blocked" on
- * that day, and the blocked clause of the summary under the date (UX audit
+ * row's nav badge carries, the sum of the blocked divers the departure cards
+ * count on that day (a card stops drawing "N blocked" once the crew taps Home,
+ * the badge does not), and the blocked clause of the summary under the date (UX audit
  * 2026-10-07, item 1; glossary "Operational horizon").
  *
  * - **The day** is today while any of today's departures is still inside the

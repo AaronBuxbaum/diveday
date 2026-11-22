@@ -448,7 +448,7 @@
   **Aboard** row (`blocked_aboard`): a danger-toned Needs you row with the blocker in a few words
   and its fix, ranked just under the after-dive roll call rows. An aboard diver never shares a row
   with ashore ones, and money owed alone never makes an Aboard row — that diver keeps an ordinary
-  payment row. The departure card keeps the blocked count; the row carries the name and the fix.
+  payment row. The departure card keeps the blocked count until the crew taps Home; the row carries the name and the fix.
   Deliberately not the
   blocker **category** (`waiver`/`certification`/`payment`/`setup`), which files a medical hold
   under *waiver*, correctly, since that is where the answer was collected. No line naming one of

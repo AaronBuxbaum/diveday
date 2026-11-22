@@ -443,6 +443,23 @@ describe("the stage chip (slice 16c)", () => {
     expect(screen.getByText(/^Molasses Reef · since /)).toBeInTheDocument();
   });
 
+  it("draws no boarding readiness once the boat is home", () => {
+    const home = { ...departure({ blocked: 1 }), stage: stationStage("home") };
+    renderSpine({ departures: [home], actions: [action({ id: "b", departure: boat("t1") })] });
+    expect(screen.getByText("Home")).toBeInTheDocument();
+    expect(screen.queryByText(/ready$/)).not.toBeInTheDocument();
+    expect(screen.queryByText("1 blocked")).not.toBeInTheDocument();
+    expect(screen.queryByText(/seats? open/)).not.toBeInTheDocument();
+    cleanup();
+    renderSpine({
+      departures: [{ ...departure({ blocked: 1 }), stage: stationStage("heading_in") }],
+      actions: [action({ id: "b", departure: boat("t1") })],
+    });
+    expect(screen.getByText("9 of 10 ready")).toBeInTheDocument();
+    expect(screen.getByText("1 blocked")).toBeInTheDocument();
+    expect(screen.getByText("2 seats open")).toBeInTheDocument();
+  });
+
   it("names no site at the dock, and none on a departure with no plan", () => {
     withStage("boarding");
     expect(screen.getByText("Boarding")).toBeInTheDocument();

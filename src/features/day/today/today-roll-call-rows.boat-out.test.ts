@@ -198,6 +198,35 @@ describe("unclosed roll call (DOM-H3), the boat out", () => {
         expect(work.outTripIds).not.toContain(trip.id);
       });
 
+      it("keeps the row on a card still inside the horizon after Home is tapped", async () => {
+        // The card stops drawing "blocked" once Home is tapped (`DayStation`), so the diver's
+        // name and fix live only here: a boat that sailed half an hour ago is still a live card.
+        const { db, shop } = ctx;
+        const fixture = await returnedTrip(db, shop.id, {
+          endedHoursAgo: -3.5,
+          divers: 1,
+          title: "Blocked Aboard, just sailed — Molasses",
+        });
+        const { trip, bookingIds, staffId } = fixture;
+        await boardAtDeparture(
+          db,
+          { shopId: shop.id, tripId: trip.id, staffId, bookingIds },
+          new Date(trip.startsAt.getTime() + 5 * 60 * 1000),
+        );
+        const recorded = await recordTripStage(db, {
+          shopId: shop.id,
+          tripId: trip.id,
+          stage: "home",
+          recordedByPersonId: staffId,
+          recordedAt: nowDate(),
+        });
+        expect(recorded.ok).toBe(true);
+
+        const work = await getTodayWork(db, shop.id, shop.slug, shopClock(shop), undefined, EN);
+        // A live boat with no crew assigned also files its own row; the diver's is the one kept.
+        expect(rowsFor(work, trip.id).map((row) => row.kind)).toContain("blocked_aboard");
+      });
+
       it("drops the row once the boat is back by the clock", async () => {
         const { db, shop } = ctx;
         // Tied up two hours ago, past the return buffer, with nobody tapping.
