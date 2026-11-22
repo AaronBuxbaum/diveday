@@ -169,6 +169,7 @@ async function seats(db: AppDb, tripId: string) {
       diveIntent: bookings.diveIntent,
       reEntryAsk: bookings.reEntryAsk,
       minorDeclaredAt: bookings.minorDeclaredAt,
+      declaredAge: bookings.declaredAge,
     })
     .from(bookings)
     .innerJoin(people, eq(people.id, bookings.personId))
@@ -309,6 +310,41 @@ describe("the Under 18 box", () => {
       booked.map((seat) => [seat.email, seat.minorDeclaredAt !== null]),
     );
     expect(marked).toEqual({ "parent@example.com": false, "kid@example.com": true });
+  });
+});
+
+/** The age beside "Under 18" informs the crew; no value of it refuses a booking (issue #4897). */
+describe("the age beside Under 18", () => {
+  async function bookKid(age: string | null, ticked = true) {
+    const { db, shop } = ctx;
+    const tripId = await freeDeparture(db, shop.id);
+    const form = submission([{ email: "parent@example.com" }, { email: "kid@example.com" }]);
+    if (ticked) form.set("minor-1", "on");
+    if (age !== null) form.set("age-1", age);
+    const state = await post(shop.slug, tripId, form);
+    const booked = await seats(db, tripId);
+    return { state, kid: booked.find((seat) => seat.email === "kid@example.com") };
+  }
+
+  it("carries a typed age to that seat, with the guardian flag unchanged", async () => {
+    const { state, kid } = await bookKid("12");
+    expect(state?.error).toBeUndefined();
+    expect(kid).toMatchObject({ declaredAge: 12 });
+    expect(kid?.minorDeclaredAt).not.toBeNull();
+  });
+
+  it("books the same with no age, a word, or an adult's number", async () => {
+    for (const age of [null, "", "twelve", "40", "-3", "12.5"]) {
+      const { state, kid } = await bookKid(age);
+      expect(state?.error).toBeUndefined();
+      expect(kid?.declaredAge).toBeNull();
+      expect(kid?.minorDeclaredAt).not.toBeNull();
+    }
+  });
+
+  it("is ignored when Under 18 is not ticked, so an adult's booking is unchanged", async () => {
+    const { kid } = await bookKid("12", false);
+    expect(kid).toMatchObject({ declaredAge: null, minorDeclaredAt: null });
   });
 });
 

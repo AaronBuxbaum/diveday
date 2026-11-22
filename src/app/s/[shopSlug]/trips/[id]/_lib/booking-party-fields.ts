@@ -21,6 +21,7 @@ export function validateBookingParty(
     fullName: string;
     email: string;
     minorDeclared: boolean;
+    declaredAge?: number;
     unnamedGuest: boolean;
   }[] = [];
   for (let index = 0; index < partySize.data; index++) {
@@ -35,11 +36,13 @@ export function validateBookingParty(
     } else if (email && !diverEmailSchema.safeParse(email).success) {
       fieldErrors[`email-${index}`] = t("booking.fieldErrors.emailInvalid");
     }
+    const minorDeclared = fields[`minor-${index}`] === "on";
     validParty.push({
       fullName: fullName || t("party.guestN", { number: index + 1 }),
       email: fullName ? email : "",
       unnamedGuest: index > 0 && !fullName,
-      minorDeclared: fields[`minor-${index}`] === "on",
+      minorDeclared,
+      ...(minorDeclared ? declaredAgeOf(fields[`age-${index}`]) : {}),
     });
   }
   if (fields.phone.length > DIVER_PHONE_MAX)
@@ -53,4 +56,16 @@ export function validateBookingParty(
     phone: fields.phone,
     promoCodeInput: fields.promoCode,
   };
+}
+
+/**
+ * The optional age beside "Under 18": a whole number 0 to 17, else nothing. A
+ * blank, a word or "40" is not an error; it books as if the box were empty,
+ * because the age informs the crew and nothing here may refuse an honest diver.
+ */
+function declaredAgeOf(value: FormDataEntryValue | null | undefined): { declaredAge?: number } {
+  const text = String(value ?? "").trim();
+  if (!/^\d{1,2}$/.test(text)) return {};
+  const age = Number(text);
+  return age <= 17 ? { declaredAge: age } : {};
 }

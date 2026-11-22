@@ -6,7 +6,10 @@ import { SMS_CONSENT_ONCE_FILLED, SmsConsentNote } from "@/components/SmsConsent
 import { buttonClass } from "@/components/ui/button";
 import { ChoicePill, ChoiceRow, controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { segmentClass, segmentedTrackClass } from "@/components/ui/segmented";
+import { JUNIOR_MINIMUM_AGE } from "@/lib/age";
+import type { DepthUnit } from "@/lib/depth-units";
 import { suggestEmailTypo } from "@/lib/email-typo";
+import { juniorRuleForAge } from "@/lib/junior-rule";
 import type { ParticipantType } from "@/lib/participant-types";
 import { initialBookingPartySize, MAX_PUBLIC_PARTY_SIZE } from "@/lib/trips";
 import { emptyMember, usePartyMembers } from "./use-party-members";
@@ -84,6 +87,13 @@ function PartySizeStepper({
   );
 }
 
+/** What the departure says about depth, for the junior rule beside a child's age. */
+export type JuniorFacts = {
+  /** The deepest planned site, in metres as stored; null when none is planned. */
+  deepestSiteMeters: number | null;
+  depthUnit: DepthUnit;
+};
+
 /** Per-input error keyed by the field's form name, e.g. `email-0` or `phone`. */
 export type BookingFieldErrors = Record<string, string>;
 
@@ -122,6 +132,7 @@ export function BookingPartyFields({
   onTypesChange,
   leadOnly = false,
   countControl = "choices",
+  junior,
 }: {
   maxPartySize: number;
   initialSize?: number;
@@ -169,6 +180,12 @@ export function BookingPartyFields({
   onTypesChange?: (types: ParticipantType[]) => void;
   /** The size and only the lead's details: a wait-list party (`TripFullSection`). */
   leadOnly?: boolean;
+  /**
+   * A boat departure's facts for a child's age: with it, "Under 18" also asks
+   * the age and says the junior rule for it (issue #4897). Absent (a course,
+   * where the course page states its own rule) the box asks nothing more.
+   */
+  junior?: JuniorFacts;
 }) {
   const t = useTranslations();
   const [size, setSize] = useState(() => initialBookingPartySize(initialSize, maxPartySize));
@@ -510,7 +527,9 @@ export function BookingPartyFields({
                       16px either side, so it read as a gap in the person's
                       details rather than a question about them. Stacked
                       without a gap, each row's own 44px is the rhythm. */}
-                  {leadOnly ? null : <UnderEighteenChoice index={index} />}
+                  {leadOnly ? null : (
+                    <UnderEighteenChoice index={index} junior={junior} type={types[index]} />
+                  )}
                 </FieldGrid>
               </div>
             </fieldset>
@@ -554,21 +573,101 @@ function LeadEmailChoice({
  * width and type size (Aaron, 2026-10-22): as a bare checkbox row between the
  * fields it read as a gap in the form rather than a question in it.
  */
-function UnderEighteenChoice({ index }: { index: number }) {
+function UnderEighteenChoice({
+  index,
+  junior,
+  type = "diver",
+}: {
+  index: number;
+  junior?: JuniorFacts;
+  type?: ParticipantType;
+}) {
   const t = useTranslations();
   const [checked, setChecked] = useState(false);
+  const [age, setAge] = useState("");
   return (
-    <ChoicePill
-      type="checkbox"
-      size="field"
-      name={`minor-${index}`}
-      checked={checked}
-      onChange={(event) => setChecked(event.target.checked)}
-    >
-      {t("party.under18")}
-      {checked ? (
-        <span className="block text-sm font-normal text-muted">{t("party.under18Hint")}</span>
+    <>
+      <ChoicePill
+        type="checkbox"
+        size="field"
+        name={`minor-${index}`}
+        checked={checked}
+        onChange={(event) => setChecked(event.target.checked)}
+      >
+        {t("party.under18")}
+        {checked ? (
+          <span className="block text-sm font-normal text-muted">{t("party.under18Hint")}</span>
+        ) : null}
+      </ChoicePill>
+      {checked && junior ? (
+        <JuniorAge index={index} junior={junior} type={type} age={age} onAgeChange={setAge} />
       ) : null}
-    </ChoicePill>
+    </>
+  );
+}
+
+/**
+ * **The child's age, and the junior rule for it** (issue #4897). A whole number,
+ * optional, never a birth date. The line under it states the limits as the Open
+ * Water course page words them; it informs and never stops a booking, and an
+ * age under the agency's minimum says the shop will be in touch.
+ */
+function JuniorAge({
+  index,
+  junior,
+  type,
+  age,
+  onAgeChange,
+}: {
+  index: number;
+  junior: JuniorFacts;
+  type: ParticipantType;
+  age: string;
+  onAgeChange: (age: string) => void;
+}) {
+  const t = useTranslations();
+  const typed = /^\d{1,2}$/.test(age.trim()) ? Number(age.trim()) : null;
+  const found =
+    typed === null ? null : juniorRuleForAge(typed, junior.deepestSiteMeters, junior.depthUnit);
+  // Depth and supervision are a diver's rules; a snorkeler or rider is only told
+  // the minimum age, which the shop follows up on whatever the seat.
+  const rule = found && (type === "diver" || found.kind === "below_minimum") ? found : null;
+  const depth =
+    rule?.kind === "junior"
+      ? t(rule.unit === "feet" ? "course.depthUnits.feet" : "course.depthUnits.meters", {
+          value: rule.limit,
+        })
+      : "";
+  return (
+    <>
+      <Field label={t("party.ageLabel")} hint={t("common.optional")} className="text-base">
+        <input
+          name={`age-${index}`}
+          inputMode="numeric"
+          autoComplete="off"
+          maxLength={2}
+          value={age}
+          onChange={(event) => onAgeChange(event.target.value)}
+          className={controlClass}
+        />
+      </Field>
+      {rule ? (
+        <div aria-live="polite" className="space-y-2 text-sm text-muted">
+          <p>
+            {rule.kind === "below_minimum"
+              ? t("party.juniorBelowMinimum", { age: JUNIOR_MINIMUM_AGE })
+              : t(
+                  rule.supervision === "professional_or_parent"
+                    ? "party.juniorUnderTwelve"
+                    : "party.juniorTwelveToFourteen",
+                  { age: typed ?? 0, depth },
+                )}
+          </p>
+          {rule.kind === "junior" && rule.deeperSites ? (
+            <p>{t("party.juniorDeeperSites")}</p>
+          ) : null}
+        </div>
+      ) : null}
+    </>
   );
 }

@@ -429,3 +429,135 @@ it("starts with the requested party and clamps it to the seats actually availabl
   expect(screen.getByRole("textbox", { name: "Diver 2 name" })).toBeInTheDocument();
   expect(screen.queryByRole("textbox", { name: "Diver 3 name" })).not.toBeInTheDocument();
 });
+
+describe("the age beside Under 18 (issue #4897)", () => {
+  const reefBoat = { deepestSiteMeters: 14, depthUnit: "feet" as const };
+  const wreckBoat = { deepestSiteMeters: 37, depthUnit: "feet" as const };
+
+  function tickUnder18() {
+    fireEvent.click(screen.getByRole("checkbox", { name: /under 18/i }));
+  }
+  function typeAge(age: string) {
+    fireEvent.change(screen.getByRole("textbox", { name: /^age/i }), { target: { value: age } });
+  }
+
+  it("asks the age only once Under 18 is ticked, and never on an adult's seat", () => {
+    renderDiver(<BookingPartyFields maxPartySize={2} junior={reefBoat} />);
+    expect(screen.queryByRole("textbox", { name: /^age/i })).toBeNull();
+    tickUnder18();
+    const field = screen.getByRole("textbox", { name: /^age/i });
+    expect(field).toHaveAttribute("name", "age-0");
+    expect(field).not.toBeRequired();
+    expect(screen.getByText("A parent or guardian signs the waiver too.")).toBeInTheDocument();
+  });
+
+  it("asks nothing more on a course, which states its own rule", () => {
+    renderDiver(<BookingPartyFields maxPartySize={2} />);
+    tickUnder18();
+    expect(screen.queryByRole("textbox", { name: /^age/i })).toBeNull();
+  });
+
+  it("states the rule for 10, 12 and 15", () => {
+    renderDiver(<BookingPartyFields maxPartySize={2} junior={reefBoat} />);
+    tickUnder18();
+    typeAge("10");
+    expect(
+      screen.getByText(
+        "At 10, a junior diver with an Open Water card dives to a maximum of 40 feet, with a dive professional or a certified parent or guardian. Your card’s agency may set its own limits.",
+      ),
+    ).toBeInTheDocument();
+    typeAge("12");
+    expect(
+      screen.getByText(
+        "At 12, a junior diver with an Open Water card dives to a maximum of 60 feet, with a certified adult. Your card’s agency may set its own limits.",
+      ),
+    ).toBeInTheDocument();
+    typeAge("15");
+    expect(screen.queryByText(/junior diver with an Open Water card/)).toBeNull();
+  });
+
+  it("adds the calm second sentence only when a planned site goes deeper", () => {
+    const { unmount } = renderDiver(<BookingPartyFields maxPartySize={2} junior={reefBoat} />);
+    tickUnder18();
+    typeAge("12");
+    expect(screen.queryByText(/go deeper than this limit/)).toBeNull();
+    unmount();
+    renderDiver(<BookingPartyFields maxPartySize={2} junior={wreckBoat} />);
+    tickUnder18();
+    typeAge("12");
+    expect(
+      screen.getByText(
+        "Some sites on this trip go deeper than this limit. The shop will contact you before the trip about whether this boat suits this diver.",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("says the shop will be in touch under the minimum age, and refuses nothing", () => {
+    renderDiver(<BookingPartyFields maxPartySize={2} junior={reefBoat} />);
+    tickUnder18();
+    typeAge("8");
+    expect(screen.getByText(/The shop will be in touch/)).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: /^age/i })).toBeValid();
+  });
+
+  describe("by kind of seat", () => {
+    const choices = [
+      { type: "diver" as const, label: "Diver" },
+      { type: "snorkeler" as const, label: "Snorkeler" },
+      { type: "rider" as const, label: "Rider" },
+    ];
+    function setKind(kind: string) {
+      fireEvent.change(screen.getByRole("combobox", { name: /joining as/i }), {
+        target: { value: kind },
+      });
+    }
+    function render() {
+      renderDiver(
+        <BookingPartyFields maxPartySize={2} junior={wreckBoat} participantChoices={choices} />,
+      );
+      tickUnder18();
+    }
+
+    it("keeps the Age field for a snorkeler or rider but says nothing about depth", () => {
+      for (const kind of ["snorkeler", "rider"]) {
+        render();
+        setKind(kind);
+        typeAge("12");
+        expect(screen.getByRole("textbox", { name: /^age/i })).toBeInTheDocument();
+        expect(screen.queryByText(/junior diver with an Open Water card/)).toBeNull();
+        expect(screen.queryByText(/go deeper than this limit/)).toBeNull();
+        cleanup();
+      }
+    });
+
+    it("still states the rule for a diver seat", () => {
+      render();
+      setKind("diver");
+      typeAge("12");
+      expect(screen.getByText(/maximum of 60 feet/)).toBeInTheDocument();
+    });
+
+    it("shows the under-10 line for a rider too", () => {
+      render();
+      setKind("rider");
+      typeAge("7");
+      expect(
+        screen.getByText(
+          "Junior diver certification starts at age 10. The shop will be in touch about what this child can do on this trip.",
+        ),
+      ).toBeInTheDocument();
+    });
+  });
+
+  it("shows metric limits in a metric shop", () => {
+    renderDiver(
+      <BookingPartyFields
+        maxPartySize={2}
+        junior={{ deepestSiteMeters: 14, depthUnit: "meters" }}
+      />,
+    );
+    tickUnder18();
+    typeAge("12");
+    expect(screen.getByText(/maximum of 18 meters/)).toBeInTheDocument();
+  });
+});

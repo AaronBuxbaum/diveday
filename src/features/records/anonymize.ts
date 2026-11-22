@@ -1568,6 +1568,7 @@ async function scrubBookingRows(
         // with their date of birth. The release keeps the fact that a guardian
         // co-signed, which is the evidence; this only said why it was asked.
         minorDeclaredAt: null,
+        declaredAge: null,
         // Why the desk turned them away is a category, but "medical" is still a
         // health fact about this person; it goes with them. *That* the desk
         // turned them away stays (`turnedAwayAt`, untouched here), so the

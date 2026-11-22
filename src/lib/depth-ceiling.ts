@@ -67,6 +67,15 @@ const JUNIOR_YOUNGEST_LIMIT: DepthCeiling = { meters: 12, feet: 40 };
 const JUNIOR_OPEN_WATER_LIMIT: DepthCeiling = { meters: 18, feet: 60 };
 const JUNIOR_ADVANCED_LIMIT: DepthCeiling = { meters: 21, feet: 70 };
 
+/**
+ * The junior ceiling for a diver of this age holding no card above Open Water,
+ * the figure a booking form can quote before any card is known. Callers hand
+ * it an age under {@link JUNIOR_AGE_END}.
+ */
+export function juniorAgeCeiling(age: number): DepthCeiling {
+  return age < JUNIOR_YOUNGEST_BAND_END ? JUNIOR_YOUNGEST_LIMIT : JUNIOR_OPEN_WATER_LIMIT;
+}
+
 /** Why a diver's ceiling is what it is — the UI needs to say which rule bit. */
 export type DepthLimitBasis =
   | "certification"

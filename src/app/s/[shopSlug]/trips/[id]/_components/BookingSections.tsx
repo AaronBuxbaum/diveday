@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useActionState, useCallback, useEffect, useRef, useState } from "react";
 import { getReturningDiverServerTime } from "@/app/actions/returning-diver-memory";
-import { BookingPartyFields } from "@/components/BookingPartyFields";
+import { BookingPartyFields, type JuniorFacts } from "@/components/BookingPartyFields";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
@@ -448,6 +448,11 @@ export type BookSpotSectionContext = {
    */
   terms?: React.ReactNode;
   /**
+   * What a boat departure says about depth, so "Under 18" can ask a child's
+   * age and show the junior rule for it. Absent on a course session.
+   */
+  junior?: JuniorFacts;
+  /**
    * The diver this page was opened by, through their own handoff (ADR
    * 20260906-before-you-ask, decision 3): the panel's worded facts plus the
    * lead fields' prefill. Null on every cold visit, where nothing renders.
@@ -514,6 +519,7 @@ export function BookSpotSection({ context }: { context: BookSpotSectionContext }
     balanceDueAt,
     timeZone,
     terms,
+    junior,
     knownDiver,
     offerHandoff,
     requirement = null,
@@ -677,6 +683,7 @@ export function BookSpotSection({ context }: { context: BookSpotSectionContext }
           onLeadEmailSettled={knownDiver || tripRef.embed ? undefined : offerHandoff}
           participantChoices={participantChoices}
           onTypesChange={setPartyTypes}
+          junior={junior}
         />
         {!tripRef.embed ? (
           <ChoiceRow

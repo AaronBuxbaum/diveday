@@ -450,6 +450,13 @@ export const bookings = pgTable(
      */
     minorDeclaredAt: timestamp("minor_declared_at", { withTimezone: true }),
     /**
+     * **The age the booker typed beside "Under 18"**, a whole number of years
+     * (issue #4897). Optional and never a birth date: it informs the crew and
+     * the junior rule the form showed, and gates nothing. Set only with
+     * `minor_declared_at`; a date of birth on file outranks it everywhere.
+     */
+    declaredAge: smallint("declared_age"),
+    /**
      * Set on every seat of a party booking *except* the organizer's own,
      * pointing at the organizer's booking on the same trip (docs ADR
      * 20260804-seat-claim-links). This is what makes "the other seats of my
@@ -734,6 +741,10 @@ export const bookings = pgTable(
     ),
     // A turn-away on a seat that is on the boat is a record contradicting itself:
     // only a released seat (or one given up since) can carry it.
+    check(
+      "bookings_declared_age_range",
+      sql`${table.declaredAge} is null or (${table.declaredAge} between 0 and 17 and ${table.minorDeclaredAt} is not null)`,
+    ),
     check(
       "bookings_turned_away_is_released",
       sql`${table.turnedAwayAt} is null or ${table.status} in ('no_show', 'cancelled')`,

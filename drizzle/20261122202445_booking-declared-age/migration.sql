@@ -1,0 +1,2 @@
+ALTER TABLE "bookings" ADD COLUMN "declared_age" smallint;--> statement-breakpoint
+ALTER TABLE "bookings" ADD CONSTRAINT "bookings_declared_age_range" CHECK ("declared_age" is null or ("declared_age" between 0 and 17 and "minor_declared_at" is not null));

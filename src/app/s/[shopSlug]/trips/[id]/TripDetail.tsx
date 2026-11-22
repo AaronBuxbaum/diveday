@@ -16,6 +16,7 @@ import { auth } from "@/lib/auth";
 import { nowDate } from "@/lib/clock";
 import { perDiverBookingPriceCents } from "@/lib/courses";
 import { checkoutSeatTerms } from "@/lib/deposits";
+import type { DepthUnit } from "@/lib/depth-units";
 import { boatToName, conditionsChangedSinceBooking } from "@/lib/diver-planning";
 import { minimumSeatsState } from "@/lib/minimum-seats";
 import { toShopCurrency } from "@/lib/money";
@@ -84,6 +85,19 @@ const TRIP_PAGE_NAMESPACES = [
   "rental",
   "trip",
 ] as const;
+
+/** A boat's depths for the junior rule beside a child's age; a course states its own. */
+function juniorFacts(
+  trip: Trip,
+  briefings: readonly { diveSite?: { maxDepthMeters: number | null } | null }[],
+  depthUnit: DepthUnit,
+) {
+  if (trip.course) return undefined;
+  const depths = briefings.flatMap(({ diveSite }) =>
+    diveSite?.maxDepthMeters ? [diveSite.maxDepthMeters] : [],
+  );
+  return { deepestSiteMeters: depths.length > 0 ? Math.max(...depths) : null, depthUnit };
+}
 
 /** Prefill a date request for a group larger than the seats still available. */
 function groupRequestFor(shop: Shop, trip: Trip, remaining: number) {
@@ -209,7 +223,6 @@ export async function TripDetailPage({
     timeZone: shop.timezone,
   });
   const diveBriefings = dayBriefings(tripDives, briefing.extras, t);
-  const coverPhoto = dayCoverPhoto(diveBriefings);
   // The dock-day rhythm's full run stays on the thread the diver reaches after
   // booking (ADR 20260827-the-divers-thread, decision 2); "The day" carries its
   // two ends in one line (fifth-loop ideas, item 19).
@@ -336,7 +349,7 @@ export async function TripDetailPage({
             locale={locale}
             isEmbed={isEmbed}
             shopSlug={shopSlug}
-            coverPhoto={coverPhoto}
+            coverPhoto={dayCoverPhoto(diveBriefings)}
             minimumSeats={minimumSeats}
             run={run}
             t={t}
@@ -413,6 +426,7 @@ export async function TripDetailPage({
                   ...checkoutSeatTerms(trip, trip.course),
                   balanceDueAt: trip.startsAt,
                   terms: <BookingFinePrint shop={shop} trip={trip} locale={locale} />,
+                  junior: juniorFacts(trip, diveBriefings, readerUnits.depth ?? shop.depthUnit),
                   knownDiver: knownDiverPanel,
                   requirement: requirementSentence,
                   offerHandoff: offerHandoff.bind(null, tripRef),

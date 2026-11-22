@@ -50,6 +50,7 @@ exports[`the diver bundle's headers > are exactly the columns decided for the di
     "group_hold_expired_at",
     "running_late_at",
     "minor_declared_at",
+    "declared_age",
     "training_plan_instructor_name",
     "training_plan_by_name",
     "training_plan_at",

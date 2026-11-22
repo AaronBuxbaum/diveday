@@ -1618,6 +1618,11 @@
     "useMainContactEmail": "Use the main contact’s email for this diver",
     "under18": "Under 18",
     "under18Hint": "A parent or guardian signs the waiver too.",
+    "ageLabel": "Age",
+    "juniorUnderTwelve": "At {age}, a junior diver with an Open Water card dives to a maximum of {depth}, with a dive professional or a certified parent or guardian. Your card’s agency may set its own limits.",
+    "juniorTwelveToFourteen": "At {age}, a junior diver with an Open Water card dives to a maximum of {depth}, with a certified adult. Your card’s agency may set its own limits.",
+    "juniorDeeperSites": "Some sites on this trip go deeper than this limit. The shop will contact you before the trip about whether this boat suits this diver.",
+    "juniorBelowMinimum": "Junior diver certification starts at age {age}. The shop will be in touch about what this child can do on this trip.",
     "bigGroupContactGeneric": "Bringing more than {count}? Contact the shop.",
     "guestN": "Guest {number}",
     "bigGroupRequest": "Bringing more than {count}? Ask about a group trip."

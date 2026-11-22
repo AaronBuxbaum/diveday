@@ -1618,6 +1618,11 @@
     "useMainContactEmail": "Usar el correo del contacto principal para este buceador",
     "under18": "Menor de 18 años",
     "under18Hint": "Un padre, madre o tutor legal también firma la exención.",
+    "ageLabel": "Edad",
+    "juniorUnderTwelve": "A los {age} años, un buceador junior con certificación Open Water bucea hasta un máximo de {depth}, con un profesional del buceo o con su padre, madre o tutor certificado. La agencia de tu certificación puede fijar sus propios límites.",
+    "juniorTwelveToFourteen": "A los {age} años, un buceador junior con certificación Open Water bucea hasta un máximo de {depth}, con un adulto certificado. La agencia de tu certificación puede fijar sus propios límites.",
+    "juniorDeeperSites": "Algunos sitios de esta salida son más profundos que este límite. El centro se pondrá en contacto contigo antes de la salida para ver si esta embarcación es adecuada para este buceador.",
+    "juniorBelowMinimum": "La certificación de buceador junior empieza a los {age} años. El centro se pondrá en contacto contigo para ver qué puede hacer este niño o niña en esta salida.",
     "bigGroupContactGeneric": "¿Sois más de {count}? Contacta con el centro.",
     "guestN": "Invitado {number}",
     "bigGroupRequest": "¿Son más de {count}? Pregunta por una salida para el grupo."
