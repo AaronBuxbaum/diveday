@@ -73,6 +73,12 @@ function RentalNoteFact({
 const FIT_SUMMARY_CLASS =
   "w-fit min-w-11 cursor-pointer list-none [&::-webkit-details-marker]:hidden";
 
+/** The door is a status, not a packing list; the facts are inside. */
+function gearDoorSummary(t: StaffTranslator, state: string, statusText: string) {
+  if (state === "rents") return t("divers.file.rentalFitOnFile");
+  return state === "not_recorded" ? t("divers.file.noneOnFile") : statusText;
+}
+
 export function GearAndSizes({
   diver,
   shopSlug,
@@ -211,10 +217,7 @@ export function GearAndSizes({
   };
 
   const sized = line.state === "rents" ? line.items.filter((item) => item.size) : [];
-  // Keep the door a status, not a packing list. The domain line still carries
-  // every item and size for the expanded facts below; the short state is enough
-  // to tell a staffer whether there is anything to inspect or act on.
-  const gearSummary = line.state === "rents" ? t("divers.file.rentalFitOnFile") : statusText;
+  const gearSummary = gearDoorSummary(t, line.state, statusText);
   const flagged = Boolean(profile?.needsStaffFitAt);
   // **Only an outcome this form produced.** All four fit notices carry
   // `form: "fit"` — the two flag controls below the disclosure share it with
@@ -235,7 +238,6 @@ export function GearAndSizes({
       // A standing can't-fill flag is open work — the crew has to fit this
       // diver by hand — so the group that carries it opens with the record.
       open={Boolean(status) || flagged || counterRentals.length > 0}
-      stacked
     >
       <InsetGroup>
         {/* What this person has from the counter right now (ADR

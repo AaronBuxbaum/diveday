@@ -51,7 +51,8 @@ export function DiverFileGroupDisclosure({
 }: {
   id: string;
   label: string;
-  summary: string;
+  /** Omit when the row has nothing to say at a glance. */
+  summary?: string;
   /**
    * `warning` for a summary standing on somebody's *word* rather than on
    * anything the shop has seen — the treatment `certificationSummaryUnchecked`
@@ -235,7 +236,7 @@ export function DiverFileGroupDisclosure({
               label on a phone and the arrow keeps the label's line; from
               `sm` it ends the row. */}
           {href ? <DoorChevron className="sm:order-last" /> : null}
-          <span className={summaryFactClass}>{summary}</span>
+          {summary ? <span className={summaryFactClass}>{summary}</span> : null}
           {detailLine}
         </div>
       </section>
@@ -273,7 +274,7 @@ export function DiverFileGroupDisclosure({
           <h2 id={id} className={`${labelFloorClass} flex-1 scroll-mt-24 text-base font-medium`}>
             {label}
           </h2>
-          <span className={summaryFactClass}>{summary}</span>
+          {summary ? <span className={summaryFactClass}>{summary}</span> : null}
           {detailLine}
         </summary>
         <div id={`${id}-content`} className="pb-6">

@@ -93,7 +93,6 @@ export function WorkOrdersGroup({
       // A ticket still on the bench is open work on this record, so the group
       // opens with it, the way a standing can't-fill flag opens its own.
       open={open.length > 0 || Boolean(status)}
-      stacked
     >
       <InsetGroup bodyAs="ul">
         {pieces.length === 0 && unfiled.length === 0 ? (

@@ -146,7 +146,7 @@
   },
   "diver": {
     "heading": "Equipo propio",
-    "gearEmpty": "Nada en ficha",
+    "gearEmpty": "Sin datos",
     "onTheBench": "{count, number} en el taller",
     "deletePiece": "Eliminar {label}",
     "deletePieceShort": "Eliminar",

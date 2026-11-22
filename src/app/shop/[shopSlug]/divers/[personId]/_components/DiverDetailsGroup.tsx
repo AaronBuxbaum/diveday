@@ -95,15 +95,15 @@ export function DiverDetailsGroup({
       id="edit-details"
       label={t("divers.details.label")}
       summary={
+        // Only what is missing: a complete contact needs no words on the
+        // closed row, and the name sits inside it.
         !emergencyName
           ? emergencyPhone
-            ? t("divers.details.summaryEmergencyNoName", { phone: emergencyPhone })
+            ? t("divers.details.summaryNoName")
             : t("divers.details.summaryNoEmergency")
-          : // "On file" needs a name and a number (glossary — Emergency
-            // contact), so a name alone reads as the half it is.
-            emergencyPhone
-            ? t("divers.details.summaryEmergency", { name: emergencyName })
-            : t("divers.details.summaryEmergencyNoPhone", { name: emergencyName })
+          : emergencyPhone
+            ? undefined
+            : t("divers.details.summaryNoPhone")
       }
       summaryTone={
         missing?.tone ??
@@ -113,7 +113,6 @@ export function DiverDetailsGroup({
         missing?.detail ??
         (askForDateOfBirth ? t("divers.details.minorDeclaredNoDateOfBirth") : undefined)
       }
-      stacked
       open={open || Boolean(missing?.open) || askForDateOfBirth}
     >
       <FieldGrid
