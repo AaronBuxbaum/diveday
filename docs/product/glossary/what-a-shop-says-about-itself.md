@@ -51,6 +51,19 @@
   card's own sentence (`shopYear.card.*`). Switched by `shops.public_year_enabled` in Settings →
   Features, on for a new shop since 2026-10-23. Absent before a departure has
   sailed, and never inside the embed. Component in `src/app/s/[shopSlug]/_components/OurYear.tsx`.
+- **Safety record** — the shopfront panel under **Our year** that states four counts of how the
+  shop's departures were run, with the days they cover (issue #4255):
+  **departures run** (home, not cancelled, not a rehearsal, at least one booked diver),
+  **divers boarded** (seats counted aboard at the dock, each departure on its own),
+  **roll calls completed** (the head count has no open gap, `listRollCallGaps` in its `historical`
+  mode, and somebody was recorded at the dock) and **readiness completed** (at least one diver
+  counted aboard and every one recorded `ready` when counted, ADR 20261015-roll-call-records-readiness).
+  Computed from existing rows (`readSafetyRecord`, `src/features/boarding/safety-record.ts`), read
+  at most once an hour per shop. Real numbers with no minimum (ADR 20260729-verified-diver-reviews);
+  a shop with no departure run shows nothing, never four zeros; the copy claims nothing beyond the
+  counts and where they come from. **Off for a new shop**: the owner publishes it by turning on
+  `shops.safety_record_enabled` in Settings → Features. Never inside the embed. Component in
+  `src/app/s/[shopSlug]/_components/SafetyRecord.tsx`.
 - **The shop's year** — the twelve months from the shop's season start
   (`shops.season_start_month`/`season_start_day`), as `ShopSeason` in `src/lib/season.ts`: the
   year page on Reports, its card, the year's money and CSV, and **Our year** all read this one

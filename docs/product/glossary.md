@@ -557,5 +557,6 @@ word in a message bundle fails `pnpm check:repo`. The Spanish reasoning is
 - Public staff profile
 - Published desk hours
 - Register
+- Safety record
 - Setting
 - The shop's year

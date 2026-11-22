@@ -10,6 +10,7 @@ const allOn = {
   lastMinuteListEnabled: true,
   tipsEnabled: true,
   publicYearEnabled: true,
+  safetyRecordEnabled: true,
   padiChecksEnabled: true,
   claudeSuggestionsEnabled: true,
   recapAssistAutoApprove: true,

@@ -5018,6 +5018,15 @@
       "sentenceNoSites": "{divers, plural, one {# diver} other {# divers}}. {boats, plural, one {# boat out} other {# boats out}}."
     }
   },
+  "safetyRecord": {
+    "heading": "Our departure record",
+    "range": "Counted from our own records, {range}.",
+    "count": "{count, number}",
+    "departures": "{count, plural, one {Departure run} other {Departures run}}",
+    "divers": "{count, plural, one {Diver boarded} other {Divers boarded}}",
+    "rollCalls": "{count, plural, one {Roll call completed} other {Roll calls completed}}",
+    "readiness": "Readiness completed"
+  },
   "participants": {
     "type": {
       "diver": "Diver",

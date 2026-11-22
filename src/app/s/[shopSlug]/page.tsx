@@ -30,12 +30,12 @@ import { MonthControls } from "./_components/MonthControls";
 import { MoreWaysRows } from "./_components/MoreWaysRows";
 import { NextBoatCard } from "./_components/NextBoatCard";
 import { OffSeasonPanel } from "./_components/OffSeasonPanel";
-import { OurYearSection } from "./_components/OurYear";
 import { PromotedDateAsk, seriesHorizonLines, viewsBoardsEnd } from "./_components/PromotedDateAsk";
 import { ScheduleFilterBar } from "./_components/ScheduleFilterBar";
 import { SchedulePagerRow } from "./_components/SchedulePagerRow";
 import { SchedulePaperSheet, scheduleSheetEmpty } from "./_components/SchedulePaperSheet";
 import { ScheduleShelves } from "./_components/ScheduleShelves";
+import { ShopfrontCounts } from "./_components/ShopfrontCounts";
 import { ShopPick } from "./_components/ShopPick";
 import { ShopWelcome } from "./_components/ShopWelcome";
 import { readSchedulePage } from "./_components/schedule-reads";
@@ -497,10 +497,8 @@ export default async function SchedulePage({
           </DiverIntlProvider>
         </section>
       ) : null}
-      {/* "Our year": the shop's own year in counts, last, and only with its yes. */}
-      <Suspense fallback={null}>
-        <OurYearSection shop={shop} locale={locale} t={t} className={SECTION_GAP} />
-      </Suspense>
+      {/* "Our year" and the safety record: the shop's own counts, last, each only with its yes. */}
+      <ShopfrontCounts shop={shop} locale={locale} t={t} className={SECTION_GAP} />
     </main>
   );
 }

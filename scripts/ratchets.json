@@ -1015,7 +1015,7 @@
     "//": "Code lines (blank and comment lines left out) of the top-level functions under src/app, src/components, src/features, src/db, src/lib still over 300, keyed <file>#<name>. Written by `node scripts/check-page-length.mjs --write`. Each number may only go down — see scripts/check-page-length.mjs.",
     "src/app/shop/[shopSlug]/orders/page.tsx#OrdersIndexPage": 316,
     "src/db/seed/dive-sites.ts#seedDiveSites": 440,
-    "src/db/seed/history.ts#seedHistory": 632,
+    "src/db/seed/history.ts#seedHistory": 631,
     "src/db/seed/more-trips.ts#seedMoreTrips": 607,
     "src/db/seed/trips.ts#seedTrips": 327,
     "src/lib/import.ts#prepareContactImport": 429
@@ -1078,7 +1078,7 @@
       }
     ],
     "src/app/(token)/ready/[token]/page.tsx": 613,
-    "src/app/s/[shopSlug]/page.tsx": 590,
+    "src/app/s/[shopSlug]/page.tsx": 588,
     "src/app/shop/[shopSlug]/gear/[id]/page.tsx": 577,
     "src/app/shop/[shopSlug]/orders/page.tsx": 426,
     "src/app/shop/[shopSlug]/page.tsx": 576,

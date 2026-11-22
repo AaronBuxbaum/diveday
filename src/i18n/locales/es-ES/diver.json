@@ -5018,6 +5018,15 @@
       "sentenceNoSites": "{divers, plural, one {# buceador} other {# buceadores}}. {boats, plural, one {# salida} other {# salidas}}."
     }
   },
+  "safetyRecord": {
+    "heading": "El registro de nuestras salidas",
+    "range": "Contado de nuestros propios registros, {range}.",
+    "count": "{count, number}",
+    "departures": "{count, plural, one {Salida realizada} other {Salidas realizadas}}",
+    "divers": "{count, plural, one {Buceador embarcado} other {Buceadores embarcados}}",
+    "rollCalls": "{count, plural, one {Pase de lista completado} other {Pases de lista completados}}",
+    "readiness": "Preparación completada"
+  },
   "participants": {
     "type": {
       "diver": "Buceador",
