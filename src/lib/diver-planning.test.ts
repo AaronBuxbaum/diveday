@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  boatToName,
   conditionsChangedSinceBooking,
   DEFAULT_DOCK_DAY_RHYTHM,
   type DockDayRhythm,
@@ -9,6 +10,7 @@ import {
   packingConfidence,
   packsLogbook,
   parseDockDayRhythm,
+  rentalPriceLabel,
   siteFit,
 } from "./diver-planning";
 
@@ -531,27 +533,64 @@ describe("booking delight planning", () => {
     expect(packingConfidence(["Towel"], null).bringPersonal).toEqual([]);
   });
 
-  // Issue #2795: a try-dive student with no card has no dives to log. Decided
-  // by the shop's flag and the facts, never by finding "Logbook" in a list.
-  it("suggests a logbook to every diver when the shop does", () => {
+  // Issue #2795 and #4896: a course student with no certification has no dives
+  // to log yet. Decided by the shop's flag and the facts, never by finding
+  // "Logbook" in a list.
+  it("suggests a logbook to every diver on a charter when the shop does", () => {
     expect(
-      packsLogbook({ shopSuggests: true, introCourseSession: false, holdsCertification: false }),
+      packsLogbook({ shopSuggests: true, courseSession: false, holdsCertification: false }),
     ).toBe(true);
     expect(
-      packsLogbook({ shopSuggests: true, introCourseSession: true, holdsCertification: true }),
+      packsLogbook({ shopSuggests: true, courseSession: false, holdsCertification: true }),
     ).toBe(true);
   });
 
-  it("leaves the logbook off for a try-dive student with no certification", () => {
+  it("keeps the logbook for a certified diver on a course", () => {
     expect(
-      packsLogbook({ shopSuggests: true, introCourseSession: true, holdsCertification: false }),
+      packsLogbook({ shopSuggests: true, courseSession: true, holdsCertification: true }),
+    ).toBe(true);
+  });
+
+  it("leaves the logbook off for a student with no certification on any course", () => {
+    expect(
+      packsLogbook({ shopSuggests: true, courseSession: true, holdsCertification: false }),
     ).toBe(false);
   });
 
   it("never suggests a logbook the shop has switched off", () => {
     expect(
-      packsLogbook({ shopSuggests: false, introCourseSession: false, holdsCertification: true }),
+      packsLogbook({ shopSuggests: false, courseSession: false, holdsCertification: true }),
     ).toBe(false);
+  });
+
+  it("names the boat on a charter and on no course session", () => {
+    expect(boatToName({ boatId: "boat-1", course: null })).toBe("boat-1");
+    expect(boatToName({ boatId: "boat-1", course: { id: "c" } })).toBeNull();
+    expect(boatToName({ boatId: null, course: null })).toBeNull();
+  });
+
+  // #4896 item 4: only extras are priced once the fee covers the dive gear.
+  it("calls the priced rentals extras when a course fee covers every core kind the shop rents", () => {
+    expect(
+      rentalPriceLabel({
+        courseSession: true,
+        offered: ["mask", "bcd", "gopro"],
+        included: ["mask", "bcd"],
+      }),
+    ).toBe("extras");
+  });
+
+  it("calls them rental gear on a charter, or when the course leaves a core kind out", () => {
+    expect(
+      rentalPriceLabel({ courseSession: false, offered: ["mask", "gopro"], included: [] }),
+    ).toBe("rental");
+    expect(
+      rentalPriceLabel({
+        courseSession: true,
+        offered: ["mask", "bcd", "gopro"],
+        included: ["mask"],
+      }),
+    ).toBe("rental");
   });
 
   it("turns a water temperature into the suit most divers want", () => {

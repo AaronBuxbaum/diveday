@@ -3,7 +3,7 @@ import { SettledCheck } from "@/components/ui/SettledCheck";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { ReadyPageData } from "@/features/boarding/ready";
 import type { DiverTranslator } from "@/i18n/messages";
-import { mailtoHref } from "@/lib/contact-links";
+import { mailtoHref, telHref } from "@/lib/contact-links";
 import { isLearningMaterialLink } from "@/lib/courses";
 
 /**
@@ -22,13 +22,19 @@ import { isLearningMaterialLink } from "@/lib/courses";
 export function CourseMaterials({
   data,
   contactEmail,
+  contactPhone,
   t,
 }: {
   data: Pick<
     ReadyPageData,
-    "learningMaterials" | "elearningCode" | "courseMaterialsDone" | "courseStarted"
+    | "learningMaterials"
+    | "elearningCode"
+    | "elearningSold"
+    | "courseMaterialsDone"
+    | "courseStarted"
   >;
   contactEmail?: string | null;
+  contactPhone?: string | null;
   t: DiverTranslator;
 }) {
   const materials = data.learningMaterials;
@@ -73,13 +79,32 @@ export function CourseMaterials({
           </li>
         ))}
       </ul>
-      {!data.courseMaterialsDone && contactEmail ? (
-        <a
-          href={mailtoHref(contactEmail)}
-          className="mt-3 inline-flex min-h-11 items-center text-sm font-medium text-primary hover:underline"
-        >
+      {data.elearningSold && !data.elearningCode && !data.courseMaterialsDone ? (
+        <p className="mt-3 text-sm text-muted">
           {t("ready.materialsAccess")}
-        </a>
+          {contactEmail || contactPhone ? (
+            <>
+              {" "}
+              {contactEmail ? (
+                <a
+                  href={mailtoHref(contactEmail)}
+                  className="inline-flex min-h-11 items-center font-medium text-primary hover:underline"
+                >
+                  {contactEmail}
+                </a>
+              ) : null}
+              {contactEmail && contactPhone ? " · " : null}
+              {contactPhone ? (
+                <a
+                  href={telHref(contactPhone)}
+                  className="inline-flex min-h-11 items-center font-medium text-primary hover:underline"
+                >
+                  {contactPhone}
+                </a>
+              ) : null}
+            </>
+          ) : null}
+        </p>
       ) : null}
     </section>
   );

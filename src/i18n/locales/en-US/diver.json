@@ -371,6 +371,7 @@
     "changedByCrew": "Changed by the crew on {when}",
     "goodToKnow": "Good to know",
     "rentalFrom": "Rental gear from {price}",
+    "extrasFrom": "Optional extras from {price}",
     "rentalFullSet": "Full set {price}"
   },
   "booking": {
@@ -394,6 +395,7 @@
       "fare": "{price} × {count, plural, one {# diver} other {# divers}}",
       "courseFee": "Course fee",
       "eLearning": "Online course materials",
+      "eLearningNote": "The agency’s online theory. Finish it before day 1.",
       "gear": "Rental gear",
       "tax": "Tax",
       "taxAtCheckout": "added at checkout",
@@ -987,7 +989,7 @@
       "tooBigSuffix": ": that’s over {maxMb} MB. Try a smaller photo."
     },
     "elearningCode": "Your eLearning code",
-    "materialsAccess": "Ask the shop about access",
+    "materialsAccess": "Your access code comes after you book. If it has not arrived, write or call the shop.",
     "courseStartLine": "Your course starts at {time}.",
     "estimatedOwnRental": "Your estimated rental: {amount}.",
     "estimatedAtShopTotal": "Estimated total at the shop: {amount}. The crew confirms the rental at the dock.",
@@ -1145,6 +1147,7 @@
     "certInvalid": "Check the agency, level, and certification number, then try again.",
     "certOptional": "Optional",
     "keepThisPage": "This page is yours to keep. Bookmark it, and it stays up to date until you sail.",
+    "keepThisPageCourse": "This page is yours to keep. Bookmark it, and it stays up to date until your course ends.",
     "logEntryWaiting": "After you dive, your log entry is waiting here.",
     "offlineCopy": "No signal: this is a saved summary generated {when}: where and when, what was still open on your checklist, what to bring and what had changed. Changes since then aren’t shown.",
     "offlineOutstandingHeading": "Still open on your checklist when this was saved",

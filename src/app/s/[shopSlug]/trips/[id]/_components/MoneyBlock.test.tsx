@@ -118,6 +118,15 @@ describe("MoneyBlock — the lines that do not render", () => {
     expect(screen.queryByText(/× 1 diver/)).not.toBeInTheDocument();
   });
 
+  it("says in a line what the e-learning fee buys", () => {
+    renderDiver(
+      <MoneyBlock context={props({ courseFeeCents: 40_000, eLearningFeeCents: 9_000 })} />,
+    );
+    expect(
+      screen.getByText("The agency’s online theory. Finish it before day 1."),
+    ).toBeInTheDocument();
+  });
+
   it("hides the e-learning line for a course that does not sell one", () => {
     renderDiver(
       <MoneyBlock context={props({ courseFeeCents: 40_000, eLearningFeeCents: null })} />,

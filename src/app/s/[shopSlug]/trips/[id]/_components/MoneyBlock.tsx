@@ -190,7 +190,11 @@ export function MoneyBlock({
             <Line label={t("money.courseFee")} value={money(courseFeeCents * partySize)} />
           ) : null}
           {eLearningFeeCents !== null ? (
-            <Line label={t("money.eLearning")} value={money(eLearningFeeCents * partySize)} />
+            <Line
+              label={t("money.eLearning")}
+              note={t("money.eLearningNote")}
+              value={money(eLearningFeeCents * partySize)}
+            />
           ) : null}
         </>
       ) : showDiverLine ? (
@@ -276,10 +280,13 @@ export function MoneyBlock({
 }
 
 /** One supporting row: what it is on the left, what it costs on the right. */
-function Line({ label, value }: { label: string; value: string }) {
+function Line({ label, note, value }: { label: string; note?: string; value: string }) {
   return (
     <div className="flex items-baseline justify-between gap-4">
-      <dt className="text-sm text-muted">{label}</dt>
+      <dt className="text-sm text-muted">
+        {label}
+        {note ? <span className="block text-xs">{note}</span> : null}
+      </dt>
       <dd className="text-sm tabular-nums">{value}</dd>
     </div>
   );

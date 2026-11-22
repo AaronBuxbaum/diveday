@@ -204,7 +204,7 @@ function bookSpotConfirmation(input: {
     packingList: shop.packingList,
     packingLogbook: packsLogbook({
       shopSuggests: shop.packingLogbook,
-      introCourseSession: trip.course?.isIntroCourse === true,
+      courseSession: trip.course != null,
       holdsCertification: false,
     }),
     learningMaterials: trip.course

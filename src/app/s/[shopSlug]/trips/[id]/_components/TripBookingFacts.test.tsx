@@ -57,16 +57,49 @@ describe("TripBookingFacts", () => {
     expect(screen.queryByText(/Rental gear from/)).not.toBeInTheDocument();
     expect(screen.queryByText(/Full set/)).not.toBeInTheDocument();
   });
+  // #4896: the $5 left is the GoPro; it must not read as a hidden gear charge.
+  it("calls what is left to price on a course extras, not rental gear", () => {
+    const core = ["bcd", "regulator", "wetsuit", "mask", "fins", "weights"];
+    show(
+      {
+        ...shop,
+        rentalItems: [...core, "gopro"],
+        rentalPricing: { setCents: 4500, perItemCents: { gopro: 2000 }, nitroxCents: null },
+      } as unknown as Shop,
+      { ...trip, course: { includedRentalKinds: core } } as Trip,
+    );
+    expect(screen.getByText("Optional extras from $20.00")).toBeInTheDocument();
+    expect(screen.queryByText(/Rental gear from/)).not.toBeInTheDocument();
+  });
+  it("says nothing about rentals on a course when no extra is priced", () => {
+    show(shop, { ...trip, course: { includedRentalKinds: shop.rentalItems } } as Trip);
+    expect(screen.queryByText(/Rental gear from|Optional extras/)).not.toBeInTheDocument();
+  });
+  it("keeps Rental gear from on a course whose fee leaves a core kind out", () => {
+    show(shop, { ...trip, course: { includedRentalKinds: ["mask"] } } as Trip);
+    expect(screen.getByText(/Rental gear from/)).toBeInTheDocument();
+    expect(screen.queryByText(/Optional extras/)).not.toBeInTheDocument();
+  });
+  it("keeps the shop's bring list on a course as on a charter", () => {
+    show(shop, { ...trip, course: { includedRentalKinds: shop.rentalItems } } as Trip);
+    expect(screen.getByText("Towel")).toBeInTheDocument();
+    cleanup();
+    show();
+    expect(screen.getByText("Towel")).toBeInTheDocument();
+  });
   it("names included personal kit as provided before booking without selling it as a rental", () => {
     show(shop, {
       ...trip,
       course: { includedRentalKinds: shop.rentalItems, includedPersonalGear: ["snorkel", "boots"] },
     } as Trip);
     const provided = screen.getByText("We provide").closest("div");
-    const bring = screen.getByText("Bring").closest("div");
-    if (!provided || !bring) throw new Error("packing sections missing");
+    if (!provided) throw new Error("packing sections missing");
     for (const item of ["Snorkel", "Boots"]) {
       expect(within(provided).getByText(item)).toBeInTheDocument();
+    }
+    const bring = screen.getByText("Bring").closest("div");
+    if (!bring) throw new Error("bring section missing");
+    for (const item of ["Snorkel", "Boots"]) {
       expect(within(bring).queryByText(item)).not.toBeInTheDocument();
     }
     expect(screen.queryByText(/Rental gear from|Full set/)).not.toBeInTheDocument();
