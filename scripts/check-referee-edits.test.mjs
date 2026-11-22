@@ -315,6 +315,18 @@ describe("the referee's report", () => {
       changes: [change("src/test/cross-shop/not-shop-scoped.ts", "M", 0, 3)],
     });
     expect(shorter.loosens).toBe(0);
+    // The writers the sweep excuses for linking are the same kind of list.
+    const excused = report({
+      changes: [change("src/test/cross-shop/caller-checked-links.ts", "M", 7, 0)],
+    });
+    expect(excused.loosens).toBe(1);
+    expect(excused.needsEyes).toHaveLength(1);
+    // So are the calls written by hand: a function named there counts as swept.
+    const byHand = report({
+      changes: [change("src/test/cross-shop/hand-filled.ts", "M", 1, 0)],
+    });
+    expect(byHand.loosens).toBe(1);
+    expect(byHand.needsEyes).toHaveLength(1);
   });
 
   it("escapes what an author wrote so a stray tag cannot hide the lines after it", () => {
