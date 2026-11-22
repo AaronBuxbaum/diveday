@@ -39,4 +39,5 @@ names what enforces it; the reasoning and incidents are in
   (ADR 20261105-ci-runs-on-the-top-of-the-stack).
 - **Skills state how, docs state what and why**; a skill that contradicts an ADR or the code is
   fixed in the same change. A reviewer agent lists only the tools it needs.
+- **A rule you loosen, you say so**: a deleted or weakened test, a changed expected answer, a lowered floor, a raised ratchet or an edited check needs `## Rules changed` and a `referee-reviewer` line in the PR body (`scripts/check-referee-edits.mjs`).
 - **Text a human will copy is written unwrapped**, in a script's output as in a doc.

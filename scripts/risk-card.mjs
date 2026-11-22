@@ -20,7 +20,7 @@
 // `--post` writes the sticky comment (marker below) to the pull request named by `PR_NUMBER`,
 // `GITHUB_REPOSITORY` and `GH_TOKEN`, and appends the card to `$GITHUB_STEP_SUMMARY`. Without it the
 // card prints. `--mutation` is the JSON `scripts/mutation/run.mjs` wrote and `--referee` the JSON
-// `scripts/referee-edits.mjs` wrote; each section is left out when its file is absent, and the card
+// `scripts/check-referee-edits.mjs` wrote; each section is left out when its file is absent, and the card
 // says it did not run.
 
 import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";

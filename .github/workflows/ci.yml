@@ -175,6 +175,31 @@ jobs:
         run: |
           gh pr view "$PR_NUMBER" --json body --jq .body > "$RUNNER_TEMP/pr-body.md" 2>/dev/null || printf '%s' "$PR_BODY" > "$RUNNER_TEMP/pr-body.md"
           node scripts/check-pr-body.mjs --body-file "$RUNNER_TEMP/pr-body.md" --base "${STACK_BASE_SHA:-origin/$BASE_REF}"
+      # A pull request that loosens a rule (deletes or weakens a test, changes a test's expected
+      # answer, lowers a floor, raises a ratchet, edits a check or the CI workflow) says so in plain
+      # words under `## Rules changed` and names a `referee-reviewer` run
+      # (scripts/check-referee-edits.mjs; docs/engineering/guardrails.md). It also writes the JSON the
+      # risk card reads. Diffed against the stack's base, head named by sha: the checked-out merge
+      # commit would count what main merged since.
+      - name: Rules changed
+        if: ${{ !cancelled() && github.event_name == 'pull_request' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          BASE_REF: ${{ github.base_ref }}
+          STACK_BASE_SHA: ${{ needs.stack-gate.outputs.diff_base }}
+        run: |
+          gh pr view "$PR_NUMBER" --json body --jq .body > "$RUNNER_TEMP/pr-body.md" 2>/dev/null || printf '%s' "$PR_BODY" > "$RUNNER_TEMP/pr-body.md"
+          node scripts/check-referee-edits.mjs --body-file "$RUNNER_TEMP/pr-body.md" --base "${STACK_BASE_SHA:-origin/$BASE_REF}" --head "$PR_HEAD_SHA" --out .agent-out/referee-edits.json
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: ${{ always() && github.event_name == 'pull_request' }}
+        with:
+          name: referee-edits
+          path: .agent-out/referee-edits.json
+          if-no-files-found: ignore
+          retention-days: 30
       # A warning, never a failure: logic under src/lib, src/db or src/features changed and no
       # test file did (scripts/warn-untested-logic.mjs; docs/agents/repo-checks.md#untested-logic).
       - name: Logic changed with no test
@@ -1648,6 +1673,11 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        continue-on-error: true
+        with:
+          name: referee-edits
+          path: .agent-out
       - name: Write the risk card
         continue-on-error: true
         env:
@@ -1659,7 +1689,7 @@ jobs:
           STACK_BASE_SHA: ${{ needs.stack-gate.outputs.diff_base }}
         run: |
           gh pr view "$PR_NUMBER" --json body --jq .body > "$RUNNER_TEMP/pr-body.md" 2>/dev/null || printf '%s' "$PR_BODY" > "$RUNNER_TEMP/pr-body.md"
-          node scripts/risk-card.mjs --post --base "${STACK_BASE_SHA:-origin/$BASE_REF}" --head "$PR_HEAD_SHA" --body-file "$RUNNER_TEMP/pr-body.md"
+          node scripts/risk-card.mjs --post --base "${STACK_BASE_SHA:-origin/$BASE_REF}" --head "$PR_HEAD_SHA" --body-file "$RUNNER_TEMP/pr-body.md" --referee .agent-out/referee-edits.json
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
