@@ -402,6 +402,7 @@ const ABOARD_KIND_ORDER: readonly AboardBlockerKind[] = [
 
 export function aboardBlockerKind(blockers: readonly ReadinessBlocker[]): AboardBlockerKind | null {
   const kinds = new Set(blockers.map((blocker) => ABOARD_KIND[blocker.code]));
+  // mutation-ok: find gives undefined or a non-empty kind name, so ?? and || both turn undefined into null
   return ABOARD_KIND_ORDER.find((kind) => kinds.has(kind)) ?? null;
 }
 
@@ -825,6 +826,7 @@ function withEndedCourse(
     .filter((course) => certificationRank(course.level) >= certificationRank(minimumLevel))
     .reduce<(CertificationInTraining & { tripId: string }) | null>(
       (latest, course) =>
+        // mutation-ok: two courses ending at the same instant are equally the one that ended last, so which is named is arbitrary
         !latest || course.finishesAt.getTime() > latest.finishesAt.getTime() ? course : latest,
       null,
     );
@@ -891,6 +893,7 @@ function certificationBlocker(
   if (verified.length > 0) {
     const heldLevel = verified
       .map((certification) => certification.level)
+      // mutation-ok: a tie in rank is the same level, so > and >= give the same level
       .reduce((best, level) => (certificationRank(level) > certificationRank(best) ? level : best));
     return {
       code: "certification_insufficient",
@@ -906,6 +909,7 @@ function certificationBlocker(
   if (submitted.length > 0) {
     const heldLevel = submitted
       .map((card) => card.level)
+      // mutation-ok: a tie in rank is the same level, so > and >= give the same level
       .reduce((best, level) => (certificationRank(level) > certificationRank(best) ? level : best));
     return {
       code: "certification_insufficient",
@@ -1081,6 +1085,7 @@ function saleLevelBlocker(
     ...(evidence.declaredLevel ? [evidence.declaredLevel] : []),
   ];
   const higher = (best: CertificationLevel | null, level: CertificationLevel) =>
+    // mutation-ok: a tie in rank is the same level, so > and >= give the same level
     best === null || certificationRank(level) > certificationRank(best) ? level : best;
   const heldLevel = rungs.reduce<CertificationLevel | null>(higher, null);
   const reached = (evidence.levelsInTraining ?? []).reduce<CertificationLevel | null>(
@@ -1107,6 +1112,7 @@ export function levelStanding(
     minimumLevel,
     evidence.certificationsInTraining ?? [],
     evidence.noCertificationDeclared ?? false,
+    // mutation-ok: a Date is always truthy, so ?? and || pick the same side
     evidence.now ?? nowDate(),
   );
   return blocker ? withEndedCourse(blocker, minimumLevel, evidence.coursesEnded) : null;
@@ -1161,6 +1167,7 @@ export function standing(
  * human-readable blocker; only explicit evidence can produce `ready`.
  */
 export function calculateReadiness(input: ReadinessInput): ReadinessResult {
+  // mutation-ok: a Date is always truthy, so ?? and || pick the same side
   const now = input.now ?? nowDate();
   const blockers: ReadinessBlocker[] = [];
 
@@ -1308,6 +1315,7 @@ export function calculateReadiness(input: ReadinessInput): ReadinessResult {
         input.requirement,
         input.siteRequirement,
         input.trainingDive,
+        // mutation-ok: the reach is the word site or default, never falsy, so ?? and || agree
         input.trainingDiveReach ?? "site",
       )
     : NO_REQUIREMENT;
@@ -1329,6 +1337,7 @@ export function calculateReadiness(input: ReadinessInput): ReadinessResult {
   );
 
   if (input.requirement.requiresPayment && !(input.statedFree && !isDiver(input.participantType))) {
+    // mutation-ok: a payment status is a non-empty word, so ?? and || agree
     const status = input.paymentStatus ?? "unpaid";
     if (!PAYMENT_CLEARED.has(status)) {
       blockers.push({ code: status === "refunded" ? "payment_refunded" : "payment_due" });

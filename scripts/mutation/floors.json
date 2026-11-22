@@ -4,10 +4,10 @@
   "src/lib/booking-gates.ts": 92,
   "src/lib/money.ts": 79,
   "src/lib/nitrox-fill.ts": 100,
-  "src/lib/pass-through-fee.ts": 95,
+  "src/lib/pass-through-fee.ts": 100,
   "src/lib/payment-transition.ts": 100,
-  "src/lib/promo-codes.ts": 88,
-  "src/lib/readiness.ts": 93,
-  "src/lib/roll-call-days.ts": 79,
-  "src/lib/trip-admission.ts": 86
+  "src/lib/promo-codes.ts": 100,
+  "src/lib/readiness.ts": 100,
+  "src/lib/roll-call-days.ts": 100,
+  "src/lib/trip-admission.ts": 100
 }

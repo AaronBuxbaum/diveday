@@ -41,6 +41,7 @@ export type DayMark = {
 const keyOf = (subject: string, checkpoint: string) => `${subject}\u0000${checkpoint}`;
 const isAfterDive = (checkpoint: string) => checkpoint.startsWith("after_dive_");
 const ordinalOf = (checkpoint: string) => {
+  // mutation-ok: departure is only ever compared against dive numbers of 1 or more, so 0 and 1 order the same
   if (checkpoint === "departure") return 0;
   const dive = Number(checkpoint.slice("after_dive_".length));
   return Number.isInteger(dive) && dive >= 1 ? dive : Number.NaN;
@@ -57,6 +58,7 @@ export function standingByDay<M extends DayMark>(marks: readonly M[]): Map<numbe
   const byDay = new Map<number, Map<string, M>>();
   for (const mark of marks) {
     const key = keyOf(mark.subject, mark.checkpoint);
+    // mutation-ok: a Map is always truthy, so ?? and || pick the same side
     const day = byDay.get(mark.day) ?? new Map<string, M>();
     day.set(key, mark);
     byDay.set(mark.day, day);
@@ -66,6 +68,7 @@ export function standingByDay<M extends DayMark>(marks: readonly M[]): Map<numbe
     // tap, or one that names its own day's mark, leaves the alarm standing.
     if (mark.status !== "cleared" || !isAfterDive(mark.checkpoint) || !mark.retracts) continue;
     for (const [earlier, standing] of byDay) {
+      // mutation-ok: on the mark's own day the standing entry is the cleared mark itself, which retracts nothing, so >= and > agree
       if (earlier >= mark.day) continue;
       const target = standing.get(key);
       if (target?.status === "not_boarded" && target.id === mark.retracts) standing.set(key, mark);
@@ -128,6 +131,7 @@ function stillOpenEarlier<M extends DayMark>(
   const days = [...standing.keys()].filter((day) => day < currentDay).sort((a, b) => a - b);
   for (const day of days) {
     const marks = standing.get(day);
+    // mutation-ok: the days come from the map's own keys, so a day always has marks; the guard is for the type
     if (!marks) continue;
     for (const mark of marks.values()) {
       if (mark.status !== "not_boarded" || !isAfterDive(mark.checkpoint)) continue;
@@ -137,6 +141,7 @@ function stillOpenEarlier<M extends DayMark>(
           other.subject === mark.subject &&
           other.status === "boarded" &&
           isAfterDive(other.checkpoint) &&
+          // mutation-ok: one subject has one standing mark per checkpoint, so an equal dive is the mark itself and is never boarded
           ordinalOf(other.checkpoint) > dive,
       );
       if (
@@ -169,6 +174,7 @@ export function manifestRollCallView<M extends DayMark>(
   for (const [key, mark] of carriedMissing(standing, currentDay)) view.set(key, mark);
   // A standing `cleared` today is nothing today: an earlier day's stated
   // missing person it did not reach back to stays on the view (#3981).
+  // mutation-ok: a Map is always truthy, so ?? and || pick the same side
   for (const [key, mark] of standing.get(currentDay) ?? new Map<string, M>()) {
     const carried = view.get(key);
     if (carried?.status === "not_boarded" && (carried.day < 0 || carried.evidenceConflict))
@@ -204,6 +210,7 @@ export function notBackAboardSince<M extends TimedDayMark>(
   // has not reached yet (a fast tablet) can add red but settles nothing.
   const standing = standingByDay(marks.filter((mark) => mark.day <= currentDay));
   const red = stillOpenEarlier(standing, currentDay);
+  // mutation-ok: today's marks read the same whether or not they are also counted in ahead
   const ahead = standingByDay(marks.filter((mark) => mark.day > currentDay));
   for (const marksOfDay of [standing.get(currentDay), ...ahead.values()]) {
     for (const mark of marksOfDay?.values() ?? []) {
@@ -213,6 +220,7 @@ export function notBackAboardSince<M extends TimedDayMark>(
   let since: Date | null = null;
   for (const mark of red) {
     const start = runStart(marks, mark);
+    // mutation-ok: an equal start sets since to the same instant
     if (!since || start < since) since = start;
   }
   return since;
@@ -221,6 +229,7 @@ export function notBackAboardSince<M extends TimedDayMark>(
 /** The first `not_boarded` of the unbroken run that ends in `mark`, on its day and checkpoint. */
 function runStart<M extends TimedDayMark>(marks: readonly M[], mark: M): Date {
   let start = mark.occurredAt;
+  // mutation-ok: a standing mark has no newer mark of its own run after it, so starting one step later reaches the same start
   for (let i = marks.indexOf(mark) - 1; i >= 0; i--) {
     const earlier = marks[i];
     if (!earlier || earlier.day !== mark.day) continue;

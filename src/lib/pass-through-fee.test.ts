@@ -20,6 +20,13 @@ describe("parsePassThroughFee", () => {
     }
   });
 
+  it("accepts the smallest whole fee, one cent", () => {
+    expect(parsePassThroughFee({ name: "Park", amountCents: 1 })).toEqual({
+      name: "Park",
+      amountCents: 1,
+    });
+  });
+
   it("refuses a non-integer amount, so no fraction of a cent reaches Stripe", () => {
     for (const amountCents of [12.5, Number.NaN, Number.POSITIVE_INFINITY]) {
       expect(parsePassThroughFee({ name: "Park", amountCents })).toBeNull();
