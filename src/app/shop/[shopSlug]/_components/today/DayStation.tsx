@@ -90,7 +90,7 @@ export function DayStation({
   // The seats on sale, not the stated number (H-20261009-certificate-caps-seats, #2388).
   const open = Math.max(0, station.sellableCapacity - station.booked);
   // **A boat that is home has no boarding left to read** (Aaron, 2026-11-22): the bar's blocked and
-  // open segments, "blocked" and "seats open" are pre-departure facts. Who went stays.
+  // open segments, "blocked" and "seats open" are pre-departure facts; "N of M ready" stays.
   const home = stage?.stage === "home";
   const meta = [
     { text: station.siteName, crew: false },

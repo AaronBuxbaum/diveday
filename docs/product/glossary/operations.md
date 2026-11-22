@@ -6,7 +6,7 @@
   counts the **next boat day** inside it, not the whole week: today's departures while one is still
   to sail (not yet an hour past leaving the dock), tomorrow's once they are all away, plus every
   diver blocked aboard a boat still out, whose departure the horizon dropped an hour after it
-  sailed. That is the sum of the day's cards' "N blocked" plus the Aboard rows in Needs you, and the
+  sailed. That is the sum of the blocked divers the day's cards count (a card stops showing "N blocked" once the crew taps Home; the badge does not) plus the Aboard rows in Needs you, and the
   blocked clause of the summary under the date says the same figure in words
   (`blockedOnNextBoatDay`, `src/features/boarding/blockers.ts`). Anything past the horizon is Schedule's job, not
   a triage list's. Defined once in `src/lib/operational-window.ts`; each
