@@ -89,6 +89,9 @@ export function DayStation({
   const ready = station.booked - blocked;
   // The seats on sale, not the stated number (H-20261009-certificate-caps-seats, #2388).
   const open = Math.max(0, station.sellableCapacity - station.booked);
+  // **A boat that is home has no boarding left to read** (Aaron, 2026-11-22): the bar's blocked and
+  // open segments, "blocked" and "seats open" are pre-departure facts. Who went stays.
+  const home = stage?.stage === "home";
   const meta = [
     { text: station.siteName, crew: false },
     { text: station.boatName, crew: false },
@@ -216,22 +219,28 @@ export function DayStation({
           one bar the boat's capacity wide; the words under it are the
           accessible reading, so the bar itself is decoration. The arrival
           desk draws the same bar (`ReadinessBar`, #2100). */}
-      <ReadinessBar
-        className="mt-4"
-        ready={ready}
-        blocked={blocked}
-        of={station.sellableCapacity}
-      />
-      <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm tabular-nums">
+      {home ? null : (
+        <ReadinessBar
+          className="mt-4"
+          ready={ready}
+          blocked={blocked}
+          of={station.sellableCapacity}
+        />
+      )}
+      <p
+        className={`${home ? "mt-4" : "mt-2"} flex flex-wrap items-center gap-x-3 gap-y-1 text-sm tabular-nums`}
+      >
         <span>{t("shopHome.spine.readyCount", { ready, booked: station.booked })}</span>
-        {blocked > 0 ? (
+        {blocked > 0 && !home ? (
           <span className="font-medium text-danger">
             {t("shopHome.spine.blockedCount", { count: blocked })}
           </span>
         ) : null}
-        <span className="text-muted">
-          {open === 0 ? t("shopHome.spine.full") : t("shopHome.spine.seatsOpen", { count: open })}
-        </span>
+        {home ? null : (
+          <span className="text-muted">
+            {open === 0 ? t("shopHome.spine.full") : t("shopHome.spine.seatsOpen", { count: open })}
+          </span>
+        )}
       </p>
 
       {crewRollCallOpen ? (
