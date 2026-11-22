@@ -196,5 +196,10 @@ describe("firstFailingFile", () => {
   it("reads the file a red Vitest run names", () => {
     expect(firstFailingFile(" FAIL  |lib| src/lib/a.test.ts > x\n")).toBe("src/lib/a.test.ts");
     expect(firstFailingFile("all good")).toBeNull();
+    // What CI's coloured output looked like: no pipes, the project in a coloured box.
+    const coloured =
+      "\u001b[41m\u001b[1m FAIL \u001b[22m\u001b[49m \u001b[30m\u001b[46m scripts \u001b[49m\u001b[39m scripts/a/b.test.mjs\u001b[2m > \u001b[22mx";
+    expect(firstFailingFile(coloured)).toBe("scripts/a/b.test.mjs");
+    expect(firstFailingFile(" FAIL  src/lib/a.test.ts > x\n")).toBe("src/lib/a.test.ts");
   });
 });

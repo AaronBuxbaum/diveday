@@ -28,6 +28,7 @@ import { availableParallelism } from "node:os";
 import path from "node:path";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
+import { stripVTControlCharacters } from "node:util";
 
 import { runBoundedAsync, SUBPROCESS_TIMEOUTS } from "../subprocess.mjs";
 import { changedLines, gitChangedFiles, gitDiff, gitHead } from "./diff.mjs";
@@ -79,11 +80,15 @@ async function vitest(root, workDir, name, testFiles, { env = {}, timeoutMs, wor
         env: {
           // A run started from inside a Vitest worker (run.test.mjs) must not inherit its markers.
           ...Object.fromEntries(
-            Object.entries(process.env).filter(([key]) => !key.startsWith("VITEST")),
+            Object.entries(process.env).filter(
+              ([key]) => !key.startsWith("VITEST") && key !== "FORCE_COLOR",
+            ),
           ),
           // Annotations for every caught break would flood a pull request's checks.
           GITHUB_ACTIONS: "",
           VITE_CONFIG_NATIVE_IGNORE_WARNING: "true",
+          // The log is read by a program: colour codes would sit inside the file names it parses.
+          NO_COLOR: "1",
           ...env,
         },
       },
@@ -98,7 +103,9 @@ async function vitest(root, workDir, name, testFiles, { env = {}, timeoutMs, wor
 
 /** The first test file a red Vitest run names. */
 export function firstFailingFile(log) {
-  const match = /FAIL\s+(?:\|[^|\n]+\|\s+)?(\S+)/.exec(log);
+  // Plain output names the project in pipes (`FAIL  |scripts| file`); coloured output drops them.
+  const plain = stripVTControlCharacters(log);
+  const match = /FAIL\s+(?:\|[^|\n]*\|\s+|\S+\s+)?(\S+\.(?:test|spec)\.\w+)/.exec(plain);
   return match ? match[1] : null;
 }
 
