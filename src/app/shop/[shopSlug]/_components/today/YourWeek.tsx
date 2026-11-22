@@ -87,49 +87,55 @@ export function YourWeekList({
       className="mt-10"
     >
       <ul>
-        {lines.map((line) => (
-          <LedgerRow
-            key={line.tripId}
-            href={`/shop/${shopSlug}/trips/${line.tripId}`}
-            linkLabel={t("today.yourWeek.openTrip", { title: line.title })}
-          >
-            <div className="min-w-0">
-              <p className="font-medium break-words">
-                {line.boatName ? `${line.boatName} · ${line.title}` : line.title}
-              </p>
-              <p className="mt-0.5 text-sm text-muted tabular-nums">
-                {formatShortDate(line.startsAt, locale, timeZone)} ·{" "}
-                {line.crewCall
-                  ? t(
-                      // Their own shift or the shop's crew time (H-20261022-crew-arrive-before-divers) is
-                      // theirs; the divers' call is named as the divers'.
-                      line.crewCall.source === "divers"
-                        ? "today.yourWeek.diversAtTheDock"
-                        : "today.yourWeek.atTheDock",
-                      {
-                        // A call the evening before names its own day, never
-                        // the departure's (dive-domain review of layer 1).
-                        dock: isSameCalendarDay(line.crewCall.at, line.startsAt, timeZone)
-                          ? formatTime(line.crewCall.at, locale, timeZone)
-                          : formatWeekdayTime(line.crewCall.at, locale, timeZone),
-                        leaves: formatTime(line.startsAt, locale, timeZone),
-                      },
-                    )
-                  : formatTime(line.startsAt, locale, timeZone)}{" "}
-                · {line.tripRole ? staffRoleLabel(t, line.tripRole) : t("today.yourWeek.roleUnset")}
-              </p>
-              {line.gap ? (
-                <p
-                  className={`mt-1 text-sm font-medium ${
-                    GAP_TONE[line.gap] === "warning" ? "text-warning-strong" : "text-muted"
-                  }`}
-                >
-                  {gapWords[line.gap]}
+        {lines.map((line) => {
+          const when = line.crewCall
+            ? t(
+                // Their own shift or the shop's crew time (H-20261022-crew-arrive-before-divers) is
+                // theirs; the divers' call is named as the divers'.
+                line.crewCall.source === "divers"
+                  ? "today.yourWeek.diversAtTheDock"
+                  : "today.yourWeek.atTheDock",
+                {
+                  // A call the evening before names its own day, never
+                  // the departure's (dive-domain review of layer 1).
+                  dock: isSameCalendarDay(line.crewCall.at, line.startsAt, timeZone)
+                    ? formatTime(line.crewCall.at, locale, timeZone)
+                    : formatWeekdayTime(line.crewCall.at, locale, timeZone),
+                  leaves: formatTime(line.startsAt, locale, timeZone),
+                },
+              )
+            : formatTime(line.startsAt, locale, timeZone);
+          const role = line.tripRole
+            ? staffRoleLabel(t, line.tripRole)
+            : t("today.yourWeek.roleUnset");
+          return (
+            <LedgerRow
+              key={line.tripId}
+              href={`/shop/${shopSlug}/trips/${line.tripId}`}
+              linkLabel={t("today.yourWeek.openTrip", { title: line.title })}
+            >
+              <div className="min-w-0">
+                <p className="font-medium break-words">
+                  {line.boatName ? `${line.boatName} · ${line.title}` : line.title}
                 </p>
-              ) : null}
-            </div>
-          </LedgerRow>
-        ))}
+                {/* A separator stays on the end of the fact before it (a no-break space
+                  ties it), so a wrapped line never opens with "·". */}
+                <p className="mt-0.5 text-sm text-muted tabular-nums">
+                  {`${formatShortDate(line.startsAt, locale, timeZone)}\u00a0· ${when}\u00a0· ${role}`}
+                </p>
+                {line.gap ? (
+                  <p
+                    className={`mt-1 text-sm font-medium ${
+                      GAP_TONE[line.gap] === "warning" ? "text-warning-strong" : "text-muted"
+                    }`}
+                  >
+                    {gapWords[line.gap]}
+                  </p>
+                ) : null}
+              </div>
+            </LedgerRow>
+          );
+        })}
       </ul>
     </LedgerGroup>
   );

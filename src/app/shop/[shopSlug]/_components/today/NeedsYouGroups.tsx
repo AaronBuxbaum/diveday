@@ -38,6 +38,17 @@ export function NeedsYouGroups({
   if (desk && !groups.some((group) => group.departure === null)) {
     groups.push({ departure: null, rows: [] });
   }
+  // **A desk with no boat beside it needs no label**: "The desk" under "Needs you"
+  // named a group with nothing to be told apart from.
+  const [only] = groups;
+  if (groups.length === 1 && only && only.departure === null) {
+    return (
+      <ul>
+        {only.rows.map((action) => row(action, false))}
+        {desk}
+      </ul>
+    );
+  }
   return (
     <div className="flex flex-col gap-4">
       {groups.map((group) =>
@@ -73,7 +84,17 @@ export function NeedsYouGroups({
             </ul>
           </LedgerGroup>
         ) : (
-          <LedgerGroup key="desk" as="h3" label={t("shopHome.spine.deskGroupLabel")}>
+          <LedgerGroup
+            key="desk"
+            as="h3"
+            // The boat labels are 44px links; the desk's label stands in the same box so the
+            // two kinds of heading keep the same air above and below.
+            label={
+              <span className="flex min-h-11 items-center">
+                {t("shopHome.spine.deskGroupLabel")}
+              </span>
+            }
+          >
             <ul>
               {group.rows.map((action) => row(action, false))}
               {desk}
@@ -164,6 +185,8 @@ export function NeedsYouQueue({
           <LedgerGroup
             as="h3"
             folded
+            // The same row as Tomorrow and This week, so the way to the rest reads as a door.
+            summaryVariant="row"
             className="mt-4"
             label={t("shopHome.spine.deskFoldLabel", { count: folded.length + (payments ? 1 : 0) })}
           >

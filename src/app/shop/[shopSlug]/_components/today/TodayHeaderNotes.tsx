@@ -11,6 +11,7 @@ export function TodayHeaderNotes({
   shopSlug,
   quietDay,
   hasStations,
+  boatsToday,
   nextDeparture,
   showFirstRunChecklist,
   locale,
@@ -20,6 +21,8 @@ export function TodayHeaderNotes({
   shopSlug: string;
   quietDay: boolean;
   hasStations: boolean;
+  /** Boats ran today, so the board is not new, only finished: "yet" would be wrong. */
+  boatsToday: boolean;
   nextDeparture: NextDeparture | null;
   showFirstRunChecklist: boolean;
   locale: string;
@@ -49,15 +52,17 @@ export function TodayHeaderNotes({
           })}
         </p>
       ) : null}
-      {/* Nothing on the books at all (and past first-run, whose ledger
-                owns "schedule your first trip"): one teaching sentence and the
-                door, not a boxed section. */}
+      {/* Nothing left on the books (and past first-run, whose ledger
+                owns "schedule your first trip"): one sentence and the door, not
+                a boxed section. A day whose boats are all home says "no more",
+                never "yet": the header above already counts them. The door's
+                words never split across lines. */}
       {!quietDay && !hasStations && !nextDeparture && !showFirstRunChecklist ? (
         <p className="mt-1 max-w-2xl text-muted">
-          {t("shopHome.noDeparturesEmpty")}{" "}
+          {t(boatsToday ? "shopHome.noDeparturesLeft" : "shopHome.noDeparturesEmpty")}{" "}
           <Link
             href={`/shop/${shopSlug}/schedule/board?add=1`}
-            className="font-medium text-primary hover:underline"
+            className="font-medium whitespace-nowrap text-primary hover:underline"
           >
             {t("shopHome.scheduleTrip")}
           </Link>

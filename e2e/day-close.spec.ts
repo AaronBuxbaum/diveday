@@ -1,4 +1,5 @@
 import { DEV_STAFF_LOGINS } from "../src/db/dev-credentials";
+import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, test } from "./fixtures";
 import {
   offlineCopySaved,
@@ -9,6 +10,8 @@ import {
 } from "./helpers";
 import { E2E_FROZEN_CLOCK } from "./servers";
 import { seedFacts } from "./shop-facts";
+
+const staff = staffTranslator("en-US");
 
 /**
  * **The evening, on the shop home** — ADR 20260827-clearwater-surface-language,
@@ -57,6 +60,24 @@ test.describe("the evening on the home", () => {
     await expect(
       page.getByText(/^All boats are home: \d+ passengers and \d+ crew out, \d+ back\.$/),
     ).toBeVisible();
+  });
+
+  test("says there are no more departures, never yet, once the last boat is home", async ({
+    page,
+    request,
+  }) => {
+    // The header's one teaching sentence is for a board that has never had a boat. With today's
+    // boats home and nothing scheduled after them it said "Nothing is on the books yet" under a
+    // line that had just counted three boats.
+    test.setTimeout(45_000);
+    await signInAsOwner(page);
+    await seedFacts(request, [{ name: "evening", heads: "closed" }, "offSeason"]);
+    await page.goto("/shop/blue-mantis");
+
+    await expect(
+      page.getByText(staff("shopHome.noDeparturesLeft"), { exact: false }),
+    ).toBeVisible();
+    await expect(page.getByRole("link", { name: staff("shopHome.scheduleTrip") })).toBeVisible();
   });
 
   test("settles the day on the crew's own word, an hour before the clock would", async ({

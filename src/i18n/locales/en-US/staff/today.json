@@ -80,8 +80,8 @@
     "heading": "Your week",
     "openTrip": "Open {title}",
     "roleUnset": "On the crew",
-    "atTheDock": "At the dock {dock} · leaves {leaves}",
-    "diversAtTheDock": "Divers at the dock {dock} · leaves {leaves}"
+    "atTheDock": "At the dock\u00a0{dock} · leaves\u00a0{leaves}",
+    "diversAtTheDock": "Divers at the dock\u00a0{dock} · leaves\u00a0{leaves}"
   },
   "actionKind": {
     "rollCallMissingDiver": "Missing diver",

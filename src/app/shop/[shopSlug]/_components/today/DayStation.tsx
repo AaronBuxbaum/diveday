@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { Fragment } from "react";
 import { DiveDayIcon } from "@/components/DiveDayIcon";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
@@ -170,20 +171,26 @@ export function DayStation({
                 ? fact.text
                 : station.crew.map((person, personIndex) => (
                     // Names can repeat; the list is already ordered by person ID.
+                    // A photo and its name never part across a line; the comma follows the name
+                    // closely (no break falls before it) and the break falls after it, between people.
                     // biome-ignore lint/suspicious/noArrayIndexKey: this display has no mutable state.
-                    <span key={personIndex}>
-                      {personIndex > 0 ? ", " : ""}
-                      {person.staffPhotoPath ? (
-                        <Image
-                          src={person.staffPhotoPath}
-                          alt=""
-                          width={24}
-                          height={24}
-                          className="me-1 inline-block rounded-full align-middle"
-                        />
-                      ) : null}
-                      {person.fullName}
-                    </span>
+                    <Fragment key={personIndex}>
+                      <span className="whitespace-nowrap">
+                        {person.staffPhotoPath ? (
+                          <Image
+                            src={person.staffPhotoPath}
+                            alt=""
+                            width={24}
+                            height={24}
+                            // 24px of photo in a 20px line: the negative margin keeps the line the
+                            // text's own height, so a crew line is no taller than its neighbours.
+                            className="-my-0.5 me-1 inline-block rounded-full align-middle"
+                          />
+                        ) : null}
+                        {person.fullName}
+                      </span>
+                      {personIndex < station.crew.length - 1 ? ", " : ""}
+                    </Fragment>
                   ))}
             </span>
           ))}

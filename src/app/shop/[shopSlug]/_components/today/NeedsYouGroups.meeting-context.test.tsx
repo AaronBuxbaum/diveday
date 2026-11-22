@@ -166,3 +166,25 @@ it.each([
     expect(rows[0].detail).toContain("Day 1");
   },
 );
+
+const deskRow = (id: string): TodayAction => ({
+  id,
+  kind: "unanswered_messages",
+  urgency: "soon",
+  subject: "3 messages are waiting on an answer",
+  detail: "3 messages are waiting on an answer",
+  context: null,
+  aboutDeparture: false,
+  actionLabel: "Open inbox",
+  href: "/inbox",
+  dueAt: null,
+});
+
+it("names the desk only when a boat's rows stand beside it", () => {
+  show([deskRow("inbox")]);
+  expect(screen.getByText("3 messages are waiting on an answer")).toBeInTheDocument();
+  expect(screen.queryByText("The desk")).not.toBeInTheDocument();
+  cleanup();
+  show([action("diver", "5:00 PM"), deskRow("inbox")]);
+  expect(screen.getByRole("heading", { name: "The desk" })).toBeVisible();
+});

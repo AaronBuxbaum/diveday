@@ -240,7 +240,7 @@ function StationRow({
     <>
       {action.aboutDeparture ? null : (
         <>
-          <span className="font-medium">
+          <span className={action.detail ? "font-medium" : undefined}>
             {action.detail ? action.subject : rowLine(action.subject)}
           </span>
           {action.detail ? (
@@ -668,6 +668,8 @@ export type DaySpineContext = {
   sessions?: React.ReactNode;
   /** The day's closing state. Omitted, the spine renders its morning reading alone. */
   evening?: EveningReading;
+  /** False when the arrival search sits between the header and the spine: the all-home line keeps the column's gap. */
+  underHeader?: boolean;
   /**
    * The high-wind rows, still arriving (`getTodayWork`'s `highWind`): today's
    * under the Needs you list, tomorrow's inside its disclosure. Omitted, none.
@@ -697,6 +699,7 @@ export function DaySpine({ context }: { context: DaySpineContext }) {
     crew = { tipsCents: 0, month: null, thanks: [] },
     sessions,
     evening,
+    underHeader = true,
     highWind,
     needsYou: needsYouRead,
     blocked = 0,
@@ -746,20 +749,17 @@ export function DaySpine({ context }: { context: DaySpineContext }) {
           above everything, and the spine underneath it is honestly empty. */}
       {firstRun}
 
-      {/* The coral table's two home rows, one at a time (see the docblock).
-          Each renders only while its condition holds and vanishes when it
-          passes — nothing here is stored, and nothing replays a celebration
-          the day has moved past.
-
-          **Only the all-home line is pulled up** (`-mt-4`, pixel-craft K-319):
-          it tucks under the header's "Next up" sentence, which the page prints
-          only once no station is left on the spine — an evening's shape. The
-          all-clear needs today's stations, and the season's fact comes with
-          them, so nothing is above either but the sky band: pulled, they sat
-          16px under its edge with 40px to the first station. Unpulled, they
-          sit the header's 32px under the band like every first block. */}
+      {/* The coral table's two home rows, one at a time (see the docblock). Each
+          renders only while its condition holds and vanishes when it passes;
+          nothing here is stored, and nothing replays a celebration the day has moved past.
+          **Only the all-home line is pulled up** (`-mt-4`, pixel-craft K-319), and only
+          while nothing but the header is above it (`underHeader`): it tucks under the
+          header's "Next up" sentence, printed once no station is left on the spine. With
+          the arrival search between, it keeps the column's 40px. The all-clear and the
+          season's fact need today's stations, so only the sky band is above them: they
+          sit the header's 32px under it like every first block. */}
       {allHomeLine && evening ? (
-        <AllClearLine className="rise-in -mt-4 tabular-nums">
+        <AllClearLine className={`rise-in tabular-nums${underHeader ? " -mt-4" : ""}`}>
           {/* **Souls, not seats** (issue #1346). The one sentence in the
               product about who came home used to leave the crew out of both
               numbers — and they are the people most reliably still in the
@@ -956,9 +956,9 @@ export function DaySpine({ context }: { context: DaySpineContext }) {
           today's work. Tomorrow still expands in place — a `<details>` on the
           `open:` variant takes both columns so its stations get the width —
           and the week still points at the board, because a week is a board
-          question. */}
+          question. A door that stands alone takes the whole row. */}
       {spine.tomorrow.stations.length > 0 || spine.week.jobs > 0 ? (
-        <div className="grid sm:grid-cols-2 sm:gap-5">
+        <div className="grid sm:grid-cols-2 sm:gap-5 sm:[&>:only-child]:col-span-2">
           {spine.tomorrow.stations.length > 0 ? (
             <LedgerGroup
               as="h2"

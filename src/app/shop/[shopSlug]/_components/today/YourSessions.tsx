@@ -43,9 +43,14 @@ export function YourSessions({
             <div className="min-w-0">
               <p className="font-medium">{session.title}</p>
               <p className="mt-0.5 text-sm text-muted tabular-nums">
-                {formatShortDate(session.startsAt, locale, timeZone)} ·{" "}
-                {formatTime(session.startsAt, locale, timeZone)}
-                {session.courseTitle ? ` · ${session.courseTitle}` : ""}
+                {/* The dot stays on the fact before it, so a wrapped line never opens with one. */}
+                {[
+                  formatShortDate(session.startsAt, locale, timeZone),
+                  formatTime(session.startsAt, locale, timeZone),
+                  session.courseTitle,
+                ]
+                  .filter(Boolean)
+                  .join("\u00a0· ")}
               </p>
               <p className="mt-1 text-sm tabular-nums">
                 {t("today.yourSessions.studentsCount", { count: session.booked })}
