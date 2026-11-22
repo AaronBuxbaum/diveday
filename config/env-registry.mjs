@@ -1390,6 +1390,20 @@ export const ENV_GROUPS = [
         absent: "the render-cost tests stay quiet",
       },
       {
+        key: "FC_SEED",
+        from: "harness",
+        targets: NOWHERE,
+        forbiddenInProduction: true,
+        absent: "each property test (src/test/property.ts) draws a fresh seed",
+      },
+      {
+        key: "FC_RUNS",
+        from: "harness",
+        targets: NOWHERE,
+        forbiddenInProduction: true,
+        absent: "each property test runs its own default number of cases",
+      },
+      {
         key: "PGLITE_DATA_DIR",
         from: "harness",
         targets: NOWHERE,

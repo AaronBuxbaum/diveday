@@ -64,6 +64,8 @@ Today, notifications, offline manifests, auth). What they do not say:
   `src/lib/intl-cache.ts`: Biome rule `intlCache`.
 - **A formatted date or time is one unit**, joined by `keepUnitsWhole` (`src/lib/date-parts.ts`)
   with U+00A0 inside; a test matches it with a string query or a regex that spells `\s`.
+- **A rule stated as an invariant gets a property test** beside its module
+  (`<module>.properties.test.ts`, `property()` from `src/test/property.ts`; docs/engineering/testing.md#property-tests).
 - **Safety-critical logic** (manifests, roll call, cert gating, medical flags) gets boring code,
   failure-path and adversarial tests, and a `dive-domain-expert` review; auth, tokens and personal
   or medical data get a `security-reviewer` review.

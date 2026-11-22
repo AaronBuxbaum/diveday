@@ -9,6 +9,7 @@ every other section stands.
 | Layer | Tool, where | Owns | Never |
 | --- | --- | --- | --- |
 | Rules | Vitest `lib`, colocated `src/lib/**/*.test.ts` | every decision with a branch: cert gating, capacity, pricing, dates; the refusal case is mandatory | rendering |
+| Properties | Vitest via `src/test/property.ts` (fast-check), colocated `*.properties.test.ts` | a rule stated once and attacked with generated cases: admission against readiness, readiness failing closed, money, capacity, roll call, nitrox, the clock ([below](#property-tests)) | re-implementing the rule inside the test |
 | Database | Vitest `db` on PGlite, `src/db/**/*.test.ts` | queries, transactions, erasure, reset | proving a race (PGlite is one connection) |
 | Real Postgres | Vitest + a `postgres:16` container, `src/db/*.postgres.test.ts` | every lock and race guard; the committed `drizzle/` set applying to a real server ([below](#the-real-postgres-suites)) | anything else |
 | Component | Vitest `ui` + Testing Library, colocated `.test.tsx` | interactive widgets: what a person clicks and sees, by role and label | class names, server pages |
@@ -53,6 +54,42 @@ assertion: the screenshot shows the overlap gone.
 failure site and the product does not prioritize automated a11y (Aaron, 2026-10-24). Markup fixes
 that are free still land: a name on a control, a label on an input, a real heading. The weekly
 persona walk's axe probe went the same day, and `@axe-core/playwright` with it.
+
+## Property tests
+
+A property is one sentence that must always hold, checked against hundreds of generated inputs
+(ADR [20261122-property-tests-with-fast-check](../architecture/decisions/20261122-property-tests-with-fast-check.md)).
+`property(name, arbitraries, predicate, { runs })` from `src/test/property.ts` registers it: 300
+runs by default, `FC_RUNS=<n>` multiplies them for a longer hunt, `FC_SEED=<n>` replays one exact
+sequence. A failure prints the shrunk counterexample and the rerun command
+(`FC_SEED=<n> pnpm test <file>`); it is a real counterexample, never a flake to retry. The shared
+arbitraries (`arbDay`, `arbCents`, `arbMoment`, cards and requirements) are anchored on the frozen
+clock. A property calls the real function, states its rule in a comment above it, and was seen to
+fail against a broken copy of that rule; one that cannot fail is deleted.
+
+| Rule | File |
+| --- | --- |
+| Admission never refuses an item readiness would clear | `src/lib/trip-admission.properties.test.ts` |
+| Readiness fails closed: no configuration blocks; only a verified card at the level clears; adding a card never blocks; an uncleared medical blocks; a minor's solo release blocks; the 18th birthday flips the guardian rule once; every blocker is a typed code | `src/lib/readiness.properties.test.ts` |
+| A zero-decimal currency is never divided by 100; minor units round-trip | `src/lib/money.properties.test.ts` |
+| A discount stays between 0 and the price and never rises with the discount; 100% is free; a settled total splits to exactly itself with no share above its ask | `src/lib/payments/settlement.properties.test.ts` |
+| The percent fee is between 0 and the volume and monotonic in it | `src/lib/billing/pricing-plans.properties.test.ts`, `src/features/money/fee-comparison.properties.test.ts` |
+| A cancellation refund never exceeds what was paid; a sequence of external refunds never exceeds it | `src/lib/deposits.properties.test.ts`, `src/lib/payment-marks.properties.test.ts` |
+| A part's net of refund is between 0 and the part and the parts never sum above what was kept | `src/features/money/trip-money/rules.properties.test.ts` |
+| A trip-credit balance parses only to a safe integer | `src/lib/trip-credit.properties.test.ts` |
+| The boat counts everyone, the divers-only limit and the divemaster target count divers; a full boat shows no open seats | `src/lib/participant-types.properties.test.ts`, `src/lib/manifests.properties.test.ts`, `src/lib/trips.properties.test.ts` |
+| Roll call converges in any order and with repeats; a conflict stays one until reconciled; agreeing statements merge; replay puts dependencies first; a retry has the same intent key | `src/lib/roll-call-causality.properties.test.ts` |
+| Only 22 to 40% O2 has a MOD, which never exceeds the ppO2 ceiling or deepens as O2 rises | `src/features/safety/nitrox-mod.properties.test.ts` |
+| The departure phase never moves backward; `hasSailed`/`hasReturned` are monotonic; occurrence dates are strictly increasing and two rolls equal one | `src/lib/departure-clock.properties.test.ts`, `src/lib/trips.properties.test.ts`, `src/lib/recurrence.properties.test.ts` |
+
+**Not pinned by a property**: a payment status only moving forward (`setBookingPaymentIfNotFinal`
+decides it under a lock in `src/db/payments.ts`, with no pure transition function), capacity under
+concurrent bookings (the booking transaction and the real-Postgres suite), "a clock never decides"
+in roll call (`RollCallEvidence` carries no timestamp, so the type pins it) and "a caller's MOD is
+never trusted" (`nitroxModFor` takes only the mix). A recreational card does not expire
+(ADR 20260821-a-card-does-not-expire), so readiness has no card-expiry boundary to pin; the guardian
+birthday is the date boundary it has. `netOfRefund` floors each part and is not a conserving
+split; `allocateSettledTotal` is.
 
 ## How a change decides its tests
 

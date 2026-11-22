@@ -199,6 +199,7 @@
     "drizzle-kit": "1.0.0-rc.5",
     "esbuild": "^0.28.2",
     "fake-indexeddb": "^6.2.8",
+    "fast-check": "4.10.3",
     "jsdom": "^31.0.1",
     "jsqr": "^1.4.0",
     "msw": "^3.0.7",
