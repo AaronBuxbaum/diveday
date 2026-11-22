@@ -3,6 +3,7 @@ import {
   CAPABILITY_PAGE_PRINT_MARGIN_MM,
   capabilityPagePrintRule,
   PAPER_PASS_PAPER,
+  PAPER_PASS_RECEIPT_PAPER,
   PRINT_SHEET_BOX_MM,
   paperAddress,
   paperPassPath,
@@ -25,6 +26,23 @@ describe("the paper", () => {
     const box = PRINT_SHEET_BOX_MM[PAPER_PASS_PAPER];
     expect(box.width).toBeGreaterThan(0);
     expect(box.height ?? 0).toBeGreaterThan(box.width);
+  });
+});
+
+describe("the receipt roll", () => {
+  it("draws the pass in the 48 mm that 58 mm and 80 mm printers both hold", () => {
+    const rule = printSheetPageRule(PAPER_PASS_RECEIPT_PAPER);
+    // The page is the 58 mm roll; its 5 mm side gutters leave the 48 mm sheet.
+    expect(rule).toContain("size:58mm 200mm");
+    expect(rule).toContain("margin:3mm 5mm");
+    expect(PRINT_SHEET_BOX_MM[PAPER_PASS_RECEIPT_PAPER]).toEqual({ width: 48, height: null });
+  });
+
+  it("is reached from the pass by one flag, and the card is the default", () => {
+    expect(paperPassPath("blue-mantis", "t1", "b1")).toBe("/shop/blue-mantis/trips/t1?pass=b1");
+    expect(paperPassPath("blue-mantis", "t1", "b1", { receipt: true })).toBe(
+      "/shop/blue-mantis/trips/t1?pass=b1&receipt=1",
+    );
   });
 });
 

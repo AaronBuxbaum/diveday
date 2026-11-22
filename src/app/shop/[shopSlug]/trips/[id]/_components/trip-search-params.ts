@@ -26,6 +26,8 @@ export type TripPageSearchParams = {
   phase?: string;
   /** A booking id: the page is that booking's paper pass, to print and hand over. */
   pass?: string;
+  /** With `pass`: the pass is drawn for a receipt roll (58 or 80 mm thermal) rather than an A6 card. */
+  receipt?: string;
   /** `1`: the page is the departure's packet, the sheets a captain prints and carries (#2736). */
   print?: string;
   /** `1`: the page is the departure's blow-out, the call-off confirmation or its record. */

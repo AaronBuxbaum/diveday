@@ -390,6 +390,16 @@ test.describe("print", () => {
     await capturePrint(page, "paper-pass");
   });
 
+  // **The pass on a receipt roll**: 48 mm wide for 58 and 80 mm thermal
+  // printers, reached from the A6 pass's own screen; same pinned booking.
+  test("the paper pass prints on a 48 mm receipt roll", async ({ page }) => {
+    const reefId = await seededTripId(page, "blue-mantis", "Two-Tank Reef — Molasses & French");
+    await page.goto(`/shop/blue-mantis/trips/${reefId}?pass=${DEMO_RECAP_BOOKING_ID}`);
+    await page.getByRole("link", { name: staff("print.counter.passReceipt") }).click();
+    await page.getByRole("link", { name: staff("print.counter.passCard") }).waitFor();
+    await capturePrint(page, "paper-pass-receipt");
+  });
+
   // **The counter card on paper** — the sign a shop stands on its desk. Its
   // code is the shop's public register address, the same on every seed, so
   // the capture is deterministic without a pinned id.

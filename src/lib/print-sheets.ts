@@ -18,10 +18,21 @@ import { shopPath } from "./staff-notices";
  * letter-sized render down to A6 ({@link PRINT_SHEET_PAPER_MM} is how it is
  * told).
  */
-export type PrintSheetPaper = "A6 portrait" | "Letter or A4";
+export type PrintSheetPaper = "A6 portrait" | "Letter or A4" | "Receipt 58 mm";
 
 /** The paper pass's paper. */
 export const PAPER_PASS_PAPER: PrintSheetPaper = "A6 portrait";
+
+/**
+ * **The pass on a receipt roll**: the thermal printers a counter already has
+ * beside the till, 58 mm and 80 mm alike. The page is the 58 mm roll and the
+ * sheet its 48 mm middle (5 mm of margin each side), the width both rolls print
+ * without clipping. The length is the roll's: it runs as long as the pass.
+ */
+export const PAPER_PASS_RECEIPT_PAPER: PrintSheetPaper = "Receipt 58 mm";
+
+/** The sheet's width on a receipt roll, in millimetres: what 58 mm and 80 mm printers both hold. */
+export const RECEIPT_SHEET_WIDTH_MM = 48;
 
 /** The counter card's paper: the same A6, stood on the desk. */
 export const COUNTER_CARD_PAPER: PrintSheetPaper = "A6 portrait";
@@ -51,6 +62,9 @@ const PACKET_MARGIN_MM = 12.7;
  */
 const PRINT_SHEET_MARGIN_MM = 6;
 
+/** A receipt: the margin above and below the pass. */
+const RECEIPT_MARGIN_MM = 3;
+
 /**
  * The paper's own size, in millimetres, as `@page size` is told it.
  *
@@ -63,12 +77,21 @@ const PRINT_SHEET_PAPER_MM = {
   "A6 portrait": { width: 105, height: 148 },
   // A4's width and Letter's height: the box that fits on both.
   "Letter or A4": { width: 210, height: 279.4 },
+  // A roll has no page height; the printer cuts it. The page is only as tall as
+  // the longest pass a shop prints (a dozen lines and a code).
+  "Receipt 58 mm": { width: 58, height: 200 },
 } satisfies Record<PrintSheetPaper, { width: number; height: number }>;
 
 export function printSheetPageRule(paper: PrintSheetPaper): string {
   // The packets keep the app's own `@page`: the printer's paper, the page count.
   if (paper === PACKET_PAPER) return "";
   const { width, height } = PRINT_SHEET_PAPER_MM[paper];
+  // The roll keeps its own side gutter and a short top and bottom, so no paper
+  // is fed past the pass.
+  if (paper === PAPER_PASS_RECEIPT_PAPER) {
+    const side = (width - RECEIPT_SHEET_WIDTH_MM) / 2;
+    return `@page{size:${width}mm ${height}mm;margin:${RECEIPT_MARGIN_MM}mm ${side}mm;@bottom-right{content:none}}`;
+  }
   // The page number the app's own `@page` prints in its corner is for a
   // packet that runs to several pages; a card is one sheet, and the number
   // would land on the shop's fold line.
@@ -87,6 +110,8 @@ export const PRINT_SHEET_BOX_MM: Record<PrintSheetPaper, { width: number; height
       width: PRINT_SHEET_PAPER_MM["A6 portrait"].width - 2 * PRINT_SHEET_MARGIN_MM,
       height: PRINT_SHEET_PAPER_MM["A6 portrait"].height - 2 * PRINT_SHEET_MARGIN_MM,
     },
+    // A roll: the 48 mm middle, as long as the pass.
+    "Receipt 58 mm": { width: RECEIPT_SHEET_WIDTH_MM, height: null },
     // No floor: a packet sheet is as long as its roster, over as many pages.
     "Letter or A4": {
       width: PRINT_SHEET_PAPER_MM["Letter or A4"].width - 2 * PACKET_MARGIN_MM,
@@ -142,8 +167,14 @@ export function tripPacketPath(shopSlug: string, tripId: string): string {
  * Built with `shopPath`, which escapes every segment, so a booking id can never
  * rewrite the route it names.
  */
-export function paperPassPath(shopSlug: string, tripId: string, bookingId: string): string {
-  return `${shopPath(shopSlug, "trips", tripId)}?pass=${encodeURIComponent(bookingId)}`;
+export function paperPassPath(
+  shopSlug: string,
+  tripId: string,
+  bookingId: string,
+  { receipt = false }: { receipt?: boolean } = {},
+): string {
+  const pass = `${shopPath(shopSlug, "trips", tripId)}?pass=${encodeURIComponent(bookingId)}`;
+  return receipt ? `${pass}&receipt=1` : pass;
 }
 
 /**
