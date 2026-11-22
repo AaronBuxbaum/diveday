@@ -97,6 +97,7 @@ const GROUPS: { reason: string; functions: string[] }[] = [
       "dev-bootstrap.ts:takeSeedLock",
       "fly-safe-correction.ts:retryOwedFlySafeCorrections",
       "held-sends.ts:claimRow",
+      "missing-diver-alerts.ts:sendMissingDiverAlerts",
       "held-sends.ts:dueHeldIds",
       "held-sends.ts:settleInterruptedHeldSends",
       "held-sends.ts:settleHeldSend",
@@ -190,13 +191,22 @@ const GROUPS: { reason: string; functions: string[] }[] = [
   },
   {
     reason:
-      "Reads or writes by an id or a row its caller has already matched to the signed-in shop; the caller is what keeps shops apart",
+      "Takes a shop inside an array or a union the sweep cannot read yet, so it is skipped for now and should be swept once it can; the booking write the public form reaches comes first",
     functions: [
       "bookings.ts:createBookingParty",
+      "crew-notices.ts:recordCrewNotices",
+      "notifications.ts:sendNotification",
+      "notifications.ts:sendNotificationBatch",
+      "notifications.ts:sendAndRecordNotification",
+    ],
+  },
+  {
+    reason:
+      "Reads or writes by an id or a row its caller has already matched to the signed-in shop; the caller is what keeps shops apart",
+    functions: [
       "bookings.ts:tripCourseCrewCounts",
       "bookings.ts:courseSeatRefusal",
       "checkouts.ts:lockSeatsInOrder",
-      "crew-notices.ts:recordCrewNotices",
       "departure-notes.ts:lastDayStartsAt",
       "dive-site-photos.ts:diveSitePhotosNoOtherSiteHolds",
       "dive-site-photos.ts:diveSitePhotoStillHeld",
@@ -205,10 +215,6 @@ const GROUPS: { reason: string; functions: string[] }[] = [
       "fly-safe-correction.ts:discardRefusedFlySafeExposure",
       "fly-safe-correction.ts:queuedFlySafeCorrectionState",
       "interest-offers.ts:invitableSeats",
-      "missing-diver-alerts.ts:sendMissingDiverAlerts",
-      "notifications.ts:sendNotification",
-      "notifications.ts:sendNotificationBatch",
-      "notifications.ts:sendAndRecordNotification",
       "operations.ts:recordActivityRow",
       "people.ts:recordDiverOwnLocaleForBooking",
       "readiness.ts:getBookingReadinessDetail",

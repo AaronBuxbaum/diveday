@@ -34,7 +34,7 @@ import process from "node:process";
 import { fileURLToPath } from "node:url";
 
 import { reviewAnswered, reviewsSection } from "./check-pr-body.mjs";
-import { areasOf, isTestFile, ruleFileKind } from "./guardrail-areas.mjs";
+import { areasOf, escapeHtml, isTestFile, ruleFileKind } from "./guardrail-areas.mjs";
 import { bodySection } from "./risk-card.mjs";
 import { readBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 import { parseNameStatus } from "./warn-untested-logic.mjs";
@@ -262,10 +262,20 @@ export function statementOf(body) {
   return text.length >= 20 && !GENERIC_NONE.test(text) ? text : "";
 }
 
+/** Rule files that decide what every later change is told or allowed to skip. */
+const JUDGES = new Set(["verdict", "allowlist"]);
+
 const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 const quote = (text, limit = 220) => {
   const flat = String(text).replace(/\s+/g, " ").trim();
   return flat.length <= limit ? flat : `${flat.slice(0, limit).replace(/\s+\S*$/, "")}…`;
+};
+/** `quote` for text an author wrote that lands outside a code span: made safe for a comment. */
+const quoteProse = (text, limit = 220) => {
+  const flat = String(text).replace(/\s+/g, " ").trim();
+  return flat.length <= limit
+    ? escapeHtml(flat)
+    : `${escapeHtml(flat.slice(0, limit).replace(/\s+\S*$/, ""))}…`;
 };
 
 /**
@@ -278,7 +288,9 @@ const quote = (text, limit = 220) => {
  */
 export function refereeReport({ changes, before, after, hunks, body }) {
   const statement = statementOf(body);
-  const reason = statement ? `The author's reason: "${quote(statement)}"` : "No reason was given.";
+  const reason = statement
+    ? `The author's reason: "${quoteProse(statement)}"`
+    : "No reason was given.";
   const needsEyes = [];
   const watch = [];
   const protects = [];
@@ -372,7 +384,7 @@ export function refereeReport({ changes, before, after, hunks, body }) {
       );
     }
     for (const why of newAbsorbedReasons(was, now)) {
-      watch.push(`A floor fall was recorded with this reason: "${quote(why)}"`);
+      watch.push(`A floor fall was recorded with this reason: "${quoteProse(why)}"`);
     }
     return null;
   });
@@ -388,7 +400,7 @@ export function refereeReport({ changes, before, after, hunks, body }) {
       );
     }
     for (const why of newAbsorbedReasons(was, now)) {
-      watch.push(`A breakage-drill floor fall was recorded with this reason: "${quote(why)}"`);
+      watch.push(`A breakage-drill floor fall was recorded with this reason: "${quoteProse(why)}"`);
     }
     return null;
   });
@@ -421,7 +433,7 @@ export function refereeReport({ changes, before, after, hunks, body }) {
       });
     }
     for (const why of newAbsorbedReasons(was, now)) {
-      watch.push(`A ratchet rise was recorded with this reason: "${quote(why)}"`);
+      watch.push(`A ratchet rise was recorded with this reason: "${quoteProse(why)}"`);
     }
     return null;
   });
@@ -436,7 +448,8 @@ export function refereeReport({ changes, before, after, hunks, body }) {
     } else if (change.status === "D") {
       loosens += 1;
       ruleEdits.push({ ...change, ...kind, how: "removed" });
-    } else if (change.removed > 0) {
+    } else if (kind.kind === "allowlist" ? change.added > 0 : change.removed > 0) {
+      // The sweep's skip list loosens when an entry is added; every other rule file when a line goes.
       loosens += 1;
       ruleEdits.push({ ...change, ...kind, how: "edited" });
     } else {
@@ -451,6 +464,15 @@ export function refereeReport({ changes, before, after, hunks, body }) {
           edit.path,
           `${edit.words[0].toUpperCase()}${edit.words.slice(1)} was deleted`,
           "Is the rule it held still held somewhere?",
+        ),
+      );
+    } else if (edit.how === "edited" && JUDGES.has(edit.kind)) {
+      // What judges every later change: a person is asked, not just told.
+      needsEyes.push(
+        item(
+          edit.path,
+          `${edit.words[0].toUpperCase()}${edit.words.slice(1)} was edited, ${plural(edit.removed, "line")} removed and ${edit.added} added`,
+          "Does the edit make a bad change easier to merge or harder to see?",
         ),
       );
     } else if (edit.how === "edited") {

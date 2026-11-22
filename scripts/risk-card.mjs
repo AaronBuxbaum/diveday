@@ -28,7 +28,7 @@ import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 
-import { AREAS, areasOf, isLogicFile, isTestFile } from "./guardrail-areas.mjs";
+import { AREAS, areasOf, escapeHtml, isLogicFile, isTestFile } from "./guardrail-areas.mjs";
 import { classifyScope } from "./mutation/scope.mjs";
 import { readBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 import { parseNameStatus } from "./warn-untested-logic.mjs";
@@ -144,8 +144,8 @@ export function bodySection(body, title) {
 /** A one-paragraph excerpt, cut on a word and marked when cut. */
 export function excerpt(text, limit = 600) {
   const flat = String(text).replace(/\s+/g, " ").trim();
-  if (flat.length <= limit) return flat;
-  return `${flat.slice(0, limit).replace(/\s+\S*$/, "")}…`;
+  if (flat.length <= limit) return escapeHtml(flat);
+  return `${escapeHtml(flat.slice(0, limit).replace(/\s+\S*$/, ""))}…`;
 }
 
 const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
@@ -309,13 +309,13 @@ export function buildRiskCard(input) {
       for (const survivor of file.survivors ?? []) {
         const blocks = policy[file.class] !== "warn";
         needs.push({
-          what: `${file.path}:${survivor.line}: I ${survivor.operator} (${survivor.was} to ${survivor.became}) and no test failed${blocks ? "; CI blocks this" : ""}.`,
+          what: `${file.path}:${survivor.line}: I ${survivor.operator} (\`${survivor.was}\` to \`${survivor.became}\`) and no test failed${blocks ? "; CI blocks this" : ""}.`,
           ask: "That line is not really protected. The thread should add a test that fails when it is wrong.",
         });
       }
       for (const accept of file.accepted ?? []) {
         watch.push(
-          `${file.path}:${accept.line} excused from the breakage drills: ${accept.reason}.`,
+          `${file.path}:${accept.line} excused from the breakage drills: ${escapeHtml(accept.reason)}.`,
         );
       }
     }
@@ -521,7 +521,7 @@ async function post(markdown) {
     signal: AbortSignal.timeout(15_000),
   });
   if (!listed.ok) throw new Error(`listing comments answered ${listed.status}`);
-  const existing = (await listed.json()).find((comment) => String(comment.body).includes(MARKER));
+  const existing = ourComment(await listed.json());
   const url = existing ? `${base}/comments/${existing.id}` : `${base}/${PR_NUMBER}/comments`;
   const saved = await fetch(url, {
     method: existing ? "PATCH" : "POST",
@@ -531,6 +531,14 @@ async function post(markdown) {
   });
   if (!saved.ok) throw new Error(`saving the comment answered ${saved.status}`);
   return true;
+}
+
+/** The card this job posted earlier: carries the marker and was written by the Actions bot, not by anyone who copied the marker. */
+export function ourComment(comments) {
+  return comments.find(
+    (comment) =>
+      comment.user?.login === "github-actions[bot]" && String(comment.body).includes(MARKER),
+  );
 }
 
 function parseArgs(argv) {

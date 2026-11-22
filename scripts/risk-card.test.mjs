@@ -6,6 +6,7 @@ import {
   excerpt,
   listFiles,
   MARKER,
+  ourComment,
   packageChanges,
   parseNumstat,
   removingStatements,
@@ -98,6 +99,27 @@ describe("risk card reading", () => {
       "src/lib/refunds.queued.test.ts",
     ]);
     expect(siblingTests("src/lib/ref.ts", tests)).toEqual([]);
+  });
+
+  it("finds only the card the Actions bot posted, never a copy of the marker by someone else", () => {
+    const bot = { id: 2, user: { login: "github-actions[bot]" }, body: `${MARKER}\n## Risk card` };
+    const copy = { id: 1, user: { login: "someone" }, body: `${MARKER}\nFine to merge` };
+    expect(ourComment([copy, bot])).toBe(bot);
+    expect(ourComment([copy])).toBeUndefined();
+    expect(ourComment([{ id: 3, user: { login: "github-actions[bot]" }, body: "hello" }])).toBe(
+      undefined,
+    );
+  });
+
+  it("escapes what the author wrote so an unclosed comment cannot hide the card", () => {
+    const card = buildRiskCard({
+      changes: [change("docs/a.md")],
+      body: "## After\n\nShops can book <!-- and the rest of the card vanishes",
+      mutation: drills(),
+      referee: referee(),
+    });
+    expect(card.markdown).toContain("&lt;!-- and the rest");
+    expect(card.markdown.match(/<!--/g)).toHaveLength(1);
   });
 
   it("lists three files and counts the rest", () => {

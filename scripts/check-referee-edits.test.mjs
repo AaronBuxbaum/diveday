@@ -298,6 +298,31 @@ describe("the referee's report", () => {
     expect(added.loosens).toBe(0);
   });
 
+  it("asks a person when the card, the verdict or the sweep's skip list is edited", () => {
+    const card = report({ changes: [change("scripts/risk-card.mjs", "M", 4, 1)] });
+    expect(card.loosens).toBe(1);
+    expect(card.needsEyes[0].what).toContain("was edited");
+    const skipList = report({
+      changes: [change("src/test/cross-shop/not-shop-scoped.ts", "M", 2, 0)],
+    });
+    expect(skipList.loosens).toBe(1);
+    expect(skipList.needsEyes).toHaveLength(1);
+    const shorter = report({
+      changes: [change("src/test/cross-shop/not-shop-scoped.ts", "M", 0, 3)],
+    });
+    expect(shorter.loosens).toBe(0);
+  });
+
+  it("escapes what an author wrote so a stray tag cannot hide the lines after it", () => {
+    const result = report({
+      changes: [change("scripts/check-tenant-gates.mjs", "D", 0, 80)],
+      body: "## Rules changed\n\nThe check was reordered <!-- and nothing else loosened because it only moved.",
+    });
+    const shown = JSON.stringify([result.needsEyes, result.watch]);
+    expect(shown).toContain("&lt;!--");
+    expect(shown).not.toContain("<!--");
+  });
+
   it("calls an edited check a loosening and an added check a tightening", () => {
     const edited = report({ changes: [change("scripts/check-tenant-gates.mjs", "M", 4, 3)] });
     expect(edited.loosens).toBe(1);

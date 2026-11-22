@@ -18,6 +18,14 @@ import { classifyScope } from "./mutation/scope.mjs";
 const DOMAIN_EXPERT = REVIEWS.find((review) => review.agent === "dive-domain-expert");
 const SECURITY = REVIEWS.find((review) => review.agent === "security-reviewer");
 
+/**
+ * Text a pull request author wrote, made safe to put in a comment: an unclosed `<!--` or a stray tag
+ * in it would hide or reshape the lines that follow. Escape after cutting, never before.
+ */
+export function escapeHtml(text) {
+  return String(text).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+}
+
 /** A test or spec file, anywhere. */
 export const TEST_FILE = /\.(?:test|spec)\.[cm]?[jt]sx?$/;
 
@@ -56,6 +64,11 @@ const RULE_FILES = [
     /^scripts\/(?:coverage-floors|ratchets|cross-shop-coverage|mutation\/floors)\.json$/,
   ],
   ["mutation", "the breakage drills", /^scripts\/mutation\/[^/]+\.(?:mjs|json)$/],
+  [
+    "allowlist",
+    "the list of database functions the cross-shop sweep skips",
+    /^src\/test\/cross-shop\/not-shop-scoped\.ts$/,
+  ],
   [
     "verdict",
     "what makes CI fail or the risk card speak",

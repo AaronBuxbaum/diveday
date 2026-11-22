@@ -44,6 +44,5 @@ A new database function that leaks is caught on the pull request that adds it, w
 for it, in under a minute. The sweep cannot see: a function whose parameters it cannot fill
 (listed, banked), a function that takes no shop and trusts its caller to have checked an id (the
 allowlist's last group), leaks in routes, server actions and features that do not go through
-`src/db`, a count or flag computed over another shop's rows, and a join that returns a foreign value
-the fixture neither marked nor keys. Each filled name gets one value of A's, so a branch reached
-only by other data is not tried.
+`src/db`, a count or flag computed over another shop's rows, a new row of the second shop that points at the first shop's record (a leak by insert), and a join that returns a foreign value
+the fixture neither marked nor keys. A branch reached only by other data is not tried.

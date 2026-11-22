@@ -192,7 +192,16 @@ jobs:
           STACK_BASE_SHA: ${{ needs.stack-gate.outputs.diff_base }}
         run: |
           gh pr view "$PR_NUMBER" --json body --jq .body > "$RUNNER_TEMP/pr-body.md" 2>/dev/null || printf '%s' "$PR_BODY" > "$RUNNER_TEMP/pr-body.md"
-          node scripts/check-referee-edits.mjs --body-file "$RUNNER_TEMP/pr-body.md" --base "${STACK_BASE_SHA:-origin/$BASE_REF}" --head "$PR_HEAD_SHA" --out .agent-out/referee-edits.json
+          # Judge with the base branch's copy of the script when it has one, so a pull request cannot
+          # edit the rule that reads it: the script runs from a worktree of the base, which reads
+          # this checkout's commits through the same object store. A stack that introduces the script
+          # has no base copy yet and runs its own; the first merge ends that.
+          BASE_SHA="${STACK_BASE_SHA:-$(git rev-parse "origin/$BASE_REF")}"
+          if git cat-file -e "$BASE_SHA:scripts/check-referee-edits.mjs" 2>/dev/null; then
+            git worktree add --detach "$RUNNER_TEMP/judge" "$BASE_SHA" > /dev/null
+            cd "$RUNNER_TEMP/judge"
+          fi
+          node scripts/check-referee-edits.mjs --body-file "$RUNNER_TEMP/pr-body.md" --base "$BASE_SHA" --head "$PR_HEAD_SHA" --out "$GITHUB_WORKSPACE/.agent-out/referee-edits.json"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: ${{ always() && github.event_name == 'pull_request' }}
         with:
@@ -1748,7 +1757,14 @@ jobs:
           STACK_BASE_SHA: ${{ needs.stack-gate.outputs.diff_base }}
         run: |
           gh pr view "$PR_NUMBER" --json body --jq .body > "$RUNNER_TEMP/pr-body.md" 2>/dev/null || printf '%s' "$PR_BODY" > "$RUNNER_TEMP/pr-body.md"
-          node scripts/risk-card.mjs --post --base "${STACK_BASE_SHA:-origin/$BASE_REF}" --head "$PR_HEAD_SHA" --body-file "$RUNNER_TEMP/pr-body.md" --referee .agent-out/referee-edits.json --mutation .agent-out/mutation-diff.json
+          # The base branch's copy writes the card when it has one (see the "Rules changed" step), so a
+          # pull request cannot edit the card that reports on it.
+          BASE_SHA="${STACK_BASE_SHA:-$(git rev-parse "origin/$BASE_REF")}"
+          if git cat-file -e "$BASE_SHA:scripts/risk-card.mjs" 2>/dev/null; then
+            git worktree add --detach "$RUNNER_TEMP/judge" "$BASE_SHA" > /dev/null
+            cd "$RUNNER_TEMP/judge"
+          fi
+          node scripts/risk-card.mjs --post --base "$BASE_SHA" --head "$PR_HEAD_SHA" --body-file "$RUNNER_TEMP/pr-body.md" --referee "$GITHUB_WORKSPACE/.agent-out/referee-edits.json" --mutation "$GITHUB_WORKSPACE/.agent-out/mutation-diff.json" --out "$GITHUB_WORKSPACE/.agent-out"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
