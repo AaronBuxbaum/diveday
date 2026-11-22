@@ -569,6 +569,9 @@ function git(args) {
   return String(
     readBounded("git", args, {
       encoding: "utf8",
+      // A file the base does not have is expected (a new floors file); keep git's complaint out of
+      // the job log, where it reads like a failure.
+      stdio: ["ignore", "pipe", "pipe"],
       timeoutMs: SUBPROCESS_TIMEOUTS.git,
       maxBuffer: 256 * 1024 * 1024,
     }),
