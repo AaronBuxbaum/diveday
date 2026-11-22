@@ -1,6 +1,7 @@
 import { asc, eq, inArray } from "drizzle-orm";
 import type { AppDb } from "../../db/client";
 import { diveSites, tripDives } from "../../db/schema/index";
+import type { DiveSiteDifficulty } from "../../lib/dive-site-difficulty";
 
 /** One planned dive's site as a card or a forecast reads it. */
 export type PlannedDiveSite = {
@@ -8,6 +9,8 @@ export type PlannedDiveSite = {
   name: string;
   forecastLatitude: number | null;
   forecastLongitude: number | null;
+  /** The shop's own rating of the site; null when it has not rated it. */
+  difficultyLevel: DiveSiteDifficulty | null;
 };
 
 /**
@@ -30,6 +33,7 @@ export async function plannedSitesByTrip(
       name: diveSites.name,
       forecastLatitude: diveSites.forecastLatitude,
       forecastLongitude: diveSites.forecastLongitude,
+      difficultyLevel: diveSites.difficultyLevel,
     })
     .from(tripDives)
     .innerJoin(diveSites, eq(diveSites.id, tripDives.diveSiteId))
