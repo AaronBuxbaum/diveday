@@ -161,14 +161,18 @@ for (const role of ["diver", "crew"] as const) {
           new Date(E2E_FROZEN_CLOCK).getTime() + (situation === "fast aboard" ? 15 : -15) * 60_000,
         );
         if (situation === "fast aboard") {
-          await recordNamed(page, personName);
-          await live
-            .getByRole("dialog")
-            .getByRole("button", { name: "Mark not back aboard", exact: true })
-            .click();
-          await expect(live.locator('[data-deck-screen="receipt"]')).toContainText(
-            staff("manifest.deck.savedMissing"),
-          );
+          await Promise.all([
+            recordNamed(page, personName),
+            (async () => {
+              await live
+                .getByRole("dialog")
+                .getByRole("button", { name: "Mark not back aboard", exact: true })
+                .click();
+              await expect(live.locator('[data-deck-screen="receipt"]')).toContainText(
+                staff("manifest.deck.savedMissing"),
+              );
+            })(),
+          ]);
         } else {
           // Both old bases are rendered and the saved device is offline. These
           // independent statements can finish together before reconnecting.
