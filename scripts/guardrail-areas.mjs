@@ -56,6 +56,11 @@ const RULE_FILES = [
     /^scripts\/(?:coverage-floors|ratchets|cross-shop-coverage|mutation\/floors)\.json$/,
   ],
   ["mutation", "the breakage drills", /^scripts\/mutation\/[^/]+\.(?:mjs|json)$/],
+  [
+    "verdict",
+    "what makes CI fail or the risk card speak",
+    /^scripts\/(?:ci-merge-verdict|risk-card|guardrail-areas)\.mjs$/,
+  ],
   ["lint", "a lint rule", /^(?:biome\.json|scripts\/lint-rules\/.*)$/],
   ["types", "the type checker's settings", /^tsconfig\.json$/],
   [

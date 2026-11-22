@@ -157,6 +157,8 @@ describe("rule files and the author's statement", () => {
     expect(ruleFileKind("biome.json")?.kind).toBe("lint");
     expect(ruleFileKind("scripts/mutation/floors.json")?.kind).toBe("floors");
     expect(ruleFileKind("scripts/mutation/policy.json")?.kind).toBe("mutation");
+    expect(ruleFileKind("scripts/ci-merge-verdict.mjs")?.kind).toBe("verdict");
+    expect(ruleFileKind("scripts/risk-card.mjs")?.kind).toBe("verdict");
     expect(ruleFileKind("scripts/cross-shop-coverage.json")?.kind).toBe("floors");
     expect(ruleFileKind(".claude/rules/domain.md")?.kind).toBe("agent-rules");
     expect(ruleFileKind("src/lib/refunds.ts")).toBeNull();
