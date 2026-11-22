@@ -41,8 +41,12 @@ export const DEFAULT_LEAD_MS = 700;
 /** The tap itself, from a fingertip landing to the finished screen (ms). */
 const TAP_MS = 1800;
 
-/** Card 1 holds its first frame this long before its beat starts, so a reader lands on it before it moves (ms; Aaron, 2026-11-20). */
-export const FIRST_CARD_HOLD_MS = 3000;
+/**
+ * Card 1 holds its first frame this long before its beat starts, so a reader lands on the shop's
+ * page and has time to look at it before it moves (ms). It was 3 s (Aaron, 2026-11-20), and a
+ * phone reader still saw the page go within a flick of the thumb (Aaron, 2026-11-22).
+ */
+export const FIRST_CARD_HOLD_MS = 7000;
 
 /** How long the finished screen stays for reading (ms), about a hundred seconds a walk (Aaron, 2026-11-18). */
 const HOLD_AFTER_MS = 4200;
