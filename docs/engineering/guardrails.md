@@ -93,8 +93,8 @@ These are the holes. Each is something a person would otherwise have to catch.
    real money in live mode is a human step (human-task issue on switching Stripe to live).
 9. **Real traffic.** There are no users yet. Load, cost surprises and the odd things real people do
    are unknown until they happen. The nightly simulation and weekly persona walk are rehearsals.
-10. **Security scanning is thin.** Known-vulnerable libraries are found weekly (Dependabot, CodeQL), not
-    on every pull request. Secret scanning and push protection are a GitHub setting (a human task).
+10. **Security scanning is thin.** Known-vulnerable libraries and code patterns are found weekly
+    (Dependabot, CodeQL), not on every pull request. Secret scanning and push protection are on.
 11. **Accessibility** is not scanned: that was Aaron's call on 2026-10-24.
 12. **Wording.** Legal and medical wording needs a human reviewer (human-task issues).
 
