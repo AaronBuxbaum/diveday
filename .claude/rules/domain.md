@@ -77,7 +77,7 @@ What each area must keep true; its tests hold most of these, and its ADR the rea
 - **Waivers**: a signed record is immutable (a correction is a new version); a medical answer
   that triggers referral fails closed; submission is idempotent and authorized.
 - **Certifications**: requirements and evidence are separate, and missing configuration fails
-  closed; only verified, unexpired evidence at or above the required level clears a diver; every
+  closed; only verified evidence at or above the required level clears a diver (a card does not expire); every
   readiness blocker is typed.
 - **Rental fit**: a fit is a size record, never an allocation (only a gear reservation reserves a
   unit), and the register never answers what size a diver needs; one tank per diver per planned
@@ -131,7 +131,7 @@ What each area must keep true; its tests hold most of these, and its ADR the rea
   Signup, and its token never reads back out of `src/db/whatsapp-accounts.ts`.
 - **Reviews and promos**: a review comes only from a diver's own recap link, for a booking that
   dived; a bare rating publishes now, words wait for staff, and added words go back to moderation;
-  the average never counts a held review or rounds up; `discountedAmountCents` mirrors Stripe's
+  the average never counts a held review or rounds up; `netOfPercentDiscount` mirrors Stripe's
   rounding; a redemption counts once per paid checkout; a last-minute promo's `max_redemptions` is
   capped at the open seats.
 - **Export and import**: every table and every exported column is exported, folded or excluded
