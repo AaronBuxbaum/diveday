@@ -2,6 +2,7 @@ import { and, desc, eq, getViewSelectedFields, inArray, or } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { groupSeatSettled } from "@/lib/group-holds";
 import { log } from "@/lib/log";
+import { isFinalPaymentStatus, paymentTransitionRefusal } from "@/lib/payment-transition";
 import type { AppTransaction, DbExecutor } from "./client";
 import { recordCollectionBalance } from "./collection-ledger";
 import { boundLockWaits } from "./lock-bounds";
@@ -334,16 +335,10 @@ async function holdUnallocatedSettlement(
 }
 
 /**
- * A status a provider-webhook replay must never move a booking backward out
- * of — a human already refunded it, or explicitly waived it, and a duplicate
- * or out-of-order event describing an earlier point in the payment's history
- * must not undo that (CR-004).
- */
-const FINAL_PAYMENT_STATUSES: ReadonlySet<PaymentStatus> = new Set(["refunded", "waived"]);
-
-/**
  * Same contract as {@link setBookingPayment}, but refuses to write a lesser
- * status (e.g. "paid") over one already in {@link FINAL_PAYMENT_STATUSES}.
+ * status (e.g. "paid") over one already in `FINAL_PAYMENT_STATUSES`. Which
+ * status may follow which is decided by `paymentTransitionRefusal`
+ * (`src/lib/payment-transition.ts`); this function only carries it out.
  * Provider-webhook reconciliation (checkout/order payment cascades) should
  * call this instead of `setBookingPayment` directly; ordinary staff writes —
  * including the refund/waive writes that produce those final states in the
@@ -382,7 +377,8 @@ export async function setBookingPaymentIfNotFinal(db: AppTransaction, input: Set
       return null;
     }
     const current = await currentPayment(tx, input.shopId, input.bookingId);
-    if (!FINAL_PAYMENT_STATUSES.has(input.status)) {
+    if (!isFinalPaymentStatus(input.status)) {
+      const refusal = paymentTransitionRefusal(current, input.status);
       if (input.provider === "stripe" && current && current.providerRef !== input.providerRef) {
         if (await providerSourceWasApplied(tx, input)) return current;
         if (
@@ -393,13 +389,10 @@ export async function setBookingPaymentIfNotFinal(db: AppTransaction, input: Set
           return current;
         }
       }
-      if (
-        current?.provider === "mixed" &&
-        (current.providerRef !== input.providerRef || current.status === "partly_refunded")
-      )
+      if (current?.provider === "mixed" && current.providerRef !== input.providerRef)
         return current;
-      if (current?.provider === "stripe" && current.status === "partly_refunded") return current;
-      if (current && FINAL_PAYMENT_STATUSES.has(current.status)) {
+      if (current && refusal === "partly_refunded") return current;
+      if (current && refusal === "final") {
         if (input.provider === "stripe" && current.provider === null)
           await holdUnallocatedSettlement(tx, input, SETTLEMENT_AFTER_FINAL_STATE);
         log("payment.refused_final_status_regression", "error", {

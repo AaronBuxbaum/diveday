@@ -79,13 +79,13 @@ fail against a broken copy of that rule; one that cannot fail is deleted.
 | A cancellation refund never exceeds what was paid and moves money only before the stated deadline; a sequence of external refunds never exceeds what was paid | `src/lib/deposits.properties.test.ts`, `src/lib/payment-marks.properties.test.ts` |
 | A part's net of refund is between 0 and the part and the parts never sum above what was kept | `src/features/money/trip-money/rules.properties.test.ts` |
 | A trip-credit balance parses only to a safe integer | `src/lib/trip-credit.properties.test.ts` |
+| A payment status only moves forward under provider reconciliation: nothing non-final follows refunded or waived, a provider payment that gave money back is not put back, and a refund or waive is allowed from anywhere; the locked writer agrees for every pair | `src/lib/payment-transition.properties.test.ts`, `src/db/payments.test.ts` |
 | Seating counts everyone against the boat and only divers against the divers-only limit; the manifest's over-capacity counts every boarded passenger and its boat over-capacity boarded crew too; after a dive anyone unanswered or not back is unaccounted for; the divemaster gap is right for a given diver count (that callers pass divers only is their SQL, not pinned); a full boat shows no open seats | `src/lib/participant-types.properties.test.ts`, `src/lib/manifests.properties.test.ts`, `src/lib/trips.properties.test.ts` |
 | Roll call converges in any order and with repeats; a conflict stays one until reconciled; accounted for means unconflicted, stated, and aboard after a dive; agreeing statements merge; replay puts dependencies first; a retry has the same intent key | `src/lib/roll-call-causality.properties.test.ts` |
 | Only 22 to 40% O2 has a MOD, which is the deepest whole metre and foot within the ppO2 ceiling and never deepens as O2 rises; a typed fill is air or a whole 21 to 40, never rounded | `src/features/safety/nitrox-mod.properties.test.ts` |
 | The departure phase never moves backward; `hasSailed`/`hasReturned` are monotonic; occurrence dates are strictly increasing, complete, and two rolls equal one | `src/lib/departure-clock.properties.test.ts`, `src/lib/trips.properties.test.ts`, `src/lib/recurrence.properties.test.ts` |
 
-**Not pinned by a property**: a payment status only moving forward (`setBookingPaymentIfNotFinal`
-decides it under a lock in `src/db/payments.ts`, with no pure transition function), capacity under
+**Not pinned by a property**: capacity under
 concurrent bookings (the booking transaction and the real-Postgres suite), "a clock never decides"
 in roll call (`RollCallEvidence` carries no timestamp, so the type pins it) and "a caller's MOD is
 never trusted" (`nitroxModFor` takes only the mix), a fill needing a verified nitrox card

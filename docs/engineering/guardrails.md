@@ -83,8 +83,10 @@ These are the holes. Each is something a person would otherwise have to catch.
    scores whole files and the score can only rise.
 5. **Rule tests only know the rules we wrote down.** A rule that is not in the list is not attacked
    (`docs/engineering/testing.md#property-tests` lists what is pinned and what is not). A rule that
-   lives only inside a database query or under a row lock, such as "a payment status only moves
-   forward", is pinned by the real-Postgres tests, not by a generated test.
+   lives only inside a database query or under a row lock, such as capacity under concurrent
+   bookings, is pinned by the real-Postgres tests, not by a generated test. ("A payment status only
+   moves forward" left that group: `src/lib/payment-transition.ts` states it, and the locked writer
+   is checked against it for every pair.)
 6. **The sweep covers a known shape.** It calls the database functions that take a shop and checks
    their answers for another shop's ids and marked names. It does not call a function whose
    parameters it cannot fill yet (the count is banked and can only fall), or one that takes no shop
