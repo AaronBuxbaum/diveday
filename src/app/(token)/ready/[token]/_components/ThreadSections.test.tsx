@@ -20,6 +20,9 @@ vi.mock("../booking-actions", () => ({
   askToMoveAction: async () => {},
 }));
 vi.mock("./RunningLate", () => ({ RunningLate: () => <p>late</p> }));
+vi.mock("@/app/s/[shopSlug]/trips/[id]/_components/FirstBoatAfterwards", () => ({
+  FirstBoatAfterwards: () => <p>first boat</p>,
+}));
 vi.mock("./CourseMaterials", () => ({ CourseMaterials: () => <p>materials</p> }));
 vi.mock("@/components/TripArrivalCard", () => ({
   TripArrivalCard: (props: Record<string, unknown>) => {
@@ -115,6 +118,11 @@ function context(over: Partial<ReadyThreadSectionsContext> = {}): ReadyThreadSec
 }
 
 describe("ThreadSections", () => {
+  it("offers the first boat afterwards under the running-late line, once the trip is read", () => {
+    render(<ThreadSections context={context()} />);
+    expect(screen.getByText("first boat")).toBeTruthy();
+  });
+
   it("opens payment for an active held seat without a normal payment checklist step", () => {
     const c = context();
     Object.assign(c.data, {

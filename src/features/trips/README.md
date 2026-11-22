@@ -10,7 +10,8 @@ pack, what to tell guests, and recovering a cancelled day.
   `thin-boats/`, `trip-calendar.ts` (the iCalendar writer for a trip).
 - The trip page: `trip-page.ts`, `trip-overview.ts`, `trip-fix-list.ts`, `trip-guests/`,
   `trip-lenses.ts`, `trip-stages.ts`, `trip-stage-tone.ts`, `trip-shared-reads.ts`,
-  `trip-paper-identity.ts`, `stable-packet.ts`, `trip-planned-sites.ts`, `day-profile.ts`.
+  `trip-paper-identity.ts`, `stable-packet.ts`, `trip-planned-sites.ts`, `day-profile.ts`,
+  `first-boat-afterwards.ts` and `first-boat-pick.ts` (the one easygoing boat a refresher points to).
 - Preparing: `trip-prep/`, `dive-intent/`.
 - Settings: `trip-defaults-page/`, `trip-tags-page.ts`.
 - When a day is lost: `disruption-recovery.ts`, `recovery-activities/`.

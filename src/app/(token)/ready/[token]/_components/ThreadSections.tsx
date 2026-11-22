@@ -1,3 +1,4 @@
+import { FirstBoatAfterwards } from "@/app/s/[shopSlug]/trips/[id]/_components/FirstBoatAfterwards";
 import {
   PackingLists,
   PackingSection,
@@ -130,6 +131,15 @@ export function ThreadSections({ context }: { context: ReadyThreadSectionsContex
               column stepped unevenly down one scroll. */}
       <div className="mt-10 space-y-10">
         <RunningLate token={token} data={data} locale={locale} t={t} />
+        {fullShop && fullTrip ? (
+          <FirstBoatAfterwards
+            shop={fullShop}
+            trip={fullTrip}
+            locale={locale}
+            now={nowDate()}
+            t={t}
+          />
+        ) : null}
         {fullShop && fullTrip ? (
           <TripArrivalCard
             shop={arrivalCardShopOf(fullShop)}

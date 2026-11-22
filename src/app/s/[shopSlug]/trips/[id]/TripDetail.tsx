@@ -41,6 +41,7 @@ import { ConditionsLine } from "./_components/ConditionsLine";
 import { bookingCourseFees } from "./_components/course-fees";
 import { crewLanguagesSentence } from "./_components/crew-languages";
 import { EmbedBookedNotice } from "./_components/EmbedBookedNotice";
+import { FirstBoatAfterwards } from "./_components/FirstBoatAfterwards";
 import { knownDiverPanelFor } from "./_components/known-diver-lines";
 import { fullTripAlternatives, worthALookList } from "./_components/other-boats";
 import { TripAlternatives } from "./_components/TripAlternatives";
@@ -261,7 +262,6 @@ export async function TripDetailPage({
   const alternatives = full ? fullTripAlternatives(trip, board, where) : [];
   const worthALookRows =
     full || !offersAnotherBoat ? [] : worthALookList(trip, board, { ...where, now });
-  const remaining = spotsRemaining(trip);
   const errorMessage = error && isErrorCode(error) ? t(ERROR_MESSAGE_KEYS[error]) : undefined;
   const tripRef = { shopSlug, tripId, embed: isEmbed };
 
@@ -406,9 +406,9 @@ export async function TripDetailPage({
                   trip: bookingFormTrip(trip),
                   withAnchor: false,
                   tripRef,
-                  remaining,
+                  remaining: spotsRemaining(trip),
                   requestedPartySize: isEmbed ? 1 : schedulePartySize(requestedPartySize),
-                  groupRequestHref: groupRequestFor(shop, trip, remaining),
+                  groupRequestHref: groupRequestFor(shop, trip, spotsRemaining(trip)),
                   errorMessage,
                   payAtBooking: payAtBooking && checkoutMode(stripeAccount),
                   offerCodeField,
@@ -476,6 +476,7 @@ export async function TripDetailPage({
               <ConditionsChangedNotice locale={locale} />
             ) : null}
             <TripAlternatives alternatives={worthALookRows} locale={locale} />
+            <FirstBoatAfterwards {...{ shop, trip, locale, isEmbed, now, t }} />
           </div>
         </div>
         {/* Full keeps the same sticky CTA rather than hiding it — a diver who
