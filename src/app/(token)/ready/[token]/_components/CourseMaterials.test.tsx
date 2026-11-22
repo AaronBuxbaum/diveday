@@ -14,12 +14,13 @@ const t = diverTranslator("en-US");
 
 type Data = Pick<
   ReadyPageData,
-  "learningMaterials" | "elearningCode" | "courseMaterialsDone" | "courseStarted"
+  "learningMaterials" | "elearningCode" | "elearningSold" | "courseMaterialsDone" | "courseStarted"
 >;
 function data(over: Partial<Data>): Data {
   return {
     learningMaterials: [],
     elearningCode: null,
+    elearningSold: false,
     courseMaterialsDone: false,
     courseStarted: false,
     ...over,
@@ -99,18 +100,84 @@ describe("CourseMaterials", () => {
   });
 });
 
-it("offers the shop's real contact for access without promising a delivery method or date", () => {
-  render(
-    <CourseMaterials
-      data={data({
-        learningMaterials: [{ name: "PADI Open Water eLearning", note: "Finish before day 1" }],
-      })}
-      contactEmail="courses@example.com"
-      t={t}
-    />,
-  );
-  expect(screen.getByRole("link", { name: "Ask the shop about access" })).toHaveAttribute(
-    "href",
-    "mailto:courses@example.com",
-  );
+const ACCESS_SENTENCE =
+  "Your access code comes after you book. If it has not arrived, write or call the shop.";
+
+describe("CourseMaterials: how e-learning access arrives", () => {
+  const withMaterials = {
+    learningMaterials: [{ name: "PADI Open Water eLearning", note: "Finish before day 1" }],
+    elearningSold: true,
+  };
+
+  it("says the code comes after booking and offers the shop's own email and phone before one arrives", () => {
+    render(
+      <CourseMaterials
+        data={data(withMaterials)}
+        contactEmail="courses@example.com"
+        contactPhone="+1 305 555 0100"
+        t={t}
+      />,
+    );
+    expect(screen.getByText(ACCESS_SENTENCE, { exact: false })).toBeInTheDocument();
+    expect(screen.queryByText("Ask the shop about access")).toBeNull();
+    expect(screen.getByRole("link", { name: "courses@example.com" })).toHaveAttribute(
+      "href",
+      "mailto:courses@example.com",
+    );
+    expect(screen.getByRole("link", { name: "+1 305 555 0100" })).toHaveAttribute(
+      "href",
+      "tel:+13055550100",
+    );
+  });
+
+  it("shows the code with the material's own start line and no access sentence once the student has one", () => {
+    render(
+      <CourseMaterials
+        data={data({ ...withMaterials, elearningCode: "AB12-CD34" })}
+        contactEmail="courses@example.com"
+        t={t}
+      />,
+    );
+    expect(screen.getByText("AB12-CD34")).toBeInTheDocument();
+    expect(screen.getByText(/Finish before day 1/)).toBeInTheDocument();
+    expect(screen.queryByText(ACCESS_SENTENCE)).toBeNull();
+  });
+
+  it("promises no code for a course that sells no e-learning", () => {
+    render(
+      <CourseMaterials
+        data={data({ learningMaterials: [{ name: "Logbook" }], elearningSold: false })}
+        contactEmail="courses@example.com"
+        t={t}
+      />,
+    );
+    expect(screen.queryByText(ACCESS_SENTENCE)).toBeNull();
+  });
+
+  it("says nothing about access once the shop has marked the materials done", () => {
+    render(
+      <CourseMaterials
+        data={data({ ...withMaterials, courseMaterialsDone: true })}
+        contactEmail="courses@example.com"
+        t={t}
+      />,
+    );
+    expect(screen.queryByText(ACCESS_SENTENCE)).toBeNull();
+  });
+
+  it("keeps the link where the shop pointed it", () => {
+    render(
+      <CourseMaterials
+        data={data({
+          ...withMaterials,
+          learningMaterials: [{ name: "PADI eLearning", url: "https://www.padi.com/" }],
+        })}
+        t={t}
+      />,
+    );
+    expect(screen.getByRole("link", { name: "PADI eLearning" })).toHaveAttribute(
+      "href",
+      "https://www.padi.com/",
+    );
+  });
 });

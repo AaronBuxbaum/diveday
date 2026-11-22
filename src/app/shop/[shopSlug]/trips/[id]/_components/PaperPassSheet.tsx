@@ -79,10 +79,10 @@ export async function PaperPassSheet({
   // with the landmark and the parking note a diver without a phone needs most.
   const where = meetingPointOfRows(shop, booking);
   // The shop's list, then the logbook when it suggests one (`packsLogbook`;
-  // the pass reads no cards, so a try-dive's pass leaves it off).
+  // the pass reads no cards, so a course pass leaves it off).
   const bring = packsLogbook({
     shopSuggests: shop.packingLogbook,
-    introCourseSession: booking.introCourse,
+    courseSession: booking.courseSession,
     holdsCertification: false,
   })
     ? [...shop.packingList, t("print.sheet.pass.logbook")]

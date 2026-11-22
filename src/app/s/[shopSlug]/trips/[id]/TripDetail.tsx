@@ -16,7 +16,7 @@ import { auth } from "@/lib/auth";
 import { nowDate } from "@/lib/clock";
 import { perDiverBookingPriceCents } from "@/lib/courses";
 import { checkoutSeatTerms } from "@/lib/deposits";
-import { conditionsChangedSinceBooking } from "@/lib/diver-planning";
+import { boatToName, conditionsChangedSinceBooking } from "@/lib/diver-planning";
 import { minimumSeatsState } from "@/lib/minimum-seats";
 import { toShopCurrency } from "@/lib/money";
 import { parsePassThroughFee } from "@/lib/pass-through-fee";
@@ -287,7 +287,7 @@ export async function TripDetailPage({
       profile={profile}
       showIncludedGear={!!confirmed || inPast}
     >
-      {!isEmbed ? <TripBoatPhoto db={db} shopId={shop.id} boatId={trip.boatId} t={t} /> : null}
+      {!isEmbed ? <TripBoatPhoto db={db} shopId={shop.id} boatId={boatToName(trip)} t={t} /> : null}
     </TripItinerary>
   );
 

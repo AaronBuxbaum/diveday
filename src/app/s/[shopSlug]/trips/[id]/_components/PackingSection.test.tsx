@@ -178,6 +178,12 @@ describe("PackingSection — the logbook line", () => {
   it("leaves it off for an uncertified student on a try-dive session", () => {
     renderBring({ packingLogbook: true, course: true, holdsCertification: false });
     expect(screen.queryByText("Logbook")).not.toBeInTheDocument();
+  });
+
+  // #4896: the shop's own list stays on a course (a boat day needs its
+  // seasickness supplies); only the boat name goes.
+  it("keeps the shop's bring list on a course as on a charter", () => {
+    renderBring({ packingLogbook: true, course: true, holdsCertification: false });
     expect(screen.getByText("Swimsuit and towel")).toBeInTheDocument();
   });
 
@@ -186,8 +192,13 @@ describe("PackingSection — the logbook line", () => {
     expect(screen.getByText("Logbook")).toBeInTheDocument();
   });
 
-  it("keeps it for an uncertified student on a course that logs training dives", () => {
+  it("leaves it off for an uncertified Open Water student too", () => {
     renderBring({ packingLogbook: true, course: true, intro: false, holdsCertification: false });
+    expect(screen.queryByText("Logbook")).not.toBeInTheDocument();
+  });
+
+  it("keeps it for a certified diver on an Open Water course", () => {
+    renderBring({ packingLogbook: true, course: true, intro: false, holdsCertification: true });
     expect(screen.getByText("Logbook")).toBeInTheDocument();
   });
 
@@ -232,6 +243,7 @@ describe("PackingSection — a course's included gear", () => {
     renderCourse(["mask", "fins"], ["snorkel", "boots"]);
     expect(column("We provide")).toContain("Snorkel");
     expect(column("We provide")).toContain("Boots");
+    expect(column("Bring")).toContain("Swimsuit and towel");
     expect(column("Bring")).not.toMatch(/Snorkel|Boots/);
   });
 

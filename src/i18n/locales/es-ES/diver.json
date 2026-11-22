@@ -371,6 +371,7 @@
     "changedByCrew": "Cambiado por la tripulación el {when}",
     "goodToKnow": "Conviene saber",
     "rentalFrom": "Equipo de alquiler desde {price}",
+    "extrasFrom": "Extras opcionales desde {price}",
     "rentalFullSet": "Equipo completo {price}"
   },
   "booking": {
@@ -394,6 +395,7 @@
       "fare": "{price} × {count, plural, one {# buceador} other {# buceadores}}",
       "courseFee": "Curso",
       "eLearning": "Materiales del curso en línea",
+      "eLearningNote": "La teoría en línea de la agencia. Termínala antes del día 1.",
       "gear": "Equipo de alquiler",
       "tax": "Impuesto",
       "taxAtCheckout": "se suma al pagar",
@@ -987,7 +989,7 @@
       "tooBigSuffix": ": supera los {maxMb} MB. Prueba con una foto más pequeña."
     },
     "elearningCode": "Tu código de eLearning",
-    "materialsAccess": "Consulta al centro cómo acceder",
+    "materialsAccess": "Tu código de acceso llega después de reservar. Si no te ha llegado, escribe o llama al centro.",
     "courseStartLine": "Tu curso comienza a las {time}.",
     "estimatedOwnRental": "Tu alquiler estimado: {amount}.",
     "estimatedAtShopTotal": "Total estimado en el centro: {amount}. La tripulación confirma el alquiler en el muelle.",
@@ -1145,6 +1147,7 @@
     "certInvalid": "Revisa la agencia, el nivel y el número de certificación, e inténtalo de nuevo.",
     "certOptional": "Opcional",
     "keepThisPage": "Esta página es tuya: guárdala en favoritos y seguirá al día hasta que zarpes.",
+    "keepThisPageCourse": "Esta página es tuya: guárdala en favoritos y seguirá al día hasta que termine tu curso.",
     "logEntryWaiting": "Después de bucear, tu página de bitácora te espera aquí.",
     "offlineCopy": "Sin cobertura: este es un resumen guardado, generado el {when}: dónde y cuándo, lo que seguía pendiente en tu lista, qué llevar y qué había cambiado. No se muestran los cambios posteriores.",
     "offlineOutstandingHeading": "Pendiente en tu lista cuando se guardó esto",

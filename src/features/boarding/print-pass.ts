@@ -1,7 +1,7 @@
 import { and, eq, isNull } from "drizzle-orm";
 import { liveTrip, seatNotCancelled } from "@/db/trips";
 import type { DbExecutor } from "../../db/client";
-import { boats, bookings, courses, people, trips } from "../../db/schema/index";
+import { boats, bookings, people, trips } from "../../db/schema/index";
 
 /**
  * **The seat a paper pass is printed from** (ADR 20260908-one-hand, decision 6,
@@ -36,8 +36,8 @@ export type PassBooking = {
   /** The two finding-the-place notes the trip page shows (ux review 2026-10-11, item 27). */
   arrivalLandmark: string | null;
   arrivalParkingNote: string | null;
-  /** The departure is a session of a try-dive (`courses.is_intro_course`): its pass suggests no logbook. */
-  introCourse: boolean;
+  /** The departure is a course session: its pass suggests no logbook, the pass reads no cards. */
+  courseSession: boolean;
 };
 
 export async function getPassBooking(
@@ -58,7 +58,7 @@ export async function getPassBooking(
       meetingPointAddress: trips.meetingPointAddress,
       arrivalLandmark: trips.arrivalLandmark,
       arrivalParkingNote: trips.arrivalParkingNote,
-      introCourse: courses.isIntroCourse,
+      courseId: trips.courseId,
     })
     .from(bookings)
     // The diver and the departure are read within the caller's shop too, as
@@ -66,7 +66,6 @@ export async function getPassBooking(
     .innerJoin(people, and(eq(people.id, bookings.personId), eq(people.shopId, shopId)))
     .innerJoin(trips, and(eq(trips.id, bookings.tripId), eq(trips.shopId, shopId)))
     .leftJoin(boats, eq(boats.id, trips.boatId))
-    .leftJoin(courses, eq(courses.id, trips.courseId))
     .where(
       and(
         eq(bookings.id, bookingId),
@@ -79,5 +78,7 @@ export async function getPassBooking(
         liveTrip(),
       ),
     );
-  return row ? { ...row, introCourse: row.introCourse === true } : null;
+  if (!row) return null;
+  const { courseId, ...pass } = row;
+  return { ...pass, courseSession: courseId !== null };
 }

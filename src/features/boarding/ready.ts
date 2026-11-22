@@ -556,6 +556,8 @@ export type ReadyPageData = {
   learningMaterials: CourseLearningMaterial[];
   /** The code the shop handed this student for the course's eLearning, or null. */
   elearningCode: string | null;
+  /** The course sells eLearning, so the shop hands each student a code after booking. */
+  elearningSold: boolean;
   /**
    * Someone marked this student's materials done, on this departure or another
    * of the same course (`courseMaterialsDoneByPerson`).
@@ -988,6 +990,7 @@ export async function getReadyPageData(
     welcomeHello: row.welcomeSharedAt !== null ? row.welcomeHello : null,
     learningMaterials: readLearningMaterials(trip.course?.learningMaterials),
     elearningCode,
+    elearningSold: (trip.course?.eLearningPriceCents ?? 0) > 0,
     courseMaterialsDone: row.courseMaterialsDoneAt !== null || materialsDoneElsewhere,
     courseSession: row.tripCourseId !== null,
     courseStarted: trip.startsAt.getTime() <= now.getTime(),
