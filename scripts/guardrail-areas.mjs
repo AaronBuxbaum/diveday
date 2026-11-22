@@ -50,8 +50,12 @@ const RULE_FILES = [
     "the list of repository checks",
     /^scripts\/(?:rules-registry|ratchet|coverage-floors|coverage-safety-files|coverage-relevant)\.mjs$/,
   ],
+  [
+    "floors",
+    "a coverage floor or allowance",
+    /^scripts\/(?:coverage-floors|ratchets|cross-shop-coverage|mutation\/floors)\.json$/,
+  ],
   ["mutation", "the breakage drills", /^scripts\/mutation\/[^/]+\.(?:mjs|json)$/],
-  ["floors", "a coverage floor or allowance", /^scripts\/(?:coverage-floors|ratchets)\.json$/],
   ["lint", "a lint rule", /^(?:biome\.json|scripts\/lint-rules\/.*)$/],
   ["types", "the type checker's settings", /^tsconfig\.json$/],
   [

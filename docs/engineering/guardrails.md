@@ -73,13 +73,18 @@ These are the holes. Each is something a person would otherwise have to catch.
    boat, a real iPhone's Safari, a screen in sunlight, or whether a flow is pleasant. Real-device
    offline testing is V-02.
 4. **Breakage drills are a sample.** They only break lines a pull request changed, only in money and
-   safety files, and at most 150 breaks per run, so a very large change is partly untried (the card
-   says "tried 150 of 412"). A change that cannot alter behavior is excused with a written reason in
-   the code (`mutation-ok`); the card lists every excuse, but a wrong excuse is a hole. Files not in
-   the money and safety lists are not drilled at all.
-5. **Rule tests only know the rules we wrote down.** A rule that is not in the list is not attacked.
-   A rule that lives only inside a database query is pinned by the real-Postgres tests, not by a
-   generated test.
+   safety files under `src/lib`, `src/db` and `src/features`, and at most 150 breaks per run, so a
+   very large change is partly untried (the card says "tried 150 of 412"). A change that cannot
+   alter behavior is excused with a written reason in the code (`mutation-ok`); the card lists every
+   excuse, but a wrong excuse is a hole. Money and safety code in a route, a page or a component is
+   never broken on purpose (the card says so by name), and files outside the two lists are not
+   drilled at all. A break that makes a test hang counts as caught, and some breaks change no
+   behavior (a default that is never read), so a score of 100% is not the goal; the weekly run
+   scores whole files and the score can only rise.
+5. **Rule tests only know the rules we wrote down.** A rule that is not in the list is not attacked
+   (`docs/engineering/testing.md#property-tests` lists what is pinned and what is not). A rule that
+   lives only inside a database query or under a row lock, such as "a payment status only moves
+   forward", is pinned by the real-Postgres tests, not by a generated test.
 6. **The sweep covers a known shape.** It calls the database functions that take a shop and checks
    their answers for another shop's ids and marked names. It does not call a function whose
    parameters it cannot fill yet (the count is banked and can only fall), or one that takes no shop

@@ -376,6 +376,36 @@ export function refereeReport({ changes, before, after, hunks, body }) {
     }
     return null;
   });
+  floorPatches("scripts/mutation/floors.json", (was, now) => {
+    for (const lowered of loweredFloors(was, now, (key) => after(key) !== null)) {
+      loosens += 1;
+      needsEyes.push(
+        item(
+          lowered.key,
+          `A breakage-drill score floor was ${lowered.now === null ? "removed" : `lowered from ${lowered.was}% to ${lowered.now}%`}: fewer deliberate breaks of this file must be caught`,
+          "Is the lower bar deliberate?",
+        ),
+      );
+    }
+    for (const why of newAbsorbedReasons(was, now)) {
+      watch.push(`A breakage-drill floor fall was recorded with this reason: "${quote(why)}"`);
+    }
+    return null;
+  });
+  floorPatches("scripts/cross-shop-coverage.json", (was, now) => {
+    const raised =
+      before("scripts/cross-shop-coverage.json") === null ? [] : raisedAllowances(was, now);
+    if (raised.length > 0) {
+      loosens += 1;
+      needsEyes.push({
+        what: `The count of database functions the cross-shop sweep cannot check yet went up (${raised
+          .map((entry) => `${entry.was} to ${entry.now}`)
+          .join(", ")}): more of them can now hand one shop's rows to another unseen.`,
+        ask: `Is that deliberate? ${reason}`,
+      });
+    }
+    return null;
+  });
   floorPatches("scripts/ratchets.json", (was, now) => {
     const raised = raisedAllowances(was, now);
     if (raised.length > 0) {

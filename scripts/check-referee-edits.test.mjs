@@ -155,6 +155,9 @@ describe("rule files and the author's statement", () => {
     expect(ruleFileKind("scripts/check-tenant-gates.test.mjs")).toBeNull();
     expect(ruleFileKind(".github/workflows/ci.yml")?.kind).toBe("ci");
     expect(ruleFileKind("biome.json")?.kind).toBe("lint");
+    expect(ruleFileKind("scripts/mutation/floors.json")?.kind).toBe("floors");
+    expect(ruleFileKind("scripts/mutation/policy.json")?.kind).toBe("mutation");
+    expect(ruleFileKind("scripts/cross-shop-coverage.json")?.kind).toBe("floors");
     expect(ruleFileKind(".claude/rules/domain.md")?.kind).toBe("agent-rules");
     expect(ruleFileKind("src/lib/refunds.ts")).toBeNull();
   });
@@ -254,6 +257,43 @@ describe("the referee's report", () => {
     });
     expect(result.needsEyes[0].what).toContain("lowered from 99% to 90%");
     expect(result.watch.join("\n")).toContain("dead branch deleted");
+  });
+
+  it("raises a lowered breakage-drill floor and a rise in what the sweep cannot check", () => {
+    const drillFloors = (value) => JSON.stringify({ "//": "x", "src/lib/readiness.ts": value });
+    const lowered = report({
+      changes: [change("scripts/mutation/floors.json")],
+      before: () => drillFloors(93),
+      after: () => drillFloors(80),
+    });
+    expect(lowered.needsEyes[0].what).toContain(
+      "breakage-drill score floor was lowered from 93% to 80%",
+    );
+    const raisedFloor = report({
+      changes: [change("scripts/mutation/floors.json")],
+      before: () => drillFloors(80),
+      after: () => drillFloors(93),
+    });
+    expect(raisedFloor.loosens).toBe(0);
+    const sweep = (count) => JSON.stringify({ "//": "x", notFillable: count });
+    const worse = report({
+      changes: [change("scripts/cross-shop-coverage.json")],
+      before: () => sweep(399),
+      after: () => sweep(420),
+    });
+    expect(worse.needsEyes[0].what).toContain("399 to 420");
+    const better = report({
+      changes: [change("scripts/cross-shop-coverage.json")],
+      before: () => sweep(399),
+      after: () => sweep(350),
+    });
+    expect(better.loosens).toBe(0);
+    const added = report({
+      changes: [change("scripts/cross-shop-coverage.json", "A")],
+      before: () => null,
+      after: () => sweep(399),
+    });
+    expect(added.loosens).toBe(0);
   });
 
   it("calls an edited check a loosening and an added check a tightening", () => {
