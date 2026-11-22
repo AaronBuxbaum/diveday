@@ -156,7 +156,8 @@ describe("rule files and the author's statement", () => {
     expect(ruleFileKind(".github/workflows/ci.yml")?.kind).toBe("ci");
     expect(ruleFileKind("biome.json")?.kind).toBe("lint");
     expect(ruleFileKind("scripts/mutation/floors.json")?.kind).toBe("floors");
-    expect(ruleFileKind("scripts/mutation/policy.json")?.kind).toBe("mutation");
+    expect(ruleFileKind("scripts/mutation/policy.json")?.kind).toBe("policy");
+    expect(ruleFileKind("scripts/mutation/run.mjs")?.kind).toBe("mutation");
     expect(ruleFileKind("scripts/ci-merge-verdict.mjs")?.kind).toBe("verdict");
     expect(ruleFileKind("scripts/risk-card.mjs")?.kind).toBe("verdict");
     expect(ruleFileKind("scripts/cross-shop-coverage.json")?.kind).toBe("floors");
@@ -220,6 +221,9 @@ describe("the referee's report", () => {
       after: () => suite(5),
     });
     expect(many.watch).toHaveLength(1);
+    // The card prints a watch entry as the text it is, so it must be a sentence, not an item.
+    expect(typeof many.watch[0]).toBe("string");
+    expect(many.watch[0]).toContain("src/components/Foo.test.tsx");
     expect(many.needsEyes).toHaveLength(0);
     const money = report({
       changes: [change("src/db/refunds.test.ts")],
@@ -333,6 +337,39 @@ describe("the referee's report", () => {
     expect(added.protects.join("\n")).toContain("Added a repository check");
     const removed = report({ changes: [change("scripts/check-tenant-gates.mjs", "D", 0, 80)] });
     expect(removed.needsEyes).toHaveLength(1);
+  });
+
+  it("does not call a line added to the CI workflow, the verdict or the drills protection", () => {
+    // `continue-on-error: true`, an early `return problems;` and a drill that skips itself are all
+    // additions that loosen, so the card must not say they protect anything.
+    for (const path of [
+      ".github/workflows/ci.yml",
+      "scripts/ci-merge-verdict.mjs",
+      "scripts/risk-card.mjs",
+      "scripts/mutation/run.mjs",
+    ]) {
+      const grew = report({ changes: [change(path, "M", 2, 0)] });
+      expect(grew.tightens, path).toBe(0);
+      expect(grew.loosens, path).toBe(0);
+      expect(grew.protects.join("\n"), path).not.toContain("Extended");
+      expect(grew.watch.join("\n"), path).toContain("an added line can switch a check off");
+      expect(grew.watch.join("\n"), path).toContain(path);
+    }
+    const workflow = report({ changes: [change(".github/workflows/new-job.yml", "A", 30, 0)] });
+    expect(workflow.tightens).toBe(0);
+    expect(workflow.watch.join("\n")).toContain("not counted as protection");
+  });
+
+  it("asks a person about any edit to the setting that makes a drill block or warn", () => {
+    const flipped = report({ changes: [change("scripts/mutation/policy.json", "M", 1, 1)] });
+    expect(flipped.loosens).toBe(1);
+    expect(flipped.needsEyes).toHaveLength(1);
+    expect(flipped.needsEyes[0].what).toContain("block or only warn");
+    const grown = report({ changes: [change("scripts/mutation/policy.json", "M", 1, 0)] });
+    expect(grown.loosens).toBe(1);
+    expect(grown.needsEyes).toHaveLength(1);
+    const dropped = report({ changes: [change("scripts/mutation/policy.json", "D", 0, 4)] });
+    expect(dropped.needsEyes).toHaveLength(1);
   });
 
   it("mentions a rule switched off in product code but does not make it a loosening", () => {

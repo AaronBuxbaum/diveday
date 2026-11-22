@@ -263,7 +263,14 @@ export function statementOf(body) {
 }
 
 /** Rule files that decide what every later change is told or allowed to skip. */
-const JUDGES = new Set(["verdict", "allowlist"]);
+const JUDGES = new Set(["verdict", "allowlist", "policy"]);
+
+/**
+ * Rule files where a line that is only added can still loosen: `continue-on-error: true` on a job,
+ * an early `return` in the verdict, a drill that skips itself. Such a change is shown as something
+ * to watch, never as protection, and is not counted as a tightening.
+ */
+const ADDING_CAN_LOOSEN = new Set(["ci", "verdict", "mutation", "policy"]);
 
 const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 const quote = (text, limit = 220) => {
@@ -304,7 +311,10 @@ export function refereeReport({ changes, before, after, hunks, body }) {
     const stem = test.replace(/\.(?:test|spec)(?:\.[\w-]+)*\.[cm]?[jt]sx?$/, "");
     return [".ts", ".tsx", ".mjs", ".js"].map((ext) => `${stem}${ext}`);
   };
-  const tier = (file) => (areasOf(file).some((id) => WEIGHTY.has(id)) ? needsEyes : watch);
+  // A money or safety file's edit asks a person (an item with a question); any other file's is a
+  // sentence to watch, because the card prints a watch entry as the text it is.
+  const record = (file, entry) =>
+    areasOf(file).some((id) => WEIGHTY.has(id)) ? needsEyes.push(entry) : watch.push(entry.what);
   const item = (file, what, ask) => ({ what: `${what} (\`${file}\`).`, ask: `${ask} ${reason}` });
 
   for (const change of changes) {
@@ -314,7 +324,8 @@ export function refereeReport({ changes, before, after, hunks, body }) {
       const loss = testLoss(before(change.path) ?? "", null);
       if (loss.tests === 0 && loss.assertions === 0) continue;
       loosens += 1;
-      tier(change.path).push(
+      record(
+        change.path,
         item(
           change.path,
           `A test file was deleted (${plural(loss.tests, "test")}, ${plural(loss.assertions, "check")}) and the code it tested was not`,
@@ -325,7 +336,8 @@ export function refereeReport({ changes, before, after, hunks, body }) {
       const loss = testLoss(before(change.path) ?? "", after(change.path) ?? "");
       if (loss.switchedOff > 0) {
         loosens += 1;
-        tier(change.path).push(
+        record(
+          change.path,
           item(
             change.path,
             `${plural(loss.switchedOff, "test")} switched off (skipped, set to do later or run alone)`,
@@ -338,7 +350,8 @@ export function refereeReport({ changes, before, after, hunks, body }) {
         const was = testCounts(before(change.path) ?? "");
         const now = testCounts(after(change.path) ?? "");
         loosens += 1;
-        tier(change.path).push(
+        record(
+          change.path,
           item(
             change.path,
             `A test now makes ${plural(loss.assertions, "check")} fewer (${was.assertions} before, ${now.assertions} now)`,
@@ -355,7 +368,8 @@ export function refereeReport({ changes, before, after, hunks, body }) {
       found.kind === "answer"
         ? `A test's expected answer changed: \`${quote(found.subject, 60)}\` was expected to be ${quote(found.was, 60)} and is now ${quote(found.became, 60)}`
         : `A test's check got weaker: \`${quote(found.subject, 60)}\` was held to \`${found.was}\` and is now held to \`${found.became}\``;
-    tier(found.file).push(
+    record(
+      found.file,
       item(found.file, words, "Was the old answer wrong, or was the code made to fit?"),
     );
   }
@@ -442,16 +456,27 @@ export function refereeReport({ changes, before, after, hunks, body }) {
   for (const change of changes) {
     const kind = ruleFileKind(change.path);
     if (!kind || kind.kind === "floors") continue;
-    if (change.status === "A") {
+    if (change.status === "A" && ADDING_CAN_LOOSEN.has(kind.kind)) {
+      ruleEdits.push({ ...change, ...kind, how: "grew" });
+    } else if (change.status === "A") {
       tightens += 1;
       ruleEdits.push({ ...change, ...kind, how: "added" });
     } else if (change.status === "D") {
       loosens += 1;
       ruleEdits.push({ ...change, ...kind, how: "removed" });
-    } else if (kind.kind === "allowlist" ? change.added > 0 : change.removed > 0) {
-      // The sweep's skip list loosens when an entry is added; every other rule file when a line goes.
+    } else if (
+      kind.kind === "allowlist"
+        ? change.added > 0
+        : kind.kind === "policy"
+          ? change.added + change.removed > 0
+          : change.removed > 0
+    ) {
+      // The sweep's skip list loosens when an entry is added, the drill policy when anything in it
+      // moves (a block can become a warn in one word); every other rule file when a line goes.
       loosens += 1;
       ruleEdits.push({ ...change, ...kind, how: "edited" });
+    } else if (ADDING_CAN_LOOSEN.has(kind.kind)) {
+      ruleEdits.push({ ...change, ...kind, how: "grew" });
     } else {
       tightens += 1;
       ruleEdits.push({ ...change, ...kind, how: "extended" });
@@ -474,6 +499,10 @@ export function refereeReport({ changes, before, after, hunks, body }) {
           `${edit.words[0].toUpperCase()}${edit.words.slice(1)} was edited, ${plural(edit.removed, "line")} removed and ${edit.added} added`,
           "Does the edit make a bad change easier to merge or harder to see?",
         ),
+      );
+    } else if (edit.how === "grew") {
+      watch.push(
+        `${edit.words[0].toUpperCase()}${edit.words.slice(1)} grew by ${plural(edit.added, "line")} (\`${edit.path}\`); an added line can switch a check off, so this is not counted as protection.`,
       );
     } else if (edit.how === "edited") {
       watch.push(

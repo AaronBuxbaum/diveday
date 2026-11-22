@@ -102,7 +102,9 @@ These are the holes. Each is something a person would otherwise have to catch.
    remains, and the reason this page says "closely watched" rather than "impossible". Two
    things narrow it: the referee and the risk card run from the base branch's copy of their
    scripts, so a pull request cannot edit the rule that reads it, and an edit to the card, the CI
-   verdict or the sweep's skip list always asks a person. The CI workflow file itself runs from the
+   verdict, the drill block-or-warn setting or the sweep's skip list always asks a person. A line
+   only added to the workflow, the verdict or the drills is shown as something to watch and never
+   as protection, because `continue-on-error` is an added line. The CI workflow file itself runs from the
    pull request, so one that deletes a guard's step silences that guard for its own run, and
    nothing in the repository stops it. A GitHub ruleset that requires the workflow from `main`
    would, where the plan allows it.

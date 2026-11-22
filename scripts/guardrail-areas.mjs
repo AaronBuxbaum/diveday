@@ -63,6 +63,11 @@ const RULE_FILES = [
     "a coverage floor or allowance",
     /^scripts\/(?:coverage-floors|ratchets|cross-shop-coverage|mutation\/floors)\.json$/,
   ],
+  [
+    "policy",
+    "the setting that makes an uncaught breakage drill block or only warn",
+    /^scripts\/mutation\/policy\.json$/,
+  ],
   ["mutation", "the breakage drills", /^scripts\/mutation\/[^/]+\.(?:mjs|json)$/],
   [
     "allowlist",
