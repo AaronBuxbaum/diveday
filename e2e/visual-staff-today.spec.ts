@@ -91,7 +91,7 @@ for (const scheme of ["light", "dark"] as const) {
           await page.goto("/shop/blue-mantis");
           await page.getByRole("heading", { name: "Your week" }).waitFor();
           await page
-            .getByText(/At the dock \d{1,2}:\d\d\s[AP]M · leaves/)
+            .getByText(/At the dock\s\d{1,2}:\d\d\s[AP]M\s· leaves/)
             .first()
             .waitFor();
           const arrivals = page.getByRole("searchbox", {
