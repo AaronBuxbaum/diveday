@@ -359,11 +359,12 @@ const checkRepoSource = await readFile(path.join(ROOT, "scripts/rules-registry.m
 // `check-follow-ups.mjs` reads the live tracker, and inside check:repo one malformed issue
 // turned every open pull request red (#2036). It still has to run somewhere, so its
 // workflow must name it.
-// `check-pr-body.mjs` is the other kind of elsewhere: it reads a pull request's body, which no
-// branch contains, so CI's safeguards job hands it the body from the event.
+// `check-pr-body.mjs` and `check-referee-edits.mjs` are the other kind of elsewhere: they read a
+// pull request's body, which no branch contains, so CI's safeguards job hands them the body.
 const SCHEDULED_GUARDS = {
   "check-follow-ups.mjs": [".github/workflows/follow-ups.yml", "pnpm check:follow-ups"],
   "check-pr-body.mjs": [".github/workflows/ci.yml", "node scripts/check-pr-body.mjs"],
+  "check-referee-edits.mjs": [".github/workflows/ci.yml", "node scripts/check-referee-edits.mjs"],
 };
 for (const [file, [workflow, command]] of Object.entries(SCHEDULED_GUARDS)) {
   const source = await readFile(path.join(ROOT, workflow), "utf8").catch(() => "");

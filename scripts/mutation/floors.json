@@ -1,0 +1,12 @@
+{
+  "//": "Breakage-drill score floor (percent of drilled breaks a test caught) per file, run weekly by .github/workflows/mutation.yml. A floor may only rise: `node scripts/mutation/run.mjs --file <path> --write` banks a rise and refuses a fall; `--absorb \"<why>\"` records a fall with its reason. See scripts/mutation/floors.mjs.",
+  "src/features/safety/nitrox-mod.ts": 93,
+  "src/lib/booking-gates.ts": 92,
+  "src/lib/money.ts": 79,
+  "src/lib/nitrox-fill.ts": 100,
+  "src/lib/pass-through-fee.ts": 95,
+  "src/lib/promo-codes.ts": 88,
+  "src/lib/readiness.ts": 93,
+  "src/lib/roll-call-days.ts": 79,
+  "src/lib/trip-admission.ts": 86
+}

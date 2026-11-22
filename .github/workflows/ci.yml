@@ -175,6 +175,40 @@ jobs:
         run: |
           gh pr view "$PR_NUMBER" --json body --jq .body > "$RUNNER_TEMP/pr-body.md" 2>/dev/null || printf '%s' "$PR_BODY" > "$RUNNER_TEMP/pr-body.md"
           node scripts/check-pr-body.mjs --body-file "$RUNNER_TEMP/pr-body.md" --base "${STACK_BASE_SHA:-origin/$BASE_REF}"
+      # A pull request that loosens a rule (deletes or weakens a test, changes a test's expected
+      # answer, lowers a floor, raises a ratchet, edits a check or the CI workflow) says so in plain
+      # words under `## Rules changed` and names a `referee-reviewer` run
+      # (scripts/check-referee-edits.mjs; docs/engineering/guardrails.md). It also writes the JSON the
+      # risk card reads. Diffed against the stack's base, head named by sha: the checked-out merge
+      # commit would count what main merged since.
+      - name: Rules changed
+        if: ${{ !cancelled() && github.event_name == 'pull_request' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          BASE_REF: ${{ github.base_ref }}
+          STACK_BASE_SHA: ${{ needs.stack-gate.outputs.diff_base }}
+        run: |
+          gh pr view "$PR_NUMBER" --json body --jq .body > "$RUNNER_TEMP/pr-body.md" 2>/dev/null || printf '%s' "$PR_BODY" > "$RUNNER_TEMP/pr-body.md"
+          # Judge with the base branch's copy of the script when it has one, so a pull request cannot
+          # edit the rule that reads it: the script runs from a worktree of the base, which reads
+          # this checkout's commits through the same object store. A stack that introduces the script
+          # has no base copy yet and runs its own; the first merge ends that.
+          BASE_SHA="${STACK_BASE_SHA:-$(git rev-parse "origin/$BASE_REF")}"
+          if git cat-file -e "$BASE_SHA:scripts/check-referee-edits.mjs" 2>/dev/null; then
+            git worktree add --detach "$RUNNER_TEMP/judge" "$BASE_SHA" > /dev/null
+            cd "$RUNNER_TEMP/judge"
+          fi
+          node scripts/check-referee-edits.mjs --body-file "$RUNNER_TEMP/pr-body.md" --base "$BASE_SHA" --head "$PR_HEAD_SHA" --out "$GITHUB_WORKSPACE/.agent-out/referee-edits.json"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: ${{ always() && github.event_name == 'pull_request' }}
+        with:
+          name: referee-edits
+          path: .agent-out/referee-edits.json
+          if-no-files-found: ignore
+          retention-days: 30
       # A warning, never a failure: logic under src/lib, src/db or src/features changed and no
       # test file did (scripts/warn-untested-logic.mjs; docs/agents/repo-checks.md#untested-logic).
       - name: Logic changed with no test
@@ -183,6 +217,47 @@ jobs:
           BASE_REF: ${{ github.base_ref }}
           STACK_BASE_SHA: ${{ needs.stack-gate.outputs.diff_base }}
         run: node scripts/warn-untested-logic.mjs --base "${STACK_BASE_SHA:-origin/$BASE_REF}"
+
+  # Breakage drills on the changed lines of money and safety files (ADR
+  # 20261122-diff-mutation-testing; docs/engineering/testing.md#breakage-drills): each changed
+  # line is broken a few small ways (a flipped comparison, a skipped call, a dropped condition)
+  # and a test has to go red for each. A break no test notices fails the job while
+  # scripts/mutation/policy.json sets its class to "block". Pull requests only: a push has no
+  # base to diff against. At most 150 breaks and 20 minutes; the JSON says when it was capped.
+  mutation-diff:
+    name: Breakage drills
+    needs: [changes, stack-gate]
+    if: ${{ !cancelled() && github.event_name == 'pull_request' && needs.stack-gate.outputs.run != 'false' && needs.changes.outputs.mutation == 'true' }}
+    runs-on: ${{ fromJSON(needs.changes.outputs.runner || '"ubuntu-24.04"') }}
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # The diff reaches back to the merge base with the base branch.
+          fetch-depth: 0
+      - uses: ./.github/actions/setup
+      # The PGlite template a db-backed test hydrates from, restored the way `unit-tests` does;
+      # the baseline run builds it on a miss (src/test/global-setup.ts). Never saved here.
+      - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: node_modules/.cache/diveday
+          key: ${{ runner.os }}-${{ runner.arch }}-pglite-template-${{ hashFiles('drizzle/**', 'src/**', 'config/**', 'pnpm-lock.yaml', 'package.json', '!**/*.test.*', '!**/*.spec.*', '!**/*.snap') }}
+      - name: Break the changed money and safety lines
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          # A stacked top layer is drilled against where its stack left the default branch.
+          STACK_BASE_SHA: ${{ needs.stack-gate.outputs.diff_base }}
+        run: pnpm mutate --diff "${STACK_BASE_SHA:-origin/$BASE_REF}" --summary "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: ${{ !cancelled() }}
+        with:
+          name: mutation-diff
+          path: .agent-out/mutation-diff.json
+          include-hidden-files: true
+          if-no-files-found: ignore
+          retention-days: 30
 
   unit-tests:
     name: Unit tests shard ${{ matrix.shard }}/6
@@ -1274,6 +1349,7 @@ jobs:
       db: ${{ steps.filter.outputs.db }}
       pixel_probe: ${{ steps.filter.outputs.pixel_probe }}
       safety: ${{ steps.filter.outputs.safety }}
+      mutation: ${{ steps.filter.outputs.mutation }}
       browser: ${{ steps.superseded.outputs.browser || steps.filter.outputs.browser }}
       runner: ${{ steps.runner.outputs.runner }}
     steps:
@@ -1333,6 +1409,7 @@ jobs:
             echo "code=true" >> "$GITHUB_OUTPUT"
             echo "pixel_probe=true" >> "$GITHUB_OUTPUT"
             echo "safety=true" >> "$GITHUB_OUTPUT"
+            echo "mutation=true" >> "$GITHUB_OUTPUT"
             echo "browser=true" >> "$GITHUB_OUTPUT"
             echo "Diff range '${base}...${head}' is uncertain or unresolvable — running everything." >> "$GITHUB_STEP_SUMMARY"
             exit 0
@@ -1365,6 +1442,16 @@ jobs:
           else
             echo "safety=false" >> "$GITHUB_OUTPUT"
             echo "Nothing the safety-file coverage floors measure changed — unit shards run without coverage and the floors job is skipped (main still runs it)." >> "$GITHUB_STEP_SUMMARY"
+          fi
+          # `mutation` — did this change touch a money or safety file the breakage drills cover
+          # (scripts/mutation/scope.mjs)? Only then does `mutation-diff` break its changed lines.
+          # Fails open like the rest: an error here answers true.
+          mutation_changed=$(git diff --name-only "${base}...${head}" | node scripts/mutation/scope.mjs || echo "unknown")
+          if [ -n "${mutation_changed}" ]; then
+            echo "mutation=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "mutation=false" >> "$GITHUB_OUTPUT"
+            echo "No money or safety file changed — the breakage drills are skipped." >> "$GITHUB_STEP_SUMMARY"
           fi
           # Three-dot, from the merge base: what this branch changed, not what
           # main did underneath it. Two dots would report every file main added
@@ -1583,6 +1670,7 @@ jobs:
       - real-postgres
       - coverage-floors
       - visual-flakes
+      - mutation-diff
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
@@ -1628,3 +1716,59 @@ jobs:
           PR_IS_FORK: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository }}
           GH_TOKEN: ${{ github.token }}
         run: node scripts/ci-merge-verdict.mjs
+
+  # The risk card (scripts/risk-card.mjs; docs/engineering/guardrails.md): what this stack changed,
+  # in plain words, and whether anything needs Aaron's decision. Advisory by design: it never fails
+  # the run and `ci-result` does not wait for it; the checks that block a merge are their own jobs.
+  # It runs after `ci-result` so the drills and the referee guard have already reported. Bare node
+  # and git, no install, so it still says something when install is what broke. Top of a stack only:
+  # the stack's base is the diff base, so the card covers every layer under it.
+  risk-card:
+    name: Risk card
+    needs: [stack-gate, ci-result]
+    if: ${{ !cancelled() && github.event_name == 'pull_request' && needs.stack-gate.outputs.run != 'false' && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        continue-on-error: true
+        with:
+          name: referee-edits
+          path: .agent-out
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        continue-on-error: true
+        with:
+          name: mutation-diff
+          path: .agent-out
+      - name: Write the risk card
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          BASE_REF: ${{ github.base_ref }}
+          STACK_BASE_SHA: ${{ needs.stack-gate.outputs.diff_base }}
+        run: |
+          gh pr view "$PR_NUMBER" --json body --jq .body > "$RUNNER_TEMP/pr-body.md" 2>/dev/null || printf '%s' "$PR_BODY" > "$RUNNER_TEMP/pr-body.md"
+          # The base branch's copy writes the card when it has one (see the "Rules changed" step), so a
+          # pull request cannot edit the card that reports on it.
+          BASE_SHA="${STACK_BASE_SHA:-$(git rev-parse "origin/$BASE_REF")}"
+          if git cat-file -e "$BASE_SHA:scripts/risk-card.mjs" 2>/dev/null; then
+            git worktree add --detach "$RUNNER_TEMP/judge" "$BASE_SHA" > /dev/null
+            cd "$RUNNER_TEMP/judge"
+          fi
+          node scripts/risk-card.mjs --post --base "$BASE_SHA" --head "$PR_HEAD_SHA" --body-file "$RUNNER_TEMP/pr-body.md" --referee "$GITHUB_WORKSPACE/.agent-out/referee-edits.json" --mutation "$GITHUB_WORKSPACE/.agent-out/mutation-diff.json" --out "$GITHUB_WORKSPACE/.agent-out"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: risk-card
+          path: .agent-out/risk-card.*
+          if-no-files-found: ignore
+          retention-days: 30

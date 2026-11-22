@@ -227,6 +227,12 @@ runs. Pass args directly. The shell guard refuses the bare form.
   export/import) get a `security-reviewer` review before merge, named in the same "Reviews
   launched" section (`scripts/check-pr-body.mjs`); it reports only what another shop or the
   public could do today.
+- **A rule you loosen, you say so.** Deleting or skipping a test, changing a test's expected answer,
+  lowering a coverage floor, raising a ratchet, or editing a check, the CI workflow, a lint or test
+  setting or the agent rules needs a `## Rules changed` section (plain words: what got looser, why
+  that is safe) and a `referee-reviewer` line under "Reviews launched"; a guard that no longer fits is
+  changed or deleted, never worked around, and never kept to satisfy itself. CI reads both
+  ([repo-checks.md](repo-checks.md#referee-edits)) and the risk card shows Aaron each one.
 - **Layout**: domain logic in `src/lib/` or a feature module; routes in `src/app/` stay thin; e2e
   specs live in `e2e/`. The dependency direction is one way — `app → features → lib/db` — and
   `pnpm check:architecture` enforces it.

@@ -91,6 +91,23 @@ export const ALERTS = {
     prompt:
       "The weekly durations refresh (`.github/workflows/durations-refresh.yml`) is red. Read the newest failed run linked in this issue's body and comments with `gh api repos/AaronBuxbaum/diveday/actions/runs/<id>/jobs` and its logs, and find the failing step. Read the workflow, `scripts/merge-test-durations.mjs` and `scripts/e2e-durations.mjs` first. A missing artifact is a `ci.yml` upload problem; a refused push needs the owner, so say which setting in a comment here; a script error is fixed with a failing test first. Done is a manual run of the workflow (its Run workflow button) going green, plus `pnpm lint`, `pnpm typecheck` and `pnpm check:repo` on the fix. Close this issue in the PR that lands the fix.",
   },
+  mutation: {
+    title: "Fix the weekly breakage drills, which are red on main",
+    kind: "risk",
+    effort: "M",
+    touches: [
+      ".github/workflows/mutation.yml",
+      "scripts/mutation/run.mjs",
+      "scripts/mutation/floors.json",
+    ],
+    noticed:
+      "The scheduled `Breakage drills` workflow failed on main. It breaks every line of each file in `scripts/mutation/floors.json` one small way at a time (a flipped comparison, a skipped call, a dropped condition) and fails a file whose share of breaks a test caught fell below its floor, or whose unmutated tests are red. While it is red, a money or safety file has lines a broken version of which no test would notice. Each red run after this one adds a comment with its link; the first green run closes this issue.",
+    why: "It was found by the scheduled run, not by a change anyone was making. A fall comes from a change that added logic without a test that pins it, or a test that stopped asserting; the per-file `mutation-file-*` artifact lists every surviving break by line.",
+    proposed:
+      'Download the red leg\'s `mutation-file-*` artifact and read its survivors. Add a test that fails for each break that matters. Mark a break that cannot change behavior with `// mutation-ok: <why>`. Lower a floor only with `--write --absorb "<why>"` and a reason a reviewer would accept.',
+    prompt:
+      "The weekly breakage drills (`.github/workflows/mutation.yml`, which runs `pnpm mutate --file <path>` for each file in `scripts/mutation/floors.json`) are red on main. Read the newest failed run linked in this issue's body and comments and download the red legs' `mutation-file-*` artifacts. Read `docs/engineering/testing.md` (Breakage drills) and `docs/architecture/decisions/20261122-diff-mutation-testing.md` first. For each surviving break, add a test that fails when that line is wrong, or mark a break that cannot alter behavior with `// mutation-ok: <why>`; never weaken an assertion. Reproduce with `pnpm mutate --file <path>`. Done is that command passing for every red file, plus `pnpm lint`, `pnpm typecheck` and `pnpm check:repo`. Close this issue in the PR that lands the fix.",
+  },
   "e2e-nightly": {
     title: "Fix the nightly quarantine and flake-hunt run, which is red on main",
     kind: "risk",

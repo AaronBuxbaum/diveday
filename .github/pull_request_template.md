@@ -18,6 +18,10 @@
 
 <!-- The approach and the decision that was not obvious. What you ran, and what you did not. -->
 
+## Rules changed
+
+<!-- "none" unless this PR deletes or weakens a test, changes a test's expected answer, lowers a coverage floor, raises a ratchet, or edits a check, the CI workflow, a lint or test setting, or the agent rules. Then one or two plain sentences: what got looser and why that is safe. Aaron reads this, not the diff. CI's "Rules changed" step (scripts/check-referee-edits.mjs) reads it. -->
+
 ## Reviews launched
 
 <!-- Each line: "launched" and what it found and what changed, or "not needed because <reason>".
@@ -29,6 +33,7 @@
 
 - `dive-domain-expert` (dock operator):
 - `security-reviewer`:
+- `referee-reviewer`: <only when "Rules changed" is not "none"; it reads just those edits>
 
 ## Seen filled in
 

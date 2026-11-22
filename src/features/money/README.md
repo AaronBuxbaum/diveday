@@ -30,7 +30,7 @@ and the seat a payment is for (`bookings`).
 - A zero-decimal currency is never divided by 100 and a settled order keeps its currency; a refund
   automates only inside the stated window for a real Stripe payment; a replayed webhook repairs a
   partial write but never regresses a refund.
-- `discountedAmountCents` mirrors Stripe's rounding; a redemption counts once per paid checkout; a
+- `netOfPercentDiscount` mirrors Stripe's rounding; a redemption counts once per paid checkout; a
   last-minute promo's `max_redemptions` is capped at the open seats.
 - A local order charges no card and creates no provider invoice; it never clears a booking fare or
   grants package credit, and replays of one request UUID record nothing twice.

@@ -491,7 +491,7 @@
       "AGENTS.md": 1054,
       ".claude/rules/*.md (without paths: frontmatter)": 0,
       ".claude/skills/*/SKILL.md (description lines)": 765,
-      ".claude/agents/*.md (description lines)": 130
+      ".claude/agents/*.md (description lines)": 156
     },
     "raises": [
       {
@@ -632,6 +632,12 @@
         "why": "Require a pushed PR and passing CI by default",
         "files": {
           "AGENTS.md": "1039 -> 1054"
+        }
+      },
+      {
+        "why": "referee-reviewer agent: a fresh reader for edits to the rules that judge every change (guardrails stack)",
+        "files": {
+          ".claude/agents/*.md (description lines)": "130 -> 156"
         }
       }
     ]

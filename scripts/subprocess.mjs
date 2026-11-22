@@ -190,6 +190,20 @@ export const SUBPROCESS_TIMEOUTS = {
    * branch rather than leaving it behind in a killed job.
    */
   pgRestore: 1_200_000,
+  /**
+   * One breakage-drill run (`scripts/mutation/run.mjs`): a Vitest process over the tests that
+   * import one module, with one mutant switched on. A pure module's tests answer in two or three
+   * seconds; thirty is the ceiling, and a mutant that runs into it is counted as caught, because
+   * an infinite loop is a break the tests noticed. Ninety when a database test file is in the
+   * run, which pays a PGlite template hydration per file.
+   */
+  mutantRun: 30_000,
+  mutantRunDb: 90_000,
+  /**
+   * The unmutated run of the same tests before any mutant (the baseline), which builds the PGlite
+   * template on a cold runner when a database file is selected. Five minutes, as `regenerateSnapshot`.
+   */
+  mutationBaseline: 300_000,
 };
 
 /** Whether a `spawnSync` result or a caught `execFileSync` error is a timeout kill. */
