@@ -351,6 +351,13 @@ export const shops = pgTable(
      */
     seatSoldAlertsEnabled: boolean("seat_sold_alerts_enabled").notNull().default(false),
     /**
+     * **The public safety record** (issue #4255; glossary "Safety record"): the
+     * shopfront's four counts of how the shop's departures were run, computed
+     * from existing rows. **Off by default**: the owner publishes it by
+     * choosing to. Off, nothing is read and nothing is drawn.
+     */
+    safetyRecordEnabled: boolean("safety_record_enabled").notNull().default(false),
+    /**
      * **Private charters** (loop 5, row 11; glossary "Charter inquiry"): the
      * shopfront's ask-for-a-day form offers "a boat for our group", and the
      * Requests page quotes it. Rides on date requests, so it is offered only

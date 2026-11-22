@@ -380,6 +380,31 @@ export async function listDepartureRollCallByTrip(
   tripIds: string[],
 ): Promise<Map<string, Map<string, "boarded" | "not_boarded">>> {
   const byTrip = new Map<string, Map<string, "boarded" | "not_boarded">>();
+  for (const [tripId, marks] of await listStandingDepartureMarksByTrip(db, shopId, tripIds)) {
+    byTrip.set(tripId, new Map([...marks].map(([bookingId, mark]) => [bookingId, mark.status])));
+  }
+  return byTrip;
+}
+
+/** A seat's standing departure result: the one `listStandingDepartureMarksByTrip` keeps. */
+export type StandingDepartureMark = {
+  status: "boarded" | "not_boarded";
+  /** What readiness said when the diver was counted aboard; null on `not_boarded`. */
+  readinessStatus: string | null;
+};
+
+/**
+ * **The one reading of each seat's standing departure result**, with what
+ * readiness said when it was written. `listDepartureRollCallByTrip` narrows it
+ * to the status; the public safety record reads the readiness too, so the two
+ * cannot disagree about who was aboard.
+ */
+export async function listStandingDepartureMarksByTrip(
+  db: DbExecutor,
+  shopId: string,
+  tripIds: readonly string[],
+): Promise<Map<string, Map<string, StandingDepartureMark>>> {
+  const byTrip = new Map<string, Map<string, StandingDepartureMark>>();
   if (tripIds.length === 0) return byTrip;
   const rows = await db
     .select({
@@ -390,7 +415,11 @@ export async function listDepartureRollCallByTrip(
     .from(rollCallEvents)
     .innerJoin(bookings, and(eq(bookings.id, rollCallEvents.bookingId), seatNotCancelled))
     .where(
-      and(eq(rollCallEvents.shopId, shopId), seatMarks(), inArray(rollCallEvents.tripId, tripIds)),
+      and(
+        eq(rollCallEvents.shopId, shopId),
+        seatMarks(),
+        inArray(rollCallEvents.tripId, [...tripIds]),
+      ),
     )
     .orderBy(...newestMarkFirst());
   const effective = await effectiveCausalRowsForDb(db, rows, { allSubjectEvents: true });
@@ -405,9 +434,9 @@ export async function listDepartureRollCallByTrip(
     // event and it is neither result, so it drops out entirely rather than
     // being remembered as its previous one.
     if (event.status !== "boarded" && event.status !== "not_boarded") continue;
-    const states = byTrip.get(event.tripId) ?? new Map<string, "boarded" | "not_boarded">();
-    states.set(event.bookingId, event.status);
-    byTrip.set(event.tripId, states);
+    const marks = byTrip.get(event.tripId) ?? new Map<string, StandingDepartureMark>();
+    marks.set(event.bookingId, { status: event.status, readinessStatus: event.readinessStatus });
+    byTrip.set(event.tripId, marks);
   }
   return byTrip;
 }

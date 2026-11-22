@@ -15,7 +15,7 @@
  * field guide, private charters asked for on the date-request form, and the
  * computer dive files on a diver's record, teaching courses, the widgets a shop frames on
  * its own website, and the hourly seat-sold email to the desk (the one feature that starts off:
- * `OFF_BY_DECISION`). Off hides the feature on every surface that offers it and deletes
+ * `OFF_BY_DECISION`, with the public safety record, which a shop publishes only by choosing to). Off hides the feature on every surface that offers it and deletes
  * nothing, so turning it back on finds everything where it was.
  *
  * **Every feature starts on for a new shop** (Aaron, 2026-10-23). "Our year"
@@ -36,6 +36,7 @@ export const SHOP_FEATURES = [
   "lastMinuteList",
   "tips",
   "publicYear",
+  "safetyRecord",
   "padiChecks",
   "claudeSuggestions",
   "recapAutoApprove",
@@ -70,9 +71,11 @@ export type ShopFeature = (typeof SHOP_FEATURES)[number];
 /**
  * The features that start **off** for a new shop, against Aaron's 2026-10-23
  * "every feature starts on". Seat-sold alerts add mail to a personal inbox, so
- * the shop asks for them (loop 5, row 8; Aaron, "off by default").
+ * the shop asks for them (loop 5, row 8; Aaron, "off by default"). The public
+ * safety record is a claim about the shop's own practice, so the owner
+ * publishes it by choosing to (issue #4255).
  */
-export const OFF_BY_DECISION: readonly ShopFeature[] = ["seatSoldAlerts"];
+export const OFF_BY_DECISION: readonly ShopFeature[] = ["seatSoldAlerts", "safetyRecord"];
 
 /** The `shops` columns behind each feature, as Drizzle names them. */
 export const SHOP_FEATURE_COLUMNS = {
@@ -84,6 +87,7 @@ export const SHOP_FEATURE_COLUMNS = {
   lastMinuteList: "lastMinuteListEnabled",
   tips: "tipsEnabled",
   publicYear: "publicYearEnabled",
+  safetyRecord: "safetyRecordEnabled",
   padiChecks: "padiChecksEnabled",
   claudeSuggestions: "claudeSuggestionsEnabled",
   recapAutoApprove: "recapAssistAutoApprove",

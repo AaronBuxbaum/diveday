@@ -181,6 +181,24 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "reports", scheme);
       });
 
+      test(`owner stats render true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/stats");
+        await page.getByRole("heading", { level: 1, name: "Money" }).waitFor();
+        await page.getByRole("region", { name: staffCopy("stats.figuresLabel") }).waitFor();
+        await capture(page, "owner-stats", scheme);
+      });
+
+      test.describe("owner stats in Spanish", () => {
+        test.use({ locale: SPANISH });
+
+        test(`the stats read in Spanish (${scheme})`, async ({ page }) => {
+          const copy = staffTranslator(SPANISH);
+          await page.goto("/shop/blue-mantis/stats");
+          await page.getByRole("region", { name: copy("stats.figuresLabel") }).waitFor();
+          await capture(page, "owner-stats", scheme, { locale: SPANISH });
+        });
+      });
+
       test.describe("reports in Spanish", () => {
         test.use({ locale: SPANISH });
 

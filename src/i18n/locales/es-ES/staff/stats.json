@@ -1,0 +1,34 @@
+{
+  "figuresLabel": "Los últimos 12 meses",
+  "basis": "Salidas que ya han zarpado en los últimos 12 meses.",
+  "none": "—",
+  "repeat": {
+    "label": "Buceadores que repiten",
+    "detail": "{repeat} de {divers, plural, one {# buceador} other {# buceadores}} bucearon más de una vez"
+  },
+  "waivers": {
+    "label": "Exenciones firmadas a la salida",
+    "detail": "{signed} de {seats, plural, one {# plaza} other {# plazas}}"
+  },
+  "ready": {
+    "label": "Exenciones el día anterior",
+    "detail": "{ready} de {counted, plural, one {# salida} other {# salidas}} con todas las exenciones firmadas"
+  },
+  "medical": {
+    "label": "Tiempo de revisión médica",
+    "hours": "{hours, plural, one {# hora} other {# horas}}",
+    "days": "{days, plural, one {# día} other {# días}}",
+    "detail": "{cleared, plural, one {# revisión aprobada} other {# revisiones aprobadas}}, {waiting} aún abiertas"
+  },
+  "courses": {
+    "title": "Cursos",
+    "asked": "{count, plural, one {# consulta} other {# consultas}}",
+    "booked": "{count, plural, one {# con plaza} other {# con plaza}}",
+    "certified": "{count, plural, one {# certificado} other {# certificados}}",
+    "empty": "Sin actividad de cursos en los últimos 12 meses."
+  },
+  "empty": {
+    "title": "Todavía no hay nada que contar",
+    "body": "Se rellena a medida que zarpan las salidas."
+  }
+}

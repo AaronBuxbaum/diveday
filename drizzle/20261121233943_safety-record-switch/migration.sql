@@ -1,0 +1,1 @@
+ALTER TABLE "shops" ADD COLUMN "safety_record_enabled" boolean DEFAULT false NOT NULL;

@@ -158,6 +158,7 @@ export type StaffDestinationId =
   | "safety"
   | "drills"
   | "promoCodes"
+  | "ownerStats"
   | "settings"
   | "team"
   | "calendarFeed"
@@ -227,6 +228,7 @@ export const STAFF_DESTINATION_LABEL_KEYS: Record<StaffDestinationId, StaffMessa
   safety: "shared.shopNavLinks.safety",
   drills: "shared.shopNavLinks.drills",
   promoCodes: "shared.shopNavLinks.promoCodes",
+  ownerStats: "shared.shopNavLinks.ownerStats",
   settings: "shared.shopNavLinks.settings",
   team: "shared.shopNavLinks.team",
   calendarFeed: "shared.shopNavLinks.calendarFeed",
@@ -325,6 +327,8 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
   { id: "orders", suffix: "/orders", section: "money" },
   { id: "reports", suffix: "/reports", section: "money", gate: "reports" },
   { id: "promoCodes", suffix: "/promos", section: "money", gate: "reports" },
+  // Five plain counts over the year (issue #4262). Informational; the same owner/manager gate.
+  { id: "ownerStats", suffix: "/stats", section: "money", gate: "reports" },
   // The month's safety and its incident reports (ADR 20261012-incident-reports)
   // are a place of their own, not a tab of Money: incidents are not money. The
   // same owner/manager gate as Reports, since it reads the same record.
@@ -404,7 +408,7 @@ export const STAFF_SECTION_TABS = {
   courses: ["certifications", "courses"],
   gear: ["gear", "workOrders"],
   inbox: ["inbox", "requests", "reviews"],
-  money: ["orders", "promoCodes", "reports"],
+  money: ["orders", "promoCodes", "reports", "ownerStats"],
   safety: ["safety", "drills"],
 } as const satisfies Partial<Record<StaffSection, readonly StaffDestinationId[]>>;
 

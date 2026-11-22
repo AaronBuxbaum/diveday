@@ -12,6 +12,7 @@ manifest and roll call, offline copies of it, and the reasons someone cannot boa
 - The roster and roll call: `roster-facts.ts`, `roster-filters.ts`, `roll-call-gaps.ts` (the one
   detector of open head counts), `roll-call-alerts/`, `standing-sailed-roll-call.ts`.
 - Offline manifests: `offline-manifest-snapshots/`.
+- The public safety record's four counts: `safety-record.ts` (shown only when the owner turns it on).
 
 ## Does not own
 
