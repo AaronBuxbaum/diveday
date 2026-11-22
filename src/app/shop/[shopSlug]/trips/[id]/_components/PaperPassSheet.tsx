@@ -164,7 +164,7 @@ export async function PaperPassSheet({
             clear of the words beside it. */}
         <div
           className={
-            receipt ? "mt-3 flex flex-col items-center gap-3" : "mt-4 flex items-center gap-4"
+            receipt ? "mt-3 flex flex-col items-center gap-4" : "mt-4 flex items-center gap-4"
           }
         >
           <SheetCode
