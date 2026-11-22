@@ -57,6 +57,11 @@ export const ADULT_AGE = MINOR_AGE_CEILING + 1;
  * other agencies. Read by the depth bands and one-tap party teams.
  */
 export const JUNIOR_YOUNGEST_BAND_END = 12;
+/**
+ * The youngest age the agency certifies a junior diver: the "10 years old" in
+ * the Open Water course template (`src/content/course-templates.ts`, `minimumAge: 10`).
+ */
+export const JUNIOR_MINIMUM_AGE = 10;
 /** The birthday at which the PADI junior age bands end. */
 export const JUNIOR_AGE_END = 15;
 

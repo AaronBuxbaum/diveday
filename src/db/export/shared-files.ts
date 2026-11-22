@@ -343,6 +343,7 @@ export const BOOKINGS_CSV = sharedFile<ShopRow<"bookingRows">>({
     // asked for a guardian's co-signature on the release, so it travels
     // with the release it explains.
     { header: "minor_declared_at", in: "both", value: (row) => row.minorDeclaredAt },
+    { header: "declared_age", in: "both", value: (row) => row.declaredAge },
     // The instructor's own words to this student, and who wrote them
     // (issues #1196, #1205). The student read it on their recap; a
     // shop moving its data takes the sentence with it.

@@ -1,0 +1,77 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "cf1ac6e6-9b99-43b2-9f25-c740682c2891",
+  "prevIds": [
+    "2b46cbf6-36b3-4af4-9da8-0f8802b4477d"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "bookings",
+        "declared_age"
+      ],
+      "writes": [
+        "s|col|public.bookings.declared_age",
+        "n|col|public.bookings.declared_age",
+        "e|col|public.bookings.declared_age"
+      ],
+      "reads": [
+        "n|tbl|public.bookings",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_check",
+      "statementTarget": [
+        "table",
+        "public",
+        "bookings"
+      ],
+      "writes": [
+        "s|ck|public.bookings.bookings_declared_age_range",
+        "n|ck|public.bookings.bookings_declared_age_range",
+        "e|ck|public.bookings.bookings_declared_age_range",
+        "n|con|public.bookings.bookings_declared_age_range"
+      ],
+      "reads": [
+        "n|tbl|public.bookings",
+        "n|sch|public",
+        "n|col|public.bookings.declared_age",
+        "n|col|public.bookings.minor_declared_at"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "bookings",
+        "name": "declared_age",
+        "type": "smallint",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "bookings",
+        "name": "bookings_declared_age_range",
+        "value": "\"declared_age\" is null or (\"declared_age\" between 0 and 17 and \"minor_declared_at\" is not null)",
+        "entityType": "checks"
+      }
+    }
+  ]
+}

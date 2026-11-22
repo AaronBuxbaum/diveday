@@ -319,6 +319,12 @@ export type BookingRequest = {
    */
   minorDeclared?: boolean;
   /**
+   * The age typed beside "Under 18", whole years 0 to 17 (issue #4897). Kept
+   * only with `minorDeclared`; the crew's roster reads it where no date of
+   * birth is on file. It informs and gates nothing.
+   */
+  declaredAge?: number;
+  /**
    * What this person is doing on the boat (ADR 20261007-participant-types).
    * Omitted is a diver, which is every caller that predates the type and the
    * stricter reading: a diver is asked for more, never less.
@@ -1532,6 +1538,7 @@ async function writeSeat(
         // which is a stale credit surviving a cancellation nobody can see.
         referralSource: partnerReferralSlug(req.referralSource),
         minorDeclaredAt: req.minorDeclared ? nowDate() : null,
+        declaredAge: req.minorDeclared ? (req.declaredAge ?? null) : null,
       })
       .where(eq(bookings.id, existing.id));
     await settlePackageCoverage(tx, {
@@ -1571,6 +1578,7 @@ async function writeSeat(
       deliveryEmail: input.deliveryEmail,
       referralSource: partnerReferralSlug(req.referralSource),
       minorDeclaredAt: req.minorDeclared ? nowDate() : null,
+      declaredAge: req.minorDeclared ? (req.declaredAge ?? null) : null,
       ...partyColumns,
       // **Stamped by the application clock, not the column's `defaultNow()`.**
       //

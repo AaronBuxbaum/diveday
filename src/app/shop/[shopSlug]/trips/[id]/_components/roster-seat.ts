@@ -285,7 +285,13 @@ export function rosterSeat(entry: RosterEntry, settled: boolean, context: Roster
   // date, no line, rather than an "unknown" that reads as a gap to fill on
   // every diver who has never been asked (H-20260730-minimum-age-gate-data).
   const dateOfBirth = person.dateOfBirth;
-  const age = showsPersonDetail && dateOfBirth ? ageOnDate(dateOfBirth, tripDate) : null;
+  // With no date, the age the booker typed beside "Under 18" stands in, so the
+  // crew reads "Minor · age 12" before the dock (issue #4897).
+  const age = !showsPersonDetail
+    ? null
+    : dateOfBirth
+      ? ageOnDate(dateOfBirth, tripDate)
+      : (booking.declaredAge ?? null);
   // The booker's "Under 18" on this seat stands in for a date the shop does
   // not hold, for the badge and the co-signature alike (decision 2026-10-13).
   const minorDeclared = Boolean(booking.minorDeclaredAt);

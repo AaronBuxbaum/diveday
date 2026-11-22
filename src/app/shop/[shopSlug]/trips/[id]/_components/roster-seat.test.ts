@@ -42,6 +42,18 @@ describe("rosterSeat", () => {
     expect(facts(declared).requiresGuardian).toBe(false);
   });
 
+  it("shows the age the booker typed beside Under 18, and a date of birth outranks it", () => {
+    const declared = entry("a", "Asha Osei");
+    Object.assign(declared.booking, {
+      minorDeclaredAt: new Date("2026-10-01T12:00:00Z"),
+      declaredAge: 12,
+    });
+    expect(facts(declared)).toMatchObject({ minor: true, age: 12, requiresGuardian: true });
+    expect(facts(entry("a", "Asha Osei")).age).toBeNull();
+    Object.assign(declared.person, { dateOfBirth: "1990-01-01" });
+    expect(facts(declared).age).not.toBe(12);
+  });
+
   it("carries whether the row is filed under a settled group", () => {
     expect(facts(undefined, true).settledRow).toBe(true);
     expect(facts().settledRow).toBe(false);
