@@ -20,7 +20,7 @@ import {
 
 /** What the Pay step needs from the booking's receipt. */
 type Receipt = {
-  tripCredit?: { amountCents: number; balanceCents: number };
+  tripCredit?: { amountCents: number; balanceCents: number | null };
   amountCents: number | null;
   currency: string;
   isDeposit: boolean;
@@ -53,10 +53,14 @@ export function payStepLines(
   deskPayment: DeskPayment | null = null,
 ): { paidLine: string; depositBalanceLine: string | null } {
   const paid = receipt?.tripCredit
-    ? t("ready.tripCreditApplied", {
-        amount: money(receipt.tripCredit.amountCents, receipt.currency),
-        balance: money(receipt.tripCredit.balanceCents, receipt.currency),
-      })
+    ? receipt.tripCredit.balanceCents === null
+      ? t("ready.tripCreditAppliedOnly", {
+          amount: money(receipt.tripCredit.amountCents, receipt.currency),
+        })
+      : t("ready.tripCreditApplied", {
+          amount: money(receipt.tripCredit.amountCents, receipt.currency),
+          balance: money(receipt.tripCredit.balanceCents, receipt.currency),
+        })
     : receipt && receipt.amountCents !== null
       ? money(receipt.amountCents, receipt.currency)
       : t("ready.checklistDetail.paymentDone");

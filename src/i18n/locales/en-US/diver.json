@@ -1234,7 +1234,8 @@
     "groupSummary": "{total, plural, one {# seat in your group} other {# seats in your group}} · {unclaimed, plural, one {# unclaimed} other {# unclaimed}}",
     "doctorNeeds": "What your doctor needs",
     "waiverSigned": "Waiver signed.",
-    "tripCreditApplied": "{amount} trip credit applied · {balance} credit left"
+    "tripCreditApplied": "{amount} trip credit applied · {balance} credit left",
+    "tripCreditAppliedOnly": "{amount} trip credit applied"
   },
   "thread": {
     "stepsDone": "{done} of {total} done",

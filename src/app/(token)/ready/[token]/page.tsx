@@ -346,9 +346,8 @@ async function DiverReadinessPage({
         partyClaimsPromise,
         threadTripReads,
         // What this booking has been charged. Read on every visit, because "what did
-        // I pay?" is a question the night before too — and it is what the Pay step's
-        // settled line says, now that the receipt panel that used to say it above
-        // the checklist is gone (ADR 20260827-the-divers-thread, decision 3).
+        // I pay?" is a question the night before too — and the Pay step's
+        // settled line is where the receipt belongs (ADR 20260827-the-divers-thread).
         // The emails line went with that panel; `EmbedBookedNotice` still carries it,
         // where it is the only thing the reader gets.
         resolvePaymentReceipt(
@@ -362,6 +361,7 @@ async function DiverReadinessPage({
           justBooked || pay === "paid",
           data.trip.seatPriceCents,
           toShopCurrency(shop.currency),
+          delivered && !data.identityHeld,
         ),
         // Asked whatever `COURSE_FORMS_BLOCK_BOARDING` says: warn-only raises no blocker (#2266).
         data.asksCourseForms ? getCourseFormsForBooking(db, shop.id, bookingId) : null,
