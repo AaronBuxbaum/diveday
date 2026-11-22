@@ -28,6 +28,7 @@ export async function tripCreditBookingOptions(
         eq(bookings.personId, personId),
         bookingId ? eq(bookings.id, bookingId) : undefined,
         eq(bookings.status, "booked"),
+        or(isNull(bookings.groupHoldUntil), gt(bookings.groupHoldUntil, nowDate())),
         isNull(bookings.identityUnconfirmedAt),
         eq(bookings.wantsNitrox, false),
         eq(trips.status, "scheduled"),

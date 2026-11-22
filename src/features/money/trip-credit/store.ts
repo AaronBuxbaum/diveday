@@ -258,6 +258,7 @@ async function redeemWithAuthority(
       if (fare !== input.expectedFareCents) return refused("changed");
       if (
         booking.status !== "booked" ||
+        (booking.groupHoldUntil !== null && booking.groupHoldUntil <= nowDate()) ||
         booking.identityUnconfirmedAt ||
         trip.status !== "scheduled" ||
         trip.startsAt <= nowDate() ||
