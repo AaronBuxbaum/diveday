@@ -8,6 +8,8 @@ const test = (message) => ({
 });
 const wedge =
   "visual: page.screenshot did not return within 2000ms at http://localhost/a (shot.png). The renderer did not answer a trivial evaluate, so it is wedged, not slow — the known, unattributed Chromium wedge.";
+const screenshotTimeoutWedge =
+  "visual: page.screenshot timed out at http://localhost/a (e2e/screenshots/shot.png) and the renderer did not answer a trivial evaluate, so it is wedged, not slow — the known, unattributed Chromium wedge (see the debug skill's visual-capture section). page.screenshot: Timeout 15000ms exceeded.\nCall log:\n  - taking page screenshot";
 const boundedWedge =
   "visual: the font settle did not return within 10000ms at http://localhost/a — the shot may contain an unpainted band; check the diff for a blank stripe. The renderer did not answer a trivial evaluate within 5000ms, so it is wedged, not slow.";
 const report = (...tests) => ({ errors: [], suites: [{ specs: [{ tests }] }] });
@@ -23,6 +25,15 @@ it("allows only exclusively proven wedge failures", () => {
       errors: [{ message: "worker crashed" }],
     }),
   ).toBe(false);
+});
+it("recognizes a Playwright screenshot timeout whose probe got no answer", () => {
+  expect(canRetryWedges(report(test(screenshotTimeoutWedge)))).toBe(true);
+  expect(
+    canRetryWedges(report(test(screenshotTimeoutWedge.replace("did not answer", "answered")))),
+  ).toBe(false);
+  expect(canRetryWedges(report(test(`An assertion quoted: ${screenshotTimeoutWedge}`)))).toBe(
+    false,
+  );
 });
 it("recognizes the harness's explicit bounded-wait wedge verdict", () => {
   expect(canRetryWedges(report(test(boundedWedge)))).toBe(true);

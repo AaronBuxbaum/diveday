@@ -28,6 +28,7 @@ The harness discipline that contains it, which any new capture code must keep:
   evaluates, `screenshotOrGiveUp` for screenshots. A new screenshot call site in
   `e2e/visual-*.spec.ts` must use `screenshotOrGiveUp`, never bare `page.screenshot`.
 - **A Playwright screenshot timeout is probed too.** Its own 15s deadline can fire before the give-up race (#4795); `screenshotOrGiveUp` then asks the same probe and words the failure "wedged, not slow" when the page is silent.
+- **A failed visual shard keeps its evidence.** The `visual-attempts-<shard>` artifact also holds `browser-attempt.log` (Chromium's own stderr, `DEBUG=pw:browser`) and `system-attempt.txt` (load, memory and CPU/IO pressure, biggest processes), so the next wedge can finally be attributed. A wedge message `scripts/e2e-retry-policy.mjs` does not match is no wedge to CI: the shard goes red on a PR and its capture is filed as a flake on main (#4875), so a new verdict wording gets a case in its test.
 - **On a stall, probe before blaming.** Both helpers ask the page `evaluate(() => true)` with a
   5s bound and word their message by the answer: alive means our wait leaked (investigate);
   "wedged, not slow" means the known wedge.
