@@ -230,6 +230,7 @@ export function PackingLists({
   holdsCertification: boolean;
   locale: string;
 }) {
+  const courseSession = trip.course != null;
   const packing = packingConfidence(
     shop.packingList,
     rentalFit ?? null,
@@ -242,10 +243,11 @@ export function PackingLists({
   );
   const logbook = packsLogbook({
     shopSuggests: shop.packingLogbook,
-    introCourseSession: trip.course?.isIntroCourse === true,
+    courseSession,
     holdsCertification,
   });
   const t = diverTranslator(locale);
+  const hasBring = packing.bringPersonal.length + packing.bring.length > 0 || logbook;
   const exposureSuit =
     trip.waterTemperatureC === null ? null : exposureSuitFor(trip.waterTemperatureC);
   return (
@@ -254,18 +256,20 @@ export function PackingLists({
         <p className="mt-2 text-sm text-muted">{t(EXPOSURE_SUIT_KEYS[exposureSuit])}</p>
       ) : null}
       <div className="mt-4 grid gap-4 sm:grid-cols-3">
-        <div>
-          <h3 className="font-semibold">{t("trip.packBring")}</h3>
-          <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-muted">
-            {packing.bringPersonal.map((code) => (
-              <li key={code}>{t(PERSONAL_GEAR_KEYS[code])}</li>
-            ))}
-            {packing.bring.map((item) => (
-              <li key={item}>{item}</li>
-            ))}
-            {logbook ? <li>{t("trip.packLogbook")}</li> : null}
-          </ul>
-        </div>
+        {hasBring ? (
+          <div>
+            <h3 className="font-semibold">{t("trip.packBring")}</h3>
+            <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-muted">
+              {packing.bringPersonal.map((code) => (
+                <li key={code}>{t(PERSONAL_GEAR_KEYS[code])}</li>
+              ))}
+              {packing.bring.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+              {logbook ? <li>{t("trip.packLogbook")}</li> : null}
+            </ul>
+          </div>
+        ) : null}
         <div>
           <h3 className="font-semibold">{t("trip.packRenting")}</h3>
           <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-muted">
@@ -337,9 +341,9 @@ export function PackingSection({
    */
   legTravelTimes?: LegTravelTimes;
   /**
-   * This diver has a certification card on file. Read only on a try-dive
+   * This diver has a certification card on file. Read only on a course
    * session, where a student with none has no dives to log and is not told to
-   * bring a logbook (`packsLogbook`, issue #2795).
+   * bring a logbook (`packsLogbook`, issues #2795 and #4896).
    */
   holdsCertification: boolean;
   locale: string;

@@ -23,5 +23,5 @@ export async function enrollInMultiDayCourse(page: Page) {
   await expect(meetings.locator("li")).toHaveCount(3);
   await expect(page.getByTestId("ready-session-day")).toContainText("Day 3");
   await expect(page.getByText(/Your course starts at/)).toBeVisible();
-  await expect(page.getByRole("link", { name: t("ready.materialsAccess") })).toBeVisible();
+  await expect(page.getByText(t("ready.materialsAccess"), { exact: false })).toBeVisible();
 }

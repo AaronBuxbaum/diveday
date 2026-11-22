@@ -2,7 +2,7 @@ import { arrivalCardFacts, arrivalCardShopOf } from "@/components/arrival-card-f
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { diverTranslator } from "@/i18n/messages";
 import { PERSONAL_GEAR_KEYS, RENTAL_ITEM_KEYS } from "@/i18n/packing-labels";
-import { packingConfidence } from "@/lib/diver-planning";
+import { packingConfidence, rentalPriceLabel } from "@/lib/diver-planning";
 import { formatMoneyCents } from "@/lib/format";
 import { openMapsUrl } from "@/lib/maps";
 import { CORE_RENTAL_KINDS, offeredRentableItems, quoteRentalFit } from "@/lib/rentals";
@@ -23,6 +23,7 @@ export function TripBookingFacts({
   const t = diverTranslator(locale);
   const included = trip.course?.includedRentalKinds ?? [];
   const offered = offeredRentableItems(shop.rentalItems).map((item) => item.kind);
+  const courseSession = trip.course != null;
   const packing = packingConfidence(
     shop.packingList,
     null,
@@ -31,6 +32,7 @@ export function TripBookingFacts({
     offered.filter((kind) => shop.rentalPricing.perItemCents[kind] !== 0),
     trip.course?.includedPersonalGear ?? [],
   );
+  const priceLabel = rentalPriceLabel({ courseSession, offered, included });
   const rentable = offered.filter((kind) => !included.includes(kind));
   const quote = (kinds: typeof rentable) =>
     quoteRentalFit(shop.rentalPricing, {
@@ -79,7 +81,7 @@ export function TripBookingFacts({
         {prices.length > 0 ? (
           <div>
             <dt className="font-semibold">
-              {t("trip.rentalFrom", {
+              {t(priceLabel === "extras" ? "trip.extrasFrom" : "trip.rentalFrom", {
                 price: formatMoneyCents(Math.min(...prices), shop.currency, locale),
               })}
             </dt>

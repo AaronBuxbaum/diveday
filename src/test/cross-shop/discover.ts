@@ -12,7 +12,10 @@ import { parseSync } from "oxc-parser";
  * are read from a destructuring pattern or from its type: written inline, or a
  * type alias or interface declared in the file or imported from `src/`, through
  * intersections, unions (the first branch that reads fully), `Partial`, `Omit`
- * and `Pick`. A part of a type it cannot read becomes one required field named
+ * and `Pick`. A list of such objects (`Request[]`, `readonly Request[]`,
+ * `Array<Request>`) is read as its element's fields and marked `each`, so a
+ * shop named inside every request counts as taking a shop. A part of a type it
+ * cannot read becomes one required field named
  * `…`, which nothing fills, so the function is "not fillable yet" rather than
  * called with a guess.
  */
@@ -20,8 +23,11 @@ import { parseSync } from "oxc-parser";
 /** One value a function takes: a positional parameter or a field of an object parameter. */
 export type Slot = { name: string; optional: boolean };
 
-/** A parameter: a plain value, or an object whose fields were read. */
-export type Param = Slot & { fields?: Slot[] };
+/**
+ * A parameter: a plain value, an object whose fields were read, or (`each`) a
+ * list of such objects.
+ */
+export type Param = Slot & { fields?: Slot[]; each?: true };
 
 export type DbFunction = { file: string; name: string; params: Param[] };
 
@@ -138,6 +144,21 @@ function annotation(node: Node): unknown {
   return (node.typeAnnotation as Node | undefined)?.typeAnnotation;
 }
 
+/** The element type of `T[]`, `readonly T[]`, `Array<T>` or `ReadonlyArray<T>`, or null. */
+function elementOf(type: unknown): Node | null {
+  if (!isNode(type)) return null;
+  if (type.type === "TSArrayType") return type.elementType as Node;
+  if (type.type === "TSTypeOperator" && type.operator === "readonly") {
+    return elementOf(type.typeAnnotation);
+  }
+  if (type.type === "TSTypeReference") {
+    const name = keyName(type.typeName);
+    const args = ((type.typeArguments as Node | undefined)?.params as Node[] | undefined) ?? [];
+    if ((name === "Array" || name === "ReadonlyArray") && args[0]) return args[0];
+  }
+  return null;
+}
+
 /** One declared parameter, as the sweep sees it. */
 function readParam(node: Node, lookup: TypeLookup): Param {
   let target = node;
@@ -150,9 +171,12 @@ function readParam(node: Node, lookup: TypeLookup): Param {
   if (target.type === "Identifier") {
     const name = target.name as string;
     // A `shop` row is filled whole; its fields are the shop's, not the call's.
+    const element = elementOf(annotation(target));
     const fields =
-      name === "shop" ? undefined : (fieldsOf(annotation(target), lookup) ?? undefined);
-    return { name, optional: optional || Boolean(target.optional), fields };
+      name === "shop" ? undefined : (fieldsOf(element ?? annotation(target), lookup) ?? undefined);
+    const param: Param = { name, optional: optional || Boolean(target.optional), fields };
+    if (element && fields) param.each = true;
+    return param;
   }
   if (target.type === "ObjectPattern") {
     const typed = fieldsOf(annotation(target), lookup) ?? [];

@@ -251,7 +251,23 @@ describe("ReadyMastheadMeta", () => {
       ),
     );
     expect(screen.getByText(/^Tomorrow · Sun, Oct\s11/)).toBeTruthy();
-    expect(screen.getByText(/This page is yours to keep/)).toBeTruthy();
+    expect(screen.getByText(/stays up to date until you sail\./)).toBeTruthy();
+  });
+
+  it("says a course page stays up to date until the course ends, never until you sail", () => {
+    render(
+      withProvider(
+        "en-US",
+        <ReadyMastheadMeta
+          facts={{ ...FACTS, courseSession: true }}
+          locale="en-US"
+          now={NIGHT_BEFORE}
+          t={diverTranslator("en-US")}
+        />,
+      ),
+    );
+    expect(screen.getByText(/stays up to date until your course ends\./)).toBeTruthy();
+    expect(screen.queryByText(/until you sail/)).toBeNull();
   });
 });
 

@@ -116,7 +116,8 @@ What each area must keep true; its tests hold most of these, and its ADR the rea
 - **Payments** (ADR 20260723-payment-operation-intents): every Stripe-mutating call carries an
   Idempotency-Key from a `payment_operation_intents` row written first; paid state comes only from
   Stripe (a webhook or an authenticated read), never a return URL; a payment status only moves
-  forward (`setBookingPaymentIfNotFinal`) and a cancelled booking is never paid; a zero-decimal
+  forward (`paymentTransitionRefusal` in `src/lib/payment-transition.ts`, carried out by
+  `setBookingPaymentIfNotFinal`) and a cancelled booking is never paid; a zero-decimal
   currency is never divided by 100 and a settled order keeps its currency; a refund automates only
   inside the stated window for a real Stripe payment, and anything else routes to staff; a
   replayed webhook repairs a partial write but never regresses a refund.

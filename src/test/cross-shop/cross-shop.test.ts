@@ -25,6 +25,11 @@ export async function picked(db: AppDb, input: Omit<Lookup, "limit"> & { kind: K
 export async function either(db: AppDb, input: { shopId: string } & ({ tripId: string } | { other: string })) {}
 export async function imported(db: AppDb, input: Imported) {}
 export async function partlySeen(db: AppDb, input: Imported & { shopId: string }) {}
+export async function party(db: AppDb, requests: Lookup[], options: { holdUntil?: Date } = {}) {}
+export async function notices(tx: AppTransaction, notices: readonly Edit[], now: Date = new Date()) {}
+export async function generic(db: AppDb, requests: Array<Lookup>, more: ReadonlyArray<Scoped>) {}
+export async function plainList(db: AppDb, shopId: string, tripIds: string[]) {}
+export async function inferred(db: AppDb, notification: Inferred) {}
 export async function noShop(db: AppDb, token: string) {}
 export function pure(value: number) {}
 `;
@@ -69,6 +74,35 @@ describe("discovery reads parameter names", () => {
     expect(names("either")).toEqual(["shopId", "tripId"]);
   });
 
+  it("reads a list of requests as its element's fields, and finds the shop inside", () => {
+    expect(fns.party?.params[1]).toEqual({
+      name: "requests",
+      optional: false,
+      each: true,
+      fields: [
+        { name: "shopId", optional: false },
+        { name: "tripId", optional: false },
+        { name: "limit", optional: true },
+      ],
+    });
+    expect(fns.notices?.params[1]?.each).toBe(true);
+    expect(fns.notices?.params[1]?.fields?.map((field) => field.name)).toEqual([
+      "shopId",
+      "bookingId",
+      "note",
+    ]);
+    expect(fns.generic?.params.slice(1).map((param) => param.each)).toEqual([true, true]);
+    for (const name of ["party", "notices", "generic"]) {
+      expect(fns[name] && takesShop(fns[name]), name).toBe(true);
+    }
+    // A list of plain values is still one named value, filled whole.
+    expect(fns.plainList?.params[2]).toEqual({
+      name: "tripIds",
+      optional: false,
+      fields: undefined,
+    });
+  });
+
   it("follows an import, and marks a type it cannot see", () => {
     expect(fns.imported?.params[1]?.fields).toBeUndefined();
     expect(fns.partlySeen?.params[1]?.fields?.map((field) => field.name)).toEqual([
@@ -100,6 +134,27 @@ describe("classification", () => {
       if (!fn) throw new Error(`no ${name}`);
       expect(classify(fn, fillable, new Map()).kind, name).toBe("swept");
     }
+  });
+
+  it("fills a list parameter with one request carrying the caller's shop", () => {
+    const fn = fns.party;
+    if (!fn) throw new Error("no party");
+    expect(classify(fn, fillable, new Map()).kind).toBe("swept");
+    expect(argumentsFor(fn, { shop: { id: "shop-b" }, values: { tripId: SHOP_A_TRIP } })).toEqual([
+      [{ shopId: "shop-b", tripId: SHOP_A_TRIP }],
+    ]);
+  });
+
+  it("sweeps a function whose type it cannot read once its arguments are written by hand", () => {
+    const fn = fns.inferred;
+    if (!fn) throw new Error("no inferred");
+    expect(takesShop(fn)).toBe(false);
+    expect(classify(fn, fillable, new Map()).kind).toBe("unclassified");
+    const byHand = new Map([["sample.ts:inferred", () => [{ shopId: "shop-b" }]]]);
+    expect(classify(fn, fillable, new Map(), byHand)).toMatchObject({ kind: "swept" });
+    // Swept by hand and excused at once is a contradiction, and fails.
+    const excused = new Map([["sample.ts:inferred", "stale"]]);
+    expect(classify(fn, fillable, excused, byHand).kind).toBe("staleAllowlist");
   });
 
   it("names what it cannot fill, never guesses it", () => {

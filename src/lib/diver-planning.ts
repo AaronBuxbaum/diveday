@@ -1,5 +1,5 @@
 import type { DiveSiteDifficulty } from "@/lib/dive-site-difficulty";
-import { type RentableItemKind, SCUBA_UNIT_KINDS } from "@/lib/rentals";
+import { CORE_RENTAL_KINDS, type RentableItemKind, SCUBA_UNIT_KINDS } from "@/lib/rentals";
 import type { CoursePersonalGear } from "./course-personal-gear";
 
 /**
@@ -610,26 +610,55 @@ export function packingConfidence(
 }
 
 /**
- * Whether the packing list suggests a logbook (issue #2795). The shop decides
- * whether it suggests one at all (`shops.packing_logbook`). It is left off for
- * a student on a try-dive session (`courses.is_intro_course`, Discover Scuba)
- * who holds no certification: a taster certifies nothing and has no dives to
- * log. Every other course keeps it, since an Open Water student's training
- * dives are logged and signed (dive-domain review). Flags and facts, never a
- * match on the shop's own free-text list.
+ * Whether the packing list suggests a logbook (issue #2795, #4896). The shop
+ * decides whether it suggests one at all (`shops.packing_logbook`). On a
+ * course session it is left off for a student who holds no certification: a
+ * beginner has no dives to log yet, and the shop's own materials cover the
+ * training dives. A charter keeps it, since only a certified diver can book
+ * one. Flags and facts, never a match on the shop's own free-text list.
  */
 export function packsLogbook(input: {
   shopSuggests: boolean;
-  introCourseSession: boolean;
+  courseSession: boolean;
   /**
    * At least one live certification card on file for this diver, verified or
-   * not. A surface that cannot know (the confirmation email, the paper pass)
-   * says false: on a try-dive the line is then left off, which costs a
-   * certified diver nothing they need.
+   * not (a self-declared card counts). A surface that cannot know (the
+   * confirmation email, the paper pass) says false: on a course the line is
+   * then left off, which costs a certified diver nothing they need.
    */
   holdsCertification: boolean;
 }): boolean {
-  return input.shopSuggests && (!input.introCourseSession || input.holdsCertification);
+  return input.shopSuggests && (!input.courseSession || input.holdsCertification);
+}
+
+/**
+ * The boat a diver is told they will be on. A course session names none: the
+ * data cannot say which of its days are on the water (a course day has a title
+ * and hours, no kind), and "You'll be on Mantis I" over a classroom and pool
+ * day is wrong. A charter names its boat (#4896). The shop's own bring list
+ * stays on a course: a ride-back layer listed on a classroom day costs nothing,
+ * and a student on the boat with no seasickness tablets loses the dive
+ * (dive-domain review, #4896).
+ */
+export function boatToName(trip: { boatId: string | null; course: unknown }) {
+  return trip.course ? null : trip.boatId;
+}
+
+/**
+ * Which word the pre-booking rental block leads with. A course whose fee
+ * includes every core dive-gear kind the shop rents leaves only extras (a
+ * camera) priced, and "Rental gear from" under a list of everything provided
+ * reads as a hidden gear charge, so it says `extras` (#4896).
+ */
+export function rentalPriceLabel(input: {
+  courseSession: boolean;
+  offered: readonly RentableItemKind[];
+  included: readonly RentableItemKind[];
+}): "rental" | "extras" {
+  const core = CORE_RENTAL_KINDS.filter((kind) => input.offered.includes(kind));
+  return input.courseSession && core.every((kind) => input.included.includes(kind))
+    ? "extras"
+    : "rental";
 }
 
 export function conditionsChangedSinceBooking(
