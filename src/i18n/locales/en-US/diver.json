@@ -1235,7 +1235,12 @@
     "doctorNeeds": "What your doctor needs",
     "waiverSigned": "Waiver signed.",
     "tripCreditApplied": "{amount} trip credit applied · {balance} credit left",
-    "tripCreditAppliedOnly": "{amount} trip credit applied"
+    "tripCreditAppliedOnly": "{amount} trip credit applied",
+    "tripCreditAvailable": "You have {balance} in trip credit",
+    "useTripCredit": "Apply {fare} trip credit",
+    "applyingTripCredit": "Applying credit",
+    "partyGuestsAtShop": "{count, plural, one {# guest} other {# guests}}: {amount}, due at the shop.",
+    "partyPaymentsCheck": "Check with the shop about your guests’ remaining balance."
   },
   "thread": {
     "stepsDone": "{done} of {total} done",
