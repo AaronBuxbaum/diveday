@@ -111,13 +111,14 @@ describe("the paper each call site keeps clear of its code", () => {
 
   it("keeps the pass's words four modules beside its code", async () => {
     const page = source("../trips/[id]/_components/PaperPassSheet.tsx");
-    const row = page.match(
-      /className="mt-4 flex items-center (gap-[^\s"]+)"[\s\S]*?size=\{(\d+)\}/,
-    );
+    const row = page.match(/"mt-4 flex items-center (gap-[^\s"]+)"[\s\S]*?size=\{(\d+)\}/);
     expect(row).toBeTruthy();
     const [, gap = "", width = "0"] = row ?? [];
-    expect(mm(gap)).toBeGreaterThanOrEqual(
-      (4 * Number(width)) / (await modules("0b6f1f3e-5a51-4a0e-9d7e-2f0c7b7f4a11")),
-    );
+    const owed = (4 * Number(width)) / (await modules("0b6f1f3e-5a51-4a0e-9d7e-2f0c7b7f4a11"));
+    expect(mm(gap)).toBeGreaterThanOrEqual(owed);
+    // The receipt roll stacks the words below the code, with the same room.
+    const stacked = page.match(/"mt-3 flex flex-col items-center (gap-[^\s"]+)"/);
+    expect(stacked).toBeTruthy();
+    expect(mm(stacked?.[1] ?? "")).toBeGreaterThanOrEqual(owed);
   });
 });
