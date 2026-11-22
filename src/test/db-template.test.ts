@@ -102,8 +102,9 @@ it("outer immutable CI caches include the same input manifest", async () => {
   const keys = workflow
     .split("\n")
     .filter((line) => line.includes("-pglite-template-") && line.includes("key:"));
-  expect(keys).toHaveLength(2);
-  expect(keys[0]?.trim()).toBe(keys[1]?.trim());
+  // `unit-tests`, `real-postgres` and `mutation-diff` each restore the template.
+  expect(keys).toHaveLength(3);
+  for (const key of keys) expect(key.trim()).toBe(keys[0]?.trim());
   for (const file of [
     ...TEMPLATE_INPUT_ROOTS.map((root) => `${root}/**`),
     ...TEMPLATE_INPUT_FILES,
