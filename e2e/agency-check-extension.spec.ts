@@ -16,6 +16,16 @@ import {
 import { E2E_FROZEN_CLOCK } from "./servers";
 
 /**
+ * **How long the staff page waits for the browser extension to answer.** A check is a round trip
+ * through a second browser's extension: open the lookup tab, wait for it to load, fill it, reply
+ * (`extension/background.js`). That is slower than the app's own 8-second assertion default, and
+ * every other wait on a reply in this file already allowed 20 seconds or more. Two SSI assertions
+ * had not, and on a loaded CI runner one failed with the card still reading "Checking with SSI…"
+ * when the 8 seconds ran out (#4920).
+ */
+const EXTENSION_REPLY_MS = 20_000;
+
+/**
  * **The cert-check extension itself, installed in a real Chromium** (H-20261008-cert-check-extension, ADR
  * 20261008-cert-check-extension).
  *
@@ -514,7 +524,9 @@ test("SSI opens a manual lookup and fills after the staffer reveals the form", a
   const opened = context.waitForEvent("page");
   await cards.getByRole("button", { name: "Check with SSI" }).click();
   const lookup = await opened;
-  await expect(cards.getByText(/Review SSI’s terms and complete the check/)).toBeVisible();
+  await expect(cards.getByText(/Review SSI’s terms and complete the check/)).toBeVisible({
+    timeout: EXTENSION_REPLY_MS,
+  });
   await expect(lookup.getByLabel("Accept terms")).not.toBeChecked();
   await expect(lookup.locator("#firstname")).toHaveValue("");
   // This is the loopback fake's checkbox, not SSI's real terms.
@@ -539,7 +551,7 @@ test("signed out of PADI, the check says to sign in first and types nothing into
 
   // DiveChek's own address showing PADI's sign-in form.
   await cards.getByRole("button", { name: "Check with PADI" }).click();
-  await expect(signInFirst).toBeVisible({ timeout: 20_000 });
+  await expect(signInFirst).toBeVisible({ timeout: EXTENSION_REPLY_MS });
   expect(agencyPages.requests).toContain("GET https://pro.padi.com/divechek");
   expect(agencyPages.typedIntoSignIn).toEqual([]);
   expect(agencyPages.requests.filter((request) => request.startsWith("POST"))).toEqual([]);
@@ -555,7 +567,7 @@ test("signed out of PADI, the check says to sign in first and types nothing into
   const signInAgain = reloaded.getByText("Sign in to the PADI Pros’ Site first, then check again.");
   await expect(signInAgain).toHaveCount(0);
   await reloaded.getByRole("button", { name: "Check with PADI" }).click();
-  await expect(signInAgain).toBeVisible({ timeout: 20_000 });
+  await expect(signInAgain).toBeVisible({ timeout: EXTENSION_REPLY_MS });
   expect(agencyPages.requests).toContain("GET https://login.padi.com/sign-in?return=%2Fdivechek");
   expect(agencyPages.typedIntoSignIn).toEqual([]);
   expect(agencyPages.requests.filter((request) => request.startsWith("POST"))).toEqual([]);
@@ -578,7 +590,7 @@ test("signed in to PADI, DiveChek sent on to pros.padi.com is read, its Run Repo
   const toast = page
     .getByRole("status")
     .filter({ hasText: "PADI shows this certification. Marked certified." });
-  await expect(toast).toBeVisible({ timeout: 20_000 });
+  await expect(toast).toBeVisible({ timeout: EXTENSION_REPLY_MS });
   await expect(cards.getByText(/^Checked with PADI by /)).toBeVisible();
   await expect(
     cards.getByText("Sign in to the PADI Pros’ Site first, then check again."),
@@ -616,7 +628,7 @@ test("signed out of PADI between the form and its answer, the check says to sign
 
   await expect(
     cards.getByText("Sign in to the PADI Pros’ Site first, then check again."),
-  ).toBeVisible({ timeout: 20_000 });
+  ).toBeVisible({ timeout: EXTENSION_REPLY_MS });
   // The search was sent, and answered with PADI's sign-in, which nothing was typed into.
   expect(agencyPages.requests.some((request) => request.includes("first_name="))).toBe(true);
   expect(agencyPages.typedIntoSignIn).toEqual([]);
@@ -655,7 +667,7 @@ test("other PADI cards shown after an automatic match remain pending until confi
   agencyPages.padiCardNumber = cardNumber;
   await cards.getByRole("button", { name: "Check with PADI" }).click();
   await expect(page.getByRole("status").filter({ hasText: PADI_CERTIFIED })).toBeVisible({
-    timeout: 20_000,
+    timeout: EXTENSION_REPLY_MS,
   });
   const offer = cards.getByRole("group", { name: LISTED_LEAD });
   await expect(offer.getByRole("checkbox", { name: "Enriched Air Diver" })).toBeChecked();
@@ -675,7 +687,9 @@ test("SSI leaves a staff-edited identity untouched", async ({ page, context, ext
   const opened = context.waitForEvent("page");
   await cards.getByRole("button", { name: "Check with SSI" }).click();
   const lookup = await opened;
-  await expect(cards.getByText(/Review SSI’s terms and complete the check/)).toBeVisible();
+  await expect(cards.getByText(/Review SSI’s terms and complete the check/)).toBeVisible({
+    timeout: EXTENSION_REPLY_MS,
+  });
   await lookup.locator("#firstname").evaluate((input: HTMLInputElement) => {
     input.value = "Another";
   });
