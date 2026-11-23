@@ -1,10 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  MAX_ATTEMPTS,
-  lowerLayers,
-  staleRuns,
-} from "./ci-lower-layer-sweep.mjs";
+import { lowerLayers, MAX_ATTEMPTS, staleRuns } from "./ci-lower-layer-sweep.mjs";
 
 const pr = (number, sha, labels = [], state = "open") => ({
   number,
@@ -34,9 +30,7 @@ describe("lowerLayers", () => {
     const stack = {
       pull_requests: [{ number: 1 }, { number: 2 }, { number: 3 }],
     };
-    expect(
-      lowerLayers(stack, [pr(2, "b"), pr(3, "c")]).map((l) => l.number),
-    ).toEqual([2]);
+    expect(lowerLayers(stack, [pr(2, "b"), pr(3, "c")]).map((l) => l.number)).toEqual([2]);
   });
 });
 
@@ -68,29 +62,19 @@ describe("staleRuns", () => {
     expect(picked).toEqual([]);
   });
   it("judges only the newest run on a head", () => {
-    expect(
-      staleRuns(
-        [layer(1, "a")],
-        [run(10, "a", "failure"), run(11, "a", "success")],
-      ),
-    ).toEqual([]);
-  });
-  it("ignores a run from an older head", () => {
-    expect(staleRuns([layer(1, "new")], [run(10, "old", "failure")])).toEqual(
+    expect(staleRuns([layer(1, "a")], [run(10, "a", "failure"), run(11, "a", "success")])).toEqual(
       [],
     );
   });
+  it("ignores a run from an older head", () => {
+    expect(staleRuns([layer(1, "new")], [run(10, "old", "failure")])).toEqual([]);
+  });
   it("leaves a ci-now layer to its own real result", () => {
-    expect(
-      staleRuns([layer(1, "a", ["ci-now"])], [run(10, "a", "failure")]),
-    ).toEqual([]);
+    expect(staleRuns([layer(1, "a", ["ci-now"])], [run(10, "a", "failure")])).toEqual([]);
   });
   it("stops after the attempt cap so a gate that keeps running cannot loop", () => {
     expect(
-      staleRuns(
-        [layer(1, "a")],
-        [run(10, "a", "failure", { run_attempt: MAX_ATTEMPTS })],
-      ),
+      staleRuns([layer(1, "a")], [run(10, "a", "failure", { run_attempt: MAX_ATTEMPTS })]),
     ).toEqual([]);
   });
 });

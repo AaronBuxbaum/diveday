@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import path from "node:path";
 // Clears the red or cancelled CI run a lower layer of a stack inherited from when it was the top.
 //
 // A stack grows upward: while a pull request is the newest layer it is the top, so the gate
@@ -9,7 +10,6 @@
 // skips and `CI result` reports success in seconds. The top layer is never touched.
 import process from "node:process";
 import { fileURLToPath } from "node:url";
-import path from "node:path";
 
 import { FORCE_LABEL } from "./ci-stack-gate.mjs";
 
@@ -27,15 +27,11 @@ export function staleRuns(layers, runs) {
   for (const layer of layers) {
     if (layer.labels.includes(FORCE_LABEL)) continue;
     const mine = runs
-      .filter(
-        (run) =>
-          run.head_sha === layer.head_sha && run.event === "pull_request",
-      )
+      .filter((run) => run.head_sha === layer.head_sha && run.event === "pull_request")
       .sort((a, b) => b.id - a.id);
     const latest = mine[0];
     if (!latest || latest.status !== "completed") continue;
-    if (!STALE.has(latest.conclusion) || latest.run_attempt >= MAX_ATTEMPTS)
-      continue;
+    if (!STALE.has(latest.conclusion) || latest.run_attempt >= MAX_ATTEMPTS) continue;
     picked.push({ pr: layer.number, run: latest.id });
   }
   return picked;
@@ -55,32 +51,21 @@ export function lowerLayers(stack, pulls) {
     }));
 }
 
-if (
-  process.argv[1] &&
-  path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
-) {
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const { GITHUB_REPOSITORY: repo, GITHUB_TOKEN: token } = process.env;
   const call = async (method, pathname) => {
-    const response = await fetch(
-      `https://api.github.com/repos/${repo}/${pathname}`,
-      {
-        method,
-        headers: {
-          accept: "application/vnd.github+json",
-          authorization: `Bearer ${token}`,
-          "x-github-api-version": "2022-11-28",
-        },
+    const response = await fetch(`https://api.github.com/repos/${repo}/${pathname}`, {
+      method,
+      headers: {
+        accept: "application/vnd.github+json",
+        authorization: `Bearer ${token}`,
+        "x-github-api-version": "2022-11-28",
       },
-    );
-    if (!response.ok)
-      throw new Error(`${method} ${pathname}: HTTP ${response.status}`);
-    return response.status === 204 || method === "POST"
-      ? null
-      : response.json();
+    });
+    if (!response.ok) throw new Error(`${method} ${pathname}: HTTP ${response.status}`);
+    return response.status === 204 || method === "POST" ? null : response.json();
   };
-  const stacks = (await call("GET", "stacks?per_page=100")).filter(
-    (s) => s.open,
-  );
+  const stacks = (await call("GET", "stacks?per_page=100")).filter((s) => s.open);
   const pulls = await call("GET", "pulls?state=open&per_page=100");
   const lines = [];
   for (const stack of stacks) {
