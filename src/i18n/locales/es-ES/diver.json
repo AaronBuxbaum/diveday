@@ -4479,6 +4479,14 @@
       "moneyPartyOnline": "{seats, plural, one {# plaza} other {# plazas}}: {amount}, con tarjeta en línea.",
       "moneyPartyDeposit": "{seats, plural, one {# plaza} other {# plazas}}: {deposit} con tarjeta en línea y {balance} en el muelle el {date}.",
       "moneyPartyAtShop": "{seats, plural, one {# plaza} other {# plazas}}: {amount}, a pagar en el centro.",
+      "course": {
+        "subject": "Inscripción confirmada: {tripTitle}",
+        "arriveNote": "Llega {minutes, plural, one {# minuto} other {# minutos}} antes. Nosotros nos encargamos del resto.",
+        "waiverStep": "Primero, firma tu exención. {shopName} la necesita antes de tu primer día.",
+        "seeWhatsLeft": "Consulta lo que te falta antes de tu primer día",
+        "moneyDeposit": "Tu plaza: {deposit} con tarjeta en línea y {balance} en el centro el {date}.",
+        "moneyPartyDeposit": "{seats, plural, one {# plaza} other {# plazas}}: {deposit} con tarjeta en línea y {balance} en el centro el {date}."
+      },
       "partyPaid": "{seats, plural, one {Pagado con tarjeta: {amount}.} other {Pagado con tarjeta por # plazas: {amount}.}}"
     },
     "waitlistInvite": {

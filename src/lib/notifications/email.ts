@@ -40,6 +40,8 @@ type BookingConfirmationEmailInput = {
   timezone: string;
   /** Minutes before departure to be at the dock; the shop's call, default 30. */
   dockCallMinutes?: number;
+  /** A course session: the words say arrive and first day, never boat, dock or sail. */
+  courseSession?: boolean;
   /** The diver's readiness page, so a closed tab never loses it. */
   readinessUrl?: string;
   /** The thread's Sign step this confirmation carries as its first step, when one is owed. */
@@ -677,7 +679,7 @@ function meetingPointSection(t: DiverTranslator, point: MeetingPoint | undefined
 function confirmationMoneyLine(
   t: DiverTranslator,
   money: ConfirmationMoney,
-  input: { locale: DiverLocale; startsAt: Date; timezone: string },
+  input: { locale: DiverLocale; startsAt: Date; timezone: string; courseSession?: boolean },
 ): string {
   const amount = (cents: number) => formatMoneyCents(cents, money.currency, input.locale);
   // A lead holding several seats hears the party's figure, the one the form
@@ -685,17 +687,19 @@ function confirmationMoneyLine(
   const party = (money.seats ?? 1) > 1;
   const seats = money.seats ?? 1;
   if (money.due === "deposit") {
-    return t(
-      party
+    const depositKey = input.courseSession
+      ? party
+        ? "notifications.bookingConfirmation.course.moneyPartyDeposit"
+        : "notifications.bookingConfirmation.course.moneyDeposit"
+      : party
         ? "notifications.bookingConfirmation.moneyPartyDeposit"
-        : "notifications.bookingConfirmation.moneyDeposit",
-      {
-        seats,
-        deposit: amount(money.depositCents),
-        balance: amount(money.balanceCents),
-        date: formatShortDate(input.startsAt, input.locale, input.timezone),
-      },
-    );
+        : "notifications.bookingConfirmation.moneyDeposit";
+    return t(depositKey, {
+      seats,
+      deposit: amount(money.depositCents),
+      balance: amount(money.balanceCents),
+      date: formatShortDate(input.startsAt, input.locale, input.timezone),
+    });
   }
   if (party) {
     const partyLine = t(
@@ -800,13 +804,14 @@ export type NotificationEmail = {
  */
 function waiverStep(
   t: DiverTranslator,
-  input: Pick<BookingConfirmationEmailInput, "waiverUrl" | "shopName">,
+  input: Pick<BookingConfirmationEmailInput, "waiverUrl" | "shopName" | "courseSession">,
 ) {
   if (!input.waiverUrl) return { text: "", html: "" };
-  const lead = t("notifications.bookingConfirmation.waiverStep", { shopName: input.shopName });
-  const leadHtml = t("notifications.bookingConfirmation.waiverStep", {
-    shopName: escapeHtml(input.shopName),
-  });
+  const key = input.courseSession
+    ? "notifications.bookingConfirmation.course.waiverStep"
+    : "notifications.bookingConfirmation.waiverStep";
+  const lead = t(key, { shopName: input.shopName });
+  const leadHtml = t(key, { shopName: escapeHtml(input.shopName) });
   const label = t("notifications.bookingConfirmation.waiverLink");
   return {
     text: `\n\n${lead}\n${label}:\n${input.waiverUrl}`,
@@ -821,7 +826,11 @@ export function bookingConfirmationEmail(input: BookingConfirmationEmailInput): 
   const time = formatTimeRangeTz(input.startsAt, input.endsAt, input.locale, input.timezone);
   const title = escapeHtml(input.tripTitle);
   const shop = escapeHtml(input.shopName);
-  const seeWhatsLeft = t("notifications.common.seeWhatsLeft");
+  const seeWhatsLeft = t(
+    input.courseSession
+      ? "notifications.bookingConfirmation.course.seeWhatsLeft"
+      : "notifications.common.seeWhatsLeft",
+  );
   const readyText = input.readinessUrl ? `\n\n${seeWhatsLeft}:\n${input.readinessUrl}\n` : "\n";
   const readyHtml = input.readinessUrl ? emailButton(input.readinessUrl, seeWhatsLeft) : "";
 
@@ -847,11 +856,14 @@ export function bookingConfirmationEmail(input: BookingConfirmationEmailInput): 
   const confirmedHtml = t("notifications.bookingConfirmation.confirmed", {
     tripTitle: `<strong>${title}</strong>`,
   });
-  const dockNote = t("notifications.bookingConfirmation.dockNote", {
-    dock,
-    shopName: input.shopName,
-  });
-  const dockNoteHtml = t("notifications.bookingConfirmation.dockNote", { dock, shopName: shop });
+  const dockNote = input.courseSession
+    ? t("notifications.bookingConfirmation.course.arriveNote", {
+        minutes: input.dockCallMinutes ?? 30,
+      })
+    : t("notifications.bookingConfirmation.dockNote", { dock, shopName: input.shopName });
+  const dockNoteHtml = input.courseSession
+    ? dockNote
+    : t("notifications.bookingConfirmation.dockNote", { dock, shopName: shop });
   // A course's learning materials, above the packing list: the eLearning is
   // the one thing on this page with a deadline weeks before the boat.
   const materials = materialsSection(t, input.learningMaterials, input.elearningCode);
@@ -886,7 +898,12 @@ export function bookingConfirmationEmail(input: BookingConfirmationEmailInput): 
     : "";
 
   return {
-    subject: t("notifications.bookingConfirmation.subject", { tripTitle: input.tripTitle }),
+    subject: t(
+      input.courseSession
+        ? "notifications.bookingConfirmation.course.subject"
+        : "notifications.bookingConfirmation.subject",
+      { tripTitle: input.tripTitle },
+    ),
     text: `${greeting.text}\n\n${confirmed}\n\n${date}\n${time}${termsText}${waiver.text}\n\n${dockNote}${where.text}${readyText}${calendarText}${materials.text}${reminderText}`,
     html: `<p>${greeting.html}</p><p>${confirmedHtml}</p><p><strong>${escapeHtml(date)}</strong><br>${escapeHtml(time)}</p>${termsHtml}${waiver.html}<p>${dockNoteHtml}</p>${where.html}${readyHtml}${calendarHtml}${materials.html}${reminderHtml}`,
   };
