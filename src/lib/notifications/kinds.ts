@@ -198,6 +198,8 @@ const bookingConfirmationSchema = z.object({
   endsAt: z.date(),
   timezone: z.string().trim().min(1).max(100),
   dockCallMinutes: z.number().int().min(5).max(180).optional(),
+  /** A course session: it starts rather than sails, so the words name no boat or dock. */
+  courseSession: z.boolean().optional(),
   readinessUrl: z.url().max(2_000).optional(),
   /**
    * The thread's Sign step, carried as the confirmation's first step so one

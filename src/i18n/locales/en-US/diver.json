@@ -4479,6 +4479,14 @@
       "moneyPartyOnline": "{seats, plural, one {# seat} other {# seats}}: {amount}, by card online.",
       "moneyPartyDeposit": "{seats, plural, one {# seat} other {# seats}}: {deposit} by card online, then {balance} at the dock on {date}.",
       "moneyPartyAtShop": "{seats, plural, one {# seat} other {# seats}}: {amount}, due at the shop.",
+      "course": {
+        "subject": "You’re enrolled: {tripTitle}",
+        "arriveNote": "Please arrive {minutes, plural, one {# minute} other {# minutes}} early. We’ll take it from there.",
+        "waiverStep": "First, sign your waiver. {shopName} needs it before your first day.",
+        "seeWhatsLeft": "See what’s left before your first day",
+        "moneyDeposit": "Your seat: {deposit} by card online, then {balance} at the shop on {date}.",
+        "moneyPartyDeposit": "{seats, plural, one {# seat} other {# seats}}: {deposit} by card online, then {balance} at the shop on {date}."
+      },
       "partyPaid": "{seats, plural, one {Paid by card: {amount}.} other {Paid by card for # seats: {amount}.}}"
     },
     "waitlistInvite": {

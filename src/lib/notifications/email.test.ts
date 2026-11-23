@@ -34,6 +34,40 @@ const base = {
 };
 
 describe("bookingConfirmationEmail", () => {
+  describe("a course day", () => {
+    const course = {
+      ...base,
+      tripTitle: "Open Water Diver, day 1",
+      courseSession: true,
+      readinessUrl: "https://example.test/ready/abc",
+      money: {
+        due: "deposit" as const,
+        depositCents: 20000,
+        balanceCents: 31500,
+        currency: "USD",
+      },
+    };
+
+    for (const locale of ["en-US", "es-ES"] as const) {
+      it(`says nothing of a boat, dock or sailing in ${locale}`, () => {
+        const email = bookingConfirmationEmail({ ...course, locale });
+        const words =
+          locale === "en-US"
+            ? /\b(boat|dock|sail|sails|sailing)\b/i
+            : /\b(barco|bordo|muelle|zarpar|zarpa|salir)\b/i;
+        expect(`${email.subject}\n${email.text}\n${email.html}`).not.toMatch(words);
+      });
+    }
+
+    it("tells a student when to arrive, and when the balance is due", () => {
+      const email = bookingConfirmationEmail(course);
+      expect(email.subject).toBe("You’re enrolled: Open Water Diver, day 1");
+      expect(email.text).toContain("Please arrive 30 minutes early");
+      expect(email.text).toContain("then $315.00 at the shop on");
+      expect(email.text).toContain("See what’s left before your first day");
+    });
+  });
+
   it("defaults the dock call to 30 minutes", () => {
     const email = bookingConfirmationEmail(base);
     expect(email.text).toContain("be at the dock 30 minutes early");

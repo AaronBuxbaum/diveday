@@ -2259,6 +2259,7 @@ async function sendStoredBookingConfirmation(
         endsAt: row.trip.endsAt,
         timezone: row.shop.timezone,
         dockCallMinutes: row.shop.dockCallMinutes,
+        ...(row.course ? { courseSession: true } : {}),
         readinessUrl: readinessCapability
           ? new URL(readinessLinkPath(readinessCapability.token), `${origin}/`).toString()
           : undefined,

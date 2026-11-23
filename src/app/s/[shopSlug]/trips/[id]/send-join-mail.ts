@@ -199,6 +199,7 @@ function bookSpotConfirmation(input: {
     endsAt: trip.endsAt,
     timezone: shop.timezone,
     dockCallMinutes: shop.dockCallMinutes,
+    ...(trip.course != null ? { courseSession: true } : {}),
     readinessUrl: input.readinessUrl,
     waiverUrl: input.waiverUrl,
     packingList: shop.packingList,
