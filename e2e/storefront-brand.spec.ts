@@ -32,6 +32,17 @@ test.describe("the storefront wears the shop's brand", () => {
     await expect(
       page.getByText(diverTranslator("en-US")("brand.badges.padi_5_star")),
     ).toBeVisible();
+    // An affiliation with an official logo file wears it beside the words
+    // (H-20261123-badge-logos-shipped); PADI has none yet and stays text.
+    const t = diverTranslator("en-US");
+    const withLogo = page.getByRole("listitem").filter({ hasText: t("brand.badges.tripadvisor") });
+    await expect(withLogo.locator('img[src*="tripadvisor"]')).toHaveCount(1);
+    await expect(
+      page
+        .getByRole("listitem")
+        .filter({ hasText: t("brand.badges.padi_5_star") })
+        .locator("img"),
+    ).toHaveCount(0);
     await expect(page.getByRole("link", { name: "Bookings by DiveDay" })).toBeVisible();
   });
 

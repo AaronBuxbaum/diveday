@@ -218,6 +218,7 @@ and run the command again.
 | H-20261109-media-version-recovery | Chosen | 2026-11-09 | How long should older media versions remain recoverable? |
 | H-20261110-bill-recorded-receipts | Resolved | 2026-11-10 | Bill recorded receipts across payment methods |
 | H-20261110-branch-protection-top-of-stack | Deferred | 2026-11-10 | When should branch protection require the stack result? |
+| H-20261123-badge-logos-shipped | Implemented, legal review pending | 2026-11-23 | Ship official logos beside a shop's affiliation badges |
 
 <!-- human-decision-index:end -->
 

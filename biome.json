@@ -6,7 +6,14 @@
     "useIgnoreFile": true
   },
   "files": {
-    "includes": ["**", "!pnpm-lock.yaml", "!drizzle", "!screenshots", "!docs/design/canvases"]
+    "includes": [
+      "**",
+      "!pnpm-lock.yaml",
+      "!drizzle",
+      "!screenshots",
+      "!docs/design/canvases",
+      "!public/badges"
+    ]
   },
   "formatter": {
     "enabled": true,
