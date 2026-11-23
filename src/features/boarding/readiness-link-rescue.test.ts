@@ -8,7 +8,14 @@ import {
 } from "../../db/booking-capabilities";
 import { cancelBooking, createBooking } from "../../db/bookings";
 import type { AppDb } from "../../db/client";
-import { bookingCapabilities, notificationDeliveries, people } from "../../db/schema/index";
+import {
+  bookingCapabilities,
+  bookings,
+  courses,
+  notificationDeliveries,
+  people,
+  trips,
+} from "../../db/schema/index";
 import { setTripStatus } from "../../db/trips";
 import { upcomingTripsWithCounts } from "../../db/trips-queries.test-support";
 import { nowDate } from "../../lib/clock";
@@ -112,6 +119,26 @@ describe("emailFreshReadinessLink", () => {
     // is the whole point.
     expect(String(notification.readinessUrl)).toMatch(new RegExp(`^${APP_ORIGIN}/ready/`));
     expect(String(notification.readinessUrl)).not.toContain(token);
+  });
+
+  it("leaves a boat day's rescue without a course flag (issue #4912)", async () => {
+    const { db, token } = await bookingWithDeadLink();
+    await emailFreshReadinessLink(db, token);
+    expect(sent.mock.calls[0]?.[0]).not.toHaveProperty("courseSession");
+  });
+
+  it("says it is a course session when the booking's trip has a course (issue #4912)", async () => {
+    const { db, shop, bookingId, token } = await bookingWithDeadLink();
+    const [course] = await db.select({ id: courses.id }).from(courses).limit(1);
+    if (!course) throw new Error("expected a seeded course");
+    const [booking] = await db
+      .select({ tripId: bookings.tripId })
+      .from(bookings)
+      .where(and(eq(bookings.id, bookingId), eq(bookings.shopId, shop.id)));
+    if (!booking) throw new Error("expected the booking");
+    await db.update(trips).set({ courseId: course.id }).where(eq(trips.id, booking.tripId));
+    expect(await emailFreshReadinessLink(db, token)).toBe("sent");
+    expect(sent.mock.calls[0]?.[0]).toMatchObject({ courseSession: true });
   });
 
   it("tells the caller nothing but a code", async () => {
