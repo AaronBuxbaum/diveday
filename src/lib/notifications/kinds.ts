@@ -372,6 +372,8 @@ const readinessLinkSchema = z.object({
   readinessUrl: z.url().max(2_000),
   expiresAt: z.date(),
   timezone: z.string().trim().min(1).max(100),
+  /** A course session: the rescue words say first day, not sailing. */
+  courseSession: z.boolean().optional(),
   /**
    * Why the link is going out. Absent is the rescue of an expired link, which
    * every sender before course forms meant; `course_forms` is the waiver send
@@ -410,6 +412,8 @@ const seatOfferBase = z.object({
   diverName: z.string().trim().min(1).max(120),
   shopName: z.string().trim().min(1).max(120),
   tripTitle: tripTitleSchema,
+  /** A course session: it starts rather than sails, so the words name no boat. */
+  courseSession: z.boolean().optional(),
   startsAt: z.date(),
   endsAt: z.date(),
   timezone: z.string().trim().min(1).max(100),

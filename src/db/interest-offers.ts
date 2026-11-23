@@ -664,6 +664,7 @@ async function sendOffer(
     diverName: person?.fullName ?? interest.name ?? "Diver",
     shopName: shop.name,
     tripTitle: trip.title,
+    ...(trip.courseId ? { courseSession: true } : {}),
     startsAt: trip.startsAt,
     endsAt: trip.endsAt,
     timezone: shop.timezone,

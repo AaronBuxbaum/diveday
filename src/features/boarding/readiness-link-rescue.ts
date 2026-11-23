@@ -129,6 +129,7 @@ export type ReadinessRescuePlan =
       shopName: string;
       timezone: string;
       tripTitle: string;
+      courseSession: boolean;
       origin: string;
     };
 
@@ -159,6 +160,7 @@ export async function planReadinessLinkRescue(
       shopLocale: shops.defaultLocale,
       timezone: shops.timezone,
       tripTitle: trips.title,
+      courseId: trips.courseId,
     })
     .from(bookings)
     .innerJoin(people, eq(people.id, bookings.personId))
@@ -200,6 +202,7 @@ export async function planReadinessLinkRescue(
     shopName: context.shopName,
     timezone: context.timezone,
     tripTitle: context.tripTitle,
+    courseSession: context.courseId !== null,
     origin,
   };
 }
@@ -255,6 +258,7 @@ export async function sendPlannedReadinessLink(
           diverName: plan.diverName,
           shopName: plan.shopName,
           tripTitle: plan.tripTitle,
+          ...(plan.courseSession ? { courseSession: true } : {}),
           readinessUrl: new URL(readinessLinkPath(issued.token), `${plan.origin}/`).toString(),
           expiresAt: issued.expiresAt,
           timezone: plan.timezone,
