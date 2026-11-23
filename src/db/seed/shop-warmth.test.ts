@@ -16,7 +16,9 @@ it("signs the welcome, posts one notice and features the first-timer course", as
   expect(row.welcomeText).toBe(DEMO_SHOP_BRAND.welcomeText);
   expect(row.welcomeSigner).toBe("Dana Reyes, owner");
   expect(row.noticeText).toBe(DEMO_SHOP_BRAND.noticeText);
-  expect(row.safetyRecordEnabled).toBe(true);
+  // The public departure record stays off: the demo seeds not-ready divers on purpose, and its
+  // counts would read as a poor record to a diver who has not booked.
+  expect(row.safetyRecordEnabled).toBe(false);
   const pick = await readShopPick(db, row, nowDate());
   expect(pick?.kind).toBe("course");
   if (pick?.kind === "course") {

@@ -40,7 +40,7 @@ export const DEMO_SHOP_BRAND = {
   brandHeroImageAlt: demoIllustration("sunset-boat").alt,
   establishedYear: 1998,
   // **The owner's voice and the shop's word of the day** (#4928): the signed welcome under the
-  // heading, one posted notice, and the public safety record, so the demo shows the features that
+  // heading and one posted notice, so the demo shows the features that
   // put a person and a fact in front of a diver who has not booked. Shop-authored, one wording.
   // i18n-exempt: the owner's own welcome, like the tagline above.
   welcomeText:
@@ -50,7 +50,6 @@ export const DEMO_SHOP_BRAND = {
   // i18n-exempt: shop-authored notice line, true to the schedule the demo seeds.
   noticeText:
     "Wreck trips to the Spiegel Grove and the Duane go when the current allows, and we make the call the evening before.",
-  safetyRecordEnabled: true,
   // Fictional examples, labelled as such wherever a demo renders them.
   brandBadges: ["padi_5_star", "padi_idc", "green_fins", "blue_star", "dan_partner", "tripadvisor"],
   // Fictional demo scenes, never claimed as photographs of the operator.
@@ -79,16 +78,16 @@ export async function syncDemoShopBrand(db: DbExecutor): Promise<void> {
 }
 
 /**
- * Give a demo database seeded before the welcome, the notice and the safety record existed the
+ * Give a demo database seeded before the welcome and the notice existed the
  * same warmth, once: keyed on a blank welcome, so a shop owner who clears or rewrites it in the
  * demo is left alone afterwards. The pick is set with the schedule (`shop-pick.ts`), because a
  * reset replaces the courses it points at.
  */
 export async function syncDemoShopWelcome(db: DbExecutor): Promise<void> {
-  const { welcomeText, welcomeSigner, noticeText, safetyRecordEnabled } = DEMO_SHOP_BRAND;
+  const { welcomeText, welcomeSigner, noticeText } = DEMO_SHOP_BRAND;
   const [shop] = await db
     .update(shops)
-    .set({ welcomeText, welcomeSigner, noticeText, safetyRecordEnabled })
+    .set({ welcomeText, welcomeSigner, noticeText })
     .where(and(eq(shops.slug, DEMO_SHOP_SLUG), eq(shops.isDemo, true), isNull(shops.welcomeText)))
     .returning({ id: shops.id });
   if (!shop) return;

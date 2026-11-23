@@ -12,7 +12,7 @@
       "!drizzle",
       "!screenshots",
       "!docs/design/canvases",
-      "!public/badges"
+      "!public/badges/*.svg"
     ]
   },
   "formatter": {
