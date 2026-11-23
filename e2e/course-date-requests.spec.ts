@@ -53,7 +53,7 @@ for (const scenario of cases) {
       await expect(inquiry.locator("> summary")).toHaveText(diver("course.askAnotherDate"));
       await openIfClosed(inquiry);
       await expect(
-        publicPage.getByRole("link", { name: diver("course.bookThisDate") }),
+        publicPage.getByRole("link", { name: diver("course.enrollOnThisDate") }),
       ).toHaveCount(scenario.scheduled ? 2 : 0);
       if (!scenario.scheduled) {
         await expect(

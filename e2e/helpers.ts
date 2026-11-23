@@ -1438,7 +1438,7 @@ export async function bookOpenWaterSession(
   email: string,
 ): Promise<string> {
   await page.goto("/s/blue-mantis/courses/open-water-diver");
-  await page.getByRole("link", { name: "Book this date" }).last().click();
+  await page.getByRole("link", { name: "Enroll on this date" }).last().click();
   await expect(page.getByLabel("People", { exact: true })).toHaveAttribute("data-hydrated", "true");
   await page.getByLabel("Name", { exact: true }).fill(name);
   await page.getByLabel("Email", { exact: true }).fill(email);

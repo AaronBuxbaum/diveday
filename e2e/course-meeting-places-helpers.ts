@@ -34,7 +34,7 @@ export async function enrollWithCourseMeetingPlaces(page: Page, shopSlug: string
       page.locator("#how-it-runs").filter({ visible: true }).getByText(place, { exact: true }),
     ).toBeVisible();
   }
-  await page.getByRole("link", { name: "Book this date" }).first().click();
+  await page.getByRole("link", { name: "Enroll on this date" }).first().click();
   await expect(page.getByRole("heading", { name: diver("booking.courseHeading") })).toBeVisible();
   await bookASeatAndOpenThread(page, "Jordan Places", "jordan-places@example.com");
   const meetingList = page.getByTestId("ready-meeting-days").filter({ visible: true });

@@ -659,7 +659,7 @@
     "startsAt": "Starts {time}",
     "joinWaitList": "Join the wait list",
     "seeFullDate": "See this date",
-    "bookThisDate": "Book this date",
+    "enrollOnThisDate": "Enroll on this date",
     "sessionWith": "With {names}",
     "faqsHeading": "Questions divers ask",
     "howItRunsHeading": "How the course runs",
@@ -4243,7 +4243,7 @@
       "nextDate": "Next date",
       "dates": "Wed, Oct 14 – Fri, Oct 16",
       "dateMeta": "Starts 8:00 AM · 5 seats left",
-      "bookThisDate": "Book this date"
+      "enrollOnThisDate": "Enroll on this date"
     },
     "ordersLedger": {
       "label": "Orders",

@@ -191,7 +191,7 @@ test("an instructor certifies a diver from the course roster, and they can book 
     .first()
     .click();
   await expect(page.getByRole("heading", { name: "Upcoming dates" })).toBeVisible();
-  await page.getByRole("link", { name: "Book this date" }).first().click();
+  await page.getByRole("link", { name: "Enroll on this date" }).first().click();
   await expect(page.getByLabel("People", { exact: true })).toHaveAttribute("data-hydrated", "true");
   await page.getByRole("textbox", { name: "Name" }).fill(diverName);
   await page.getByRole("textbox", { name: "Email" }).fill(diverEmail);

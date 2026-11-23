@@ -345,7 +345,7 @@ test("a course taught on air offers no nitrox request, at the same shop that fil
   // route a diver enrolling in a course actually takes, and the session sits
   // far enough out that the schedule's first page need not carry it.
   await page.goto("/s/blue-mantis/courses/open-water-diver");
-  await page.getByRole("link", { name: "Book this date" }).first().click();
+  await page.getByRole("link", { name: "Enroll on this date" }).first().click();
   await expect(page.getByText("Course session · Open Water Diver")).toBeVisible();
   await expect(page.getByLabel("People", { exact: true })).toHaveAttribute("data-hydrated", "true");
   await page.getByRole("textbox", { name: "Name" }).fill("Owen Reid");

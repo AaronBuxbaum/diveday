@@ -435,7 +435,7 @@ describe("CourseSessions featured date", () => {
 
     expect(screen.getByText("Next date")).toBeInTheDocument();
     expect(screen.getAllByText(/Starts.*EDT/)).toHaveLength(2);
-    const [featured] = screen.getAllByRole("link", { name: "Book this date" });
+    const [featured] = screen.getAllByRole("link", { name: "Enroll on this date" });
     expect(featured).toHaveAttribute("href", "/s/blue-mantis/trips/trip-1");
   });
 
@@ -448,7 +448,7 @@ describe("CourseSessions featured date", () => {
     render(<CourseSessions sessions={sessions} {...props} />);
 
     expect(hero?.href).toBe("/s/blue-mantis/trips/trip-open");
-    expect(screen.getByRole("link", { name: "Book this date" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Enroll on this date" })).toHaveAttribute(
       "href",
       "/s/blue-mantis/trips/trip-open",
     );
@@ -469,7 +469,7 @@ describe("CourseSessions featured date", () => {
     // the full earlier date doesn't exist…
     expect(screen.getByText("Next open date")).toBeInTheDocument();
     expect(screen.queryByText("Next date")).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Book this date" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Enroll on this date" })).toHaveAttribute(
       "href",
       "/s/blue-mantis/trips/trip-open",
     );
@@ -489,7 +489,7 @@ describe("CourseSessions featured date", () => {
       "href",
       "/s/blue-mantis/trips/trip-full",
     );
-    expect(screen.queryByRole("link", { name: "Book this date" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Enroll on this date" })).not.toBeInTheDocument();
   });
 
   // B42 (visual review 2026-10-24): a later date's row is one link, and who
@@ -515,7 +515,7 @@ describe("CourseSessions featured date", () => {
     expect(links).toHaveLength(1);
     expect(links[0]).toHaveAttribute("href", "/s/blue-mantis/trips/trip-2");
     expect(links[0]).toHaveTextContent("With Keiko and Marcus · Benwood");
-    expect(links[0]).toHaveTextContent(/Book this date$/);
+    expect(links[0]).toHaveTextContent(/Enroll on this date$/);
   });
 
   it("names nobody and nowhere when the session sets neither", () => {
@@ -617,7 +617,7 @@ describe("the course opening's next date", () => {
     const next = courseHeroDate([full, open], "reef", "America/New_York", "en-US", t);
     expect(next).toMatchObject({
       href: "/s/reef/trips/open",
-      action: "Book this date",
+      action: "Enroll on this date",
       full: false,
       label: t("course.nextOpenDate"),
     });
