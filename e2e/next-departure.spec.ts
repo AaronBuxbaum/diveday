@@ -47,7 +47,7 @@ test.describe("a full boat ahead of the board", () => {
     await page.goto("/s/blue-mantis");
     const rows = page.getByRole("list", { name: "Upcoming trips" }).getByRole("listitem");
     await expect(rows.filter({ hasText: full })).toContainText(
-      diverTranslator("en-US")("schedule.filters.partySeats", { count: 0, party: 1 }),
+      diverTranslator("en-US")("fallback.full"),
     );
 
     // **The card is a pin, not a removal** (ADR

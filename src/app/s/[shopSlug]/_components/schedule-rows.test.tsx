@@ -183,6 +183,23 @@ it("keeps insufficient boats visible, names their seats, and carries the party t
   expect(rows({ partySize: 4, isEmbed: true })[0]?.href).toBe("/s/blue-mantis/embed/trip/t1");
 });
 
+it("says Full on a full boat when no party size was chosen, never 0 seats left", () => {
+  const full = [{ ...listed[0], booked: 10 }] as unknown as UpcomingTrips;
+  expect(rows({ listedTrips: full })[0]?.capacityText).toBe("Full");
+});
+
+it("says Full on a full boat even when a party size was chosen", () => {
+  const full = [{ ...listed[0], booked: 10 }] as unknown as UpcomingTrips;
+  const row = rows({ listedTrips: full, partySize: 2 })[0];
+  expect(row?.capacityText).toBe("Full");
+  expect(row?.insufficientSeats).toBe(true);
+});
+
+it("names the party only when a chosen size does not fit the seats left", () => {
+  expect(rows({ partySize: 4 })[0]?.capacityText).toBe("1 seat left · party of 4");
+  expect(rows({ partySize: 1 })[0]?.capacityText).toBe(t("fallback.spotsLeft", { count: 1 }));
+});
+
 it("uses only the first planned site’s photo and keeps the embed unchanged", () => {
   const listedTrips = [
     {

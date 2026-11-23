@@ -110,11 +110,13 @@ export function weekLedgerRows({
     const requirement = trip.course ? null : (requirementsByTrip.get(trip.id) ?? null);
     const seats = scheduleSeatState(t, trip);
     const departed = facts ? trip.startsAt.getTime() <= facts.now.getTime() : false;
+    // A boat with no seats says "Full" whatever the party; the party is named
+    // only beside a real seat count it does not fit.
     const capacityText = departed
       ? t("booking.sailedHeading")
-      : !isEmbed && trip.capacity - trip.booked < partySize
+      : !isEmbed && seats.tone !== "full" && trip.capacity - trip.booked < partySize
         ? t("schedule.filters.partySeats", {
-            count: Math.max(0, trip.capacity - trip.booked),
+            count: trip.capacity - trip.booked,
             party: partySize,
           })
         : seats.text;

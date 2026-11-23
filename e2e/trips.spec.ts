@@ -43,10 +43,7 @@ test("the public schedule lists seeded trips with capacity states, a month rail,
   // The sold-out wreck trip, and the weekly Saturday run sold out on its next
   // date (src/db/seed/booth.ts).
   await expect(
-    tripList.getByText(
-      diverTranslator("en-US")("schedule.filters.partySeats", { count: 0, party: 1 }),
-      { exact: true },
-    ),
+    tripList.getByText(diverTranslator("en-US")("fallback.full"), { exact: true }),
   ).toHaveCount(2);
   await expect(page.getByRole("link", { name: "Full trip form" })).toHaveCount(0);
   await expect(page.getByLabel("Schedule overview")).toHaveCount(0);
