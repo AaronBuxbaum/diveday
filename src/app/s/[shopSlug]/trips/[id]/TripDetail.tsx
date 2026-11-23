@@ -486,7 +486,7 @@ export async function TripDetailPage({
             wait-list form each carry it. */}
         {offersAnotherBoat ? (
           <PhoneFootBar href="#book">
-            {t(full ? fullFootLabel(shop) : "booking.bookVerb")}
+            {t(full ? fullFootLabel(shop) : trip.course ? "booking.enroll" : "booking.bookVerb")}
           </PhoneFootBar>
         ) : null}
       </main>

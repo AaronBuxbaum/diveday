@@ -990,7 +990,7 @@
       "tooBigSuffix": ": that’s over {maxMb} MB. Try a smaller photo."
     },
     "elearningCode": "Your eLearning code",
-    "materialsAccess": "Your access code comes after you book. If it has not arrived, write or call the shop.",
+    "materialsAccess": "Your access code shows up right here once the shop gives it to you. Not here yet? Write or call the shop.",
     "courseStartLine": "Your course starts at {time}.",
     "estimatedOwnRental": "Your estimated rental: {amount}.",
     "estimatedAtShopTotal": "Estimated total at the shop: {amount}. The crew confirms the rental at the dock.",

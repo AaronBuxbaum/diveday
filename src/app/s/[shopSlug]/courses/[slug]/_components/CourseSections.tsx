@@ -674,7 +674,8 @@ export function CourseFaqs({ faqs, t }: { faqs: CourseFaq[]; t: DiverTranslator 
 }
 
 /**
- * Phone CTA mirrors `#dates` (UX audit #8): book if any date is open;
+ * Phone CTA mirrors `#dates` (UX audit #8): enroll if any date is open, the
+ * same word the form says;
  * otherwise show the enabled waitlist or full-date label. With no dates,
  * request only when an inquiry exists.
  */
@@ -688,7 +689,7 @@ export function courseFootBar(
     return {
       href: "#dates",
       label: sessions.some((session) => !isFull(session))
-        ? t("booking.bookVerb")
+        ? t("booking.enroll")
         : waitlistOn
           ? t("course.joinWaitList")
           : t("course.seeFullDate"),

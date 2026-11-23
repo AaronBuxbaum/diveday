@@ -990,7 +990,7 @@
       "tooBigSuffix": ": supera los {maxMb} MB. Prueba con una foto más pequeña."
     },
     "elearningCode": "Tu código de eLearning",
-    "materialsAccess": "Tu código de acceso llega después de reservar. Si no te ha llegado, escribe o llama al centro.",
+    "materialsAccess": "Tu código de acceso aparecerá aquí cuando el centro te lo dé. ¿Aún no está? Escribe o llama al centro.",
     "courseStartLine": "Tu curso comienza a las {time}.",
     "estimatedOwnRental": "Tu alquiler estimado: {amount}.",
     "estimatedAtShopTotal": "Total estimado en el centro: {amount}. La tripulación confirma el alquiler en el muelle.",
