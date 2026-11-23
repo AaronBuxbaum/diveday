@@ -150,20 +150,22 @@ export default async function CoursePage({
   // this for `stored.overview` would be publishing the raw marker. The whole
   // row is resolved rather than the fields this page happens to render, so a
   // new prose field cannot quietly opt out (src/lib/courses.ts).
-  const resolved = resolveCourseContentDepths(
-    withLocalizedTemplateCopy(stored, locale),
-    courseDepthFormat(t, shop.depthUnit),
-  );
-  // The shop's own Spanish summary for a reader in Spanish (`shop-translate`).
-  const translated = await withTranslatedFields(db, shop, locale, "course", resolved, ["summary"]);
-  const course =
+  // Open Water's own earlier wording first, which only its saved baseline can tell apart; then every
+  // template's Spanish twin for what the shop has not edited (issue #4915).
+  const openWater =
     locale === "es-ES"
-      ? withLocalizedOpenWaterTemplateCopy(translated, {
+      ? withLocalizedOpenWaterTemplateCopy(stored, {
           certificationFees: t("course.templateCopy.openWaterCertificationFees"),
           elearningQuestion: t("course.templateCopy.openWaterElearningQuestion"),
           elearningAnswer: t("course.templateCopy.openWaterElearningAnswer"),
         })
-      : translated;
+      : stored;
+  const resolved = resolveCourseContentDepths(
+    withLocalizedTemplateCopy(openWater, locale),
+    courseDepthFormat(t, shop.depthUnit),
+  );
+  // The shop's own Spanish summary for a reader in Spanish (`shop-translate`).
+  const course = await withTranslatedFields(db, shop, locale, "course", resolved, ["summary"]);
 
   const certificationRequired = course.minimumCertificationLevel
     ? t("course.certificationOrHigher", {
