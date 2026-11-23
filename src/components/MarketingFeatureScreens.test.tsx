@@ -165,7 +165,7 @@ describe("the feature screens' words", () => {
     [
       "CoursePageFallback",
       CoursePageFallback,
-      ["How the course runs", "Next date", "Book this date"],
+      ["How the course runs", "Next date", "Enroll on this date"],
     ],
     ["OrdersLedgerFallback", OrdersLedgerFallback, ["Money", "New order", "Partly refunded"]],
     ["ScheduleWeekFallback", ScheduleWeekFallback, ["Afternoon Two-Tank", "nobody yet", "Add"]],
@@ -204,7 +204,7 @@ describe("the feature screens' words", () => {
     [
       "CoursePageFallback",
       CoursePageFallback,
-      ["Cómo se desarrolla el curso", "Próxima fecha", "Reservar esta fecha"],
+      ["Cómo se desarrolla el curso", "Próxima fecha", "Inscribirme en esta fecha"],
     ],
     [
       "OrdersLedgerFallback",

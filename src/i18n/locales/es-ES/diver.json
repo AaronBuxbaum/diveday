@@ -659,7 +659,7 @@
     "startsAt": "Empieza a las {time}",
     "joinWaitList": "Anotarme en la lista de espera",
     "seeFullDate": "Ver esta fecha",
-    "bookThisDate": "Reservar esta fecha",
+    "enrollOnThisDate": "Inscribirme en esta fecha",
     "sessionWith": "Con {names}",
     "faqsHeading": "Preguntas que hacen los buceadores",
     "howItRunsHeading": "Cómo se desarrolla el curso",
@@ -4243,7 +4243,7 @@
       "nextDate": "Próxima fecha",
       "dates": "mié, 14 oct – vie, 16 oct",
       "dateMeta": "Empieza a las 8:00 · quedan 5 plazas",
-      "bookThisDate": "Reservar esta fecha"
+      "enrollOnThisDate": "Inscribirme en esta fecha"
     },
     "ordersLedger": {
       "label": "Pedidos",

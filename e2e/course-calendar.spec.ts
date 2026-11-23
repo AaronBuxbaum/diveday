@@ -24,7 +24,7 @@ for (const course of [
     page,
   }) => {
     await page.goto(`/s/blue-mantis/courses/${course.slug}`);
-    await page.getByRole("link", { name: "Book this date", exact: true }).first().click();
+    await page.getByRole("link", { name: "Enroll on this date", exact: true }).first().click();
     await expect(page).toHaveURL(/\/trips\/[0-9a-f-]{36}/);
     await expect(page.getByRole("heading", { name: course.title, exact: true })).toBeVisible();
     const downloadPromise = page.waitForEvent("download");

@@ -64,7 +64,7 @@ for (const scheme of ["light", "dark"] as const) {
         page,
       }) => {
         await page.goto("/s/blue-mantis/courses/discover-scuba-diving");
-        await page.getByRole("link", { name: "Book this date" }).first().click();
+        await page.getByRole("link", { name: "Enroll on this date" }).first().click();
         await bookASeatAndOpenThread(page, "Personal Kit Student");
         const gear = await openThreadStep(page, "gear");
         await expect(gear.getByText(/^Included with the course:/)).toContainText("Snorkel");

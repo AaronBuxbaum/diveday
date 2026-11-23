@@ -513,7 +513,7 @@ export function courseHeroDate(
       ? waitlistOn
         ? t("course.joinWaitList")
         : t("course.seeFullDate")
-      : t("course.bookThisDate"),
+      : t("course.enrollOnThisDate"),
     full,
   };
 }
@@ -597,7 +597,7 @@ export function CourseSessions({
                     href={publicTripPath(shopSlug, next.id)}
                     className={buttonClass({ variant: full ? "secondary" : "primary" })}
                   >
-                    {full ? fullLabel : t("course.bookThisDate")}
+                    {full ? fullLabel : t("course.enrollOnThisDate")}
                   </Link>
                 </div>
               );
@@ -629,7 +629,7 @@ export function CourseSessions({
                             ) : null}
                           </span>
                           <span className={buttonClass({ variant: "secondary", size: "sm" })}>
-                            {full ? fullLabel : t("course.bookThisDate")}
+                            {full ? fullLabel : t("course.enrollOnThisDate")}
                           </span>
                         </Link>
                       </li>

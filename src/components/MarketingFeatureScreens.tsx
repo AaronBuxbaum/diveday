@@ -446,7 +446,7 @@ export function CoursePageFallback({ locale }: { locale: DiverLocale }) {
             <p className="text-xs text-muted">{t("fallback.coursePage.dateMeta")}</p>
           </div>
           <button type="button" disabled className={MOCK_PRIMARY_BUTTON}>
-            {t("fallback.coursePage.bookThisDate")}
+            {t("fallback.coursePage.enrollOnThisDate")}
           </button>
         </div>
       </div>

@@ -383,7 +383,7 @@ test.describe("minimum age (H-20260724-certification-levels-agency-rules, fail o
     // and never even raises the blocker.
     const diverName = `Late Bloomer ${stamp}`;
     await page.goto(`/s/${SHOP}/courses/open-water-diver`);
-    await page.getByRole("link", { name: "Book this date" }).last().click();
+    await page.getByRole("link", { name: "Enroll on this date" }).last().click();
     // The booking form is controlled, so wait for hydration before typing —
     // otherwise a fill can land before React attaches and gets silently lost.
     await expect(page.getByLabel("People", { exact: true })).toHaveAttribute(

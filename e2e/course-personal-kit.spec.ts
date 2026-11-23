@@ -9,7 +9,7 @@ test("a new course student is given the personal kit online and in the saved pre
   request,
 }) => {
   await page.goto("/s/blue-mantis/courses/discover-scuba-diving");
-  await page.getByRole("link", { name: "Book this date" }).first().click();
+  await page.getByRole("link", { name: "Enroll on this date" }).first().click();
   const facts = page.getByRole("region", { name: t("trip.goodToKnow") });
   const supplied = facts.getByText(t("trip.packProvided"), { exact: true }).locator("..");
   const coursePlan = page.getByTestId("trip-course-plan").filter({ visible: true });

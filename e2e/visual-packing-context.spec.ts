@@ -22,7 +22,7 @@ test.describe("light mode", () => {
       test.setTimeout(FLOW_TIMEOUT_MS);
       if (intro) {
         await page.goto("/s/blue-mantis/courses/discover-scuba-diving");
-        await page.getByRole("link", { name: "Book this date" }).first().click();
+        await page.getByRole("link", { name: "Enroll on this date" }).first().click();
         await bookASeatAndOpenThread(page, "First Dive Packing Student");
       } else {
         await bookAVisualRegressionSeat(page, "light");

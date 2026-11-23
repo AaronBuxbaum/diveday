@@ -7,7 +7,7 @@ const t = diverTranslator("en-US");
 
 export async function openMultiDayCourseBooking(page: Page) {
   await page.goto("/s/blue-mantis/courses/open-water-diver");
-  await page.getByRole("link", { name: "Book this date" }).first().click();
+  await page.getByRole("link", { name: "Enroll on this date" }).first().click();
   await expect(page.getByRole("heading", { name: t("booking.courseHeading") })).toBeVisible();
   // The same course plan also exists in the hidden print-only paper sheet.
   const plan = page.getByTestId("trip-course-plan").filter({ visible: true });

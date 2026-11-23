@@ -200,7 +200,7 @@ describe.each(["en-US", "es-ES"] as const)("public course requests in %s", (loca
       hasSession ? "#dates" : "#get-in-touch",
     );
     if (hasSession) {
-      for (const book of screen.getAllByRole("link", { name: t("course.bookThisDate") })) {
+      for (const book of screen.getAllByRole("link", { name: t("course.enrollOnThisDate") })) {
         expect(book).toHaveAttribute("href", "/s/blue-mantis/trips/trip-1");
       }
     } else {

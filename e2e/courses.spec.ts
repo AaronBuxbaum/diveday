@@ -711,7 +711,7 @@ test.describe("staff", () => {
     await expect(page.getByRole("heading", { name: "Upcoming dates" })).toBeVisible();
     // Sessions are listed soonest first, so the one just scheduled 21 days out is
     // the last — and the only one this test may consume a seat from.
-    await page.getByRole("link", { name: "Book this date" }).last().click();
+    await page.getByRole("link", { name: "Enroll on this date" }).last().click();
     await expect(page.getByText("Course session · Open Water Diver")).toBeVisible();
 
     // The booking form is controlled, so wait for hydration before typing.
@@ -1470,7 +1470,7 @@ test("a course's learning materials reach the student's thread, and staff tick t
   const diverContext = await browser.newContext({ baseURL: workerBaseURL });
   const diverPage = makeActivitySafe(await diverContext.newPage());
   await diverPage.goto(`/s/${slug}/courses/open-water-diver`);
-  await diverPage.getByRole("link", { name: "Book this date" }).first().click();
+  await diverPage.getByRole("link", { name: "Enroll on this date" }).first().click();
   await expect(diverPage.getByLabel("People", { exact: true })).toHaveAttribute(
     "data-hydrated",
     "true",
@@ -1550,7 +1550,7 @@ test("a course that includes its gear asks the student for sizes, not money", as
   const diverContext = await browser.newContext({ baseURL: workerBaseURL });
   const diverPage = makeActivitySafe(await diverContext.newPage());
   await diverPage.goto(`/s/${slug}/courses/open-water-diver`);
-  await diverPage.getByRole("link", { name: "Book this date" }).first().click();
+  await diverPage.getByRole("link", { name: "Enroll on this date" }).first().click();
   await expect(diverPage.getByLabel("People", { exact: true })).toHaveAttribute(
     "data-hydrated",
     "true",
