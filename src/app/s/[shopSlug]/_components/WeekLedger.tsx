@@ -435,7 +435,7 @@ function Row({
               </p>
             ) : null}
             {row.fact ? (
-              <p data-schedule-fact className="mt-1 line-clamp-1 text-base text-muted">
+              <p data-schedule-fact className="mt-1 line-clamp-2 text-base text-muted">
                 {row.fact}
               </p>
             ) : null}

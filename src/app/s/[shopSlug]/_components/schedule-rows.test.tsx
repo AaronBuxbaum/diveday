@@ -238,3 +238,36 @@ it("marks a trip as departed at its scheduled start", () => {
   expect(result[0]?.departed).toBe(true);
   expect(result[1]?.departed).toBeFalsy();
 });
+
+it("does not say the same sighting under every boat to the same site", () => {
+  const site = { id: "reef", imageUrls: [] };
+  const listedTrips = [0, 1, 2].map((index) => ({
+    ...listed[0],
+    id: `trip-${index}`,
+    diveSite: site,
+    waterTemperatureC: null,
+    visibilityMeters: null,
+    surfaceConditions: null,
+    conditionsSummary: null,
+  })) as unknown as UpcomingTrips;
+  const now = new Date("2026-07-24T12:00:00Z");
+  const tally = (speciesSlug: string) => ({ speciesSlug, dives: 3, total: 3, lastSeenAt: now });
+  const facts = {
+    now,
+    shop: { depthUnit: "feet" as const, temperatureUnit: "fahrenheit" as const },
+    sightings: new Map([
+      [
+        "reef",
+        {
+          diveSiteId: "reef",
+          dives: 3,
+          species: [tally("southern-stingray"), tally("nurse-shark")],
+        },
+      ],
+    ]),
+  };
+  const facted = rows({ listedTrips, facts }).map((row) => row.fact);
+  expect(facted[0]).toBe("Southern stingrays seen on recent dives");
+  expect(facted[1]).toBe("Nurse sharks seen on recent dives");
+  expect(facted[2]).toBe("Southern stingrays seen on recent dives");
+});

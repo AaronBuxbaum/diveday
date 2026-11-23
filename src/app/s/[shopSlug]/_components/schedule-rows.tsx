@@ -94,6 +94,9 @@ export function weekLedgerRows({
   t: DiverTranslator;
 }): WeekLedgerRow[] {
   const lensById = new Map(lenses.map((entry) => [entry.id, entry.name]));
+  // The sighting sentences already on rows above, so a list does not say the
+  // same thing under every boat (#4932).
+  const shownFacts = new Map<string, number>();
   return listedTrips.map((trip) => {
     const diveSites = diveSitesByTrip.get(trip.id) ?? { sites: [], undecidedDives: 0 };
     // The title already naming every site with nothing left to confirm is the
@@ -142,7 +145,7 @@ export function weekLedgerRows({
           ? scheduleRowFact(
               trip,
               trip.diveSite ? facts.sightings.get(trip.diveSite.id) : undefined,
-              { ...facts, t },
+              { ...facts, t, shown: shownFacts },
             )
           : null,
       lens: trip.lensId ? (lensById.get(trip.lensId) ?? null) : null,

@@ -7,7 +7,15 @@ import { type CrewPrediction, hasCrewPrediction } from "@/lib/marine-forecast";
 import type { SiteSightings } from "@/lib/sightings";
 import { type TemperatureUnit, temperatureUnitFor } from "@/lib/temperature-units";
 
-/** One earned fact: a near departure’s crew reading, otherwise the first eligible recent sighting. */
+/**
+ * One earned fact: a near departure’s crew reading, otherwise an eligible
+ * recent sighting.
+ *
+ * `shown` counts the sighting sentences the rows above already carry (#4932).
+ * The same sentence down a list stops reading as news about a boat, so a row
+ * takes the site’s first species no row above used; with none left it repeats
+ * a sentence once and then says nothing, never inventing a fact.
+ */
 export function scheduleRowFact(
   trip: CrewPrediction & { startsAt: Date },
   seen: SiteSightings | undefined,
@@ -15,8 +23,10 @@ export function scheduleRowFact(
     now,
     shop,
     t,
+    shown,
   }: {
     now: Date;
+    shown?: Map<string, number>;
     shop: { depthUnit: DepthUnit; temperatureUnit?: TemperatureUnit | null };
     t: DiverTranslator;
   },
@@ -30,11 +40,19 @@ export function scheduleRowFact(
     );
     return readings.join(" · ") || trip.conditionsSummary;
   }
+  const sentences: string[] = [];
   for (const tally of seen?.species ?? []) {
     const name =
       tally.customName ??
       (isMarineLifeSlug(tally.speciesSlug) ? marineLifeCard(tally.speciesSlug, t).plural : null);
-    if (name) return t("schedule.recentSighting", { species: name });
+    if (name) sentences.push(t("schedule.recentSighting", { species: name }));
   }
-  return null;
+  if (!shown) return sentences[0] ?? null;
+  const used = (sentence: string) => shown.get(sentence) ?? 0;
+  const chosen =
+    sentences.find((sentence) => used(sentence) === 0) ??
+    sentences.find((sentence) => used(sentence) === 1);
+  if (!chosen) return null;
+  shown.set(chosen, used(chosen) + 1);
+  return chosen;
 }
