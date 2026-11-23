@@ -19,7 +19,9 @@ import { expect, test } from "./fixtures";
 test.describe("the storefront wears the shop's brand", () => {
   test("the badge wall and the cover photo lead", async ({ page }) => {
     await page.goto("/s/blue-mantis");
-    await expect(page.getByRole("heading", { level: 2, name: "Blue Mantis Divers" })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { level: 2, name: diverTranslator("en-US")("schedule.aboutShop") }),
+    ).toBeVisible();
     await expect(
       page.getByAltText(DEMO_SHOP_BRAND.brandHeroImageAlt, { exact: true }),
     ).toBeVisible();

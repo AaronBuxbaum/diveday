@@ -25,7 +25,9 @@ test("the public schedule lists seeded trips with capacity states, a month rail,
   await page.goto("/s/blue-mantis");
   // Schedule leads with date choices; the shop's authored identity follows the board.
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Schedule");
-  await expect(page.getByRole("heading", { level: 2, name: "Blue Mantis Divers" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { level: 2, name: diverTranslator("en-US")("schedule.aboutShop") }),
+  ).toBeVisible();
   // Scoped to the departure's own row heading: the reviews shelf below the list
   // quotes trip titles too, so a bare text match finds two things.
   await expect(

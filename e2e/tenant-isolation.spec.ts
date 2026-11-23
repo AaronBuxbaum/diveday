@@ -1,3 +1,4 @@
+import { diverTranslator } from "../src/i18n/messages";
 import { expect, test } from "./fixtures";
 import { signInAsOwner } from "./helpers";
 import { mintOnboardFormPath } from "./setup-link";
@@ -101,7 +102,9 @@ test("a second shop's owner reaches none of Blue Mantis's staff surfaces", async
   await expect(page).toHaveURL(/\/s\/blue-mantis$/);
   // The public schedule leads with dates; its authored identity remains below the board.
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Schedule");
-  await expect(page.getByRole("heading", { level: 2, name: "Blue Mantis Divers" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { level: 2, name: diverTranslator("en-US")("schedule.aboutShop") }),
+  ).toBeVisible();
   // …and they get the *visitor's* chrome on it: the shop's own public header,
   // never Blue Mantis's staff nav or its pending-work counts.
   await expect(page.getByRole("link", { name: OTHER_SHOP_NAME }).first()).toBeVisible();

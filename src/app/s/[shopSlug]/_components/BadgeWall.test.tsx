@@ -38,4 +38,50 @@ describe("BadgeWall", () => {
     expect(svg).toHaveAttribute("viewBox", "3.3 0 17.4 24");
     expect(svg).toHaveClass("h-3.5", "w-auto");
   });
+
+  describe("with a phone limit", () => {
+    const seven = [
+      "padi_5_star",
+      "padi_idc",
+      "ssi_diamond",
+      "naui_pro",
+      "blue_star",
+      "tripadvisor",
+    ] as const;
+
+    it("shows three, then a quiet count of the rest that opens them, with no script", () => {
+      const { container } = render(
+        <BadgeWall badges={seven} establishedYear={1998} t={t} phoneLimit={3} />,
+      );
+      const details = container.querySelector("details");
+      expect(details).not.toBeNull();
+      expect(details).not.toHaveAttribute("open");
+      expect(details?.querySelector("summary")?.textContent).toBe("4 more");
+      // Seven pills in all: the year and six badges; four of them wait inside.
+      expect(details?.querySelectorAll("li")).toHaveLength(4);
+    });
+
+    it("keeps every pill in the wide layout, where nothing folds", () => {
+      const { container } = render(
+        <BadgeWall badges={seven} establishedYear={1998} t={t} phoneLimit={3} />,
+      );
+      const wide = Array.from(container.querySelectorAll(":scope > ul > li, :scope > li")).filter(
+        (li) => li.className.includes("max-sm:hidden"),
+      );
+      expect(wide).toHaveLength(4);
+    });
+
+    it("draws no count when the pills fit", () => {
+      const { container } = render(
+        <BadgeWall
+          badges={["padi_5_star", "blue_star"]}
+          establishedYear={1998}
+          t={t}
+          phoneLimit={3}
+        />,
+      );
+      expect(container.querySelector("details")).toBeNull();
+      expect(container.querySelectorAll("li")).toHaveLength(3);
+    });
+  });
 });
