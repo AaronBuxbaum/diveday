@@ -9,6 +9,8 @@ const oldList = [
   "Custom towel",
   "Your certification card and logbook",
   "Seasickness tablets, taken the night before",
+  "Light layer for the ride back",
+  "Seasickness supplies, if you use them",
 ];
 const oldNotes =
   "Our own dock notes. Seasick divers should take medicine the night before. Keep this.";
@@ -20,7 +22,7 @@ it("corrects only the known seeded packing phrases on the canonical demo and kee
     .where(eq(shops.id, shop.id));
   await syncDemoShopPackingCopy(db);
   const [updated] = await db.select().from(shops).where(eq(shops.id, shop.id));
-  expect(updated.packingList).toEqual(["Custom towel", "Seasickness supplies, if you use them"]);
+  expect(updated.packingList).toEqual(["Custom towel", "A light layer for after your dive"]);
   expect(updated.replyNotes).toBe("Our own dock notes. Keep this.");
   expect(updated.packingLogbook).toBe(false);
   await syncDemoShopPackingCopy(db);

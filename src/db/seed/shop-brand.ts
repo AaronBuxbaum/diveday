@@ -64,8 +64,8 @@ export async function syncDemoShopBrand(db: DbExecutor): Promise<void> {
     .where(and(eq(shops.slug, DEMO_SHOP_SLUG), eq(shops.isDemo, true), isNull(shops.logoUrl)));
 }
 
-// i18n-exempt: the fictional shop's own packing suggestion.
-const OPTIONAL_SEASICKNESS_SUPPLIES = "Seasickness supplies, if you use them";
+// i18n-exempt: the fictional shop's own packing suggestion; one wording for a boat day and a course day.
+const LIGHT_LAYER = "A light layer for after your dive";
 
 /**
  * **What Blue Mantis tells its AI drafts and its rental counter**, in the
@@ -82,8 +82,7 @@ export const DEMO_SHOP_DESK = {
   packingList: [
     "Swimsuit and towel",
     "Reef-safe sun protection",
-    "Light layer for the ride back",
-    OPTIONAL_SEASICKNESS_SUPPLIES,
+    LIGHT_LAYER,
     "Refillable water bottle",
   ],
   // i18n-exempt: a review link is a URL the shop pastes in.
@@ -93,10 +92,18 @@ export const DEMO_SHOP_DESK = {
     "Gear is due back at the dock when the boat ties up. A late return is $15 per day. A lost or damaged unit is charged at replacement cost.",
 } satisfies Partial<typeof shops.$inferInsert>;
 
-/** Correct known demo defaults without replacing a shop's own checklist or notes. */
+/**
+ * Correct known demo defaults without replacing a shop's own checklist or notes. The list is one
+ * for the whole shop, so it names no boat: a course day reads it too, and the seasickness line
+ * the demo once carried belongs in the boat-day reminder, not on a pool morning.
+ */
 export async function syncDemoShopPackingCopy(db: DbExecutor): Promise<void> {
   // i18n-exempt: exact previously seeded shop-authored words, not rendered copy.
   const timedMedicine = "Seasickness tablets, taken the night before";
+  // i18n-exempt: exact previously seeded shop-authored words, as above.
+  const optionalSupplies = "Seasickness supplies, if you use them";
+  // i18n-exempt: exact previously seeded shop-authored words, as above.
+  const rideBackLayer = "Light layer for the ride back";
   // i18n-exempt: exact previously seeded shop-authored words, as above.
   const combinedCardAndLogbook = "Your certification card and logbook";
   // i18n-exempt: exact previously seeded shop-authored words, as above.
@@ -104,7 +111,7 @@ export async function syncDemoShopPackingCopy(db: DbExecutor): Promise<void> {
   await db
     .update(shops)
     .set({
-      packingList: sql`coalesce((select jsonb_agg(case when item.value = ${timedMedicine} then ${OPTIONAL_SEASICKNESS_SUPPLIES} else item.value end order by item.ordinality) from jsonb_array_elements_text(${shops.packingList}) with ordinality as item(value, ordinality) where item.value <> ${combinedCardAndLogbook}), '[]'::jsonb)`,
+      packingList: sql`coalesce((select jsonb_agg(case when item.value = ${rideBackLayer} then ${LIGHT_LAYER} else item.value end order by item.ordinality) from jsonb_array_elements_text(${shops.packingList}) with ordinality as item(value, ordinality) where item.value <> ${combinedCardAndLogbook} and item.value <> ${timedMedicine} and item.value <> ${optionalSupplies}), '[]'::jsonb)`,
       replyNotes: sql`replace(${shops.replyNotes}, ${timedReply}, '')`,
     })
     .where(
@@ -113,6 +120,8 @@ export async function syncDemoShopPackingCopy(db: DbExecutor): Promise<void> {
         eq(shops.isDemo, true),
         or(
           sql`${shops.packingList} ? ${timedMedicine}`,
+          sql`${shops.packingList} ? ${optionalSupplies}`,
+          sql`${shops.packingList} ? ${rideBackLayer}`,
           sql`${shops.packingList} ? ${combinedCardAndLogbook}`,
           sql`strpos(coalesce(${shops.replyNotes}, ''), ${timedReply}) > 0`,
         ),

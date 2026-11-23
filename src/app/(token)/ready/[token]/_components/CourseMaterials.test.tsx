@@ -101,7 +101,7 @@ describe("CourseMaterials", () => {
 });
 
 const ACCESS_SENTENCE =
-  "Your access code comes after you book. If it has not arrived, write or call the shop.";
+  "Your access code shows up right here once the shop gives it to you. Not here yet? Write or call the shop.";
 
 describe("CourseMaterials: how e-learning access arrives", () => {
   const withMaterials = {

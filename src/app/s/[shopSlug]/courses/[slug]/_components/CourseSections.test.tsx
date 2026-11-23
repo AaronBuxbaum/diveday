@@ -554,10 +554,10 @@ describe("courseFootBar", () => {
   const open = { capacity: 8, booked: 3 };
   const full = { capacity: 8, booked: 8 };
 
-  it("books when any date has room, even when the soonest is full", () => {
+  it("enrolls when any date has room, even when the soonest is full", () => {
     expect(courseFootBar([full, open], "#get-in-touch", t)).toEqual({
       href: "#dates",
-      label: "Book",
+      label: "Enroll",
     });
   });
 
