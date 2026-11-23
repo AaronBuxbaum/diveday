@@ -199,6 +199,18 @@ export async function settleStaffHydration(
   ).toHaveCount(0);
 }
 
+/**
+ * **The add panel streams in after navigation's own hydration check**, so a link inside it clicked
+ * right after `goto` can land before its focus and scroll have run and be lost (the Rent-out panel's
+ * "Rent to <diver>", #4914). Wait for the panel's own settle mark before clicking in it.
+ */
+export async function settleAddPanel(page: Page): Promise<void> {
+  await expect(page.locator(`${ADD_PANEL_PROBE}:visible`)).toHaveAttribute(
+    "data-add-panel-settled",
+    "",
+  );
+}
+
 const SETTLED = Symbol.for("diveday.playwright.settles-staff-hydration");
 
 function settleStaffHydrationAfterNavigation(page: Page): void {

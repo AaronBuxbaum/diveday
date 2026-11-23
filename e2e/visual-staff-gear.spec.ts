@@ -7,7 +7,7 @@
 import { DEMO_SHOP_TIMEZONE } from "../src/db/seed/clock";
 import { calendarDateInTimezone, formatCalendarDate } from "../src/lib/calendar-date";
 import { DAY_MS } from "../src/lib/clock";
-import { expect, signedInAsOwner, test } from "./fixtures";
+import { expect, settleAddPanel, signedInAsOwner, test } from "./fixtures";
 import { e2eNow } from "./helpers";
 import { seedFacts } from "./shop-facts";
 import {
@@ -211,11 +211,7 @@ for (const scheme of ["light", "dark"] as const) {
       // holds the unsigned waiver line and its Send waiver (issue #2346).
       test(`the rent-out form renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/gear?add=rental&q=Priya");
-        // This panel may stream after the header; wait for its own focus/scroll.
-        await expect(page.locator("[data-add-panel]:visible")).toHaveAttribute(
-          "data-add-panel-settled",
-          "",
-        );
+        await settleAddPanel(page);
         await page.getByRole("link", { name: "Rent to Priya Sharma" }).click();
         await page.getByRole("group", { name: "Kind of gear" }).waitFor();
         // Two picks and a payment, so the bill, its total and the bar are in frame.
@@ -239,6 +235,7 @@ for (const scheme of ["light", "dark"] as const) {
 
       test(`a counter tank offers air when nitrox is unconfirmed (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/gear?add=rental&q=Lena");
+        await settleAddPanel(page);
         await page.getByRole("link", { name: "Rent to Lena Fischer" }).click();
         await page
           .getByRole("group", { name: "Kind of gear" })
@@ -260,6 +257,7 @@ for (const scheme of ["light", "dark"] as const) {
       // waiver line and its Send waiver (issue #2261, H-20261008-counter-rental-waiver-informs).
       test(`a counter rental's ticket renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/gear?add=rental&q=Priya");
+        await settleAddPanel(page);
         await page.getByRole("link", { name: "Rent to Priya Sharma" }).click();
         for (const [kind, label] of [
           ["Mask", /^Mask #1\b/],
@@ -284,6 +282,7 @@ for (const scheme of ["light", "dark"] as const) {
         page,
       }) => {
         await page.goto("/shop/blue-mantis/gear?add=rental&q=Priya");
+        await settleAddPanel(page);
         await page.getByRole("link", { name: "Rent to Priya Sharma" }).click();
         await page
           .getByRole("group", { name: "Kind of gear" })
