@@ -13,6 +13,7 @@ import { ITEM_TITLE_CLASS } from "@/components/ui/typography";
 import { getDb } from "@/db/client";
 import { upcomingSessionsByCourse } from "@/db/trips";
 import { shopBySlugCached } from "@/features/platform/shops-cached";
+import { withLocalizedTemplateCopy } from "@/features/training/course-template-localization";
 import { activeCourseAgencies, courseDoors, listActiveCourses } from "@/features/training/courses";
 import { DIVER_CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { requestTranslator } from "@/i18n/request";
@@ -119,7 +120,9 @@ export default async function PublicCoursesPage({
   // before anything on this page reads a field — the same one-shot pass the
   // course page itself makes (src/lib/courses.ts).
   const depthFormat = courseDepthFormat(t, shop.depthUnit);
-  const catalog = activeCourses.map((course) => resolveCourseContentDepths(course, depthFormat));
+  const catalog = activeCourses.map((course) =>
+    resolveCourseContentDepths(withLocalizedTemplateCopy(course, locale), depthFormat),
+  );
   const doors = courseDoors(catalog);
   const courseList = catalog.filter(
     (course) => !selectedAgency || course.agency.trim().toLowerCase() === selectedAgency,

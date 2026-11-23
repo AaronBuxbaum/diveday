@@ -35,6 +35,18 @@ A native review is still worth having and is not blocked by any of this: the bun
 per locale, so a reviewer can read them end to end without touching code. That is a decision for
 whoever is selling into a Spanish-speaking market, not a gate on shipping.
 
+## Course templates have a Spanish twin
+
+The starter course pages in `src/content/course-templates.ts` are DiveDay's words until a shop edits
+them, so each has a Spanish twin in `src/content/course-templates-es/` (issue #4915): the same fields
+in the same order, with the same number of items and the same `{depth18}` markers, ages and hours.
+`withLocalizedTemplateCopy` (`src/features/training/course-template-localization.ts`) swaps a string
+for its twin only where the shop's course still says exactly what the template said, so a shop's own
+edit, a course it wrote itself and a course copied from an older template version stay in the words
+they have. A new template or a changed template string needs its twin in the same change:
+`pnpm test course-templates-es` names what is missing. Titles stay English, like the rest of the
+course-name ladder. Use **barco**, **aguas abiertas**, **alquiler** and **tarifas de certificación**.
+
 ## The shop is **el centro**
 
 One entity, one word. "Tienda" and "centro" were both in use for the dive shop — sometimes on the

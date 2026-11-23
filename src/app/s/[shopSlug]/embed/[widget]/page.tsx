@@ -13,6 +13,7 @@ import {
 } from "@/features/after-the-dive/reviews";
 import { listBoats } from "@/features/crew-and-boats/boats";
 import { shopBySlugCached } from "@/features/platform/shops-cached";
+import { withLocalizedTemplateCopy } from "@/features/training/course-template-localization";
 import { activeCourseAgencies, listActiveCourses } from "@/features/training/courses";
 import { requestTranslator } from "@/i18n/request";
 import { courseDepthFormat } from "@/i18n/unit-labels";
@@ -105,7 +106,7 @@ export default async function EmbedWidgetPage({
   const activeCourses = async (scope: "primary" | "all") => {
     const agency = scope === "primary" ? (await activeCourseAgencies(db, shop.id))[0] : undefined;
     return (await listActiveCourses(db, shop.id, agency ? { agency } : {})).map((course) =>
-      resolveCourseContentDepths(course, depthFormat),
+      resolveCourseContentDepths(withLocalizedTemplateCopy(course, locale), depthFormat),
     );
   };
   // What the diver is asked for at enrollment, fee and eLearning together,

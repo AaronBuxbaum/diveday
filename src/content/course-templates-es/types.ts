@@ -64,6 +64,10 @@ export function courseTemplateCopyPairs(
 
 const MARKER = /\{depth\d+n?\}/g;
 
+/** The digits a sentence carries, with the depth markers taken out: ages, hours and counts must not drift in translation. */
+const numbersIn = (text: string): string =>
+  text.replace(MARKER, "").match(/\d+/g)?.sort().join() ?? "";
+
 /** What is wrong with a template's Spanish twin, one sentence each; empty when it is whole. */
 export function courseTemplateCopyProblems(
   template: CourseTemplate,
@@ -81,6 +85,7 @@ export function courseTemplateCopyProblems(
     const wanted = [...english.matchAll(MARKER)].map((m) => m[0]).sort();
     const got = [...spanish.matchAll(MARKER)].map((m) => m[0]).sort();
     if (wanted.join() !== got.join()) problems.push(`${label} changes its depth markers`);
+    if (numbersIn(english) !== numbersIn(spanish)) problems.push(`${label} changes a number`);
     if (spanish === english && english.length > 30) problems.push(`${label} is still English`);
   };
   need("description", template.description, copy.description);
