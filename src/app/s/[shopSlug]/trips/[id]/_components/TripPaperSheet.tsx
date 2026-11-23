@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { formatPaperDateTime } from "@/app/shop/[shopSlug]/trips/[id]/_components/DeparturePaperIdentity";
+import { withLocalizedTemplateCopy } from "@/features/training/course-template-localization";
 import type { DiverTranslator } from "@/i18n/messages";
 import { DIVER_CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { courseDepthFormat, diveSiteDepthText } from "@/i18n/unit-labels";
@@ -75,7 +76,10 @@ export function TripPaperSheet({
   const price = perDiverBookingPriceCents(trip, trip.course);
   const otherPrices = otherSeatPriceLines(trip, currency, locale, t);
   const course = trip.course
-    ? resolveCourseContentDepths(trip.course, courseDepthFormat(t, shop.depthUnit))
+    ? resolveCourseContentDepths(
+        withLocalizedTemplateCopy(trip.course, locale),
+        courseDepthFormat(t, shop.depthUnit),
+      )
     : null;
   const coursePlan = courseDayPlan(profile.course, t, profile.depthUnit, profile.dayCount);
   const rhythm = dayRhythmLine(profile, briefings, t, locale, zone);

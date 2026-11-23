@@ -16,7 +16,10 @@ import { getShopReviewAggregate } from "@/features/after-the-dive/reviews";
 import { diverCrewWithAway } from "@/features/crew-and-boats/crew-away-diver";
 import { shopBySlugCached } from "@/features/platform/shops-cached";
 import { assignedPublicStaffProfiles } from "@/features/public-site/public-staff-profiles";
-import { withLocalizedOpenWaterTemplateCopy } from "@/features/training/course-template-localization";
+import {
+  withLocalizedOpenWaterTemplateCopy,
+  withLocalizedTemplateCopy,
+} from "@/features/training/course-template-localization";
 import { getCourseBySlug } from "@/features/training/courses";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
 import { dateRequestCopy } from "@/i18n/date-request-copy";
@@ -147,17 +150,22 @@ export default async function CoursePage({
   // this for `stored.overview` would be publishing the raw marker. The whole
   // row is resolved rather than the fields this page happens to render, so a
   // new prose field cannot quietly opt out (src/lib/courses.ts).
-  const resolved = resolveCourseContentDepths(stored, courseDepthFormat(t, shop.depthUnit));
-  // The shop's own Spanish summary for a reader in Spanish (`shop-translate`).
-  const translated = await withTranslatedFields(db, shop, locale, "course", resolved, ["summary"]);
-  const course =
+  // Open Water's own earlier wording first, which only its saved baseline can tell apart; then every
+  // template's Spanish twin for what the shop has not edited (issue #4915).
+  const openWater =
     locale === "es-ES"
-      ? withLocalizedOpenWaterTemplateCopy(translated, {
+      ? withLocalizedOpenWaterTemplateCopy(stored, {
           certificationFees: t("course.templateCopy.openWaterCertificationFees"),
           elearningQuestion: t("course.templateCopy.openWaterElearningQuestion"),
           elearningAnswer: t("course.templateCopy.openWaterElearningAnswer"),
         })
-      : translated;
+      : stored;
+  const resolved = resolveCourseContentDepths(
+    withLocalizedTemplateCopy(openWater, locale),
+    courseDepthFormat(t, shop.depthUnit),
+  );
+  // The shop's own Spanish summary for a reader in Spanish (`shop-translate`).
+  const course = await withTranslatedFields(db, shop, locale, "course", resolved, ["summary"]);
 
   const certificationRequired = course.minimumCertificationLevel
     ? t("course.certificationOrHigher", {

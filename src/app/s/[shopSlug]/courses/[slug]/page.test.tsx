@@ -277,6 +277,34 @@ describe("public Open Water template copy", () => {
     expect(container.querySelector("#included")).toBeInTheDocument();
   });
 
+  it.each([
+    {
+      locale: "es-ES" as const,
+      shown: /La certificación Open Water Diver es la que abre la puerta/,
+    },
+    {
+      locale: "en-US" as const,
+      shown: /The Open Water Diver certification is the one that opens the door/,
+    },
+  ])(
+    "shows $locale readers the untouched template's overview in their language (issue #4915)",
+    async ({ locale, shown }) => {
+      request.locale = locale;
+      vi.mocked(shopBySlugCached).mockResolvedValue(shop(null, null));
+      vi.mocked(getCourseBySlug).mockResolvedValue({
+        ...openWaterTemplateCourse(),
+        overview: openWaterTemplate.content.overview,
+      });
+      vi.mocked(listUpcomingSessionsForCourse).mockResolvedValue([]);
+      render(
+        await CoursePage({
+          params: Promise.resolve({ shopSlug: "blue-mantis", slug: "open-water-diver" }),
+        }),
+      );
+      expect(screen.getAllByText(shown).length).toBeGreaterThan(0);
+    },
+  );
+
   it("preserves shop-edited inclusion and FAQ text on the Spanish page", async () => {
     request.locale = "es-ES";
     const shopCopy = openWaterTemplateCourse();
