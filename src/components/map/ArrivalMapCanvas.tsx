@@ -3,34 +3,35 @@
 import { useEffect, useRef } from "react";
 import { createInteractiveMap } from "./modifier-wheel-map";
 
-/** OSM's former embed framed coordinate pairs and otherwise showed the world. */
-export function arrivalCoordinates(query: string): [number, number] | null {
-  const parts = query.split(",").map((part) => Number.parseFloat(part.trim()));
-  if (parts.length !== 2 || !Number.isFinite(parts[0]) || !Number.isFinite(parts[1])) return null;
-  const [latitude, longitude] = parts as [number, number];
-  return Math.abs(latitude) <= 90 && Math.abs(longitude) <= 180 ? [latitude, longitude] : null;
-}
+/** Street-readable: a block or two around the dock fills a phone-wide card. */
+export const ARRIVAL_MAP_ZOOM = 16;
 
-export function ArrivalMapCanvas({ title, query }: { title: string; query: string }) {
+export function ArrivalMapCanvas({
+  title,
+  center,
+}: {
+  title: string;
+  center: readonly [number, number];
+}) {
   const ref = useRef<HTMLElement>(null);
+  const [latitude, longitude] = center;
   useEffect(() => {
     let cancelled = false;
     let map: import("leaflet").Map | undefined;
     import("leaflet").then((L) => {
       if (cancelled || !ref.current) return;
-      const coordinates = arrivalCoordinates(query);
       map = createInteractiveMap(L, ref.current, {
-        center: coordinates ?? [0, 0],
-        zoom: coordinates ? 15 : 1,
+        center: [latitude, longitude],
+        zoom: ARRIVAL_MAP_ZOOM,
         zoomControl: true,
         privateMap: true,
       });
-      if (coordinates) L.circleMarker(coordinates, { radius: 8 }).addTo(map);
+      L.circleMarker([latitude, longitude], { radius: 8 }).addTo(map);
     });
     return () => {
       cancelled = true;
       map?.remove();
     };
-  }, [query]);
+  }, [latitude, longitude]);
   return <section ref={ref} aria-label={title} className="h-full w-full" />;
 }

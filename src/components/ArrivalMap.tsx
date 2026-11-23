@@ -8,11 +8,11 @@ import { useMapReachable } from "./use-map-reachable";
 /** Show the map only when its basemap host is reachable and the device is online. */
 export function ArrivalMap({
   title,
-  query,
+  center,
   zoomHint,
 }: {
   title: string;
-  query: string;
+  center: readonly [number, number];
   zoomHint: string;
 }) {
   const reachable = useMapReachable(true);
@@ -21,7 +21,7 @@ export function ArrivalMap({
   return (
     <div className="relative isolate mb-5 aspect-[16/9] overflow-hidden rounded-inset bg-surface-sunken print:hidden">
       <MapWheelHint hint={zoomHint}>
-        <ArrivalMapCanvas title={title} query={query} />
+        <ArrivalMapCanvas title={title} center={center} />
       </MapWheelHint>
     </div>
   );
