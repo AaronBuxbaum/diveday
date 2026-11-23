@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { expect, settleStaffHydration, signedInAsOwner, test } from "./fixtures";
+import { expect, settleAddPanel, settleStaffHydration, signedInAsOwner, test } from "./fixtures";
 
 /**
  * Counter rentals (ADR 20260815-minimal-gear-register, amended 2026-10-08):
@@ -33,6 +33,7 @@ async function startRentalForCustomer(page: Page, { fromRegister = false } = {})
   } else {
     await page.goto("/shop/blue-mantis/gear?add=rental&q=Priya");
   }
+  await settleAddPanel(page);
   await page.getByRole("link", { name: `Rent to ${CUSTOMER}` }).click();
   // The window defaults to today; the free units for it are listed at once.
   await expect(page.getByRole("group", { name: "Kind of gear" })).toBeVisible();

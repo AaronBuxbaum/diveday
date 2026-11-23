@@ -1,7 +1,7 @@
 import type { Locator, Page } from "@playwright/test";
 import { diverTranslator } from "../src/i18n/messages";
 import { staffTranslator } from "../src/i18n/staff-messages";
-import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
+import { expect, settleAddPanel, signedInAs, signedInAsOwner, test } from "./fixtures";
 import {
   bookASeatAndOpenThread,
   choosePartySize,
@@ -201,6 +201,7 @@ export function registerRemainingExpandedAuditCaptures(
       page,
     }) => {
       await page.goto("/shop/blue-mantis/gear?add=rental&q=Rowan");
+      await settleAddPanel(page);
       await page.getByRole("link", { name: "Rent to Rowan Feld", exact: true }).click();
       const card = page
         .locator("details")

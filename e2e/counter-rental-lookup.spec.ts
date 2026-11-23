@@ -2,7 +2,7 @@ import type { Locator, Page } from "@playwright/test";
 import { gearItemKindLabel } from "../src/i18n/gear-labels";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import type { RentalLookupFleet } from "../src/test/shop-facts/rental-lookup-state";
-import { expect, signedInAsOwner, test } from "./fixtures";
+import { expect, settleAddPanel, signedInAsOwner, test } from "./fixtures";
 import { seedFacts } from "./shop-facts";
 
 const t = staffTranslator("en-US");
@@ -65,6 +65,7 @@ test.describe("counter rental lookup at 390px", () => {
     const certifiedFill = await chooseTank();
     await expect(certifiedFill.locator('option[value="32"]')).toHaveCount(1);
     await page.goto("/shop/blue-mantis/gear?add=rental&q=Lena");
+    await settleAddPanel(page);
     await page.getByRole("link", { name: "Rent to Lena Fischer" }).click();
     const unconfirmedFill = await chooseTank();
     await expect(unconfirmedFill.locator('option[value="32"]')).toHaveCount(0);
