@@ -78,7 +78,7 @@ test.describe("as owner", () => {
     // is one unboxed line, with no heading over it (ADR
     // 20260827-the-divers-thread, decision 2: "who it's for, one line, no box").
     const requirement = page.getByText(
-      "This charter is for divers with Advanced Open Water or higher.",
+      "This trip is for divers with Advanced Open Water or higher.",
     );
     await expect(requirement).toBeVisible();
     // And the way through, beside it: a level is not a refusal (issue #1866).
@@ -101,7 +101,7 @@ test.describe("as owner", () => {
     // non-disclosing fallback would be a lie on a page showing seats left, so
     // it must not appear.
     await expect(
-      page.getByText(/This charter is for divers with Advanced Open Water or higher, so we could/),
+      page.getByText(/This trip is for divers with Advanced Open Water or higher, so we could/),
     ).toBeVisible();
     await expect(page.getByText(/isn’t taking bookings right now/)).toHaveCount(0);
     await expect(page.getByRole("heading", { name: /You’ve got a seat/ })).toHaveCount(0);
@@ -131,7 +131,7 @@ test.describe("as owner", () => {
     // The requirement is still disclosed in the form — a property of the
     // trip, and the half a deciding diver needs.
     await expect(
-      page.getByText("This charter is for divers with Advanced Open Water or higher."),
+      page.getByText("This trip is for divers with Advanced Open Water or higher."),
     ).toBeVisible();
     // And the form asks nothing about anybody's diving.
     await expect(page.locator('select[name^="certificationLevel"]')).toHaveCount(0);
@@ -142,7 +142,7 @@ test.describe("as owner", () => {
     await expect(page).toHaveURL(/\/ready\//);
     // And the old refusal is not what happened.
     await expect(
-      page.getByText(/This charter is for divers with Advanced Open Water or higher, so we could/),
+      page.getByText(/This trip is for divers with Advanced Open Water or higher, so we could/),
     ).toHaveCount(0);
   });
 

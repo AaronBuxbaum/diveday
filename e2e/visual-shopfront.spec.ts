@@ -499,7 +499,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto(`/s/blue-mantis/trips/${tripId}`);
         // One unboxed line, the form's first, no heading over it (ADR
         // 20260827-the-divers-thread, decision 2; UX audit #25).
-        await page.getByText(/^This charter is for divers with/).waitFor();
+        await page.getByText(/^This trip is for divers with/).waitFor();
         // The booking form is a Client Component below the note; wait for it to
         // hydrate so the shot is of the settled page, not of the form mounting.
         await expect(page.getByLabel("People", { exact: true })).toHaveAttribute(

@@ -47,7 +47,7 @@ describe("requirementSentenceFor", () => {
 
     it("says to ask the shop, beside a required level", () => {
       expect(requirementSentenceFor(level, t, "en-US")).toBe(
-        `This charter is for divers with Advanced Open Water or higher. ${askShop}`,
+        `This trip is for divers with Advanced Open Water or higher. ${askShop}`,
       );
     });
 

@@ -214,7 +214,7 @@ export function TripFullSection({
   /** Whether the shop keeps a wait list (the Features page); off, no form to join one. */
   offerWaitlist?: boolean;
   /**
-   * Who this trip is for, already worded ("This charter is for divers with
+   * Who this trip is for, already worded ("This trip is for divers with
    * …"), or null. One unboxed line inside the form it governs (UX audit #25).
    */
   requirement?: string | null;
@@ -470,7 +470,7 @@ export type BookSpotSectionContext = {
    */
   offerHandoff?: (email: string) => void;
   /**
-   * Who this trip is for, already worded ("This charter is for divers with
+   * Who this trip is for, already worded ("This trip is for divers with
    * …"), or null. The form's first line: one sentence, no box, read with the
    * party-size control it governs rather than above the card (UX audit #25).
    */
