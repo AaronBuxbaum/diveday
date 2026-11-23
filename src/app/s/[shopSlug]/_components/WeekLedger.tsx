@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { type CSSProperties, Fragment, type ReactNode } from "react";
 import { StoredPhoto } from "@/components/StoredPhoto";
+import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { DoorChevron } from "@/components/ui/ledger";
 import { FIGURE_LARGE_CLASS } from "@/components/ui/typography";
 
@@ -78,6 +79,12 @@ export type WeekLedgerRow = {
   capacityTone: "full" | "quiet";
   /** Already-formatted money, or null for a departure with no price set. */
   price: string | null;
+  /**
+   * The boat left earlier today. The ledger folds a day's departed boats into
+   * one line under its heading, so the list opens at the next boat a diver can
+   * still book (#4929).
+   */
+  departed?: boolean;
 };
 
 /**
@@ -119,9 +126,12 @@ export function WeekLedger({
   stickyTop,
   rows,
   listLabel,
+  departedSummary,
 }: {
   rows: readonly WeekLedgerRow[];
   listLabel: string;
+  /** "3 boats already out today": the one line a day's departed boats fold into. */
+  departedSummary?: (count: number) => string;
   /**
    * Where the sticky day rule pins. The full page pins it *below* the chrome
    * bar, by the same token the bar sets its own height from (ADR
@@ -132,11 +142,17 @@ export function WeekLedger({
    */
   stickyTop: string;
 }) {
-  let lastDayKey: string | null = null;
   const priceColumn = priceColumnWidth(rows);
   const style: PriceColumnStyle | undefined = priceColumn
     ? { "--price-col": priceColumn }
     : undefined;
+  const hasPrices = priceColumn !== null;
+  const days: { key: string; rows: WeekLedgerRow[] }[] = [];
+  for (const row of rows) {
+    const day = days.at(-1);
+    if (day && day.key === row.dayKey) day.rows.push(row);
+    else days.push({ key: row.dayKey, rows: [row] });
+  }
   return (
     // `-mb-4 sm:-mb-5` hands back the last row's lower room — its `py-4
     // sm:py-5`, kept for the hover fill and unpainted at rest — so whatever
@@ -145,21 +161,71 @@ export function WeekLedger({
     // 1280 against the page's 56px section gap. A row that belongs under the
     // list takes it back in (`WEEK_LEDGER_FOLLOWER_CLASS`).
     <ul className="-mb-4 flex flex-col sm:-mb-5" aria-label={listLabel} style={style}>
-      {rows.map((row) => {
-        const newDay = row.dayKey !== lastDayKey;
-        lastDayKey = row.dayKey;
+      {days.map((day) => {
+        const first = day.rows[0];
+        if (!first) return null;
+        const gone = departedSummary ? day.rows.filter((row) => row.departed) : [];
+        const rest = day.rows.filter((row) => !gone.includes(row));
+        const anchorId = dayAnchorId(day.key);
         return (
-          <Fragment key={row.id}>
-            {newDay ? <DayRule parts={row.dayParts} stickyTop={stickyTop} /> : null}
-            <Row
-              row={row}
-              priceColumn={priceColumn !== null}
-              anchorId={newDay ? dayAnchorId(row.dayKey) : undefined}
-            />
+          <Fragment key={day.key}>
+            <DayRule parts={first.dayParts} stickyTop={stickyTop} />
+            {gone.length > 0 && departedSummary ? (
+              <DepartedFold
+                rows={gone}
+                summary={departedSummary(gone.length)}
+                priceColumn={hasPrices}
+                anchorId={anchorId}
+              />
+            ) : null}
+            {rest.map((row, index) => (
+              <Row
+                key={row.id}
+                row={row}
+                priceColumn={hasPrices}
+                anchorId={index === 0 && gone.length === 0 ? anchorId : undefined}
+              />
+            ))}
           </Fragment>
         );
       })}
     </ul>
+  );
+}
+
+/**
+ * **A day's departed boats, folded into one quiet line** (#4929). Boats that
+ * left this morning are not a choice any more, and three gray rows each saying
+ * "already sailed" filled a phone's first screen. A native `<details>`, so it
+ * opens without JavaScript, and the rows stay reachable inside it for the diver
+ * looking for their own boat. The day's jump anchor sits here, on the day's
+ * first box, because a row inside a closed fold cannot be scrolled to.
+ */
+function DepartedFold({
+  rows,
+  summary,
+  priceColumn,
+  anchorId,
+}: {
+  rows: readonly WeekLedgerRow[];
+  summary: string;
+  priceColumn: boolean;
+  anchorId: string;
+}) {
+  return (
+    <li id={anchorId} className="scroll-mt-16">
+      <details className="group/fold">
+        <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 text-sm text-muted focus-visible:focus-ring-inset [&::-webkit-details-marker]:hidden">
+          {summary}
+          <DisclosureCaret direction="down" className="text-muted group-open/fold:rotate-180" />
+        </summary>
+        <ul className="flex flex-col">
+          {rows.map((row) => (
+            <Row key={row.id} row={row} priceColumn={priceColumn} />
+          ))}
+        </ul>
+      </details>
+    </li>
   );
 }
 

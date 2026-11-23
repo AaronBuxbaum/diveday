@@ -172,6 +172,7 @@ export function weekLedgerRows({
       aboveLevel: aboveStatedLevel.has(trip.id) ? t("schedule.filters.aboveLevelChip") : null,
       insufficientSeats: !isEmbed && trip.capacity - trip.booked < partySize,
       capacityText,
+      departed,
       capacityTone: departed ? "full" : seats.tone,
       // A course session reads the course total the booking charges, never
       // the trip row's own figure (fourth UX review item 2, H-20261014-course-session-price).

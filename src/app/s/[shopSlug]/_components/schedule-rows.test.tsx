@@ -235,4 +235,6 @@ it("marks a trip as departed at its scheduled start", () => {
   expect(result[0]?.capacityTone).toBe("full");
   expect(result[0]?.linkLabel).toContain("This one’s already sailed");
   expect(result[1]?.capacityText).not.toBe("This one’s already sailed");
+  expect(result[0]?.departed).toBe(true);
+  expect(result[1]?.departed).toBeFalsy();
 });

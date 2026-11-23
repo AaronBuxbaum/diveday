@@ -687,3 +687,69 @@ it("adds the optional first-site image and only one fact without adding a tap ta
   expect(screen.getByText("81°F water · 59 ft visibility")).toBeInTheDocument();
   expect(screen.getAllByRole("link")).toHaveLength(1);
 });
+
+describe("today's departed boats fold into one disclosure", () => {
+  const departed = (id: string) =>
+    row({
+      id,
+      departed: true,
+      title: `Left ${id}`,
+      linkLabel: `Left ${id}`,
+      capacityText: "This one’s already sailed",
+    });
+
+  it("starts the day with one line that names the count and holds the departed rows inside", () => {
+    const { container } = render(
+      <WeekLedger
+        rows={[departed("a"), departed("b"), row({ id: "next", title: "Next boat" })]}
+        listLabel="Upcoming trips"
+        stickyTop="top-(--chrome-h)"
+        departedSummary={(count) => `${count} boats already out today`}
+      />,
+    );
+
+    const details = container.querySelector("details");
+    expect(details).not.toBeNull();
+    expect(details).not.toHaveAttribute("open");
+    expect(details?.querySelector("summary")?.textContent).toBe("2 boats already out today");
+    expect(details?.querySelectorAll("a")).toHaveLength(2);
+    // The row after the fold is the first one outside it.
+    const nextDoor = screen.getByRole("link", {
+      name: "Aug 27 · 7:00 AM – 10:30 AM · Two-Tank Reef · 3 seats left",
+    });
+    expect(details?.contains(nextDoor)).toBe(false);
+  });
+
+  it("keeps the day's heading and the line when every boat today has left", () => {
+    const { container } = render(
+      <WeekLedger
+        rows={[departed("a")]}
+        listLabel="Upcoming trips"
+        stickyTop="top-(--chrome-h)"
+        departedSummary={() => "1 boat already out today"}
+      />,
+    );
+
+    expect(container.querySelector("li[aria-hidden='true']")?.textContent).toContain("27");
+    expect(container.querySelector("summary")?.textContent).toBe("1 boat already out today");
+  });
+
+  it("draws no disclosure when nothing has left", () => {
+    const { container } = render(
+      <WeekLedger rows={[row()]} listLabel="Upcoming trips" stickyTop="top-(--chrome-h)" />,
+    );
+    expect(container.querySelector("details")).toBeNull();
+  });
+
+  it("puts the day's jump anchor on the disclosure so the jump lands on the day's top", () => {
+    const { container } = render(
+      <WeekLedger
+        rows={[departed("a"), row({ id: "next" })]}
+        listLabel="Upcoming trips"
+        stickyTop="top-(--chrome-h)"
+        departedSummary={() => "1 boat already out today"}
+      />,
+    );
+    expect(container.querySelector("#day-2026-08-27")?.querySelector("details")).not.toBeNull();
+  });
+});

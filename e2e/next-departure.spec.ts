@@ -86,8 +86,19 @@ test("on the seeded board departed trips are marked and no card repeats the next
   tag: READ_ONLY,
 }, async ({ page }) => {
   await page.goto("/s/blue-mantis");
-  const first = page.getByRole("list", { name: "Upcoming trips" }).getByRole("listitem").first();
-  await expect(first).toContainText(diverTranslator("en-US")("booking.sailedHeading"));
+  const list = page.getByRole("list", { name: "Upcoming trips" });
+  const fold = list.locator("details").first();
+  // Today's boats that have left are one quiet line, shut; the list starts at
+  // the first boat still open to booking (#4929).
+  await expect(fold.locator("summary")).toContainText("already out today");
+  await expect(fold).not.toHaveAttribute("open", "");
+  await expect(
+    list.getByText(diverTranslator("en-US")("booking.sailedHeading")).first(),
+  ).toBeHidden();
+  await fold.locator("summary").click();
+  await expect(
+    fold.getByText(diverTranslator("en-US")("booking.sailedHeading")).first(),
+  ).toBeVisible();
   await expect(page.getByRole("region", { name: /Next boat with space/ })).toHaveCount(0);
   await expect(page.getByRole("link", { name: "Book this boat" })).toHaveCount(0);
 });
@@ -95,7 +106,9 @@ test("on the seeded board departed trips are marked and no card repeats the next
 test("a week row is a link into its own departure", { tag: READ_ONLY }, async ({ page }) => {
   await page.goto("/s/blue-mantis");
 
-  const firstRow = page.getByRole("list", { name: "Upcoming trips" }).getByRole("listitem").first();
+  const fold = page.getByRole("list", { name: "Upcoming trips" }).locator("details").first();
+  await fold.locator("summary").click();
+  const firstRow = fold.getByRole("listitem").first();
   await expect(firstRow).toContainText(diverTranslator("en-US")("booking.sailedHeading"));
   const link = firstRow.getByRole("link").first();
   const href = await link.getAttribute("href");

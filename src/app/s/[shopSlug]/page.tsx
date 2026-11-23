@@ -388,12 +388,12 @@ export default async function SchedulePage({
               and the middle one is the sentence that reads as a shop which has
               stopped. The widget keeps it: `embed/calendar` renders neither of those
               two, and a blank iframe on a shop's own website says nothing at
-              all. The list itself renders on `showsWeekLedger`, the name the
-              pager row's margin below reads too. */}
+              all. The list renders on `showsWeekLedger`, which the pager's margin reads. */}
           {showsWeekLedger ? (
             <WeekLedger
               rows={weekRows}
               listLabel={t("schedule.tripListLabel")}
+              departedSummary={(count) => t("schedule.departedToday", { count })}
               stickyTop="top-(--chrome-h)"
             />
           ) : (

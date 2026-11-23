@@ -130,6 +130,7 @@
     "tripCardLabel": "{when} · {trip} · {capacity}",
     "previousMonth": "Previous month",
     "nextMonth": "Next month",
+    "departedToday": "{count, plural, one {# boat already out today} other {# boats already out today}}",
     "tripListLabel": "Upcoming trips",
     "monthNav": "Browse by month",
     "monthView": "Show the month calendar",
