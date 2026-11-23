@@ -28,7 +28,7 @@ test.describe("the storefront wears the shop's brand", () => {
     await expect(
       page.getByText(diverTranslator("en-US")("demo.illustrationDisclosure"), { exact: true }),
     ).toBeVisible();
-    await expect(page.getByText("Since 1998")).toBeVisible();
+    await expect(page.getByText("Since 1998", { exact: true })).toBeVisible();
     await expect(
       page.getByText(diverTranslator("en-US")("brand.badges.padi_5_star")),
     ).toBeVisible();
@@ -44,6 +44,22 @@ test.describe("the storefront wears the shop's brand", () => {
         .locator("img"),
     ).toHaveCount(0);
     await expect(page.getByRole("link", { name: "Bookings by DiveDay" })).toBeVisible();
+  });
+
+  /** #4928: the demo shows a person and a sentence in the owner's voice, not only a brand. */
+  test("the demo's welcome is signed, its notice posted, its pick and crew shown", async ({
+    page,
+  }) => {
+    const t = diverTranslator("en-US");
+    await page.goto("/s/blue-mantis");
+    await expect(page.getByText(DEMO_SHOP_BRAND.welcomeText, { exact: true })).toBeVisible();
+    await expect(page.getByText(DEMO_SHOP_BRAND.welcomeSigner, { exact: true })).toBeVisible();
+    await expect(page.getByText(DEMO_SHOP_BRAND.noticeText, { exact: true })).toBeVisible();
+    await expect(page.getByText(t("schedule.pick.eyebrow"), { exact: true })).toBeVisible();
+    const crew = page.getByText(t("staffProfiles.heading"), { exact: true });
+    await expect(crew).toBeVisible();
+    // Yusra has no profile, so she is not on the page.
+    await expect(page.getByText("Yusra")).toHaveCount(0);
   });
 
   /**

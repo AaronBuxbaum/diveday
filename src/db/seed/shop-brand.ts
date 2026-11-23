@@ -5,6 +5,8 @@ import { DEMO_SHOP_SLUG } from "../demo-shop";
 import { shops } from "../schema";
 import { DEMO_SHOP_BRAND_COLOR } from "./identifiers";
 import { DEMO_SHOP_REPLY_NOTES } from "./reply-notes";
+import { seedShopPick } from "./shop-pick";
+import { seedStaffProfilesByEmail } from "./staff-profiles";
 
 /**
  * **Blue Mantis's profile and brand: everything a trading shop fills in on
@@ -37,6 +39,18 @@ export const DEMO_SHOP_BRAND = {
   // i18n-exempt: a shop writes its own alt text, like its tagline.
   brandHeroImageAlt: demoIllustration("sunset-boat").alt,
   establishedYear: 1998,
+  // **The owner's voice and the shop's word of the day** (#4928): the signed welcome under the
+  // heading, one posted notice, and the public safety record, so the demo shows the features that
+  // put a person and a fact in front of a diver who has not booked. Shop-authored, one wording.
+  // i18n-exempt: the owner's own welcome, like the tagline above.
+  welcomeText:
+    "We opened in 1998 with one boat and a love of Molasses Reef. Fourteen divers at most, a briefing on every boat, and a captain who will call a dive off when the water says so. Come dive with us.",
+  // i18n-exempt: the owner signs in her own name.
+  welcomeSigner: "Dana Reyes, owner",
+  // i18n-exempt: shop-authored notice line, true to the schedule the demo seeds.
+  noticeText:
+    "Wreck trips to the Spiegel Grove and the Duane go when the current allows, and we make the call the evening before.",
+  safetyRecordEnabled: true,
   // Fictional examples, labelled as such wherever a demo renders them.
   brandBadges: ["padi_5_star", "padi_idc", "green_fins", "blue_star", "dan_partner", "tripadvisor"],
   // Fictional demo scenes, never claimed as photographs of the operator.
@@ -62,6 +76,24 @@ export async function syncDemoShopBrand(db: DbExecutor): Promise<void> {
     .update(shops)
     .set(DEMO_SHOP_BRAND)
     .where(and(eq(shops.slug, DEMO_SHOP_SLUG), eq(shops.isDemo, true), isNull(shops.logoUrl)));
+}
+
+/**
+ * Give a demo database seeded before the welcome, the notice and the safety record existed the
+ * same warmth, once: keyed on a blank welcome, so a shop owner who clears or rewrites it in the
+ * demo is left alone afterwards. The pick is set with the schedule (`shop-pick.ts`), because a
+ * reset replaces the courses it points at.
+ */
+export async function syncDemoShopWelcome(db: DbExecutor): Promise<void> {
+  const { welcomeText, welcomeSigner, noticeText, safetyRecordEnabled } = DEMO_SHOP_BRAND;
+  const [shop] = await db
+    .update(shops)
+    .set({ welcomeText, welcomeSigner, noticeText, safetyRecordEnabled })
+    .where(and(eq(shops.slug, DEMO_SHOP_SLUG), eq(shops.isDemo, true), isNull(shops.welcomeText)))
+    .returning({ id: shops.id });
+  if (!shop) return;
+  await seedShopPick(db, shop.id);
+  await seedStaffProfilesByEmail(db, shop.id);
 }
 
 // i18n-exempt: the fictional shop's own packing suggestion; one wording for a boat day and a course day.
