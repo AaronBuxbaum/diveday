@@ -30,7 +30,7 @@ export function staleRuns(layers, runs) {
       .filter((run) => run.head_sha === layer.head_sha && run.event === "pull_request")
       .sort((a, b) => b.id - a.id);
     const latest = mine[0];
-    if (!latest || latest.status !== "completed") continue;
+    if (latest?.status !== "completed") continue;
     if (!STALE.has(latest.conclusion) || latest.run_attempt >= MAX_ATTEMPTS) continue;
     picked.push({ pr: layer.number, run: latest.id });
   }
