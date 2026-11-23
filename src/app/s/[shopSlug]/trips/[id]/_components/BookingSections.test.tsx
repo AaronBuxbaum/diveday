@@ -295,12 +295,12 @@ describe("BookSpotSection — no box inside the box", () => {
           timeZone: "America/New_York",
           rentalItems: [],
           rentalPricing: EMPTY_RENTAL_PRICING,
-          requirement: "This charter is for divers with Advanced Open Water or higher.",
+          requirement: "This trip is for divers with Advanced Open Water or higher.",
         }}
       />,
     );
 
-    const note = screen.getByText("This charter is for divers with Advanced Open Water or higher.");
+    const note = screen.getByText("This trip is for divers with Advanced Open Water or higher.");
     expect(container.querySelector("form")?.firstElementChild).toBe(note);
     expect(note.className).not.toMatch(/\b(border|bg-)/);
   });
@@ -324,7 +324,7 @@ describe("BookSpotSection — no box inside the box", () => {
     );
 
     expect(screen.queryByText(/Who this trip is for/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/This charter is for divers with/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/This trip is for divers with/i)).not.toBeInTheDocument();
   });
 
   it("wraps no party or gear step in a bordered fieldset", () => {
@@ -597,10 +597,10 @@ describe("TripFullSection — the shop's own better answer", () => {
         shopSlug="reef-shop"
         trip={trip({ booked: 8 })}
         tripRef={tripRef}
-        requirement="This charter is for divers with Advanced Open Water or higher."
+        requirement="This trip is for divers with Advanced Open Water or higher."
       />,
     );
-    const note = screen.getByText("This charter is for divers with Advanced Open Water or higher.");
+    const note = screen.getByText("This trip is for divers with Advanced Open Water or higher.");
     expect(container.querySelector("form")?.contains(note)).toBe(true);
   });
 

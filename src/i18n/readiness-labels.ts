@@ -386,7 +386,7 @@ export function tripRequirementList(
  * where nothing reconciles it with the gate the booking form actually enforces.
  * The demo shop's own seed data did this on three cards.
  *
- * A sentence is the wrong shape there. *"This charter is for divers with
+ * A sentence is the wrong shape there. *"This trip is for divers with
  * Advanced Open Water or higher, a Deep certification, and a nitrox
  * certification"* is right on the trip page, where a diver is deciding, and is
  * four lines of a card they are scanning. So the level keeps its "or higher"
