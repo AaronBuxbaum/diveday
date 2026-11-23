@@ -124,6 +124,7 @@ type ReadinessLinkEmailInput = {
   expiresAt: Date;
   timezone: string;
   purpose?: "course_forms" | "other_day" | "log_entry";
+  courseSession?: boolean;
 };
 
 type WaitlistInviteEmailInput = {
@@ -144,6 +145,8 @@ type WaitlistInviteEmailInput = {
   unsubscribeUrl?: string;
   /** How many seats the waiting party asked for (fourth review, item 34); one when absent. */
   partySize?: number;
+  /** A course session: the words say first day and started, not boat and sailed. */
+  courseSession?: boolean;
   /**
    * The run's date the diver waited for, when the nightly roll moved them to
    * this one (fourth review, item 31): the invite then says that date filled
@@ -921,19 +924,28 @@ export function waitlistInviteEmail(input: WaitlistInviteEmailInput): Notificati
   // else, that a seat opened.
   const bodyFor = (tripTitle: string) =>
     input.sailedStartsAt
-      ? t("notifications.waitlistInvite.rolledBody", {
-          sailed: formatShortDate(input.sailedStartsAt, input.locale, input.timezone),
-          date,
-          seats,
-          tripTitle,
-        })
+      ? t(
+          input.courseSession
+            ? "notifications.waitlistInvite.course.rolledBody"
+            : "notifications.waitlistInvite.rolledBody",
+          {
+            sailed: formatShortDate(input.sailedStartsAt, input.locale, input.timezone),
+            date,
+            seats,
+            tripTitle,
+          },
+        )
       : seats > 1
         ? t("notifications.waitlistInvite.bodyParty", { seats, tripTitle })
         : t("notifications.waitlistInvite.body", { tripTitle, shopName: input.shopName });
   const body = bodyFor(input.tripTitle);
   const bodyHtml = bodyFor(`<strong>${title}</strong>`);
   const claim = t("notifications.waitlistInvite.claim");
-  const footer = t("notifications.waitlistInvite.footer");
+  const footer = t(
+    input.courseSession
+      ? "notifications.waitlistInvite.course.footer"
+      : "notifications.waitlistInvite.footer",
+  );
   // The way out is drawn only when the schema gave one (`seat_offer_commercial`).
   const unsubscribe = t("notifications.common.courtesyUnsubscribe", { shopName: input.shopName });
   const unsubscribeText = input.unsubscribeUrl
@@ -1900,11 +1912,13 @@ export function readinessLinkEmail(input: ReadinessLinkEmailInput): Notification
   // `other_day` and `log_entry` are the diver asking for another of their days
   // from one booking's page (H-20261014-other-days-send-fresh), so neither says anything expired either.
   const words = READINESS_LINK_WORDS[input.purpose ?? "rescue"];
-  const body = t(words.body, {
+  const bodyKey =
+    input.courseSession && !input.purpose ? "notifications.readinessLink.courseBody" : words.body;
+  const body = t(bodyKey, {
     shopName: input.shopName,
     tripTitle: input.tripTitle,
   });
-  const bodyHtml = t(words.body, {
+  const bodyHtml = t(bodyKey, {
     shopName: escapeHtml(input.shopName),
     tripTitle: `<strong>${escapeHtml(input.tripTitle)}</strong>`,
   });

@@ -80,6 +80,7 @@ export async function sendFindMyBookingLinks(
       diverName: people.fullName,
       personLocale: people.locale,
       tripTitle: trips.title,
+      courseId: trips.courseId,
       contactTypedByLeadAt: bookings.contactTypedByLeadAt,
       claimedAt: bookings.claimedAt,
     })
@@ -184,6 +185,7 @@ export async function sendFindMyBookingLinks(
               diverName: row.diverName,
               shopName: shop.name,
               tripTitle: row.tripTitle,
+              ...(row.courseId ? { courseSession: true } : {}),
               readinessUrl: new URL(readinessLinkPath(issued.token), `${input.origin}/`).toString(),
               expiresAt: issued.expiresAt,
               timezone: shop.timezone,

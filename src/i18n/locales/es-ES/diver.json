@@ -4497,7 +4497,11 @@
       "footer": "La plaza no está reservada a tu nombre, así que no esperes demasiado. Nos vemos en el barco.",
       "subjectParty": "Se liberaron {seats} plazas en {tripTitle}",
       "bodyParty": "Se acaban de liberar {seats} plazas en {tripTitle}, y te las ofrecemos para tu grupo.",
-      "rolledBody": "La salida del {sailed} ya zarpó. El {date} tiene lugar, y te ofrecemos {seats, plural, one {una plaza} other {# plazas}} en {tripTitle}."
+      "rolledBody": "La salida del {sailed} ya zarpó. El {date} tiene lugar, y te ofrecemos {seats, plural, one {una plaza} other {# plazas}} en {tripTitle}.",
+      "course": {
+        "footer": "La plaza no está reservada a tu nombre, así que no esperes demasiado. Nos vemos el primer día.",
+        "rolledBody": "La fecha del {sailed} ya empezó. El {date} tiene lugar, y te ofrecemos {seats, plural, one {una plaza} other {# plazas}} en {tripTitle}."
+      }
     },
     "tripInvitation": {
       "subject": "Una invitación de {shopName}: {tripTitle}",
@@ -4698,7 +4702,8 @@
       "subject": "Tu enlace de preparación para {tripTitle}",
       "body": "Aquí tienes un enlace nuevo con lo que te falta antes de salir con nosotros en {tripTitle}. El anterior ha caducado.",
       "openLink": "Abre tu preparación",
-      "expiry": "Este enlace privado caduca el {expiresAt}."
+      "expiry": "Este enlace privado caduca el {expiresAt}.",
+      "courseBody": "Aquí tienes un enlace nuevo con lo que te falta antes de tu primer día en {tripTitle}. El anterior ha caducado."
     },
     "bookingHandoff": {
       "subject": "Reserva {tripTitle} con tus datos ya puestos",
