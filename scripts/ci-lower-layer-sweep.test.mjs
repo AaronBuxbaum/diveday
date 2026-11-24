@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { lowerLayers, MAX_ATTEMPTS, staleRuns } from "./ci-lower-layer-sweep.mjs";
+import {
+  lowerLayers,
+  MAX_ATTEMPTS,
+  STUCK_LABEL,
+  STUCK_MINUTES,
+  staleRuns,
+  topAction,
+} from "./ci-lower-layer-sweep.mjs";
 
 const pr = (number, sha, labels = [], state = "open") => ({
   number,
@@ -76,5 +83,46 @@ describe("staleRuns", () => {
     expect(
       staleRuns([layer(1, "a")], [run(10, "a", "failure", { run_attempt: MAX_ATTEMPTS })]),
     ).toEqual([]);
+  });
+});
+
+describe("topAction", () => {
+  const now = Date.parse("2026-11-24T02:00:00Z");
+  const ago = (minutes) => new Date(now - minutes * 60_000).toISOString();
+  const red = (extra = {}) => ({
+    status: "completed",
+    conclusion: "failure",
+    run_attempt: 1,
+    updated_at: ago(STUCK_MINUTES + 5),
+    ...extra,
+  });
+  it("waits while the top is running or has no run", () => {
+    expect(topAction({ latest: null, now, labels: [] }).do).toBe("wait");
+    expect(topAction({ latest: red({ status: "in_progress" }), now, labels: [] }).do).toBe("wait");
+  });
+  it("gives a fresh red run time before judging it", () => {
+    expect(topAction({ latest: red({ updated_at: ago(2) }), now, labels: [] }).do).toBe("wait");
+  });
+  it("retries a stale first red run once", () => {
+    expect(topAction({ latest: red(), now, labels: [] }).do).toBe("retry");
+    expect(topAction({ latest: red({ conclusion: "cancelled" }), now, labels: [] }).do).toBe(
+      "retry",
+    );
+  });
+  it("reports a red run that already had its retry, once", () => {
+    expect(topAction({ latest: red({ run_attempt: 2 }), now, labels: [] }).do).toBe("report");
+    expect(topAction({ latest: red({ run_attempt: 2 }), now, labels: [STUCK_LABEL] }).do).toBe(
+      "wait",
+    );
+  });
+  it("clears the label once the top is green", () => {
+    const green = {
+      status: "completed",
+      conclusion: "success",
+      run_attempt: 1,
+      updated_at: ago(1),
+    };
+    expect(topAction({ latest: green, now, labels: [STUCK_LABEL] }).do).toBe("clear");
+    expect(topAction({ latest: green, now, labels: [] }).do).toBe("wait");
   });
 });
