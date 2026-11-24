@@ -15,7 +15,7 @@ import {
   soldPricing,
 } from "@/features/money/shop-subscriptions";
 import type { PricingConfig } from "@/lib/billing/pricing-plans";
-import { freePeriodEndsAt } from "@/lib/billing/standing";
+import { billableFrom } from "@/lib/billing/standing";
 import { addMonths, type MonthRef, monthKey } from "@/lib/calendar";
 import { log } from "@/lib/log";
 import { shopMonthBounds, utcToWallTime } from "@/lib/zoned";
@@ -130,9 +130,12 @@ export async function closePercentMonths(
             month,
             timeZone: shop.timezone,
             terms,
-            freeUntil: freePeriodEndsAt({
+            // Card-less money stays free: nothing before the card was added.
+            freeUntil: billableFrom({
+              now,
               timeZone: shop.timezone,
               freeTermEndsOn: subscription.freeTermEndsOn,
+              subscribedAt: subscription.subscribedAt,
             }),
             endedAt,
           });

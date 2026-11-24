@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   type BillingStandingInput,
   type BillingStatus,
+  billableFrom,
   billingStanding,
   freePeriodEndsAt,
   freeTermEndsAt,
@@ -162,5 +163,26 @@ describe("isInGoodStanding", () => {
   };
   it.each(Object.entries(expected))("%s → %s", (status, good) => {
     expect(isInGoodStanding(status as BillingStatus)).toBe(good);
+  });
+});
+
+describe("billableFrom", () => {
+  const CARD = new Date("2026-09-10T12:00:00Z");
+
+  it("bills nothing collected before a card was added", () => {
+    expect(billableFrom({ ...input(), subscribedAt: CARD })).toEqual(CARD);
+  });
+
+  it("bills nothing at all while there is no card", () => {
+    expect(billableFrom({ ...input(), subscribedAt: null })).toEqual(NOW);
+  });
+
+  it("waits for a free term that outlasts the card-added instant", () => {
+    expect(
+      billableFrom({ ...input({ freeTermEndsOn: "2026-12-31" }), subscribedAt: CARD }),
+    ).toEqual(freeTermEndsAt("2026-12-31", "America/New_York"));
+    expect(
+      billableFrom({ ...input({ freeTermEndsOn: "2026-08-01" }), subscribedAt: CARD }),
+    ).toEqual(CARD);
   });
 });

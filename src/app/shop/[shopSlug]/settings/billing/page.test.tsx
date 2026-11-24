@@ -184,6 +184,22 @@ describe("the Billing page's plan (ADR 20261022-pricing-ab-test)", () => {
       assignedPricingPlan: "percent_of_volume",
     });
   };
+  /** The percent plan with a card on file, added before this month. */
+  const subscribedPercentShop = async (db: AppDb, shopId: string) => {
+    await percentShop(db, shopId);
+    await db
+      .update(shopSubscriptions)
+      .set({
+        stripeCustomerId: "cus_percent",
+        stripeSubscriptionId: "sub_percent",
+        stripeStatus: "active",
+        currentPeriodEnd: new Date("2099-01-01T00:00:00Z"),
+        subscribedAt: new Date("2020-01-01T00:00:00Z"),
+        planMonthlyCents: 0,
+        planBasisPoints: 300,
+      })
+      .where(eq(shopSubscriptions.shopId, shopId));
+  };
   const configurePercent = () => {
     configure();
     vi.stubEnv("PRICING_BASIS_POINTS", "300");
@@ -197,12 +213,19 @@ describe("the Billing page's plan (ADR 20261022-pricing-ab-test)", () => {
     expect(lines).toContain("DiveDay, 1% of money recorded as received");
   });
 
-  it("states the percent plan, this month's volume and fee, in en-US", async () => {
+  it("states the percent plan with no running month while there is no card", async () => {
     configurePercent();
     const { lines, forms } = await render(percentShop);
     expect(lines).toContain("DiveDay, 3% of money recorded as received");
-    expect(lines.some((line) => String(line).includes(COPY.plan.thisMonth))).toBe(true);
+    // Card-less money is never billed, so there is no fee to estimate.
+    expect(lines.some((line) => String(line).includes(COPY.plan.thisMonth))).toBe(false);
     expect(forms.map((form) => form.props.action)).toEqual([startBillingCheckoutAction]);
+  });
+
+  it("states this month's volume and fee once a card is on file, in en-US", async () => {
+    configurePercent();
+    const { lines } = await render(subscribedPercentShop);
+    expect(lines.some((line) => String(line).includes(COPY.plan.thisMonth))).toBe(true);
   });
 
   it("states a base fee when the percent plan carries one", async () => {
@@ -215,7 +238,7 @@ describe("the Billing page's plan (ADR 20261022-pricing-ab-test)", () => {
   it("states the percent plan in es-ES", async () => {
     configurePercent();
     const { lines } = await render(async (db, shopId) => {
-      await percentShop(db, shopId);
+      await subscribedPercentShop(db, shopId);
       await db.update(shops).set({ defaultLocale: "es-ES" }).where(eq(shops.id, shopId));
     });
     expect(

@@ -60,6 +60,8 @@ async function percentShop(
     pricingPlanSource: "assigned",
     planMonthlyCents: 0,
     planBasisPoints: 300,
+    // The card went on when the shop was created, unless a test says otherwise.
+    subscribedAt: new Date("2031-01-01T00:00:00Z"),
     ...overrides,
   });
   // $1,000 of rentals paid through DiveDay in June.
@@ -463,6 +465,54 @@ describe("closePercentMonths", () => {
       reportedAt: null,
     });
   });
+  it("never bills money collected before the card was added", async () => {
+    // The shop collected $1,000 in June with no card, added one on July 10,
+    // then collected $1,000 more on July 15 (ADR 20261124-free-shops-no-trial).
+    const db = await unseededTestDb();
+    const shopId = await percentShop(db, { subscribedAt: new Date("2031-07-10T00:00:00Z") });
+    const [source] = await db.select().from(orders).where(eq(orders.shopId, shopId)).limit(1);
+    if (!source) throw new Error("order missing");
+    const [july] = await db
+      .insert(orders)
+      .values({
+        shopId,
+        personId: source.personId,
+        createdByPersonId: source.createdByPersonId,
+        currency: "usd",
+        collection: "cash",
+        status: "paid",
+        totalCents: 100_000,
+        amountPaidCents: 100_000,
+        paidAt: new Date("2031-07-15T12:00:00Z"),
+      })
+      .returning();
+    if (!july) throw new Error("order missing");
+    await db.insert(collectionEntries).values({
+      shopId,
+      sourceType: "order",
+      sourceId: july.id,
+      currency: "usd",
+      method: "cash",
+      amountCents: 100_000,
+      recordedAt: new Date("2031-07-15T12:00:00Z"),
+      evidence: {},
+    });
+    const provider = fakeProvider();
+    const result = await closePercentMonths(db, {
+      now: new Date("2031-08-02T14:13:00Z"),
+      config: ON,
+      provider,
+      percent: PERCENT,
+    });
+    expect(result).toMatchObject({ failed: 0, reported: 1 });
+    const statements = await db.select().from(pricingVolumeStatements);
+    expect(statements.find((row) => row.month === "2031-06-01")).toMatchObject({ feeCents: 0 });
+    expect(statements.find((row) => row.month === "2031-07-01")).toMatchObject({
+      volumeCents: 100_000,
+      feeCents: 3_000,
+    });
+  });
+
   it("does not hold a paid month for an unknown receipt from an already free period", async () => {
     const db = await unseededTestDb();
     const shopId = await percentShop(db, { freeTermEndsOn: "2031-06-20" });

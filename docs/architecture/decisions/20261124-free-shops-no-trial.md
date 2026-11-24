@@ -10,23 +10,23 @@
 ## Context
 
 Aaron, 2026-11-24 (final): DiveDay has no 14-day trial. A shop is free with no card, and DiveDay
-keeps a percent only of payments taken in DiveDay; the pricing page's line reads "Keep your booking
-tool and try DiveDay on one trip. It's free, with no card. If you take payments in DiveDay, we keep
-1%, and that's the whole price." He added that the price may change, so the copy must follow the
-pricing settings. A trial that expires contradicts a free shop, and a bundle string that spells
+keeps a percent only of payments taken in DiveDay. The price may change, so the copy must follow
+the pricing settings. A trial that expires contradicts a free shop, and a bundle string that spells
 "1%" goes stale the day `PRICING_BASIS_POINTS` changes. There are no users, so nothing needs a
 compatibility path (H-20260815-no-legacy).
 
 ## Decision
 
-- **No trial.** `src/features/shop-setup/trial.ts` is deleted. The trial was never stored (it was
-  an offset from `shops.created_at`), so no column or migration goes with it.
+- **No trial.** `src/features/shop-setup/trial.ts` is deleted; it was never stored.
 - **Standing** (`src/lib/billing/standing.ts`) has five codes: `no_card`, `free_term`, `active`,
   `past_due`, `canceled`. `no_card` is the ordinary free state: it is in good standing and
   Settings > Billing draws no badge for it. A Stripe-side trial (Checkout's deferred first charge)
   reads as `free_term` while a granted term runs, otherwise `active`.
-- **Billing starts at creation.** The free cutoff for collected money is the end of a granted free
-  term, or none; Checkout defers the first charge only to a running free term.
+- **Billing starts at the card.** Money collected with no card is never billed, including the
+  months before a card is added: the billable floor is the later of a granted free term's end and
+  `shop_subscriptions.subscribed_at`, the card-added instant the billing webhook writes when a
+  subscription is first linked (`billableFrom` in `standing.ts`, read by the monthly close and
+  Settings > Billing). Checkout defers the first charge only to a running free term.
 - **The fee is a parameter.** Every sentence that states DiveDay's price takes its figures from
   `planCopyParams(configuredPricing(pricingConfig()))` as ICU parameters (`{percent}`, `{base}`,
   `{hasBase}`, `{hasPercent}`), never a figure in a bundle. `marketing.pricing.priceNote` and
@@ -42,8 +42,8 @@ compatibility path (H-20260815-no-legacy).
 
 ## Consequences
 
-- A shop's payments are counted from its first day; a free term granted by hand is still how
-  DiveDay waives a period.
+- A shop's collected money counts from the moment it adds a card, never earlier; a free term
+  granted by hand is still how DiveDay waives a period after that.
 - A new price is an environment change (`PRICING_MONTHLY_CENTS`, `PRICING_BASIS_POINTS`) and every
   public and in-app price line follows it. A price whose shape the ICU selects do not cover
   (a per-seat fee, say) needs new branches and a case in the render test.

@@ -166,6 +166,34 @@ describe("applyBillingEffect", () => {
     expect((await getShopSubscription(db, shop.id))?.stripeStatus).toBe("trialing");
   });
 
+  it("records when the card went on, the earliest word of the subscription, and restarts it for a new one", async () => {
+    const { db, shop } = ctx;
+    await ensureShopBillingCustomer(db, shop.id, "cus_a");
+    await applyBillingEffect(db, changed({ status: "active", occurredAt: later(60) }));
+    expect((await getShopSubscription(db, shop.id))?.subscribedAt).toEqual(later(60));
+    // A later event keeps the first instant.
+    await applyBillingEffect(db, changed({ status: "active", occurredAt: later(120) }));
+    expect((await getShopSubscription(db, shop.id))?.subscribedAt).toEqual(later(60));
+    await applyBillingEffect(db, changed({ status: "canceled", occurredAt: later(180) }));
+    // A new subscription after the ended one starts its own card-added instant.
+    await applyBillingEffect(
+      db,
+      changed({ subscriptionId: "sub_b", status: "active", occurredAt: later(600) }),
+    );
+    expect(await getShopSubscription(db, shop.id)).toMatchObject({
+      stripeSubscriptionId: "sub_b",
+      subscribedAt: later(600),
+    });
+  });
+
+  it("stamps the card-added instant when Checkout links first", async () => {
+    const { db, shop } = ctx;
+    await ensureShopBillingCustomer(db, shop.id, "cus_a");
+    expect((await getShopSubscription(db, shop.id))?.subscribedAt).toBeNull();
+    await applyBillingEffect(db, completed(shop.id));
+    expect((await getShopSubscription(db, shop.id))?.subscribedAt).toBeInstanceOf(Date);
+  });
+
   it("refuses an older event delivered after a newer one", async () => {
     const { db, shop } = ctx;
     await ensureShopBillingCustomer(db, shop.id, "cus_a");

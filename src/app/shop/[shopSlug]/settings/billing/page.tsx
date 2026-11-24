@@ -25,7 +25,7 @@ import { pricingConfig } from "@/features/money/pricing-flags";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { percentFeeCents } from "@/lib/billing/pricing-plans";
-import { type BillingStatus, billingStanding, freePeriodEndsAt } from "@/lib/billing/standing";
+import { type BillingStatus, billableFrom, billingStanding } from "@/lib/billing/standing";
 import { formatCalendarDate, formatCalendarMonth } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { formatDateWithYear, formatMoneyCents } from "@/lib/format";
@@ -150,7 +150,9 @@ export default async function BillingSettingsPage({
     pendingEvidence: boolean;
   };
   let percentFacts: FeeFact[] = [];
-  if (percentPlan && !shop.isDemo) {
+  // A shop with no card owes nothing on what it collects, so there is no
+  // running month to show until a card is added.
+  if (percentPlan && !shop.isDemo && row?.subscribedAt) {
     const wall = utcToWallTime(now, shop.timezone);
     const month = { year: wall.year, month: wall.month };
     const months = await getBillingPercentMonth(
@@ -158,9 +160,11 @@ export default async function BillingSettingsPage({
       shop.id,
       month,
       shop.timezone,
-      freePeriodEndsAt({
+      billableFrom({
+        now,
         timeZone: shop.timezone,
-        freeTermEndsOn: row?.freeTermEndsOn ?? null,
+        freeTermEndsOn: row.freeTermEndsOn,
+        subscribedAt: row.subscribedAt,
       }),
     );
     percentFacts = months.flatMap(({ currency, volumeCents, statement, pendingEvidence }) => [

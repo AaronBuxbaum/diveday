@@ -1,0 +1,47 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "1b3e1534-011e-48bb-95be-ef978eb3cfde",
+  "prevIds": [
+    "cf1ac6e6-9b99-43b2-9f25-c740682c2891"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "shop_subscriptions",
+        "subscribed_at"
+      ],
+      "writes": [
+        "s|col|public.shop_subscriptions.subscribed_at",
+        "n|col|public.shop_subscriptions.subscribed_at",
+        "e|col|public.shop_subscriptions.subscribed_at"
+      ],
+      "reads": [
+        "n|tbl|public.shop_subscriptions",
+        "n|sch|public"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "shop_subscriptions",
+        "name": "subscribed_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    }
+  ]
+}

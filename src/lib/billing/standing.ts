@@ -115,6 +115,22 @@ export function freePeriodEndsAt(
   return input.freeTermEndsOn ? freeTermEndsAt(input.freeTermEndsOn, input.timeZone) : null;
 }
 
+/**
+ * The instant from which collected money is billed: the later of a granted
+ * free term's end and the card-added instant (`subscribedAt`). With no
+ * subscription yet it is `now`, so nothing collected card-less is ever billed,
+ * including the months before a card is added (ADR 20261124-free-shops-no-trial).
+ */
+export function billableFrom(
+  input: Pick<BillingStandingInput, "now" | "timeZone" | "freeTermEndsOn"> & {
+    subscribedAt: Date | null;
+  },
+): Date {
+  const card = input.subscribedAt ?? input.now;
+  const free = freePeriodEndsAt(input);
+  return free && free.getTime() > card.getTime() ? free : card;
+}
+
 export function billingStanding(input: BillingStandingInput): BillingStanding {
   const freeUntil = freeTimeEndsAt(input);
   const subscription = input.subscription;
