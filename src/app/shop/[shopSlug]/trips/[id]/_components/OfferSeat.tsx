@@ -53,6 +53,8 @@ export function OfferSeat({
   copy,
   discountFields = null,
   quiet = false,
+  once = false,
+  onDone,
 }: {
   /** Unique on the page: the tick boxes name it. */
   formId: string;
@@ -73,9 +75,18 @@ export function OfferSeat({
   discountFields?: ReactNode;
   /** Link weight, for a list where the button repeats on every row (Filling's fill card). */
   quiet?: boolean;
+  /**
+   * One press, one batch ("Offer seats"): once the send has answered, the
+   * button stays spent, and a diver the server skipped because they were
+   * emailed inside the resend window gets no "write to them yourself" either.
+   */
+  once?: boolean;
+  /** Told once the held send has answered, whatever it answered. */
+  onDone?: () => void;
 }) {
   const router = useRouter();
   const [emailed, setEmailed] = useState(false);
+  const [spent, setSpent] = useState(false);
   const [fallbacks, setFallbacks] = useState<Fallback[]>([]);
   const [copied, setCopied] = useState<Record<string, "copied" | "failed">>({});
 
@@ -110,8 +121,11 @@ export function OfferSeat({
 
   function onOutcome(outcome: HeldSendOutcome & { redirectTo?: string }) {
     const results = outcome.kind === "seat_offer" ? outcome.results : [];
+    // In a batch, "already emailed" is an answer, not a failure to work around.
+    const reached = (delivery: string) =>
+      delivery === "sent" || (once && delivery === "already_sent");
     const failed = results
-      .filter((result) => result.delivery !== "sent")
+      .filter((result) => !reached(result.delivery))
       .flatMap((result) =>
         interests.filter((interest) => interest.interestId === result.interestId),
       );
@@ -119,8 +133,10 @@ export function OfferSeat({
     setFallbacks(next);
     if (failed.length < results.length) {
       setEmailed(true);
-      setTimeout(() => setEmailed(false), 4000);
+      if (!once) setTimeout(() => setEmailed(false), 4000);
     }
+    if (once) setSpent(true);
+    onDone?.();
     // A deal's outcome carries the notice the shop answers it with (sent, or
     // why not), on the Details history; follow it unless a composer is open.
     if (outcome.redirectTo && next.length === 0) router.push(outcome.redirectTo);
@@ -156,7 +172,7 @@ export function OfferSeat({
         {discountFields}
         <button
           type="submit"
-          disabled={count === 0 || discountBlank}
+          disabled={count === 0 || discountBlank || spent}
           aria-label={emailed ? undefined : ariaLabel}
           className={buttonClass({
             variant: quiet ? "link" : "secondary",

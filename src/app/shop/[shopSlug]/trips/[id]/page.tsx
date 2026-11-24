@@ -237,7 +237,6 @@ export default async function ManageTripPage({
             phase: slots.phase,
             tripFixes: slots.fixes,
             afterReady: slots.afterReady,
-            beside: slots.beside,
             soldElsewhere: frame.soldElsewhere,
             addGuestHref: `${tripPath}?phase=${frame.shown}&add=1#add-a-booking`,
             arrival: desk?.arrival,
@@ -301,10 +300,10 @@ export default async function ManageTripPage({
           addGuest={acceptsDivers && frame.capacity > trip.booked}
         />
         <PhaseHeading
-          {...{ frame, showDetails, cancelled, addGuest: acceptsDivers && !addBand.open }}
+          {...{ frame, showDetails, cancelled, guests, tripPath, meta: slots.facts }}
+          fill={acceptsDivers && !addBand.open && { mayOffer: staffGates.mayInviteFromWaitlist }}
           record={phase.record}
           notBack={unaccounted.size}
-          tripPath={tripPath}
           rollCallHero={rollCall === "hero"}
           strip={
             <TripPhaseStrip

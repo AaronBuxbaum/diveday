@@ -1185,6 +1185,7 @@
       "leavesInDays": "The boat leaves in {count, plural, one {# day} other {# days}}."
     },
     "addGuest": "Add a guest",
+    "offerSeats": "{count, plural, one {Offer a seat} other {Offer seats}}",
     "quiet": {
       "gear": "Gear",
       "crew": "Crew",
@@ -1193,13 +1194,16 @@
       "sets": "{count, plural, one {# rental set} other {# rental sets}}",
       "noSets": "nothing to hand out",
       "noCrew": "nobody yet",
-      "rollCallAt": "roll call at the dock, {time}",
-      "gettingReady": "Getting ready starts {day}, the day before"
+      "rollCallAt": "roll call at the dock, {time}"
     },
     "filling": {
       "fillLast": "{count, plural, one {Fill the last seat} other {Fill the last #}}",
-      "pastGuests": "{count, plural, one {# past guest} other {# past guests}}",
-      "invite": "Invite",
+      "offerFirst": "{count, plural, one {Offer the first in line a seat} other {Offer the first # in line a seat}}",
+      "offerNames": "{count, plural, one {{names} gets the booking link by email.} other {{names} each get the booking link by email.}}",
+      "sendOffers": "{count, plural, one {Send the offer} other {Send # offers}}",
+      "offerNext": "{count, plural, one {Offer the next in line} other {Offer the next #}}",
+      "share": "Share",
+      "shareLine": "{count, plural, one {Invite # past guest, or copy the booking link} other {Invite # past guests, or copy the booking link}}",
       "bookingLink": "Booking link",
       "addYourself": "Add a guest yourself",
       "addGuests": "Add guests",
@@ -1216,8 +1220,7 @@
       "courseAge": "Minimum age {age} (staff check known dates of birth)",
       "specialty": "{specialty} specialty",
       "nitrox": "Nitrox certification",
-      "orHigher": "{level} or higher",
-      "heading": "This trip"
+      "orHigher": "{level} or higher"
     },
     "ready": {
       "paperPassesUnavailable": "Paper passes are available from Check-in while arrivals are open.",
