@@ -59,9 +59,7 @@ describe("BadgeWall", () => {
     // side of each pill measured 14px to the border against the text's 11–12
     // (pixel-craft K-561). Cropped across to the ink at the stroke it is drawn
     // in, and sized by height, the box is the ink.
-    const { container } = render(
-      <BadgeWall badges={[]} establishedYear={1998} t={t} />,
-    );
+    const { container } = render(<BadgeWall badges={[]} establishedYear={1998} t={t} />);
     const svg = container.querySelector("svg");
     expect(svg).toHaveAttribute("viewBox", "3.3 0 17.4 24");
     expect(svg).toHaveClass("h-3.5", "w-auto");
