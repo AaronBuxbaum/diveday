@@ -49,6 +49,10 @@ export type SeatConfirmationText =
  * (`issueBookingCapability` hands back the live one), so a diver with both
  * gets one link twice, not two links.
  *
+ * Every sent text also writes a `seat_text` delivery holding the provider's message id: the SMS
+ * receipt handler marks it failed when the carrier later rejects the message, and the roster then
+ * stops counting the seat as reachable by text (`textableSeats`, issue #4958).
+ *
  * `tracked` is the phone-only case: with no email, this text *is* the
  * confirmation, and a sent one writes the booking's `booking_confirmation`
  * row the email would have written. Only a sent one: a failed row would put
@@ -135,6 +139,9 @@ export async function textStaffSeatingConfirmation(
         { signal: notificationProviderSignal() },
       );
       if (delivery.status !== "sent") return { status: "not_sent" };
+      // Every sent text keeps its provider message id, so a carrier failure that
+      // arrives later as an SMS receipt finds this seat (issue #4958).
+      await recordNotificationDelivery(tx, { shopId, bookingId, kind: "seat_text", delivery });
       if (options.tracked) {
         await recordNotificationDelivery(tx, {
           shopId,
