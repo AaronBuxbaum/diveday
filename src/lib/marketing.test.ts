@@ -126,15 +126,30 @@ describe("the mid-season answer is one shared key", () => {
  * The pricing page's terms, pinned as rules rather than sentences
  * (docs/product/marketing-review-20260827.md, "the terms never stand at the
  * doors" — roadmap slice 12c). Every assertion here is a claims-policy
- * obligation: the trial note has to say the four things a burned buyer is
- * actually asking, and it has to say nothing beyond them, because billing
- * cadence, taxes and the contract flow are still undecided (H-20260724-public-founding-shop-price).
+ * obligation: the trial note says what a shop trying DiveDay on one trip is
+ * asking (Aaron, 2026-11-24: keep your booking tool, free, no card, 1% only of
+ * payments taken in DiveDay, and nothing more), and it says nothing beyond that,
+ * because billing cadence, taxes and the contract flow are still undecided
+ * (H-20260724-public-founding-shop-price). A shop that takes its payments
+ * elsewhere pays nothing, so a timed trial or a paid plan would contradict it.
  */
 describe("the trial's terms stand at the pricing doors", () => {
   /** What the note must name, in each locale's own words. */
   const trialTerms = {
-    "en-US": [/free/i, /2 weeks/, /no card/i, /keeps working/i],
-    "es-ES": [/gratis/i, /2 semanas/, /sin tarjeta/i, /sigue funcionando/i],
+    "en-US": [/booking tool/i, /one trip/i, /free/i, /no card/i, /1%/, /whole price/i],
+    "es-ES": [
+      /sistema de reservas/i,
+      /una salida/i,
+      /gratis/i,
+      /sin tarjeta/i,
+      /1 %/,
+      /todo el precio/i,
+    ],
+  } as const;
+  /** What it must never say again: a timed trial, or a plan to move to. */
+  const retiredTerms = {
+    "en-US": [/weeks?\b/i, /paid plan/i, /\{email\}/],
+    "es-ES": [/semanas?\b/i, /plan de pago/i, /\{email\}/],
   } as const;
 
   /**
@@ -175,10 +190,11 @@ describe("the trial's terms stand at the pricing doors", () => {
   } as const;
 
   for (const locale of DIVER_LOCALES) {
-    it(`names free, three weeks, no card and the soft expiry in ${locale}`, () => {
+    it(`names one trip, free, no card and the 1% in ${locale}`, () => {
       const note = marketingMessages(locale)["marketing.pricing.trialNote"];
       expect(note).toBeDefined();
       for (const pattern of trialTerms[locale]) expect(note).toMatch(pattern);
+      for (const pattern of retiredTerms[locale]) expect(note).not.toMatch(pattern);
     });
 
     it(`names no billing term beyond the card it does not take in ${locale}`, () => {
@@ -351,8 +367,6 @@ describe("the pricing page says the trial and card fees once", () => {
     it(`keeps the trial in the notes beside the price alone in ${locale}`, () => {
       const messages = marketingMessages(locale);
       expect(messages["marketing.pricing.trialNote"]).toBeDefined();
-      // How a trial becomes paid, through the upgrade inbox (marketing.md).
-      expect(messages["marketing.pricing.trialNote"]).toContain("{email}");
       expect(messages["marketing.pricing.faq.trialMeaning.answer"]).toBeUndefined();
       expect(messages["marketing.pricing.invoice.trial.label"]).toBeUndefined();
       expect(messages["marketing.pricing.notes.note4"]).toBeUndefined();

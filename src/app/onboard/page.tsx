@@ -355,11 +355,9 @@ export default async function OnboardPage({
               claims — no card, your records, real support — which read as a
               vendor listing its virtues at exactly the moment a buyer is
               deciding whether to type a password. A person about to sign up
-              needs one fact, and the review that named it
-              (docs/product/marketing-review-20260827.md) named the missing
-              half too: the old line said "free for 3 weeks" and never answered
-              day 22. It does now, and soft expiry is real — `src/features/shop-setup/trial.ts`
-              switches nothing off. The other three claims are shipped and
+              needs one fact: what it costs. Since 2026-11-24 (Aaron) that is
+              free, no card, and 1% only of payments taken in DiveDay, with no
+              trial window named. The other three claims are shipped and
               checkable, and they keep their paragraphs on the marketing pages
               the visitor came from; a door repeats none of them. */}
           <p className="mx-auto max-w-prose text-center text-sm text-muted">

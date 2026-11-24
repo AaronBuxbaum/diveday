@@ -537,7 +537,7 @@
       "sms": "text sent",
       "whatsapp": "WhatsApp sent"
     },
-    "nothingSent": "nothing sent: no email or phone",
+    "nothingSent": "no link sent",
     "held": "held until you confirm it’s them",
     "refusal": {
       "full": "the boat is full",

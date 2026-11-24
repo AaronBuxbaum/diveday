@@ -537,7 +537,7 @@
       "sms": "SMS enviado",
       "whatsapp": "WhatsApp enviado"
     },
-    "nothingSent": "no se envió nada: sin correo ni teléfono",
+    "nothingSent": "no se envió ningún enlace",
     "held": "en espera hasta que confirmes que es esa persona",
     "refusal": {
       "full": "el barco está lleno",

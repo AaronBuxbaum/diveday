@@ -1,6 +1,13 @@
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { createTrip, daysFromNow, e2eNow, openNewGuestForm, openTripFromBoard } from "./helpers";
+import {
+  addGuestForm,
+  createTrip,
+  daysFromNow,
+  e2eNow,
+  openNewGuestForm,
+  openTripFromBoard,
+} from "./helpers";
 
 signedInAsOwner();
 
@@ -63,5 +70,65 @@ test("an unpriced trip leads with readiness, and the add says who the links reac
   ).toHaveAccessibleDescription(new RegExp(t("trips.fixList.reason.waiverNothingSent")));
   await expect(
     page.getByRole("button", { name: "Elsa Elsewhere" }).first(),
+  ).toHaveAccessibleDescription(new RegExp(t("trips.fixList.reason.waiverPending")));
+});
+
+/**
+ * **Try it Saturday, the whole path** (brief item 6): a shop keeps its booking
+ * tool, puts one trip on the board with no price, pastes that tool's list onto
+ * it, reads per person whether a link went out, and lands on a Filling that
+ * counts who is ready. The nightly rehearsal runs this file
+ * (`.github/workflows/simulate-day.yml`), so a break anywhere on the path turns
+ * the night red. The demo shop holds every send, so each person reads "no link
+ * sent"; which channel a live shop's link took is unit tested
+ * (`seat-diver-texts.test.ts`, `PasteListPanel.test.tsx`).
+ */
+test("a list pasted onto an unpriced trip says what went out, then who is ready", async ({
+  page,
+}) => {
+  test.slow(); // a board add, a read and a seat of three, and the trip page again, each a cold compile locally
+  const title = `Pasted elsewhere ${e2eNow().getTime()}`;
+  await createTrip(page, {
+    title,
+    date: daysFromNow(10),
+    departsAt: "09:00",
+    returnsAt: "12:00",
+    capacity: 6,
+  });
+  await openTripFromBoard(page, title);
+  const sentence = page.locator("[data-trip-sentence]");
+  await expect(sentence).toContainText(t("trips.clock.sentence.noGuests"));
+
+  const band = await addGuestForm(page);
+  await band.getByText(t("trips.pasteList.heading"), { exact: true }).click();
+  const stamp = e2eNow().getTime();
+  await band
+    .getByLabel(t("trips.pasteList.listLabel"))
+    .fill(
+      [`Pia Pasted,pia-${stamp}@example.com,`, "Omar Pasted,,+1 305 555 0102", "Lu Pasted,,"].join(
+        "\n",
+      ),
+    );
+  await band.getByRole("button", { name: t("trips.pasteList.read") }).click();
+  const preview = band.getByTestId("paste-list-preview");
+  await expect(preview.getByText(t("trips.pasteList.toAddOther", { count: 3 }))).toBeVisible();
+  await preview.getByRole("button", { name: t("trips.pasteList.seatOther", { count: 3 }) }).click();
+
+  const result = band.getByTestId("paste-list-result");
+  await expect(result.getByText(t("trips.pasteList.addedOther", { count: 3 }))).toBeVisible();
+  for (const name of ["Pia Pasted", "Omar Pasted", "Lu Pasted"]) {
+    await expect(result.getByRole("listitem").filter({ hasText: name })).toContainText(
+      t("trips.pasteList.nothingSent"),
+    );
+  }
+  await expect(result.getByTestId("paste-list-refused")).toHaveCount(0);
+
+  await result.getByRole("button", { name: t("trips.pasteList.done") }).click();
+  await expect(sentence).toContainText(t("trips.clock.sentence.readyOf", { ready: 0, total: 3 }));
+  await expect(page.getByRole("button", { name: "Lu Pasted" }).first()).toHaveAccessibleDescription(
+    new RegExp(t("trips.fixList.reason.waiverNothingSent")),
+  );
+  await expect(
+    page.getByRole("button", { name: "Pia Pasted" }).first(),
   ).toHaveAccessibleDescription(new RegExp(t("trips.fixList.reason.waiverPending")));
 });

@@ -295,9 +295,9 @@ reviewed as a page, which is the right unit for copy and the wrong one for hiera
   (which leaves the "real person" clause to the set-up note a few lines above it, so the close says
   it once), the sign-up
   reassurance card, and the signed-in shop settings page. **Trial upgrades get their own address,**
-  `onboarding@dive.day` — used only for "how do I move a trial shop to paid," on the pricing page's
-  trial note (the Notes list beside the invoice), the sign-up form's trial note, and the shop Settings trial-status card (3-week trial,
-  soft expiry — see `src/features/shop-setup/trial.ts`). Both addresses are hosted mailboxes reaching the same
+  `onboarding@dive.day` — used only for "how do I move a trial shop to paid," on the shop Settings
+  trial-status card (14-day trial, soft expiry — see `src/features/shop-setup/trial.ts`). No public
+  page names it since 2026-11-24, when the pricing and sign-up trial notes stopped naming a window. Both addresses are hosted mailboxes reaching the same
   people as `aaron@dive.day` always did; see
   [docs/engineering/ses-email-runbook.md](../engineering/ses-email-runbook.md#divedays-own-addresses).
 - **A third service commitment was authorized 2026-10-07 (H-20261007-continuity-promise): the continuity promise.** Aaron Buxbaum, in the project thread: "We can publish that exact promise." The sentence is "If DiveDay ever shuts down, you get 90 days’ notice, your export, and your backups keep running until the last day." It answers the objection the demo cannot (a new vendor closing, market audit 2026-10-07 item 46), and it rests on things that ship: the one-ZIP export (`fullShopExport`) and the weekly scheduled backup to storage the shop owns (`src/features/records/backup-export/`). It is one shared key, `continuityPromise` in `src/lib/marketing.ts` (`marketing.export.continuity`), rendered on `/pricing` as the answer to the FAQ row "What happens to my shop if DiveDay shuts down?" (`faq.shutdown`). The 2026-11-11 hierarchy change removes its prominent About placement while keeping this exact answer accessible on Pricing. Its words are the owner's: no rewording, no added timeline or refund, and no other page carries it without a new decision. `src/lib/marketing.test.ts` pins the English word for word and the three commitments in every locale.
@@ -546,10 +546,12 @@ a lawyer or a mascot) applies, plus marketing-specific rules:
   On `/about`, the demo note stands under the first pair in the operational standards band,
   exactly once in `<main>`, without a price footnote. The closing band repeats the doors, not the
   note. The feature-page note also names the screen and role the demo opens.
-  **`/pricing` states the trial once beside the price.** `marketing.pricing.trialNote` says the
-  shop's trial is free for three weeks with no card, and that it keeps working while the shop
-  arranges the move to paid with `onboarding@dive.day`. The trial rules use soft expiry; do not
-  invent automatic billing, a cutoff or an indefinite free-service promise. The invoice's card
+  **`/pricing` states the trial once beside the price.** `marketing.pricing.trialNote` is
+  Aaron's line (2026-11-24): keep your booking tool and try DiveDay on one trip, free, with no
+  card; if you take payments in DiveDay, DiveDay keeps 1%, and that is the whole price. A shop that
+  takes its payments elsewhere pays nothing, and Aaron confirmed that is fine, so no public page
+  names a trial window, a cutoff or a paid plan to move to. The sign-up form's
+  `account.onboard.trialNote` says the same in one sentence. Do not invent automatic billing. The invoice's card
   processing row states Stripe's fee once; the fee-scope FAQ supplies the necessary detail.
 - **The setup door says what happens next.** The close names the person who reads the request,
   using `marketing.common.closingSupport`; each page keeps the shared `FunnelCtas` behavior.
