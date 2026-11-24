@@ -147,7 +147,7 @@ export function HomeWalkthrough({
     }
   }, [beat]);
 
-  // It plays only while the current slide's own screen is mostly in view, not the whole tall list:
+  // It plays only while the current slide's own screen is well in view (a third of it), not the whole tall list:
   // a reader who has scrolled to the controls has not yet reached the screen, and the first card's
   // hold runs only from the moment they do (Aaron, 2026-11-21).
   // biome-ignore lint/correctness/useExhaustiveDependencies: the beat is the trigger; the frame is found in the list
@@ -157,7 +157,7 @@ export function HomeWalkthrough({
     if (!target) return;
     const watcher = new IntersectionObserver(
       ([entry]) => setOnScreen(entry?.isIntersecting ?? false),
-      { threshold: 0.6 },
+      { threshold: 0.3 },
     );
     watcher.observe(target);
     return () => watcher.disconnect();

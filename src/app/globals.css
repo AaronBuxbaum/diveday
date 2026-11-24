@@ -2023,7 +2023,10 @@ select:not([multiple]):not([size]):dir(rtl) {
 [data-walk-still] *::after,
 [data-walk-idle] *:not([data-walk-frame-current]),
 [data-walk-idle] *::after {
-  animation-play-state: paused;
+  /* !important: the beat's own animations are written as shorthands in more specific rules, which
+     reset the play state to running, so the first card's page swap ran at page load, long before
+     a reader scrolled down to it (Aaron, 2026-11-24). */
+  animation-play-state: paused !important;
 }
 
 /* The fingertip the walk moves (`data-walk-cursor`, the same ring as the tap, drawn in the control
