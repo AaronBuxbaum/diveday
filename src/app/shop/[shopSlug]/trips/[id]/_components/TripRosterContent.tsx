@@ -537,7 +537,9 @@ function FillingCard({
       bookingLink={!elsewhere}
       carry={
         // **One waiting diver is worth carrying too** (fourth review, item 31).
-        !demand &&
+        // The demand banner carries the list instead, except sold elsewhere,
+        // where no banner is drawn and the carry stays here.
+        (!demand || elsewhere) &&
         isFull(seatsOnSale(trip)) &&
         actions.carryWaitlistAction &&
         actions.moveSeat?.targets.length ? (
