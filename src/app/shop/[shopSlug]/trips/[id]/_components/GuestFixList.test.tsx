@@ -52,6 +52,36 @@ function desk(ids: string[], below = new Map()) {
 const group = (key: string) => document.querySelector(`[data-fix-group="${key}"]`) as HTMLElement;
 
 describe("a row says the name, one phrase, and one button", () => {
+  it("says a waiver nobody could be sent was not sent, and hands over the counter code", () => {
+    const pending = new Map([
+      ["n", readinessRow("blocked", [{ code: "waiver_pending", params: undefined }])],
+      ["m", readinessRow("blocked", [{ code: "waiver_pending", params: undefined }])],
+    ]) as ReadinessByBooking;
+    const nameOnly = entry("n", "Nadia Nocontact");
+    renderRoster({
+      roster: [
+        { ...nameOnly, person: { ...nameOnly.person, email: null, phone: null } },
+        entry("m", "Mateo Mailed"),
+      ],
+      readiness: pending,
+      waivers: new Map() as WaiverByBooking,
+      selectedBookingId: null,
+      phase: "ready",
+    });
+    const cantBoard = group("cantBoard");
+    expect(
+      within(cantBoard).getByRole("button", { name: "Nadia Nocontact" }),
+    ).toHaveAccessibleDescription("Waiver unsigned, nothing could be sent");
+    expect(within(cantBoard).getByRole("link", { name: "Sign at the counter" })).toHaveAttribute(
+      "href",
+      "/shop/blue-mantis/trips/trip-1/party/n/waivers",
+    );
+    // An emailed guest's waiver is still the one sent and not signed.
+    expect(
+      within(cantBoard).getByRole("button", { name: "Mateo Mailed" }),
+    ).toHaveAccessibleDescription("Waiver sent, not signed");
+  });
+
   it("puts a blocked guest under Can't board yet with the one remedy", () => {
     renderRoster({
       roster: [blocked, ready],

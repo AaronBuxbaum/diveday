@@ -571,6 +571,7 @@
     "leadTime": "{weekday} departures usually sell {percent}% of their seats in the last 3 days."
   },
   "roster": {
+    "waiverNothingSent": "Waiver not signed. Nothing could be sent.",
     "addFirstNoteSummary": "Add a private note",
     "addNoteLabel": "Add a note only staff can see",
     "addNotePlaceholder": "Late to the boat, medical question, kit issue…",
@@ -978,6 +979,14 @@
     "emailBody": "Hi {firstName},\n\nA seat is open on {tripTitle} ({tripWhen}) with {shopName}. Grab it here before it goes:\n{bookingUrl}\n\nSee you on the boat!"
   },
   "partyWaiverQueue": {
+    "reachedAll": "Links went out to everyone. A QR code is here for anyone signing at the counter.",
+    "reachedSome": "Links went out to {sent} of {total}. Show the rest a QR code.",
+    "reachedNone": "No link could be sent. Show each person a QR code to sign on their phone.",
+    "sentBy": "Link sent {channels}",
+    "notSent": "Nothing could be sent",
+    "channelEmail": "by email",
+    "channelSms": "by text",
+    "channelWhatsapp": "on WhatsApp",
     "title": "Party waivers",
     "intro": "Show an available QR code for signing on the person’s phone.",
     "back": "Back to departure",
@@ -1156,6 +1165,7 @@
     "sentence": {
       "guestCount": "{count, plural, one {# guest} other {# guests}}",
       "seatsToFill": "{count, plural, one {# seat} other {# seats}} to fill.",
+      "readyOf": "{ready} of {total, plural, one {# guest} other {# guests}} ready.",
       "full": "Every seat is taken.",
       "booked": "{booked} of {capacity} booked",
       "noGuests": "No guests booked.",
@@ -1196,6 +1206,8 @@
       "bookingLinkLine": "For email, text, or social",
       "addYourself": "Add a guest yourself",
       "addYourselfLine": "Phone or walk-in booking",
+      "addGuests": "Add guests",
+      "typeOrPaste": "Type them in, or paste your list",
       "add": "Add",
       "crew": "Crew",
       "plan": "Plan",
@@ -1361,6 +1373,7 @@
       "waiverLapsed": "Waiver lapsed",
       "waiverRunsOut": "Waiver runs out before the trip",
       "waiverPending": "Waiver sent, not signed",
+      "waiverNothingSent": "Waiver unsigned, nothing could be sent",
       "medicalReview": "Needs a doctor’s sign-off",
       "medicalNotCleared": "Not cleared by a physician",
       "waiverSealFailed": "Waiver changed after signing",

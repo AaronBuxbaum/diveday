@@ -151,7 +151,14 @@ function CourseFormsQrDialog({
   );
 }
 
-export function CourseFormsQrButton({ bookingId, name }: Selection) {
+export function CourseFormsQrButton({
+  bookingId,
+  name,
+  quiet = false,
+}: Selection & {
+  /** A link already reached them: the code is the second way, drawn quieter. */
+  quiet?: boolean;
+}) {
   const context = useContext(QrContext);
   if (!context) return null;
   return (
@@ -159,7 +166,7 @@ export function CourseFormsQrButton({ bookingId, name }: Selection) {
       type="button"
       aria-label={fill(context.labelFor, { name })}
       onClick={() => context.show({ bookingId, name })}
-      className={buttonClass({ variant: "secondary" })}
+      className={buttonClass({ variant: quiet ? "ghost" : "secondary" })}
     >
       {context.label}
     </button>

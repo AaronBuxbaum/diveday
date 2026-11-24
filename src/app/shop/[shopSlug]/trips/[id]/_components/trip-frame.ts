@@ -19,7 +19,7 @@ import {
   shownClockPhase,
 } from "@/lib/trip-clock";
 import { boatStageOf, finalHomeSaid, type tripPhaseOf } from "@/lib/trip-phase";
-import { seatsOnSale } from "@/lib/trips";
+import { seatsOnSale, soldElsewhere } from "@/lib/trips";
 import { tripFacts } from "./TripHeader";
 import { phaseStripCopy } from "./trip-clock-copy";
 import { tripHeaderDaySpan } from "./trip-header-price";
@@ -58,6 +58,8 @@ export function tripFrame({
     booked: number;
     capacity: number;
     sellableCapacity: number;
+    priceCents: number | null;
+    course: { priceCents: number | null } | null;
   };
   shop: MeetingPointShopRow & { timezone: string; dockCallMinutes: number };
   roster: readonly RosterRow[];
@@ -81,6 +83,7 @@ export function tripFrame({
     rosterRowIsBlocked(readiness.get(booking.id)?.readiness),
   ).length;
   const capacity = seatsOnSale(trip).capacity;
+  const elsewhere = soldElsewhere(trip);
   const nextStartsAt = nextMeetingStart(clock);
   const dockBy = dockCallAt(nextStartsAt, shop.dockCallMinutes);
   return {
@@ -89,6 +92,15 @@ export function tripFrame({
     /** The phase on screen is an earlier one, seen after the boat left (`isLookBack`). */
     lookBack: isLookBack(shown, current),
     capacity,
+    /** The shop sells the seats somewhere else (`soldElsewhere`): Filling leads with readiness. */
+    soldElsewhere: elsewhere,
+    /**
+     * Filling's bar under the sentence: the seats, booked then open, or, on a
+     * departure sold elsewhere, the guests, ready then not.
+     */
+    bar: elsewhere
+      ? { booked: active.length - blocked, capacity: active.length }
+      : { booked: trip.booked, capacity },
     /** When guests are wanted at the dock: the shop's call, else the departure. */
     dockBy: dockBy ?? nextStartsAt,
     /** When Getting ready opens: shop-local midnight of the day before. */
@@ -128,6 +140,7 @@ export function tripFrame({
         dockCallAt: dockBy,
         booked: trip.booked,
         capacity,
+        soldElsewhere: elsewhere,
         guests: active.length,
         here,
         blocked,

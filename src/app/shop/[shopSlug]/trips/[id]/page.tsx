@@ -237,6 +237,7 @@ export default async function ManageTripPage({
             tripFixes: slots.fixes,
             afterReady: slots.afterReady,
             beside: slots.beside,
+            soldElsewhere: frame.soldElsewhere,
             addGuestHref: `${tripPath}?phase=${frame.shown}&add=1#add-a-booking`,
             arrival: desk?.arrival,
             // The rebooking record belongs to Wrapped up, not to a look back at an earlier phase.
@@ -304,7 +305,6 @@ export default async function ManageTripPage({
           record={phase.record}
           notBack={unaccounted.size}
           tripPath={tripPath}
-          booked={trip.booked}
           rollCallHero={rollCallHero}
           strip={
             <TripPhaseStrip

@@ -12,7 +12,6 @@ export function PhaseHeading({
   notBack,
   rollCallHero,
   tripPath,
-  booked,
   strip,
 }: {
   frame: ReturnType<typeof tripFrame>;
@@ -22,14 +21,13 @@ export function PhaseHeading({
   notBack: number;
   rollCallHero: boolean;
   tripPath: string;
-  booked: number;
   strip: ReactNode;
 }) {
   if (showDetails) return null;
   const rollCall = rollCallHero
     ? { href: `${tripPath}/manifest`, label: record.t("trips.clock.rollCall") }
     : null;
-  const seats = frame.shown === "filling" ? { booked, capacity: frame.capacity } : null;
+  const seats = frame.shown === "filling" ? frame.bar : null;
   const lookBack =
     (frame.lookBack && frame.current === "wrapped") || (cancelled && frame.shown !== "wrapped");
   const showSentence = !cancelled && frame.shown !== "water" && frame.shown !== "wrapped";

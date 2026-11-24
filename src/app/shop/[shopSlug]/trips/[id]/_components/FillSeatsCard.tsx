@@ -46,6 +46,10 @@ const BADGE_CLASS =
  * for a role that may act on the wait list (`mayInviteFromWaitlist`, the
  * audience `holdSendAction` itself holds), and only while the trip takes a
  * guest. The names stay either way.
+ *
+ * **Sold elsewhere** (`soldElsewhere`): the caller passes no past guests,
+ * and `addLine` in place of the walk-in line; the booking link is left off,
+ * since the seats are sold somewhere else.
  */
 export function FillSeatsCard({
   heading,
@@ -55,6 +59,8 @@ export function FillSeatsCard({
   discount,
   addHref,
   addForm,
+  addLine,
+  bookingLink = true,
   carry,
   trip,
   t,
@@ -69,6 +75,10 @@ export function FillSeatsCard({
   addHref: string | null;
   /** The add form itself, once asked for (`?add=1`). */
   addForm: ReactNode;
+  /** The add row's quieter line; the walk-in line when not given. */
+  addLine?: string;
+  /** Draw the booking link's row: off on a departure sold elsewhere. */
+  bookingLink?: boolean;
   /** "Carry who’s waiting" to another departure, on a full boat. */
   carry: ReactNode;
   trip: { id: string; shopSlug: string; shopName: string; title: string; when: string };
@@ -182,24 +192,26 @@ export function FillSeatsCard({
               </AutoOpenDetails>
             </li>
           ) : null}
-          <li className={ROW_CLASS}>
-            <span aria-hidden="true" className={BADGE_CLASS}>
-              ↗
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="block font-semibold">{t("trips.clock.filling.bookingLink")}</span>
-              <span className="block text-sm text-muted">
-                {t("trips.clock.filling.bookingLinkLine")}
+          {bookingLink ? (
+            <li className={ROW_CLASS}>
+              <span aria-hidden="true" className={BADGE_CLASS}>
+                ↗
               </span>
-            </span>
-            <CopyLinkButton
-              path={publicTripPath(trip.shopSlug, trip.id)}
-              label={t("trips.detail.copyBookingLink")}
-              copiedLabel={t("words.did.copied")}
-              failedLabel={t("trips.detail.linkCopyFailed")}
-              variant="secondary"
-            />
-          </li>
+              <span className="min-w-0 flex-1">
+                <span className="block font-semibold">{t("trips.clock.filling.bookingLink")}</span>
+                <span className="block text-sm text-muted">
+                  {t("trips.clock.filling.bookingLinkLine")}
+                </span>
+              </span>
+              <CopyLinkButton
+                path={publicTripPath(trip.shopSlug, trip.id)}
+                label={t("trips.detail.copyBookingLink")}
+                copiedLabel={t("words.did.copied")}
+                failedLabel={t("trips.detail.linkCopyFailed")}
+                variant="secondary"
+              />
+            </li>
+          ) : null}
           {addHref ? (
             <li>
               <div className={ROW_CLASS}>
@@ -211,7 +223,7 @@ export function FillSeatsCard({
                     {t("trips.clock.filling.addYourself")}
                   </span>
                   <span className="block text-sm text-muted">
-                    {t("trips.clock.filling.addYourselfLine")}
+                    {addLine ?? t("trips.clock.filling.addYourselfLine")}
                   </span>
                 </span>
                 {addForm ? null : (

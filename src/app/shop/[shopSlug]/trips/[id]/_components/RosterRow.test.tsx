@@ -451,6 +451,36 @@ describe("blockers and information", () => {
     rerender(<RosterRow entry={seat} settled={false} context={waiverContext("waiver_pending")} />);
     expect(screen.getByRole("button", { name: "Copy link" })).toBeVisible();
   });
+  it("says nothing could be sent when a waiver is open and no email or text reaches them", () => {
+    const context = contextFor("blocked");
+    const existing = context.rows.readinessByBooking.get("b-1");
+    if (!existing) throw new Error("missing readiness fixture");
+    context.rows.readinessByBooking = new Map([
+      [
+        "b-1",
+        {
+          ...existing,
+          readiness: { ...existing.readiness, blockers: [{ code: "waiver_pending" }] },
+        },
+      ],
+    ]);
+    const unreachable = {
+      ...seat,
+      person: { ...seat.person, email: null, phone: null } as unknown as RosterEntry["person"],
+    };
+    context.rows.waiverByBooking = new Map([
+      ["b-1", { waiver: { status: "pending" } }],
+    ]) as WaiverByBooking;
+    render(<RosterRow entry={unreachable} settled={false} context={context} />);
+    expect(screen.getByText(t("trips.roster.waiverNothingSent"))).toBeVisible();
+    // Its control sends (and so hands over the link to copy); it never says "sent".
+    expect(screen.getByRole("button", { name: t("trips.roster.waiverSend") })).toBeVisible();
+    expect(screen.queryByText(t("trips.roster.waiverSent"))).toBeNull();
+    cleanup();
+    render(<RosterRow entry={seat} settled={false} context={context} />);
+    expect(screen.queryByText(t("trips.roster.waiverNothingSent"))).toBeNull();
+    expect(screen.getByText(t("trips.roster.waiverSent"))).toBeVisible();
+  });
   it("offers a solo seat nobody can reach the counter QR, and a reachable one none (issue 3984)", () => {
     const unsent = () => {
       const context = contextFor("blocked");

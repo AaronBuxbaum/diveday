@@ -9,7 +9,8 @@ buddies, the wait list and cancellations.
   (the ready link by text to a seated diver with a phone), `paste-list/` (a trip's passenger list
   pasted onto one departure, each person their own seat), `seat-claims/`, `seat-ladder.ts`,
   `seat-already-held.ts`, `seat-sailed.ts`, `seat-sold-alerts.ts`, `seats-given-up.ts`,
-  `party-seat-anchor.ts`, `new-booking-page.ts`, `first-booking.ts`.
+  `party-seat-anchor.ts`, `party-reached.ts` (who a just-seated party's links reached, carried to
+  its waivers landing), `new-booking-page.ts`, `first-booking.ts`.
 - What is open: `availability/`, `open-seats/`, `worth-a-look.ts`, `your-days.ts`.
 - Requests and quotes: `booking-request.ts`, `requests-page/`, `request-advisor.ts`, `charter-quote.ts`.
 - Moves and cancellations: `move-offer.ts`, `move-preflight/`, `move-ask-alerts.ts`,

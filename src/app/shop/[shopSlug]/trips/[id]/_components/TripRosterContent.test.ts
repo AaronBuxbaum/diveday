@@ -29,7 +29,7 @@ describe("the roster's unmet-demand panel", () => {
 describe("the Fill the last N card", () => {
   it("is drawn only while filling, and left out on a cancelled departure", () => {
     expect(SOURCE).toMatch(
-      /context\.phase === "filling" && !guests\.cancelled \? \(\s*<FillSeatsCard/,
+      /context\.phase === "filling" && !guests\.cancelled \? \(\s*<FillingCard/,
     );
   });
 });

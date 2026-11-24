@@ -4,6 +4,7 @@ import { z } from "zod";
 import { getDb } from "@/db/client";
 import { busyOnLockWait } from "@/db/lock-bounds";
 import { requireShopSurface } from "@/features/accounts/session";
+import { partyReachedParam } from "@/features/bookings/party-reached";
 import {
   type SeatDiverPerson,
   type SeatPartyMember,
@@ -484,5 +485,7 @@ export async function seatPartyAction(shopSlug: string, formData: FormData) {
   if (!lead) throw new Error("seatParty returned no lead seat");
   const departurePath = door.seatedPath({ shopSlug, tripId, personId: "" });
   const queuePath = shopPath(shopSlug, "trips", tripId, "party", lead.bookingId, "waivers");
-  revalidateAndRedirect(departurePath, queuePath);
+  // The landing says who the links reached, and by what ("Try it Saturday", item 5).
+  const reached = new URLSearchParams({ reached: partyReachedParam(outcome.seats) });
+  revalidateAndRedirect(departurePath, `${queuePath}?${reached.toString()}`);
 }

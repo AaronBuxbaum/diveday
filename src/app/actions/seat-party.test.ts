@@ -60,7 +60,7 @@ beforeEach(() => {
   } as never);
   vi.mocked(seatParty).mockResolvedValue({
     ok: true,
-    seats: [{ bookingId: LEAD_BOOKING }],
+    seats: [{ bookingId: LEAD_BOOKING, reached: [] }],
   } as never);
   vi.mocked(findSimilarDivers).mockResolvedValue([]);
 });
@@ -184,6 +184,22 @@ describe("seatPartyAction", () => {
     const to = new URL(await landing(form()), "http://x");
     expect(to.pathname).toBe(`/shop/blue-mantis/trips/${TRIP_ID}/party/${LEAD_BOOKING}/waivers`);
     expect(discardFormDraft).toHaveBeenCalledWith(expect.anything(), SHOP_ID, "staff", "new_diver");
+  });
+
+  it("lands on the party's waivers saying whom each link reached, and by what", async () => {
+    const mia = "66666666-6666-4666-8666-666666666666";
+    const leo = "77777777-7777-4777-8777-777777777777";
+    vi.mocked(seatParty).mockResolvedValue({
+      ok: true,
+      seats: [
+        { bookingId: LEAD_BOOKING, reached: ["email", "sms"] },
+        { bookingId: mia, reached: [] },
+        { bookingId: leo, reached: ["whatsapp"] },
+      ],
+    } as never);
+    const to = new URL(await landing(form()), "http://x");
+    expect(to.pathname).toBe(`/shop/blue-mantis/trips/${TRIP_ID}/party/${LEAD_BOOKING}/waivers`);
+    expect(to.searchParams.get("reached")).toBe(`${LEAD_BOOKING}.es,${leo}.w`);
   });
 
   it("keeps the form when the boat takes nobody", async () => {

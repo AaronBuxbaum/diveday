@@ -571,6 +571,7 @@
     "leadTime": "Las salidas del {weekday} suelen vender el {percent} % de sus plazas en los últimos 3 días."
   },
   "roster": {
+    "waiverNothingSent": "Exención sin firmar. No se pudo enviar nada.",
     "addFirstNoteSummary": "Agregar una nota privada",
     "addNoteLabel": "Agregar una nota que solo vea el personal",
     "addNotePlaceholder": "Llegó tarde al barco, pregunta médica, problema de equipo…",
@@ -978,6 +979,14 @@
     "emailBody": "Hola {firstName},\n\nHay una plaza libre en {tripTitle} ({tripWhen}) con {shopName}. Consíguela aquí antes de que se agote:\n{bookingUrl}\n\n¡Nos vemos en el barco!"
   },
   "partyWaiverQueue": {
+    "reachedAll": "Todos recibieron su enlace. Hay un código QR para quien firme en el mostrador.",
+    "reachedSome": "Se enviaron enlaces a {sent} de {total}. Muestra un código QR al resto.",
+    "reachedNone": "No se pudo enviar ningún enlace. Muestra a cada persona un código QR para firmar en su celular.",
+    "sentBy": "Enlace enviado {channels}",
+    "notSent": "No se pudo enviar nada",
+    "channelEmail": "por correo",
+    "channelSms": "por SMS",
+    "channelWhatsapp": "por WhatsApp",
     "title": "Exenciones del grupo",
     "intro": "Muestra un código QR disponible para que la persona firme en su celular.",
     "back": "Volver a la salida",
@@ -1156,6 +1165,7 @@
     "sentence": {
       "guestCount": "{count, plural, one {# participante} other {# participantes}}",
       "seatsToFill": "{count, plural, one {Queda # plaza} other {Quedan # plazas}} por llenar.",
+      "readyOf": "{ready} de {total, plural, one {# participante listo} other {# participantes listos}}.",
       "full": "Todas las plazas están ocupadas.",
       "booked": "Reservadas: {booked} de {capacity}",
       "noGuests": "Aún no hay participantes.",
@@ -1196,6 +1206,8 @@
       "bookingLinkLine": "Para correo, mensaje o redes",
       "addYourself": "Agrega un participante tú mismo",
       "addYourselfLine": "Reserva por teléfono o en persona",
+      "addGuests": "Agrega participantes",
+      "typeOrPaste": "Escríbelos o pega tu lista",
       "add": "Agregar",
       "crew": "Tripulación",
       "plan": "Plan de buceo",
@@ -1361,6 +1373,7 @@
       "waiverLapsed": "Exención vencida",
       "waiverRunsOut": "La exención vence antes de la salida",
       "waiverPending": "Exención enviada, sin firmar",
+      "waiverNothingSent": "Exención sin firmar, no se pudo enviar nada",
       "medicalReview": "Necesita el visto bueno de un médico",
       "medicalNotCleared": "Un médico no lo autorizó",
       "waiverSealFailed": "Exención cambiada después de firmar",

@@ -30,6 +30,11 @@ export type TripSentenceInput = {
   dockCallAt: Date | null;
   booked: number;
   capacity: number;
+  /**
+   * The shop sells this departure's seats somewhere else (`soldElsewhere`):
+   * Filling says who is ready, not what is left to sell.
+   */
+  soldElsewhere: boolean;
   /** Active guests on the roster, turned away and no-shows left out. */
   guests: number;
   /** Guests checked in. */
@@ -66,6 +71,26 @@ export function tripSentence(input: TripSentenceInput, t: StaffTranslator): Trip
 
   switch (input.phase) {
     case "filling": {
+      if (input.soldElsewhere) {
+        const lead =
+          input.guests === 0
+            ? t("trips.clock.sentence.noGuests")
+            : t("trips.clock.sentence.readyOf", {
+                ready: input.guests - input.blocked,
+                total: input.guests,
+              });
+        return {
+          headline: join(lead, leaves),
+          emphasis: null,
+          sub:
+            input.guests === 0
+              ? null
+              : t("trips.clock.sentence.booked", {
+                  booked: input.booked,
+                  capacity: input.capacity,
+                }),
+        };
+      }
       const left = Math.max(0, input.capacity - input.booked);
       const lead =
         left === 0

@@ -405,6 +405,7 @@ word in a message bundle fails `pnpm check:repo`. The Spanish reasoning is
 - SMS channel
 - Snorkel-suitable
 - Snorkeler
+- Sold elsewhere
 - Souls on board
 - Staff invite
 - Stale roll call

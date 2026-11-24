@@ -20,6 +20,7 @@ function say(over: Partial<TripSentenceInput>) {
       dockCallAt: new Date("2026-11-16T13:30:00.000Z"),
       booked: 11,
       capacity: 14,
+      soldElsewhere: false,
       guests: 11,
       here: 2,
       blocked: 0,
@@ -47,6 +48,24 @@ describe("tripSentence", () => {
       headline: "3 seats to fill. The boat leaves in 5 days.",
       emphasis: null,
       sub: "11 of 14 booked",
+    });
+  });
+
+  it("Filling, sold elsewhere: how many are ready, not seats to sell", () => {
+    const filling = {
+      phase: "filling" as const,
+      now: new Date("2026-11-11T15:00:00.000Z"),
+      soldElsewhere: true,
+    };
+    expect(say({ ...filling, booked: 10, guests: 10, blocked: 2 })).toEqual({
+      headline: "8 of 10 guests ready. The boat leaves in 5 days.",
+      emphasis: null,
+      sub: "10 of 14 booked",
+    });
+    expect(say({ ...filling, booked: 0, guests: 0, blocked: 0 })).toEqual({
+      headline: "No guests booked. The boat leaves in 5 days.",
+      emphasis: null,
+      sub: null,
     });
   });
 
