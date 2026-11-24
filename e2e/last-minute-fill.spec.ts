@@ -64,7 +64,11 @@ async function offerFor(page: Page, name: string) {
     name: staff("trips.whoWantsIn.offerSeatAria", { name }),
   });
   await expect(send.locator("xpath=ancestor::form")).toHaveAttribute("data-hydrated", "true");
-  await page.getByText(staff("trips.whoWantsIn.addDiscount"), { exact: true }).click();
+  // The discount sits in the batch the page's primary opens while somebody
+  // can be offered at once, above the list otherwise.
+  const discount = page.getByText(staff("trips.whoWantsIn.addDiscount"), { exact: true });
+  if (!(await discount.isVisible())) await page.locator("[data-filling-primary]").click();
+  await discount.click();
   return send;
 }
 
@@ -174,26 +178,26 @@ test.describe("staff and the list", () => {
     const primary = page.locator("[data-filling-primary]");
     await expect(primary).toHaveCount(1);
     await expect(primary).toHaveText(/^Offer (a seat|seats)$/);
-    const batch = page.locator("#offer-seats");
-    await expect(batch.locator("[data-bulk-offer]")).toBeHidden();
+    const panel = page.locator("[data-offer-seats-panel] [data-bulk-offer]");
+    await expect(panel).toBeHidden();
+    // One step: following the primary opens the batch itself. It sends
+    // nothing: it names who one press will write to.
     await primary.click();
-    // Opening it sends nothing: it names who one press will write to.
-    const panel = batch.locator("[data-bulk-offer]");
     await expect(panel).toBeVisible();
-    await expect(panel.locator("p").first()).toContainText(/booking link by email\.$/);
+    await expect(panel.locator("p").first()).toHaveText(/^Email an offer to .+\.$/);
     const send = panel.getByRole("button", { name: /^Send (the offer|\d offers)$/ });
     await expect(send.locator("xpath=ancestor::form")).toHaveAttribute("data-hydrated", "true");
     await send.click();
     // Held, with Undo: undone, nothing left and the batch is whole again.
     await panel.getByRole("button", { name: staff("shared.sendHold.undo") }).click();
     await expect(send).toBeEnabled();
-    // Let go, the offers are on the rows, and the batch is spent: its button
-    // is disabled, or gone with the panel once nobody is left in line.
+    // Let go, the panel says how many of those named were emailed, and the
+    // batch is spent: it has no button to press again.
     await send.click();
-    await expect(page.getByText(/offered just now/).first()).toBeVisible({
+    await expect(panel.locator("[data-bulk-offer-result]")).toHaveText(/^\d of \d sent\./, {
       timeout: HELD_SEND_TIMEOUT_MS,
     });
-    await expect(panel.locator("form button[type=submit]:enabled")).toHaveCount(0);
+    await expect(send).toBeHidden();
   });
 
   test("a send that fails at Stripe is recorded on the trip, not lost", async ({

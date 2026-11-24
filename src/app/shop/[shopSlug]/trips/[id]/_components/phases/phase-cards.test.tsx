@@ -19,10 +19,16 @@ const gear = (over: Partial<GearToPack> = {}): GearToPack => ({
 });
 
 describe("the trip's facts while it fills", () => {
+  const line = () => {
+    const found = document.querySelector("[data-trip-facts]");
+    if (!(found instanceof HTMLElement)) throw new Error("no facts line");
+    return found;
+  };
+
   it("is one line of facts, each the door to its own section of Edit trip", () => {
     render(
       <TripFactsLine
-        crew={[]}
+        crew={["Sal Moretti"]}
         plan={["Blue Hole", "Coral Garden"]}
         price="$95.00"
         whoCanBook="Anyone"
@@ -31,12 +37,8 @@ describe("the trip's facts while it fills", () => {
         t={t}
       />,
     );
-    const line = document.querySelector("[data-trip-facts]");
-    if (!(line instanceof HTMLElement)) throw new Error("no facts line");
-    const door = (name: string) => within(line).getByRole("link", { name });
-    // What is not set says so, and is still the way to set it.
-    expect(door("Edit · Crew: Not set")).toHaveAttribute("href", "/trip?view=edit#crew");
-    expect(door("Edit · Crew: Not set")).toHaveTextContent("Not set");
+    const door = (name: string) => within(line()).getByRole("link", { name });
+    expect(door("Edit · Crew: Sal Moretti")).toHaveAttribute("href", "/trip?view=edit#crew");
     expect(door("Edit · Plan: Blue Hole and Coral Garden")).toHaveAttribute(
       "href",
       "/trip?view=edit#dives",
@@ -46,9 +48,30 @@ describe("the trip's facts while it fills", () => {
       "href",
       "/trip?view=edit#requirements",
     );
+    expect(within(line()).queryByText(/^Add /)).toBeNull();
   });
 
-  it("says a trip with no price has none set, with the door to set one", () => {
+  it("names everything not set in one link, to the first of it, with no Not set apiece", () => {
+    render(
+      <TripFactsLine
+        crew={[]}
+        plan={[]}
+        price={null}
+        whoCanBook="Open Water or higher"
+        editHref={(section) => `/trip?view=edit#${section}`}
+        locale="en-US"
+        t={t}
+      />,
+    );
+    expect(within(line()).getByRole("link", { name: "Add crew, plan, and price" })).toHaveAttribute(
+      "href",
+      "/trip?view=edit#crew",
+    );
+    expect(within(line()).queryByText("Not set")).toBeNull();
+    expect(within(line()).getAllByRole("link")).toHaveLength(2);
+  });
+
+  it("names only what is missing: a trip with crew and plan but no price", () => {
     render(
       <TripFactsLine
         crew={["Sal Moretti"]}
@@ -60,7 +83,7 @@ describe("the trip's facts while it fills", () => {
         t={t}
       />,
     );
-    expect(screen.getByRole("link", { name: "Edit · Price: Not set" })).toHaveAttribute(
+    expect(within(line()).getByRole("link", { name: "Add price" })).toHaveAttribute(
       "href",
       "/trip?view=edit#about",
     );

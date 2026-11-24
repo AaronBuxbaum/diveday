@@ -26,7 +26,8 @@ export function TripSentenceLine({
   return (
     <div
       data-trip-sentence=""
-      className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:gap-8"
+      // Filling's sentence shares its cards' reading width, so its primary sits over their edge.
+      className={`flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:gap-8 ${seats ? "max-w-3xl" : ""}`}
     >
       <div className="min-w-0">
         <p className={`${SECTION_TITLE_CLASS} text-balance`}>

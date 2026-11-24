@@ -6,6 +6,7 @@ import type { WhoWantsInRow } from "./who-wants-in-rows";
 
 const row = (id: string, over: Partial<WhoWantsInRow> = {}): WhoWantsInRow => ({
   interestId: id,
+  personId: null,
   name: `Diver ${id}`,
   email: `${id}@example.com`,
   facts: "",
@@ -81,6 +82,74 @@ describe("bulkOfferCandidates", () => {
       groups: groups([row("a", { belowBar: true }), row("b", { email: null }), row("c")]),
     });
     expect(ids(picked)).toEqual(["c"]);
+  });
+
+  it("never names someone who already holds a seat on this trip", () => {
+    const picked = bulkOfferCandidates({
+      ...ask,
+      seated: new Set(["p-a"]),
+      groups: groups([row("a", { personId: "p-a" }), row("b", { personId: "p-b" })]),
+    });
+    expect(ids(picked)).toEqual(["b"]);
+  });
+
+  it("names one person once: a date ask and a last-minute ask are one candidate", () => {
+    const picked = bulkOfferCandidates({
+      ...ask,
+      groups: groups(
+        [],
+        [row("a", { personId: "p-1" })],
+        [row("b", { personId: "p-1" }), row("c")],
+      ),
+    });
+    expect(ids(picked)).toEqual(["a", "c"]);
+  });
+
+  it("names one address once, however it is cased, when no person joins the asks", () => {
+    const picked = bulkOfferCandidates({
+      ...ask,
+      groups: groups(
+        [row("a", { email: "Eli@Example.com" })],
+        [row("b", { email: " eli@example.com" }), row("c")],
+      ),
+    });
+    expect(ids(picked)).toEqual(["a", "c"]);
+  });
+
+  it("does not spend a second sighting on someone the first sighting skipped", () => {
+    // Offered on their departure row: their last-minute row is not a way round it.
+    const picked = bulkOfferCandidates({
+      ...ask,
+      groups: groups(
+        [row("a", { personId: "p-1", offeredAt: new Date("2026-11-20T10:00:00Z") })],
+        [],
+        [row("b", { personId: "p-1" }), row("c")],
+      ),
+    });
+    expect(ids(picked)).toEqual(["c"]);
+  });
+
+  it("on a trip whose bar asks for a card, picks only a checked card", () => {
+    const card = (unchecked: boolean) => ({ text: "Open Water", unchecked });
+    const waiting = groups([
+      row("a", { certification: card(true) }),
+      row("b", { certification: null }),
+      row("c", { certification: card(false) }),
+    ]);
+    expect(ids(bulkOfferCandidates({ ...ask, barNeedsCard: true, groups: waiting }))).toEqual([
+      "c",
+    ]);
+    // With no bar there is nothing to check a card against.
+    expect(ids(bulkOfferCandidates({ ...ask, groups: waiting }))).toEqual(["a", "b", "c"]);
+  });
+
+  it("counts a party as one ask: the cap bounds emails, not seats asked for", () => {
+    const picked = bulkOfferCandidates({
+      ...ask,
+      openSeats: 2,
+      groups: groups([row("a", { facts: "Party of 4" }), row("b"), row("c")]),
+    });
+    expect(ids(picked)).toEqual(["a", "b"]);
   });
 
   it("names one interest once, whichever groups list it", () => {

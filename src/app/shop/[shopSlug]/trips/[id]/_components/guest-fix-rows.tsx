@@ -149,6 +149,66 @@ function sharedReminderOf(
 }
 
 /**
+ * The quiet reason lines (`quietOnFilling`) every booked guest shares, in the
+ * words the rows would say them: Filling says such a line once on the card's
+ * heading row ("Everyone: Check the depth"), and each row keeps only what is
+ * its own. Empty unless every booked guest is listed and there are two or
+ * more, so "Everyone" is true. A warning-colored reason is never folded.
+ */
+function sharedQuietOf(
+  items: readonly FixItem[],
+  fine: number,
+  textOf: (item: FixItem, reason: FixItem["reasons"][number]) => string,
+): string[] {
+  if (fine > 0 || items.length < 2) return [];
+  const [first, ...rest] = items.map(
+    (item) =>
+      new Set(
+        item.reasons.filter((reason) => quietOnFilling([reason])).map((r) => textOf(item, r)),
+      ),
+  );
+  return [...(first ?? [])].filter((text) => rest.every((texts) => texts.has(text)));
+}
+
+/** What the card's heading row already says for every guest, so a row leaves it out. */
+type Said = { reminder?: boolean; lines?: string[] };
+
+/**
+ * **Filling's Booked rows and the note above them.** Days ahead a reason is
+ * said quietly (`quietOnFilling`) and anything else in the warning color; a
+ * reminder time or a quiet line that every guest shares is said once, in the
+ * note. No row carries a remedy button: the guest opens in place.
+ */
+function fillingRows<Row extends { control: unknown; openLabel: string | null }>(input: {
+  list: { blocking: readonly FixItem[]; worthAMinute: readonly FixItem[]; fine: readonly string[] };
+  reminderOf: (guestId: string) => Date | null;
+  textOf: (item: FixItem, reason: FixItem["reasons"][number]) => string;
+  row: (item: FixItem, tone: "warning" | "muted", said: Said) => Row;
+  everyone: (reasons: string) => string;
+  reminderLine: (at: Date) => string;
+}): { rows: Row[]; note: string | undefined } {
+  const { list } = input;
+  const listed = [...list.blocking, ...list.worthAMinute];
+  const reminder = sharedReminderOf(
+    listed,
+    new Map(listed.map((item) => [item.guestId, { reminderAt: input.reminderOf(item.guestId) }])),
+  );
+  const quiet = sharedQuietOf(listed, list.fine.length, input.textOf);
+  const said: Said = { reminder: reminder !== null, lines: quiet };
+  const rows = [
+    ...list.blocking.map((item) => input.row(item, "warning", said)),
+    ...list.worthAMinute.map((item) =>
+      input.row(item, quietOnFilling(item.reasons) ? "muted" : "warning", said),
+    ),
+  ].map((row) => ({ ...row, control: null, openLabel: null }));
+  const note = [
+    quiet.length > 0 ? input.everyone(quiet.join(" · ")) : null,
+    reminder ? input.reminderLine(reminder) : null,
+  ].filter(Boolean);
+  return { rows, note: note.length > 0 ? note.join(" · ") : undefined };
+}
+
+/**
  * **One guest, read for the fix list**: the codes behind the reason lines the
  * row already says (readiness blockers, then each advisory line), so the list
  * and the opened guest can never disagree about what holds someone up.
@@ -399,9 +459,10 @@ export function guestFixRows(
   };
 
   /** Every reason the guest has, worst first, each said once. */
-  const phraseOf = (item: FixItem, seat: Seat | undefined): string | null => {
+  const phraseOf = (item: FixItem, seat: Seat | undefined, omit?: string[]): string | null => {
     if (item.reasons.length === 0) return seat ? kindPhrase(seat) : null;
-    return [...new Set(item.reasons.map((reason) => reasonText(reason, seat)))].join(" · ");
+    const lines = [...new Set(item.reasons.map((reason) => reasonText(reason, seat)))];
+    return lines.filter((line) => !omit?.includes(line)).join(" · ");
   };
 
   const callControl = (seat: Seat) => {
@@ -461,7 +522,7 @@ export function guestFixRows(
 
   const reminderLine = (at: Date) =>
     t("trips.fixList.reminderAt", { when: formatWeekdayTime(at, trip.locale, trip.shopTimezone) });
-  const fixRow = (item: FixItem, tone: FixListRow["tone"], saysReminder = true): DraftRow => {
+  const fixRow = (item: FixItem, tone: FixListRow["tone"], said: Said = {}): DraftRow => {
     const seat = byId.get(item.guestId);
     const {
       control = null,
@@ -469,13 +530,13 @@ export function guestFixRows(
       panelHoldsControl = false,
     } = remedyControl(item.remedy, seat);
     const reminder =
-      saysReminder &&
+      !said.reminder &&
       seat?.reminderAt &&
       item.reasons.length > 0 &&
       (phase === "filling" || phase === "ready")
         ? reminderLine(seat.reminderAt)
         : null;
-    const phrase = [phraseOf(item, seat), reminder].filter(Boolean).join(" · ") || null;
+    const phrase = [phraseOf(item, seat, said.lines), reminder].filter(Boolean).join(" · ") || null;
     return {
       key: item.guestId,
       guestIds: [item.guestId],
@@ -579,14 +640,14 @@ export function guestFixRows(
   };
 
   const booked = seats.filter((seat) => !seat.guest.released).map((seat) => seat.guest.id);
-  // Filling's rows: quiet for the day's routine, warning for the rest (`quietOnFilling`).
-  const sharedReminder = sharedReminderOf([...list.blocking, ...list.worthAMinute], byId);
-  const quietRows = [
-    ...list.blocking.map((item) => fixRow(item, "warning", !sharedReminder)),
-    ...list.worthAMinute.map((item) =>
-      fixRow(item, quietOnFilling(item.reasons) ? "muted" : "warning", !sharedReminder),
-    ),
-  ].map((row) => ({ ...row, control: null, openLabel: null }));
+  const filling = fillingRows({
+    list: phase === "filling" ? list : { ...list, blocking: [], worthAMinute: [] },
+    reminderOf: (id) => byId.get(id)?.reminderAt ?? null,
+    textOf: (item, reason) => reasonText(reason, byId.get(item.guestId)),
+    row: fixRow,
+    everyone: (reasons) => t("trips.fixList.everyone", { reasons }),
+    reminderLine,
+  });
   const drafts: DraftSection[] =
     phase === "listed"
       ? [folded("booked", t("trips.fixList.booked"), booked, "none"), ...released]
@@ -596,7 +657,7 @@ export function guestFixRows(
               key: "booked",
               label: t("trips.fixList.booked"),
               tone: "default",
-              note: sharedReminder ? reminderLine(sharedReminder) : undefined,
+              note: filling.note,
               summary: {
                 label: t("trips.clock.sentence.guestCount", { count: list.fine.length }),
                 phrase: t("trips.fixList.nothingYet"),
@@ -605,7 +666,7 @@ export function guestFixRows(
               },
               // Days ahead a guest's reason is said quietly, opened in place;
               // the trip's own fixes (a hull booked twice) keep their door.
-              rows: [...tripRows("danger"), ...tripRows("warning"), ...quietRows],
+              rows: [...tripRows("danger"), ...tripRows("warning"), ...filling.rows],
             },
             ...released,
           ]

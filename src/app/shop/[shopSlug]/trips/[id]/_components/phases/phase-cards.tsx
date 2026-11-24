@@ -37,6 +37,8 @@ function FactList({ rows }: { rows: { key: string; label: string; value: ReactNo
  * **The trip's facts, while it fills** (ADR 20261117-trip-page-clock, Filling):
  * crew, plan, price and who can book, one quiet line under the sentence. Each
  * value is the door to its own section of Edit trip; nothing is edited here.
+ * What is not set yet is one link naming all of it ("Add crew, plan, and
+ * price"), to the first of those sections, not a "Not set" apiece.
  * Facts only; what is missing for the day is the fix list's, from Getting ready.
  */
 export function TripFactsLine({
@@ -57,7 +59,6 @@ export function TripFactsLine({
   locale: string;
   t: StaffTranslator;
 }) {
-  const notSet = t("trips.clock.filling.notSet");
   const facts = [
     { section: "crew", label: t("trips.clock.filling.crew"), value: listOf(locale, crew) },
     { section: "dives", label: t("trips.clock.filling.plan"), value: listOf(locale, plan) },
@@ -68,22 +69,40 @@ export function TripFactsLine({
       value: whoCanBook,
     },
   ];
+  const unset = facts.filter((fact) => !fact.value);
   return (
-    <dl data-trip-facts className="flex flex-wrap gap-x-6 gap-y-1 text-sm">
-      {facts.map((fact) => (
-        <div key={fact.section} className="flex min-w-0 gap-x-1.5">
-          <dt className="shrink-0 text-muted">{fact.label}</dt>
-          <dd className="min-w-0 [overflow-wrap:anywhere]">
-            <Link
-              href={editHref(fact.section)}
-              aria-label={`${t("trips.clock.filling.edit")} · ${fact.label}: ${fact.value || notSet}`}
-              className={`underline decoration-border underline-offset-4 hover:decoration-foreground ${fact.value ? "" : "text-muted"}`}
-            >
-              {fact.value || notSet}
+    <dl data-trip-facts className="flex max-w-3xl flex-wrap items-baseline gap-x-6 gap-y-1 text-sm">
+      {facts
+        .filter((fact) => fact.value)
+        .map((fact) => (
+          <div key={fact.section} className="flex min-w-0 gap-x-1.5">
+            <dt className="shrink-0 text-muted">{fact.label}</dt>
+            <dd className="min-w-0 [overflow-wrap:anywhere]">
+              <Link
+                href={editHref(fact.section)}
+                aria-label={`${t("trips.clock.filling.edit")} · ${fact.label}: ${fact.value}`}
+                className="hover:underline focus-visible:underline"
+              >
+                {fact.value}
+              </Link>
+            </dd>
+          </div>
+        ))}
+      {unset[0] ? (
+        <div>
+          {/* A term-less group: the link's words are the term. */}
+          <dd>
+            <Link href={editHref(unset[0].section)} className={LINK} data-trip-facts-unset="">
+              {t("trips.clock.filling.addFacts", {
+                facts: listOf(
+                  locale,
+                  unset.map((fact) => fact.label.toLocaleLowerCase(locale)),
+                ),
+              })}
             </Link>
           </dd>
         </div>
-      ))}
+      ) : null}
     </dl>
   );
 }

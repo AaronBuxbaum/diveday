@@ -11,7 +11,12 @@ import type { StaffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { publicTripPath } from "@/lib/public-routes";
 import { WHO_WANTS_IN_ID } from "@/lib/trip-clock";
-import { BulkOffer, type BulkOfferBatch } from "./BulkOffer";
+import {
+  BulkOffer,
+  type BulkOfferBatch,
+  type BulkOfferResultCopy,
+  OfferSeatsReveal,
+} from "./BulkOffer";
 import { CopyLinkButton } from "./CopyLinkButton";
 import {
   type OfferDiscountCopy,
@@ -37,13 +42,13 @@ export type WhoWantsInGroup = {
 export const OFFER_SEATS_ID = "offer-seats";
 
 const ROW_CLASS = "flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 sm:px-6";
-const BADGE_CLASS =
-  "flex size-10 shrink-0 items-center justify-center rounded-full bg-primary-tint text-sm font-semibold text-primary";
+const ROW_LINK = buttonClass({ variant: "link", flush: true });
 
 /**
  * **Fill the last N** (ADR 20261117-trip-page-clock, Filling): every way to
  * fill a seat, in one card. Who asked for a seat, each with **Offer a seat**,
- * and **Offer seats** to the first few of them at once (`bulkOfferCandidates`);
+ * and **Offer seats** to the first few of them at once (`bulkOfferCandidates`),
+ * in a panel the page's primary opens;
  * **Share**, which folds the past guests worth inviting and the booking link;
  * and adding a guest by hand. An interest reserves nothing and is never ranked by fit (ADR
  * 20260813-wait-list-is-a-lead-list): each group keeps the order people asked in.
@@ -78,9 +83,10 @@ export function FillSeatsCard({
   pastGuests: { count: number; list: ReactNode } | null;
   /**
    * "Offer seats": the batch the page's primary opens (`#offer-seats`), named
-   * before it is sent; null with nobody to offer.
+   * before it is sent. Given whenever this role may offer on this departure,
+   * with no interests while nobody is in line; null where no offer is made.
    */
-  bulk?: { batch: BulkOfferBatch; summary: string } | null;
+  bulk?: { batch: BulkOfferBatch; result: BulkOfferResultCopy; locale: string } | null;
   canOffer: boolean;
   discount: OfferDiscountCopy | null;
   /** "Add a guest yourself": where its Add goes; null when the trip takes nobody. */
@@ -135,6 +141,7 @@ export function FillSeatsCard({
           shopName={trip.shopName}
           tripTitle={trip.title}
           tripWhen={trip.when}
+          label={t("trips.whoWantsIn.offer")}
           copy={copy}
           discountFields={discount ? <OfferDiscountRider key="discount" /> : null}
           quiet
@@ -145,22 +152,15 @@ export function FillSeatsCard({
 
   // The add row, last among the ways to fill a seat; first once its form is
   // open, so the form opens right under the guests it adds to.
+  const addLine = addLabel ?? t("trips.clock.filling.addYourself");
   const addRow = addHref ? (
     <li>
       <div className={ROW_CLASS}>
-        <span aria-hidden="true" className={BADGE_CLASS}>
-          +
-        </span>
-        <span className="min-w-0 flex-1 font-semibold">
-          {addLabel ?? t("trips.clock.filling.addYourself")}
-        </span>
-        {addForm ? null : (
-          <Link
-            href={addHref}
-            scroll={false}
-            className={buttonClass({ variant: "secondary", size: "sm" })}
-          >
-            {t("trips.clock.filling.add")}
+        {addForm ? (
+          <span className="font-semibold">{addLine}</span>
+        ) : (
+          <Link href={addHref} scroll={false} className={ROW_LINK}>
+            {addLine}
           </Link>
         )}
       </div>
@@ -170,9 +170,12 @@ export function FillSeatsCard({
 
   // Past guests are invited only by a role that may act on the wait list.
   const past = pastGuests && canOffer ? pastGuests : null;
+  const discountToggle =
+    canOffer && discount && shown.length > 0 ? <OfferDiscountDisclosure copy={discount} /> : null;
+  const hasBatch = Boolean(bulk && bulk.batch.interests.length > 0);
   const linkRow = (
     <>
-      <span className="min-w-0 flex-1 font-semibold">{t("trips.clock.filling.bookingLink")}</span>
+      <span className="min-w-0 flex-1">{t("trips.clock.filling.bookingLink")}</span>
       <CopyLinkButton
         path={publicTripPath(trip.shopSlug, trip.id)}
         label={t("trips.detail.copyBookingLink")}
@@ -195,37 +198,28 @@ export function FillSeatsCard({
         <h2 id="fill-seats-heading" className="px-4 pt-4 pb-1 font-semibold sm:px-6">
           {heading}
         </h2>
-        {canOffer && discount && shown.length > 0 ? (
-          <div className="px-4 sm:px-6">
-            <OfferDiscountDisclosure copy={discount} />
-          </div>
-        ) : null}
         {bulk ? (
-          // The page's primary, "Offer seats", lands here, open.
-          <AutoOpenDetails
-            id={OFFER_SEATS_ID}
-            openOnHash={OFFER_SEATS_ID}
-            className="group/bulk scroll-mt-24 px-4 sm:px-6"
-          >
-            <summary className="inline-flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-sm font-medium text-primary [&::-webkit-details-marker]:hidden">
-              {bulk.summary}
-              <DisclosureCaret direction="down" className="size-4 group-open/bulk:rotate-180" />
-            </summary>
-            <div className="pb-4">
-              <BulkOffer
-                batch={bulk.batch}
-                tripId={trip.id}
-                bookingPath={publicTripPath(trip.shopSlug, trip.id)}
-                shopName={trip.shopName}
-                tripTitle={trip.title}
-                tripWhen={trip.when}
-                copy={copy}
-                discountFields={discount ? <OfferDiscountRider key="discount" /> : null}
-              />
-            </div>
-          </AutoOpenDetails>
+          // The page's primary, "Offer seats", opens this: who it writes to,
+          // the discount that rides with it (and with each row's offer), the
+          // press. Kept while nobody is in line, so a spent batch's result stays.
+          <OfferSeatsReveal id={OFFER_SEATS_ID}>
+            <BulkOffer
+              batch={bulk.batch}
+              result={bulk.result}
+              locale={bulk.locale}
+              tripId={trip.id}
+              bookingPath={publicTripPath(trip.shopSlug, trip.id)}
+              shopName={trip.shopName}
+              tripTitle={trip.title}
+              tripWhen={trip.when}
+              copy={copy}
+              discount={hasBatch ? discountToggle : null}
+              discountFields={discount ? <OfferDiscountRider key="discount" /> : null}
+            />
+          </OfferSeatsReveal>
         ) : null}
-        <ul className={`divide-y divide-border ${bulk ? "border-t border-border" : ""}`}>
+        {!hasBatch && discountToggle ? <div className="px-4 sm:px-6">{discountToggle}</div> : null}
+        <ul className="divide-y divide-border">
           {addForm ? addRow : null}
           {shown.map((group) => (
             <li key={group.id}>
@@ -253,11 +247,10 @@ export function FillSeatsCard({
                 <summary
                   className={`${ROW_CLASS} cursor-pointer list-none [&::-webkit-details-marker]:hidden`}
                 >
-                  <span aria-hidden="true" className={BADGE_CLASS}>
-                    ↗
-                  </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block font-semibold">{t("trips.clock.filling.share")}</span>
+                    <span className="block font-medium text-primary">
+                      {t("trips.clock.filling.share")}
+                    </span>
                     <span className="block text-sm text-muted">
                       {t("trips.clock.filling.shareLine", { count: past.count })}
                     </span>
@@ -272,12 +265,7 @@ export function FillSeatsCard({
               </AutoOpenDetails>
             </li>
           ) : bookingLink ? (
-            <li className={ROW_CLASS}>
-              <span aria-hidden="true" className={BADGE_CLASS}>
-                ↗
-              </span>
-              {linkRow}
-            </li>
+            <li className={ROW_CLASS}>{linkRow}</li>
           ) : null}
           {addForm ? null : addRow}
         </ul>

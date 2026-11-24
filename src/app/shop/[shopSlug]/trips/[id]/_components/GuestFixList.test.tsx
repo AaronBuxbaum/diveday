@@ -640,4 +640,77 @@ describe("while the trip fills", () => {
     expect(advisory).toHaveClass("text-muted");
     expect(advisory).not.toHaveClass("text-warning-strong");
   });
+
+  const rusty = (id: string, name: string) => {
+    const guest = entry(id, name);
+    return { ...guest, booking: { ...guest.booking, lastDivedBand: "over_five_years" as const } };
+  };
+
+  it("says a quiet line every guest shares once, on the heading row, not on each row", () => {
+    renderRoster({
+      roster: [rusty("r", "Olga Rust"), rusty("s", "Sam Rust")],
+      readiness: new Map([
+        ["r", readinessRow("ready")],
+        ["s", readinessRow("ready")],
+      ]) as ReadinessByBooking,
+      waivers: new Map([
+        ["r", signedWaiver],
+        ["s", signedWaiver],
+      ]) as WaiverByBooking,
+      rentalFit: ownGear(["r", "s"]),
+      phase: "filling",
+      selectedBookingId: null,
+    });
+    const booked = group("booked") as HTMLElement;
+    const said = within(booked).getAllByText(/^Everyone: /);
+    expect(said).toHaveLength(1);
+    const line = (said[0]?.textContent ?? "").replace(/^Everyone: /, "");
+    expect(line.length).toBeGreaterThan(0);
+    // Both guests are still listed by name; neither row repeats the line.
+    expect(within(booked).getByRole("button", { name: "Olga Rust" })).toBeVisible();
+    expect(within(booked).getByRole("button", { name: "Sam Rust" })).toBeVisible();
+    for (const id of ["r", "s"]) {
+      expect(document.getElementById(`guest-phrase-${id}`)?.textContent ?? "").not.toContain(line);
+    }
+  });
+
+  it("never folds what would stop a guest boarding: the blocker stays on its row, in warning", () => {
+    renderRoster({
+      roster: [rusty("a", "Priya Sharma"), rusty("r", "Olga Rust")],
+      readiness: new Map([
+        ["a", readinessRow("blocked", [{ code: "waiver_not_sent", params: undefined }])],
+        ["r", readinessRow("ready")],
+      ]) as ReadinessByBooking,
+      waivers: new Map([["r", signedWaiver]]) as WaiverByBooking,
+      rentalFit: ownGear(["a", "r"]),
+      phase: "filling",
+      selectedBookingId: null,
+    });
+    const blocker = document.getElementById("guest-phrase-a");
+    expect(blocker).toHaveClass("text-warning-strong");
+    expect(blocker?.textContent ?? "").not.toBe("");
+    // Whatever the heading row says for everyone, it is never the blocker.
+    for (const shared of screen.queryAllByText(/^Everyone: /)) {
+      expect(shared.textContent).not.toContain(blocker?.textContent ?? "x");
+    }
+  });
+
+  it("keeps the line on its row when not every guest shares it", () => {
+    renderRoster({
+      roster: [rusty("r", "Olga Rust"), ready],
+      readiness: new Map([
+        ["r", readinessRow("ready")],
+        ["b", readinessRow("ready")],
+      ]) as ReadinessByBooking,
+      waivers: new Map([
+        ["r", signedWaiver],
+        ["b", signedWaiver],
+      ]) as WaiverByBooking,
+      rentalFit: ownGear(["r", "b"]),
+      phase: "filling",
+      selectedBookingId: null,
+    });
+    expect(screen.queryByText(/^Everyone: /)).toBeNull();
+    expect(document.getElementById("guest-phrase-r")?.textContent ?? "").not.toBe("");
+  });
 });

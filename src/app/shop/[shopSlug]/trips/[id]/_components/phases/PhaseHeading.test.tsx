@@ -36,12 +36,14 @@ function heading({
   soldElsewhere = false,
   fill = { mayOffer: true },
   cancelled = false,
+  seated = [],
 }: {
   interests?: Waitlist;
   booked?: number;
   soldElsewhere?: boolean;
   fill?: Props["fill"];
   cancelled?: boolean;
+  seated?: string[];
 }) {
   return render(
     <PhaseHeading
@@ -58,6 +60,7 @@ function heading({
       guests={
         {
           trip: { capacity: 6, sellableCapacity: 6, booked },
+          roster: seated.map((personId) => ({ booking: { personId, status: "confirmed" } })),
           cancelled,
           interests,
           dateInterests: [],
@@ -117,6 +120,11 @@ describe("Filling's one primary", () => {
     heading({
       interests: [waiting("a", "Ravi Menon", offered), waiting("b", "Hana Kobayashi", offered)],
     });
+    expect(primary()).toHaveTextContent("Add a guest");
+  });
+
+  it("is Add a guest when the only one in line already holds a seat here", () => {
+    heading({ seated: ["p-a"], interests: [waiting("a", "Ravi Menon")] });
     expect(primary()).toHaveTextContent("Add a guest");
   });
 
