@@ -47,7 +47,7 @@ describe("tripSentence", () => {
     expect(say({ phase: "filling", now: new Date("2026-11-11T15:00:00.000Z") })).toEqual({
       headline: "3 seats to fill. The boat leaves in 5 days.",
       emphasis: null,
-      sub: "11 of 14 booked",
+      sub: null,
     });
   });
 

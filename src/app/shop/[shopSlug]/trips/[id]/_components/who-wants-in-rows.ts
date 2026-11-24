@@ -28,6 +28,8 @@ import type { Waitlist } from "./types";
  */
 export type WhoWantsInRow = {
   interestId: string;
+  /** The known diver behind the ask; null for a name and address given with it. */
+  personId: string | null;
   name: string;
   email: string | null;
   /** The quiet line: address, when they asked, party, where the ask came from. */
@@ -78,6 +80,7 @@ export function departureInterestRows(input: {
     if (interest.parentInterestId) parts.push(t("trips.whoWantsIn.fromRequest"));
     return {
       interestId: interest.id,
+      personId: interest.personId,
       name: contact.name ?? t("trips.whoWantsIn.noName"),
       email: contact.email,
       facts: parts.filter(Boolean).join(" · "),
@@ -191,6 +194,7 @@ export function dateInterestRows(input: {
     ].filter((part): part is string => Boolean(part));
     return {
       interestId: row.id,
+      personId: row.personId,
       name: row.name ?? t("trips.whoWantsIn.noName"),
       email: row.email,
       facts: parts.join(" · "),
@@ -235,6 +239,7 @@ export function anytimeInterestRows(input: {
     const { interest, person } = recipient;
     return {
       interestId: interest.id,
+      personId: person.id,
       name: person.fullName,
       email: person.email,
       // The window is why they are in this group ("Around these dates"); it is not repeated on every row.

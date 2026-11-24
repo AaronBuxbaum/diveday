@@ -26,13 +26,13 @@ const person = (id: string, name: string, email: string | null = `${id}@example.
 });
 const first: BulkOfferBatch = {
   interests: [person("a", "Ravi Menon"), person("b", "Hana Kobayashi")],
-  names: "Ravi Menon and Hana Kobayashi each get the booking link by email.",
+  names: "Email an offer to Ravi Menon and Hana Kobayashi.",
   send: "Send 2 offers",
   next: "Offer the next 2",
 };
 const second: BulkOfferBatch = {
   interests: [person("c", "Naledi Khumalo")],
-  names: "Naledi Khumalo gets the booking link by email.",
+  names: "Email an offer to Naledi Khumalo.",
   send: "Send the offer",
   next: "Offer the next in line",
 };
@@ -46,6 +46,11 @@ const panel = (batch: BulkOfferBatch) => (
     tripTitle="Wreck Trip"
     tripWhen="Sat 15 Aug"
     copy={copy}
+    result={{
+      sent: "{sent} of {total} sent.",
+      alreadyEmailed: "Already emailed in the last 24 hours: {names}.",
+    }}
+    locale="en-US"
   />
 );
 
@@ -85,17 +90,38 @@ describe("BulkOffer", () => {
     expect(sent.has("discount")).toBe(false);
   });
 
-  it("cannot be sent twice: the spent batch's button stays disabled", async () => {
+  it("cannot be sent twice: the spent batch has no button, and says what was sent", async () => {
     answers([
       { interestId: "a", delivery: "sent" },
       { interestId: "b", delivery: "sent" },
     ]);
+    const { container } = render(panel(first));
+    await send("Send 2 offers");
+    expect(screen.queryByRole("button", { name: /Send/ })).toBeNull();
+    expect(screen.getByRole("status")).toHaveTextContent("2 of 2 sent.");
+    // The spent form cannot be submitted by another route either.
+    const form = container.querySelector("form");
+    if (form) fireEvent.submit(form);
+    expect(container.querySelector("form button[type=submit]")).toBeDisabled();
+  });
+
+  it("reports what the server sent, not what was asked: a short batch says so", async () => {
+    // The server dropped one (a seat taken meanwhile, an ask out of reach): it answers fallback.
+    answers([
+      { interestId: "a", delivery: "sent" },
+      { interestId: "b", delivery: "fallback" },
+    ]);
     render(panel(first));
     await send("Send 2 offers");
-    const button = screen.getByRole("button", { name: "Offer emailed" });
-    expect(button).toBeDisabled();
-    fireEvent.click(button);
-    expect(held.hold).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("status")).toHaveTextContent("1 of 2 sent.");
+  });
+
+  it("says nothing was sent when the send answers for nobody", async () => {
+    answers([]);
+    render(panel(first));
+    await send("Send 2 offers");
+    expect(screen.getByRole("status")).toHaveTextContent("0 of 2 sent.");
+    expect(screen.queryByRole("button", { name: /Send/ })).toBeNull();
   });
 
   it("keeps the names it was opened with when the page hands it the next people", async () => {
@@ -127,9 +153,12 @@ describe("BulkOffer", () => {
     await send("Send 2 offers");
     rerender(panel({ ...second, interests: [] }));
     expect(screen.queryByRole("button", { name: second.next })).toBeNull();
+    // The refresh that empties the line does not take the result with it.
+    expect(screen.getByRole("status")).toHaveTextContent("2 of 2 sent.");
+    expect(screen.getByText(first.names)).toBeVisible();
   });
 
-  it("treats a candidate the server already emailed as reached, with no write-to-them fallback", async () => {
+  it("offers no write-to-them fallback for a candidate the server already emailed", async () => {
     answers([
       { interestId: "a", delivery: "already_sent" },
       { interestId: "b", delivery: "sent" },
@@ -137,7 +166,10 @@ describe("BulkOffer", () => {
     render(panel(first));
     await send("Send 2 offers");
     expect(screen.queryByText(/Ravi Menon/, { selector: "a, button" })).toBeNull();
-    expect(screen.getByRole("button", { name: "Offer emailed" })).toBeDisabled();
+    // It is not counted as sent, and the panel names who was skipped and why.
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "1 of 2 sent. Already emailed in the last 24 hours: Ravi Menon.",
+    );
   });
 
   it("gives the one that could not be sent its own composer, and still spends the batch", async () => {
@@ -152,7 +184,15 @@ describe("BulkOffer", () => {
       expect.stringContaining("mailto:"),
     );
     expect(screen.queryByRole("link", { name: /Ravi Menon/ })).toBeNull();
-    expect(screen.getByRole("button", { name: "Offer emailed" })).toBeDisabled();
+    expect(screen.getByRole("status")).toHaveTextContent("1 of 2 sent.");
+  });
+
+  it("draws nothing with nobody in line, and takes the first people to arrive as its batch", () => {
+    const { container, rerender } = render(panel({ ...first, interests: [] }));
+    expect(container.querySelector("[data-bulk-offer]")).toBeNull();
+    rerender(panel(second));
+    expect(screen.getByText(second.names)).toBeVisible();
+    expect(screen.getByRole("button", { name: "Send the offer" })).toBeEnabled();
   });
 
   it("sends nothing when the hold is undone", async () => {

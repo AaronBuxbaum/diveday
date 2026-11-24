@@ -596,10 +596,13 @@
   nothing: the diver books like anyone else. A ticked row below the bar may be offered with a
   warning; "everyone who fits" sends only to rows that fit; the counter's "Email them this date"
   stays immediate and refuses what `departureOpenToDiver` refuses. **Offer seats**, Filling's primary while
-  somebody is in line, is the same held send for the first few people in the fill card's own order
-  (`bulkOfferCandidates`: at most three, never more than the open seats), named in one sentence
-  before the press. It leaves to their own row anyone already offered, below the bar, or with no
-  address; it is not drawn on a departure **sold elsewhere**; and a sent batch cannot be sent again.
+  somebody is in line, opens a panel in the fill card that names the first few people in the card's
+  own order (`bulkOfferCandidates`: at most three asks and no more asks than open seats; a party is
+  one ask, so the cap bounds emails, not seats) and sends them the same held send. One person is one
+  ask, by person then by address. It leaves to their own row anyone already offered, below the bar,
+  with no address, or (where the bar asks for a card) with no checked card; it never names anyone
+  already booked here; it is not drawn on a departure **sold elsewhere**. A sent batch cannot be
+  sent again, and the panel then says how many of those named were actually emailed.
 - **Wait list** — the diver-facing name of a departure **interest**: divers who asked to hear if a full trip frees a seat. It is not a
   booking, does not consume capacity, and never appears on a manifest. It is also **not a queue**:
   joining buys no standing, and staff invite whoever fits the departure. The join date is kept and

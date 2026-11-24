@@ -98,10 +98,8 @@ export function tripSentence(input: TripSentenceInput, t: StaffTranslator): Trip
       return {
         headline: join(lead, leaves),
         emphasis: null,
-        sub: t("trips.clock.sentence.booked", {
-          booked: input.booked,
-          capacity: input.capacity,
-        }),
+        // The phase strip says "5 of 12" and the bar draws it: no third count here.
+        sub: null,
       };
     }
     case "ready": {

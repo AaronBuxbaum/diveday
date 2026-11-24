@@ -437,7 +437,8 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
       {context.phase === "filling" ? (
         // One reading column: the guests, then the ways to fill a seat. The
         // trip's facts are a line under the sentence (`PhaseHeading`).
-        <div data-filling-layout className="space-y-10">
+        // Capped at a reading width, so a row's action stays beside its name.
+        <div data-filling-layout className="max-w-3xl space-y-10">
           {guestsLead ? (
             rosterSection
           ) : (
@@ -550,10 +551,14 @@ function FillingCard({
       groups={groups}
       canOffer={acceptsDivers && mayInviteFromWaitlist}
       bulk={
-        offer.length > 0
+        acceptsDivers && mayInviteFromWaitlist && !elsewhere
           ? {
               batch: bulkOfferBatch(offer, t, locale),
-              summary: t("trips.clock.filling.offerFirst", { count: offer.length }),
+              result: {
+                sent: t.raw("trips.clock.filling.offerResult"),
+                alreadyEmailed: t.raw("trips.clock.filling.offerAlreadyEmailed"),
+              },
+              locale,
             }
           : null
       }
