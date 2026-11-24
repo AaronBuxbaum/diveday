@@ -14,6 +14,7 @@ import {
   seedRecentRecaps,
   syncDemoShopBrand,
   syncDemoShopPackingCopy,
+  syncDemoShopWelcome,
 } from "./seed";
 import { syncDemoStripeAccount } from "./stripe-accounts";
 import { lockTripRevisionNotificationFence } from "./trip-revision-notification-fence";
@@ -176,6 +177,7 @@ async function refreshCanonicalDemoScheduleInTransaction(
   await syncDemoStripeAccount(db, shop.id);
   // A database seeded before the demo had a logo and a profile gets them once.
   await syncDemoShopBrand(db);
+  await syncDemoShopWelcome(db);
   await syncDemoShopPackingCopy(db);
 
   // The furthest-out departure, not the soonest: what is being measured is how

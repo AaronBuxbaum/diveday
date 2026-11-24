@@ -1,11 +1,19 @@
 import { eq } from "drizzle-orm";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mediaDeletionAttempts, people, shops, userAccounts } from "@/db/schema";
 import { fileScopedShopContext } from "@/test/db";
 import { seededStaffPersonId } from "@/test/staff-session";
 import { listPublicStaffProfiles, writeOwnStaffProfile } from "./profiles";
 
 const ctx = fileScopedShopContext();
+
+// The seeded demo crew already carry public profiles (#4928); these cases start from none.
+beforeEach(async () => {
+  await ctx.db
+    .update(people)
+    .set({ publicStaffProfileEnabled: false, publicStaffProfile: null })
+    .where(eq(people.shopId, ctx.shop.id));
+});
 const profile = {
   firstName: "Sal",
   role: "Captain",

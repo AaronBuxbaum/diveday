@@ -4,6 +4,13 @@ import { type DiveSpecialty, diveSiteCreatures, diveSites } from "../schema";
 import { publishedTemplateId } from "./dive-site-catalog";
 import { commonsImage } from "./images";
 
+// The first frame of a site is the 64px schedule thumbnail and the trip hero, so it is a bright,
+// sharp one (#4931).
+const MOLASSES_COVER = commonsImage(
+  "Shoal of Yellow Snapper with Elkhorn Coral - Molasses Reef (2352449386).jpg",
+);
+const BENWOOD_COVER = commonsImage("Yellow Snapper on Benwood Wreck, Key Largo (15458961361).jpg");
+
 /**
  * Where the shop dives: its own site records, and the field guide on each —
  * creatures a diver might see and the moments worth surfacing for.
@@ -87,7 +94,7 @@ export async function seedDiveSites(db: DbExecutor, shopId: string) {
           "Shallow, bright, and forgiving — a good first ocean dive after a pool course, and still worth a hundredth.",
         // Sharp, correctly located Commons reef photo; the cover now shows the fictional boat.
         imageUrls: [
-          commonsImage("Elkhorn coral 8 Molasses Reef 20080309.jpg"),
+          MOLASSES_COVER,
           commonsImage("Blue Parrotfish on Molasses Outer Reef, Key Largo (15274849398).jpg"),
         ],
         // The three routes below used to be hand-authored SVG in
@@ -239,7 +246,7 @@ export async function seedDiveSites(db: DbExecutor, shopId: string) {
             photoUrl: marineLifeImage("green-moray"),
           },
         ],
-        imageUrls: [commonsImage("Benwood-28.jpg")],
+        imageUrls: [BENWOOD_COVER],
       },
       {
         shopId,

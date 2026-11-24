@@ -60,4 +60,38 @@ describe("scheduleRowFact", () => {
       scheduleRowFact(trip, { ...seen, species: [seen.species[0]] }, { now, shop, t }),
     ).toBeNull();
   });
+
+  describe("down a list that shows several rows", () => {
+    const tallies = (...slugs: string[]): SiteSightings => ({
+      diveSiteId: "reef",
+      dives: 4,
+      species: slugs.map((speciesSlug) => ({ speciesSlug, dives: 3, total: 3, lastSeenAt: now })),
+    });
+    const past = { ...trip, startsAt: new Date("2026-07-21T11:59:59Z") };
+    const pick = (site: SiteSightings, shown: Map<string, number>) =>
+      scheduleRowFact(past, site, { now, shop, t, shown });
+
+    it("gives a later row the site’s next species instead of the sentence a row above used", () => {
+      const shown = new Map<string, number>();
+      const site = tallies("southern-stingray", "nurse-shark");
+      expect(pick(site, shown)).toBe("Southern stingrays seen on recent dives");
+      expect(pick(site, shown)).toBe("Nurse sharks seen on recent dives");
+    });
+
+    it("repeats a sentence once when the site has nothing else, then goes quiet", () => {
+      const shown = new Map<string, number>();
+      const site = tallies("southern-stingray");
+      expect(pick(site, shown)).toBe("Southern stingrays seen on recent dives");
+      expect(pick(site, shown)).toBe("Southern stingrays seen on recent dives");
+      expect(pick(site, shown)).toBeNull();
+    });
+
+    it("never counts a posted-conditions reading as a repeat and never invents a fact", () => {
+      const shown = new Map<string, number>();
+      const near = { ...trip, waterTemperatureC: 27, visibilityMeters: 18 };
+      scheduleRowFact(near, seen, { now, shop, t, shown });
+      expect(shown.size).toBe(0);
+      expect(pick({ ...seen, species: [seen.species[0]] }, shown)).toBeNull();
+    });
+  });
 });

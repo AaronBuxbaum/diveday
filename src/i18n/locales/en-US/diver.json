@@ -77,6 +77,7 @@
       "newToDiving": "New to diving?",
       "seeSchedule": "See the schedule"
     },
+    "aboutShop": "About the shop",
     "shopPhotos": "Photos from the shop",
     "photoLarge": "Photo, enlarged",
     "photoClose": "Close",
@@ -130,6 +131,7 @@
     "tripCardLabel": "{when} · {trip} · {capacity}",
     "previousMonth": "Previous month",
     "nextMonth": "Next month",
+    "departedToday": "{count, plural, one {# boat already out today} other {# boats already out today}}",
     "tripListLabel": "Upcoming trips",
     "monthNav": "Browse by month",
     "monthView": "Show the month calendar",
@@ -5011,6 +5013,7 @@
     }
   },
   "brand": {
+    "moreBadges": "{count} more",
     "since": "Since {year}",
     "badges": {
       "padi_5_star": "PADI 5 Star Dive Center",

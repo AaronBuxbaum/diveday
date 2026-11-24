@@ -94,6 +94,9 @@ export function weekLedgerRows({
   t: DiverTranslator;
 }): WeekLedgerRow[] {
   const lensById = new Map(lenses.map((entry) => [entry.id, entry.name]));
+  // The sighting sentences already on rows above, so a list does not say the
+  // same thing under every boat (#4932).
+  const shownFacts = new Map<string, number>();
   return listedTrips.map((trip) => {
     const diveSites = diveSitesByTrip.get(trip.id) ?? { sites: [], undecidedDives: 0 };
     // The title already naming every site with nothing left to confirm is the
@@ -110,11 +113,13 @@ export function weekLedgerRows({
     const requirement = trip.course ? null : (requirementsByTrip.get(trip.id) ?? null);
     const seats = scheduleSeatState(t, trip);
     const departed = facts ? trip.startsAt.getTime() <= facts.now.getTime() : false;
+    // A boat with no seats says "Full" whatever the party; the party is named
+    // only beside a real seat count it does not fit.
     const capacityText = departed
       ? t("booking.sailedHeading")
-      : !isEmbed && trip.capacity - trip.booked < partySize
+      : !isEmbed && seats.tone !== "full" && trip.capacity - trip.booked < partySize
         ? t("schedule.filters.partySeats", {
-            count: Math.max(0, trip.capacity - trip.booked),
+            count: trip.capacity - trip.booked,
             party: partySize,
           })
         : seats.text;
@@ -140,7 +145,7 @@ export function weekLedgerRows({
           ? scheduleRowFact(
               trip,
               trip.diveSite ? facts.sightings.get(trip.diveSite.id) : undefined,
-              { ...facts, t },
+              { ...facts, t, shown: shownFacts },
             )
           : null,
       lens: trip.lensId ? (lensById.get(trip.lensId) ?? null) : null,
@@ -170,6 +175,7 @@ export function weekLedgerRows({
       aboveLevel: aboveStatedLevel.has(trip.id) ? t("schedule.filters.aboveLevelChip") : null,
       insufficientSeats: !isEmbed && trip.capacity - trip.booked < partySize,
       capacityText,
+      departed,
       capacityTone: departed ? "full" : seats.tone,
       // A course session reads the course total the booking charges, never
       // the trip row's own figure (fourth UX review item 2, H-20261014-course-session-price).

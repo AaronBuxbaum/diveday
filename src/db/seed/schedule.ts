@@ -63,6 +63,7 @@ import { seedSafetyDrills } from "./safety-drills";
 import { seedSailedRecords } from "./sailed-records";
 import { seedSelfDeclaredJoiners } from "./self-declared";
 import { seedSharedDemoRecapPhoto } from "./shared-demo-recap-photo";
+import { seedShopPick } from "./shop-pick";
 import { seedShopVoice } from "./shop-voice";
 import { seedMonthSightings, seedSightings } from "./sightings";
 import { seedStaffRoster } from "./staff-roster";
@@ -765,6 +766,9 @@ const THE_DAY: readonly SeedStep[] = [
   // divers (src/db/seed/shop-voice.ts). Writes no waiver row.
   demo((db, c) => seedShopVoice(db, c.shopId, c.staff.owner.id)),
   demo((db, c) => (c.initialStaffRota ? seedStaffRoster(db, c.shopId) : Promise.resolve())),
+  // Updates-only, last: the shop features its first-timer course, found by title now that the
+  // catalog exists and re-found on every reset, which gives each course a new id (#4928).
+  demo((db, c) => seedShopPick(db, c.shopId)),
 ];
 
 /**

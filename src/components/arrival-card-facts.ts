@@ -11,6 +11,8 @@ export type ArrivalCardShop = {
   contactPhone: string | null;
   contactEmail: string | null;
   address: ShopAddressParts;
+  /** The shop's recorded position, `[latitude, longitude]`, when it has one. */
+  coordinates?: readonly [number, number] | null;
 };
 
 export type ArrivalCardTrip = {
@@ -40,6 +42,8 @@ export function arrivalCardShopOf(shop: {
   addressRegion: string | null;
   addressPostalCode: string | null;
   addressCountry: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
 }): ArrivalCardShop {
   return {
     name: shop.name,
@@ -54,6 +58,8 @@ export function arrivalCardShopOf(shop: {
       postalCode: shop.addressPostalCode,
       country: shop.addressCountry,
     },
+    coordinates:
+      shop.latitude != null && shop.longitude != null ? [shop.latitude, shop.longitude] : null,
   };
 }
 
@@ -77,6 +83,11 @@ export function arrivalCardFacts(shop: ArrivalCardShop, trip: ArrivalCardTrip) {
     label: point.label,
     address: point.address,
     mapQuery: point.mapQuery,
+    // Only the shop's own position is on record. A meeting point the shop typed
+    // elsewhere has an address and no coordinates, so it gets the link to a map
+    // app and no embedded map: a map that cannot find the place opens on the
+    // whole world and shows nothing the diver can use.
+    mapCenter: clean(trip.meetingPointAddress) ? null : (shop.coordinates ?? null),
     landmark: point.landmark,
     parkingNote: point.parking,
     transitNote: clean(trip.arrivalTransitNote),
