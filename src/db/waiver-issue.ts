@@ -204,11 +204,7 @@ async function seatsWhoseTextFailed(
     .orderBy(asc(notificationDeliveries.attemptedAt));
   const latest = new Map<string, string | null>();
   for (const row of rows) latest.set(row.bookingId, row.providerStatus);
-  return new Set(
-    [...latest]
-      .filter(([, status]) => status === "failed")
-      .map(([id]) => id),
-  );
+  return new Set([...latest].filter(([, status]) => status === "failed").map(([id]) => id));
 }
 
 /**
