@@ -461,9 +461,7 @@ export async function seatPartyAction(shopSlug: string, formData: FormData) {
     if (member.match !== undefined && member.match !== PARTY_NEW_PERSON) {
       return { ...facts, personId: member.match, typedName: member.fullName };
     }
-    return "email" in member
-      ? { ...facts, fullName: member.fullName, email: member.email, phone: member.phone }
-      : { ...facts, fullName: member.fullName };
+    return { ...facts, fullName: member.fullName, email: member.email, phone: member.phone };
   });
 
   const outcome = await seatParty(db, {

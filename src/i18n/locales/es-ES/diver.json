@@ -4728,6 +4728,7 @@
       "stopLine": "Responde STOP para darte de baja.",
       "courseForms": "{shopName}: firma los formularios del curso {tripTitle} — {url}",
       "readyLink": "Tu preparación: {url}",
+      "seated": "{shopName}: tu plaza del {date} queda reservada. Para prepararte: {url}",
       "meetingPointMoved": "{shopName}: cambiamos el punto de encuentro de {tripTitle}, {date}, {time}.",
       "rescheduled": "{shopName}: cambiamos {tripTitle} al {date}, {time}.",
       "rescheduledSeat": "{shopName}: pasamos tu plaza a {tripTitle}, el {date}, {time}."

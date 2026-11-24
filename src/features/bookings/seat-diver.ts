@@ -31,6 +31,7 @@ import { nowDate } from "../../lib/clock";
 import { log } from "../../lib/log";
 import type { ParticipantType } from "../../lib/participant-types";
 import type { TripAdmissionRefusal } from "../../lib/trip-admission";
+import { textStaffSeatingConfirmation } from "./seat-confirmation-text";
 
 /**
  * Seating a diver has never been just the booking row. Every staff door that
@@ -144,14 +145,22 @@ export type SeatDiverWaiver = "not_needed" | "sent" | "not_delivered" | "failed"
  * item 3), so the door can say "Their confirmation is on its way."
  *
  * - `sent` — the departure has not sailed, and the confirmation (with the waiver
- *   riding in it when one was owed) went out.
- * - `not_sent` — it was owed and could not go: no address, no provider, a
- *   provider error. The door's ordinary notice stands.
- * - `not_needed` — the counter's seat on today's boat (the diver is standing
- *   there), a departure that has sailed, or a held seat, which is owed nothing
- *   until its identity is confirmed (#2125).
+ *   riding in it when one was owed) went out by at least one channel
+ *   (`SeatDiverResult.reached` says which).
+ * - `not_sent` — it was owed and could not go: no address and no number a
+ *   text can reach, no provider, a provider error. The door's ordinary notice
+ *   stands.
+ * - `not_needed` — a departure that has sailed, or a held seat, which is owed
+ *   nothing until its identity is confirmed (#2125).
  */
 export type SeatDiverConfirmation = "sent" | "not_sent" | "not_needed";
+
+/**
+ * A way the seat's confirmation and ready link reached the diver ("Try it
+ * Saturday", item 3): their email, and a text by SMS or the shop's own
+ * WhatsApp. A door names them ("links went out by email and text to …").
+ */
+export type SeatDiverChannel = "email" | "sms" | "whatsapp";
 
 export type SeatDiverResult =
   | {
@@ -161,6 +170,12 @@ export type SeatDiverResult =
       personName: string;
       waiver: SeatDiverWaiver;
       confirmation: SeatDiverConfirmation;
+      /**
+       * Every channel the confirmation reached the diver on, email first;
+       * empty when nothing went out. Non-empty exactly when `confirmation` is
+       * `sent`.
+       */
+      reached: SeatDiverChannel[];
       /** Whether all active seats in the date-request offer are linked. */
       dateRequestPartyComplete?: boolean;
       /**
@@ -402,6 +417,7 @@ async function seatConsequences(
   let waiver: SeatDiverWaiver = "not_needed";
   let waiverPath: string | undefined;
   let confirmation: SeatDiverConfirmation = "not_needed";
+  const reached: SeatDiverChannel[] = [];
   const takeWaiver = (issued: IssueAndDeliverWaiverResult | null) => {
     waiver = waiverOutcome(issued);
     // A seat's own release has no token to hand over (its link is the
@@ -418,8 +434,10 @@ async function seatConsequences(
   // is still one email; when the confirmation cannot go, the waiver goes on
   // its own the old way. The counter confirms too: inside the arrivals window
   // the door cannot tell a diver at the desk from a same-day phone booking, and
-  // a diver with no address is simply not mailed. A held seat is owed nothing
-  // until its identity is confirmed (#2125).
+  // a diver with no address is simply not mailed. A diver with a phone is
+  // also texted their ready link ("Try it Saturday", item 3), so a phone-only
+  // seat is no longer owed a QR at the desk. A held seat is owed nothing until
+  // its identity is confirmed (#2125).
   const confirms =
     !outcome.identityUnconfirmed &&
     (await departureOwesConfirmation(db, input.shopId, input.tripId));
@@ -429,16 +447,33 @@ async function seatConsequences(
       const delivery = await sendStaffSeatingConfirmation(db, input.shopId, outcome.bookingId, {
         signStep: step,
       });
-      confirmation = delivery?.status === "sent" ? "sent" : "not_sent";
+      if (delivery?.status === "sent") reached.push("email");
+      // The step went out by email only if the mail carried it (`carriedSignStep`).
+      const mailedStep = delivery?.status === "sent" && delivery.carriedSignStep === true;
+      // Apart from the mail, so a text that throws never reads as a failed
+      // mail, and the other way round. The text's link is the seat's readiness
+      // link, which carries the Sign step.
+      const text = await textStaffSeatingConfirmation(db, input.shopId, outcome.bookingId, {
+        tracked: delivery === null,
+      }).catch((error: unknown) => {
+        log("booking.staff_confirmation_text_failed", "error", {
+          bookingId: outcome.bookingId,
+          errorCode: error instanceof Error ? error.name : "unknown_error",
+        });
+        return { status: "not_sent" as const };
+      });
+      if (text.status === "sent") reached.push(text.channel);
+      confirmation = reached.length > 0 ? "sent" : "not_sent";
       if (step) {
+        const carried = mailedStep || text.status === "sent";
         const fallback = await settleJoinWaiverDelivery(db, {
           shopId: input.shopId,
           bookingId: outcome.bookingId,
           step,
-          // The step went out only if the mail carried it (`carriedSignStep`).
-          confirmationSent: confirmation === "sent" && delivery?.carriedSignStep === true,
+          confirmationSent: carried,
+          channel: mailedStep ? "email" : "sms",
         });
-        if (confirmation === "sent" && delivery?.carriedSignStep === true) waiver = "sent";
+        if (carried) waiver = "sent";
         else takeWaiver(fallback);
       } else {
         // No release opened: nothing was owed, or opening failed. The join-send
@@ -450,7 +485,7 @@ async function seatConsequences(
         bookingId: outcome.bookingId,
         errorCode: error instanceof Error ? error.name : "unknown_error",
       });
-      if (confirmation === "not_needed") confirmation = "not_sent";
+      if (confirmation === "not_needed") confirmation = reached.length > 0 ? "sent" : "not_sent";
       if (waiver === "not_needed") waiver = "failed";
     }
   } else {
@@ -514,6 +549,7 @@ async function seatConsequences(
     waiver,
     waiverPath,
     confirmation,
+    reached,
     identityUnconfirmed: outcome.identityUnconfirmed,
     dateRequestPartyComplete: outcome.dateRequestPartyComplete,
   };

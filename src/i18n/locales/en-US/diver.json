@@ -4728,6 +4728,7 @@
       "stopLine": "Reply STOP to opt out.",
       "courseForms": "{shopName}: please sign your course forms for {tripTitle} — {url}",
       "readyLink": "Your trip prep: {url}",
+      "seated": "{shopName}: your seat on {date} is booked. Get ready here: {url}",
       "meetingPointMoved": "{shopName}: we moved where we meet for {tripTitle}, {date}, {time}.",
       "rescheduled": "{shopName}: we moved {tripTitle} to {date}, {time}.",
       "rescheduledSeat": "{shopName}: we moved your seat to {tripTitle}, {date}, {time}."

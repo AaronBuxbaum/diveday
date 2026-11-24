@@ -95,6 +95,39 @@ describe("seatPartyAction", () => {
     ]);
   });
 
+  it("gives each party member the email and phone typed on their own row", async () => {
+    await landing(
+      form([
+        ["email", "ana@lopez.test"],
+        ["phone", "+1 305 555 0100"],
+        [partyMemberField(1, "phone"), "+1 305 555 0142"],
+        [partyMemberField(2, "email"), "leo@lopez.test"],
+      ]),
+    );
+    expect(vi.mocked(seatParty).mock.calls[0]?.[1].members).toEqual([
+      expect.objectContaining({
+        fullName: "Ana Lopez",
+        email: "ana@lopez.test",
+        phone: "+1 305 555 0100",
+      }),
+      expect.objectContaining({
+        fullName: "Mia Lopez",
+        email: undefined,
+        phone: "+1 305 555 0142",
+      }),
+      expect.objectContaining({ fullName: "Leo Lopez", email: "leo@lopez.test", phone: undefined }),
+    ]);
+  });
+
+  it("refuses a party member's address that is not one, and seats nobody", async () => {
+    const to = new URL(
+      await landing(form([[partyMemberField(2, "email"), "leo at lopez"]])),
+      "http://x",
+    );
+    expect(to.searchParams.get("notice")).toBe("diver-invalid");
+    expect(seatParty).not.toHaveBeenCalled();
+  });
+
   it("refuses a chosen record that is not one of that row's candidates", async () => {
     vi.mocked(findSimilarDivers).mockResolvedValue([{ id: LEO_ON_FILE }] as never);
     const stranger = "55555555-5555-4555-8555-555555555555";
