@@ -1,4 +1,4 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull } from "drizzle-orm";
 import {
   courseFormsLinkPath,
   readinessWaiverLinkPath,
@@ -34,7 +34,15 @@ import {
 import { recordDiverActivity } from "./operations";
 import { isTransactionExecutor } from "./query-helpers";
 import { getBookingReadiness } from "./readiness";
-import { bookings, capabilities, people, shops, trips, waiverRecords } from "./schema";
+import {
+  bookings,
+  capabilities,
+  notificationDeliveries,
+  people,
+  shops,
+  trips,
+  waiverRecords,
+} from "./schema";
 import { optedOutPhones, stopListedSmsProvider } from "./sms-opt-outs";
 import { seatNotCancelled } from "./trips-queries";
 import { personContactLeadTyped, seatMinorDeclared } from "./waiver-signing";
@@ -159,7 +167,48 @@ export async function textableSeats(
     db,
     numbered.map(({ to }) => to),
   );
-  return new Set(numbered.filter(({ to }) => !stopped.has(to)).map(({ bookingId }) => bookingId));
+  const failed = await seatsWhoseTextFailed(
+    db,
+    shopId,
+    numbered.map(({ bookingId }) => bookingId),
+  );
+  return new Set(
+    numbered
+      .filter(({ to, bookingId }) => !stopped.has(to) && !failed.has(bookingId))
+      .map(({ bookingId }) => bookingId),
+  );
+}
+
+/**
+ * The seats whose latest ready-link text the carrier reported failed (an SMS receipt, issue #4958).
+ * A later good text clears it, so only each seat's newest `seat_text` counts.
+ */
+async function seatsWhoseTextFailed(
+  db: DbExecutor,
+  shopId: string,
+  bookingIds: readonly string[],
+): Promise<Set<string>> {
+  const rows = await db
+    .select({
+      bookingId: notificationDeliveries.bookingId,
+      providerStatus: notificationDeliveries.providerStatus,
+    })
+    .from(notificationDeliveries)
+    .where(
+      and(
+        eq(notificationDeliveries.shopId, shopId),
+        eq(notificationDeliveries.kind, "seat_text"),
+        inArray(notificationDeliveries.bookingId, [...bookingIds]),
+      ),
+    )
+    .orderBy(asc(notificationDeliveries.attemptedAt));
+  const latest = new Map<string, string | null>();
+  for (const row of rows) latest.set(row.bookingId, row.providerStatus);
+  return new Set(
+    [...latest]
+      .filter(([, status]) => status === "failed" || status === "bounced")
+      .map(([id]) => id),
+  );
 }
 
 /**

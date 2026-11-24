@@ -1,6 +1,5 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import sharp from "sharp";
 import {
   type Browser,
   type BrowserContext,
@@ -8,6 +7,7 @@ import {
   type Locator,
   type Page,
 } from "@playwright/test";
+import sharp from "sharp";
 import { requireFreshBuild } from "../scripts/e2e-build-evidence.mjs";
 import {
   captureBuildBoundary,
