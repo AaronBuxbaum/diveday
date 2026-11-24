@@ -135,6 +135,11 @@ describe("freeTimeEndsAt", () => {
     );
   });
 
+  it("is null at the very instant the free term ends", () => {
+    const end = freeTermEndsAt("2026-10-07", "America/New_York");
+    expect(freeTimeEndsAt(input({ now: end, freeTermEndsOn: "2026-10-07" }))).toBeNull();
+  });
+
   it("is null with no free term, or once it has passed", () => {
     expect(freeTimeEndsAt(input())).toBeNull();
     expect(freeTimeEndsAt(input({ freeTermEndsOn: "2026-09-01" }))).toBeNull();

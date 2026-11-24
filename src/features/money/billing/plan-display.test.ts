@@ -34,5 +34,9 @@ describe("plan figures", () => {
     expect(
       planCopyParams({ plan: "flat_monthly", monthlyCents: 9_900, basisPoints: 0 }, "en-US"),
     ).toMatchObject({ hasPercent: "no", hasBase: "yes" });
+    // The smallest share there is, one basis point, is still a percent.
+    expect(
+      planCopyParams({ plan: "percent_of_volume", monthlyCents: 0, basisPoints: 1 }, "en-US"),
+    ).toMatchObject({ hasPercent: "yes" });
   });
 });

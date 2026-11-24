@@ -126,8 +126,10 @@ export function billableFrom(
     subscribedAt: Date | null;
   },
 ): Date {
+  // mutation-ok: subscribedAt is a Date or null, so ?? and || pick the same side
   const card = input.subscribedAt ?? input.now;
   const free = freePeriodEndsAt(input);
+  // mutation-ok: at equal instants free and card are the same moment, so > and >= agree
   return free && free.getTime() > card.getTime() ? free : card;
 }
 
