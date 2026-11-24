@@ -25,6 +25,7 @@ import { isFull, seatsOnSale, spotsRemaining } from "@/lib/trips";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
 import type { BookableDiver } from "../../../../../../lib/diver-choice-types";
 import { recordPaperCourseFormAction } from "../course-actions";
+import type { PasteListState } from "../paste-list-actions";
 import { AddDiverSection, type SeatRequestContext } from "./AddDiverSection";
 import { ADD_A_BOOKING_ID } from "./add-a-booking-id";
 import { carryTargetLabel } from "./carry-target-label";
@@ -38,6 +39,7 @@ import { LastMinuteDealSection } from "./LastMinuteDealSection";
 import { MixedTrainingForTrip } from "./MixedTrainingAdvisory";
 import { moveSeatRefusalFor } from "./move-seat-refusal";
 import { OpenAddBand } from "./OpenAddBand";
+import { PasteListSection } from "./PasteListSection";
 import { type RosterArrival, RosterSection } from "./RosterSection";
 import type { PartyPreview, RosterActions, RosterRecord, SeatMove } from "./roster-model";
 import { TrainingPlanWithDepth } from "./TrainingPlanWithDepth";
@@ -46,10 +48,16 @@ import { TripNoticeBanner } from "./TripNoticeBanner";
 import { whoWantsInGroupsOf } from "./who-wants-in-rows";
 
 type FormAction = (formData: FormData) => void | Promise<void>;
+type PasteListAction = (
+  state: PasteListState | undefined,
+  formData: FormData,
+) => Promise<PasteListState>;
 
 export type TripRosterActions = {
   addBookingAction: FormAction;
   addExistingDiverAction: FormAction;
+  /** "Paste a list": a reducer, answered in the form (no list travels in a URL). */
+  pasteListAction: PasteListAction;
   addToWaitlistAction: FormAction;
   addKnownToWaitlistAction: FormAction;
   createDirectTripInvitationAction: FormAction;
@@ -561,6 +569,10 @@ function AddDiverGroup({ context }: { context: TripRosterContentContext }) {
           request: seatRequest?.context,
         }}
       />
+      {/* A whole trip's list from somewhere else, each person their own seat. */}
+      {!isFull(seatsOnSale(trip)) && !seatRequest ? (
+        <PasteListSection action={actions.pasteListAction} locale={locale} />
+      ) : null}
     </div>
   );
 }

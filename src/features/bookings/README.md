@@ -6,7 +6,8 @@ buddies, the wait list and cancellations.
 ## Owns
 
 - Seating: `seat-diver.ts` (every staff door that seats a diver), `seat-confirmation-text.ts`
-  (the ready link by text to a seated diver with a phone), `seat-claims/`, `seat-ladder.ts`,
+  (the ready link by text to a seated diver with a phone), `paste-list/` (a trip's passenger list
+  pasted onto one departure, each person their own seat), `seat-claims/`, `seat-ladder.ts`,
   `seat-already-held.ts`, `seat-sailed.ts`, `seat-sold-alerts.ts`, `seats-given-up.ts`,
   `party-seat-anchor.ts`, `new-booking-page.ts`, `first-booking.ts`.
 - What is open: `availability/`, `open-seats/`, `worth-a-look.ts`, `your-days.ts`.
@@ -27,5 +28,7 @@ payment for the seat (`money`) and the trip itself (`trips`).
 - Every staff door that seats a diver goes through `seatDiver`.
 - A staff-seated diver hears about the seat on every contact on file (email, and a text when
   their number can take one), once, never retried; `reached` says which.
+- A pasted list seats each person on a booking of their own; a name on file never stops the
+  list, and a record is chosen only from what that row's preview offered.
 - Admission is weaker than readiness: nothing here refuses a diver readiness would clear.
 - Codes and deals both resolve in `bookSpot`, and Stripe owns the arithmetic.
