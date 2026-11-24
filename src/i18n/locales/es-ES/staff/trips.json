@@ -496,6 +496,60 @@
     "requestGone": "Esa petición está cerrada o se eliminó.",
     "requestNotOffered": "Esa petición no recibió esta salida, así que las plazas de aquí no la responden."
   },
+  "pasteList": {
+    "heading": "Pegar una lista",
+    "listLabel": "Nombres, correos y teléfonos",
+    "listDescription": "Una persona por línea, copiada de una hoja de cálculo o de otra herramienta de reservas. Columnas en cualquier orden.",
+    "chooseFile": "Elegir un archivo CSV",
+    "fileUnreadable": "No se pudo leer ese archivo. Copia sus filas en el cuadro.",
+    "read": "Leer la lista",
+    "reading": "Leyendo…",
+    "refused": {
+      "empty": "Todavía no hay nada que leer. Pega una persona por línea.",
+      "too_large": "Eso es más que la lista de una salida. Pega una salida a la vez.",
+      "too_many_columns": "Esa lista tiene más columnas que una lista de salida. Copia solo los nombres, correos y teléfonos.",
+      "too_many_rows": "Una lista admite hasta {limit, plural, one {# persona} other {# personas}}. Pega una salida a la vez.",
+      "cell_too_long": "Una celda es demasiado larga para ser un nombre, un correo o un teléfono.",
+      "no_names": "No se encontraron nombres. Pon el nombre de cada persona en su propia columna.",
+      "invalid": "La lista cambió antes de agregarse. Léela de nuevo."
+    },
+    "toAddOne": "{count} persona por agregar",
+    "toAddOther": "{count} personas por agregar",
+    "skippedOne": "{count} fila sin nombre quedó fuera",
+    "skippedOther": "{count} filas sin nombre quedaron fuera",
+    "duplicatesOne": "{count} fila repetida quedó fuera",
+    "duplicatesOther": "{count} filas repetidas quedaron fuera",
+    "whoLabel": "Quién es {name}",
+    "newPerson": "Persona nueva",
+    "onFile": "{name}, registrado",
+    "onFileWith": "{name}, registrado ({contact})",
+    "droppedEmail": "Correo omitido: no es una dirección",
+    "droppedPhone": "Teléfono omitido: no es un número",
+    "linksGo": "Quien tenga correo o teléfono recibe su enlace de preparación por correo o SMS.",
+    "seatOne": "Agregar {count} persona",
+    "seatOther": "Agregar {count} personas",
+    "startOver": "Empezar de nuevo",
+    "addedOne": "{count} persona agregada",
+    "addedOther": "{count} personas agregadas",
+    "notAddedOne": "{count} sin agregar",
+    "notAddedOther": "{count} sin agregar",
+    "reached": {
+      "email": "correo enviado",
+      "sms": "SMS enviado",
+      "whatsapp": "WhatsApp enviado"
+    },
+    "nothingSent": "no se envió ningún enlace",
+    "held": "en espera hasta que confirmes que es esa persona",
+    "refusal": {
+      "full": "el barco está lleno",
+      "already": "ya está en esta salida",
+      "cards": "sus certificaciones no alcanzan para esta salida",
+      "course": "el curso no puede recibirle",
+      "busy": "el barco estaba ocupado, agrégale de nuevo",
+      "unavailable": "no se puede agregar a esta salida"
+    },
+    "done": "Listo"
+  },
   "inviteSuggestions": {
     "heading": "Ya bucearon en {site} contigo",
     "description": "Ofrecer una plaza envía un correo por esta salida. A nadie se le pregunta dos veces en 30 días.",
@@ -518,6 +572,7 @@
     "leadTime": "Las salidas del {weekday} suelen vender el {percent} % de sus plazas en los últimos 3 días."
   },
   "roster": {
+    "waiverNothingSent": "Exención sin firmar. No se pudo enviar nada.",
     "addFirstNoteSummary": "Agregar una nota privada",
     "addNoteLabel": "Agregar una nota que solo vea el personal",
     "addNotePlaceholder": "Llegó tarde al barco, pregunta médica, problema de equipo…",
@@ -925,6 +980,14 @@
     "emailBody": "Hola {firstName},\n\nHay una plaza libre en {tripTitle} ({tripWhen}) con {shopName}. Consíguela aquí antes de que se agote:\n{bookingUrl}\n\n¡Nos vemos en el barco!"
   },
   "partyWaiverQueue": {
+    "reachedAll": "Todos recibieron su enlace. Hay un código QR para quien firme en el mostrador.",
+    "reachedSome": "Se enviaron enlaces a {sent} de {total}. Muestra un código QR al resto.",
+    "reachedNone": "No se pudo enviar ningún enlace. Muestra a cada persona un código QR para firmar en su celular.",
+    "sentBy": "Enlace enviado {channels}",
+    "notSent": "No se pudo enviar nada",
+    "channelEmail": "por correo",
+    "channelSms": "por SMS",
+    "channelWhatsapp": "por WhatsApp",
     "title": "Exenciones del grupo",
     "intro": "Muestra un código QR disponible para que la persona firme en su celular.",
     "back": "Volver a la salida",
@@ -1103,6 +1166,7 @@
     "sentence": {
       "guestCount": "{count, plural, one {# participante} other {# participantes}}",
       "seatsToFill": "{count, plural, one {Queda # plaza} other {Quedan # plazas}} por llenar.",
+      "readyOf": "{ready} de {total, plural, one {# participante listo} other {# participantes listos}}.",
       "full": "Todas las plazas están ocupadas.",
       "booked": "Reservadas: {booked} de {capacity}",
       "noGuests": "Aún no hay participantes.",
@@ -1143,6 +1207,8 @@
       "bookingLinkLine": "Para correo, mensaje o redes",
       "addYourself": "Agrega un participante tú mismo",
       "addYourselfLine": "Reserva por teléfono o en persona",
+      "addGuests": "Agrega participantes",
+      "typeOrPaste": "Escríbelos o pega tu lista",
       "add": "Agregar",
       "crew": "Tripulación",
       "plan": "Plan de buceo",
@@ -1308,6 +1374,7 @@
       "waiverLapsed": "Exención vencida",
       "waiverRunsOut": "La exención vence antes de la salida",
       "waiverPending": "Exención enviada, sin firmar",
+      "waiverNothingSent": "Exención sin firmar, no se pudo enviar nada",
       "medicalReview": "Necesita el visto bueno de un médico",
       "medicalNotCleared": "Un médico no lo autorizó",
       "waiverSealFailed": "Exención cambiada después de firmar",

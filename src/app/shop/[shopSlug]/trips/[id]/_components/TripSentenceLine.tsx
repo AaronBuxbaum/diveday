@@ -16,7 +16,7 @@ export function TripSentenceLine({
   sentence: TripSentence;
   /** The door to Roll call, worded; null where the page has none yet. */
   rollCall: { href: string; label: string } | null;
-  /** Filling's seat bar: one block a seat, the booked ones filled. */
+  /** Filling's bar: one block a seat, the booked ones filled; on a departure sold elsewhere, one a guest, the ready ones filled. */
   seats?: { booked: number; capacity: number } | null;
 }) {
   return (

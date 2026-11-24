@@ -25,6 +25,7 @@ import { cachedListFormat } from "@/lib/intl-cache";
 import { firstNameOf } from "@/lib/person-name";
 import { diverPhotoDisplayPath } from "@/lib/person-photo";
 import { rentalFitCompleteness } from "@/lib/rentals";
+import { shopPath } from "@/lib/staff-notices";
 import type { FixListGuest, FixListRow, FixListSection } from "./GuestFixList";
 import { RosterRow, type RosterRowContext } from "./RosterRow";
 import { rowNotices } from "./roster-row-notices";
@@ -105,6 +106,14 @@ type Seat = {
   sendWaiver: ((variant: ControlWeight) => ReactNode) | null;
   /** A link can reach this guest alone, so a group send may include them. */
   waiverSendable: boolean;
+  /** An email or a text can reach the guest; with neither, nothing was sent. */
+  reachable: boolean;
+  /**
+   * Where an unreachable guest signs instead: their party's queue, or their
+   * own one-seat counter queue (issue #3984). Null when a link reaches them
+   * or the seat waits on who it is.
+   */
+  counterHref: string | null;
   /** What a payment fix would take, formatted in the shop's currency. */
   owed: string | null;
   /** The guest's open help request: the row says it and holds the crew choice. */
@@ -166,9 +175,10 @@ function seatOf(entry: RosterEntry, context: RosterRowContext): Seat {
   const partyLead =
     Boolean(booking.partyLeadBookingId) ||
     rows.roster.some((other) => other.booking.partyLeadBookingId === booking.id);
-  // One tap sends the link only to a guest a link can reach; a party's or a
-  // counter guest's release is signed through its queue, on the opened guest.
-  const reachable = Boolean(person.email) || rows.textableBookings.has(booking.id);
+  // One tap sends the link only to a guest a link can reach (the seat's own
+  // word, `rosterSeat`); a party's or a counter guest's release is signed
+  // through its queue, on the opened guest.
+  const { reachable } = seat;
   const control = seat.waiverControl;
   const waiverSendable = Boolean(
     control.action && reachable && !partyLead && !seat.identityUnconfirmed,
@@ -218,6 +228,18 @@ function seatOf(entry: RosterEntry, context: RosterRowContext): Seat {
       : null,
     sendWaiver,
     waiverSendable,
+    reachable,
+    counterHref:
+      reachable || seat.identityUnconfirmed
+        ? null
+        : shopPath(
+            trip.shopSlug,
+            "trips",
+            trip.tripId,
+            "party",
+            booking.partyLeadBookingId ?? booking.id,
+            "waivers",
+          ),
     owed,
     helpRequest,
     order: rows.openOrderByBooking.get(booking.id) ?? null,
@@ -346,6 +368,9 @@ export function guestFixRows(
       return t(HELP_KIND_KEYS[seat.helpRequest.kind]);
     const ask = seat?.entry.booking.reEntryAsk;
     if (reason === "re_entry_ask" && ask) return t(RE_ENTRY_PHRASE_KEYS[ask]);
+    // Opened for signing, but no email or text could carry it: say so, not "sent".
+    if (reason === "waiver_pending" && seat && !seat.reachable)
+      return t("trips.fixList.reason.waiverNothingSent");
     return t(reasonKey(reason));
   };
 
@@ -377,6 +402,19 @@ export function guestFixRows(
   } => {
     if (remedy === "send_waiver" && seat?.sendWaiver)
       return { control: seat.sendWaiver, panelHoldsControl: true };
+    // Nothing could be sent: the counter's QR code is the way to sign.
+    if (remedy === "send_waiver" && seat?.counterHref) {
+      const href = seat.counterHref;
+      return {
+        control: (variant) => (
+          <Link href={href} className={buttonClass({ variant, size: "sm" })}>
+            {t("trips.partyWaiverQueue.counter")}
+          </Link>
+        ),
+        // The opened guest draws its own counter link beside the waiver line.
+        panelHoldsControl: true,
+      };
+    }
     if (remedy === "review_cards" && seat)
       return {
         control: (variant) => (

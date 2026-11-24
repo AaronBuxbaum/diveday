@@ -25,6 +25,7 @@ import { isFull, seatsOnSale, spotsRemaining } from "@/lib/trips";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
 import type { BookableDiver } from "../../../../../../lib/diver-choice-types";
 import { recordPaperCourseFormAction } from "../course-actions";
+import type { PasteListState } from "../paste-list-actions";
 import { AddDiverSection, type SeatRequestContext } from "./AddDiverSection";
 import { ADD_A_BOOKING_ID } from "./add-a-booking-id";
 import { carryTargetLabel } from "./carry-target-label";
@@ -38,6 +39,7 @@ import { LastMinuteDealSection } from "./LastMinuteDealSection";
 import { MixedTrainingForTrip } from "./MixedTrainingAdvisory";
 import { moveSeatRefusalFor } from "./move-seat-refusal";
 import { OpenAddBand } from "./OpenAddBand";
+import { PasteListSection } from "./PasteListSection";
 import { type RosterArrival, RosterSection } from "./RosterSection";
 import type { PartyPreview, RosterActions, RosterRecord, SeatMove } from "./roster-model";
 import { TrainingPlanWithDepth } from "./TrainingPlanWithDepth";
@@ -46,10 +48,16 @@ import { TripNoticeBanner } from "./TripNoticeBanner";
 import { whoWantsInGroupsOf } from "./who-wants-in-rows";
 
 type FormAction = (formData: FormData) => void | Promise<void>;
+type PasteListAction = (
+  state: PasteListState | undefined,
+  formData: FormData,
+) => Promise<PasteListState>;
 
 export type TripRosterActions = {
   addBookingAction: FormAction;
   addExistingDiverAction: FormAction;
+  /** "Paste a list": a reducer, answered in the form (no list travels in a URL). */
+  pasteListAction: PasteListAction;
   addToWaitlistAction: FormAction;
   addKnownToWaitlistAction: FormAction;
   createDirectTripInvitationAction: FormAction;
@@ -176,6 +184,12 @@ export type TripRosterContentContext = {
   afterReady?: ReactNode;
   /** Beside the guest list at full width (Filling's trip facts). */
   beside?: ReactNode;
+  /**
+   * The shop sells this departure somewhere else (`soldElsewhere`): Filling
+   * draws no demand banner, past guests or booking link (who asked for this
+   * departure stays), and the add card follows the guests once there are any.
+   */
+  soldElsewhere?: boolean;
 };
 
 /**
@@ -185,7 +199,6 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
   const {
     guests,
     shopSlug,
-    shopName,
     locale,
     timezone,
     shopRentalItems,
@@ -205,9 +218,6 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
     record,
     inWaterCrew,
     acceptsDivers,
-    mayInviteFromWaitlist,
-    mayDiscount,
-    currency,
     actions,
   } = context;
   const t = staffTranslator(locale);
@@ -352,6 +362,12 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
     />
   );
 
+  // Sold elsewhere, the guests and how ready they are lead; the add card follows them.
+  const elsewhereLate = Boolean(context.soldElsewhere) && roster.length > 0;
+  const fillCard =
+    context.phase === "filling" && !guests.cancelled ? (
+      <FillingCard context={context} whoWantsInGroups={whoWantsInGroups} />
+    ) : null;
   return (
     // `contents`, so these blocks lie in the page's flow; `space-y-10` is the
     // page's stack carried through it, since the page's own reaches only its
@@ -376,7 +392,7 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
       )}
       <FormStatus tone={addStatus?.tone}>{addStatus?.text}</FormStatus>
 
-      {demand && context.phase === "filling" ? (
+      {demand && context.phase === "filling" && !context.soldElsewhere ? (
         // A card in a tone (`TONE_PANEL_CLASS`), not a 12px inset box: its
         // corners were tighter than every card's, its words 4px further in.
         <section className={`${TONE_PANEL_CLASS} border-warning/40 bg-warning-tint`}>
@@ -418,66 +434,7 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
         </section>
       ) : null}
 
-      {context.phase === "filling" && !guests.cancelled ? (
-        <FillSeatsCard
-          heading={
-            spotsRemaining(seatsOnSale(trip)) > 0
-              ? t("trips.clock.filling.fillLast", { count: spotsRemaining(seatsOnSale(trip)) })
-              : t("trips.whoWantsIn.heading", {
-                  count: whoWantsInGroups.reduce(
-                    (sum, group) => sum + group.rows.length + (group.more?.length ?? 0),
-                    0,
-                  ),
-                })
-          }
-          groups={whoWantsInGroups}
-          canOffer={acceptsDivers && mayInviteFromWaitlist}
-          discount={mayDiscount ? offerDiscountCopy(t, currency, locale) : null}
-          pastGuests={
-            acceptsDivers && guests.inviteSuggestions
-              ? {
-                  count: guests.inviteSuggestions.total,
-                  line: t("trips.inviteSuggestions.heading", {
-                    site: guests.inviteSuggestions.siteName,
-                  }),
-                  list: (
-                    <InviteSuggestionsGroup
-                      suggestions={guests.inviteSuggestions}
-                      action={actions.invitePastDiverAction}
-                      locale={locale}
-                      timeZone={timezone}
-                    />
-                  ),
-                }
-              : null
-          }
-          addHref={acceptsDivers ? (context.addGuestHref ?? null) : null}
-          addForm={
-            acceptsDivers && context.addBand?.open ? <AddDiverGroup context={context} /> : null
-          }
-          carry={
-            // **One waiting diver is worth carrying too** (fourth review, item 31).
-            !demand &&
-            isFull(seatsOnSale(trip)) &&
-            actions.carryWaitlistAction &&
-            actions.moveSeat?.targets.length ? (
-              <CarryWaitlistForm
-                action={actions.carryWaitlistAction}
-                targets={actions.moveSeat.targets}
-                t={t}
-              />
-            ) : null
-          }
-          trip={{
-            id: trip.id,
-            shopSlug,
-            shopName,
-            title: trip.title,
-            when: formatShortDate(trip.startsAt, locale, timezone),
-          }}
-          t={t}
-        />
-      ) : null}
+      {elsewhereLate ? null : fillCard}
       <TrainingPlanWithDepth context={context} />
       {context.beside ? (
         <div className="grid items-start gap-6 lg:grid-cols-2">
@@ -487,6 +444,7 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
       ) : (
         rosterSection
       )}
+      {elsewhereLate ? fillCard : null}
       {/* "Add a guest" outside Filling opens the form under the list (`?add=1`). */}
       {acceptsDivers && context.addBand?.open && context.phase !== "filling" ? (
         <section
@@ -499,6 +457,108 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
       ) : null}
       {afterRoster}
     </div>
+  );
+}
+
+/**
+ * Filling's add card: every way to fill a seat, or, on a departure sold
+ * elsewhere (`soldElsewhere`), adding the guests by hand or by paste and
+ * whoever asked for this departure, with no past guests to invite and no
+ * booking link.
+ */
+function FillingCard({
+  context,
+  whoWantsInGroups,
+}: {
+  context: TripRosterContentContext;
+  whoWantsInGroups: ReturnType<typeof whoWantsInGroupsOf>;
+}) {
+  const {
+    guests,
+    shopSlug,
+    shopName,
+    locale,
+    timezone,
+    acceptsDivers,
+    mayInviteFromWaitlist,
+    mayDiscount,
+    currency,
+    actions,
+  } = context;
+  const t = staffTranslator(locale);
+  const { trip, demand } = guests;
+  const elsewhere = Boolean(context.soldElsewhere);
+  // Sold elsewhere, only who asked for this very departure: the date and
+  // anytime leads are other customers to sell seats to.
+  const groups = elsewhere
+    ? whoWantsInGroups.filter((group) => group.id === "departure")
+    : whoWantsInGroups;
+  const waiting = groups.reduce(
+    (sum, group) => sum + group.rows.length + (group.more?.length ?? 0),
+    0,
+  );
+  return (
+    <FillSeatsCard
+      heading={
+        // Sold elsewhere, nothing is said about seats to sell: who asked for
+        // this departure, when somebody did, else the add itself.
+        elsewhere
+          ? waiting > 0
+            ? t("trips.whoWantsIn.heading", { count: waiting })
+            : t("trips.clock.filling.addGuests")
+          : spotsRemaining(seatsOnSale(trip)) > 0
+            ? t("trips.clock.filling.fillLast", { count: spotsRemaining(seatsOnSale(trip)) })
+            : t("trips.whoWantsIn.heading", { count: waiting })
+      }
+      groups={groups}
+      canOffer={acceptsDivers && mayInviteFromWaitlist}
+      discount={mayDiscount ? offerDiscountCopy(t, currency, locale) : null}
+      pastGuests={
+        !elsewhere && acceptsDivers && guests.inviteSuggestions
+          ? {
+              count: guests.inviteSuggestions.total,
+              line: t("trips.inviteSuggestions.heading", {
+                site: guests.inviteSuggestions.siteName,
+              }),
+              list: (
+                <InviteSuggestionsGroup
+                  suggestions={guests.inviteSuggestions}
+                  action={actions.invitePastDiverAction}
+                  locale={locale}
+                  timeZone={timezone}
+                />
+              ),
+            }
+          : null
+      }
+      addHref={acceptsDivers ? (context.addGuestHref ?? null) : null}
+      addForm={acceptsDivers && context.addBand?.open ? <AddDiverGroup context={context} /> : null}
+      addLine={elsewhere ? t("trips.clock.filling.typeOrPaste") : undefined}
+      bookingLink={!elsewhere}
+      carry={
+        // **One waiting diver is worth carrying too** (fourth review, item 31).
+        // The demand banner carries the list instead, except sold elsewhere,
+        // where no banner is drawn and the carry stays here.
+        (!demand || elsewhere) &&
+        isFull(seatsOnSale(trip)) &&
+        actions.carryWaitlistAction &&
+        actions.moveSeat?.targets.length ? (
+          <CarryWaitlistForm
+            action={actions.carryWaitlistAction}
+            targets={actions.moveSeat.targets}
+            t={t}
+          />
+        ) : null
+      }
+      trip={{
+        id: trip.id,
+        shopSlug,
+        shopName,
+        title: trip.title,
+        when: formatShortDate(trip.startsAt, locale, timezone),
+      }}
+      t={t}
+    />
   );
 }
 
@@ -561,6 +621,10 @@ function AddDiverGroup({ context }: { context: TripRosterContentContext }) {
           request: seatRequest?.context,
         }}
       />
+      {/* A whole trip's list from somewhere else, each person their own seat. */}
+      {!isFull(seatsOnSale(trip)) && !seatRequest ? (
+        <PasteListSection action={actions.pasteListAction} locale={locale} />
+      ) : null}
     </div>
   );
 }

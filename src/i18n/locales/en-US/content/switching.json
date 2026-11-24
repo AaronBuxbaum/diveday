@@ -69,7 +69,7 @@
     "closingTitle": "Try a departure before you move your records",
     "closingSupport": "Send us a sample of your records and we’ll review the move with you. You can also write to {email}.",
     "alongsideTitle": "Keep your tools, add DiveDay",
-    "alongsideDescription": "Try DiveDay on one trip while your booking site, register, and sheet keep doing their jobs, then decide what to move."
+    "alongsideDescription": "Start with one departure while your booking site, register, and sheet keep doing their jobs, then decide what to move."
   },
   "competitor": {
     "keepOrLeaveEyebrow": "Keep it, or leave it",
@@ -185,7 +185,7 @@
   "alongside": {
     "eyebrow": "Alongside your tools",
     "title": "Keep what works. Add what your dive day is missing",
-    "heroLede": "You don’t have to leave anything to start. Try DiveDay on one trip while the booking site, the register, and the sheet you already use keep doing their jobs, then decide what to move.",
+    "heroLede": "You don’t have to leave anything to start. Run a single departure through DiveDay while the booking site, the register, and the sheet you already use keep doing their jobs, then decide what to move.",
     "intro1": "DiveDay has no live link to other software. It has no retail register and doesn’t talk to your booking site on its own. What it has is files in, files out, a booking link you control, and a browser extension that looks up cards on your agency’s own page, so the two sides meet where a person can see them.",
     "intro2": "So the useful question isn’t what DiveDay plugs into. It’s which part of the day each tool should own while you try it.",
     "tools": {

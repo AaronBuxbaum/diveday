@@ -2,7 +2,7 @@ import { diverTranslator } from "../src/i18n/messages";
 import { FEATURE_PAGE_SLUGS, featurePagePath } from "../src/lib/feature-pages";
 import { capabilityGroup, earlyAccessPrice, productCapabilityIndex } from "../src/lib/marketing";
 import { MIGRATION_GUIDES } from "../src/lib/migration-guides";
-import { ONBOARDING_EMAIL, SWITCH_EMAIL } from "../src/lib/platform-mail";
+import { SWITCH_EMAIL } from "../src/lib/platform-mail";
 import { expect, test } from "./fixtures";
 import { mintOnboardFormPath } from "./setup-link";
 
@@ -593,18 +593,16 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   await expect(
     page.getByText("Today’s price, locked for one year for founding shops."),
   ).toBeVisible();
-  // The trial's own terms, once, in the notes beside the price — free, three
-  // weeks, no card, and the soft expiry that src/features/shop-setup/trial.ts actually
-  // implements. The FAQ's trial row went with the visual review of 2026-10-24
-  // (B11: the FAQ keeps only what the table and notes do not answer), and card
-  // fees are the invoice's own row, nowhere else. The note also says how a
-  // trial becomes paid, through the upgrade inbox (docs/product/marketing.md).
-  const trialTerms = page.getByText(
-    diverTranslator("en-US")("marketing.pricing.trialNote", { email: ONBOARDING_EMAIL }),
-    { exact: true },
-  );
+  // The trial's own terms, once, in the notes beside the price: try it on one
+  // trip, free, no card, and 1% only of payments taken in DiveDay (Aaron,
+  // 2026-11-24; docs/product/marketing.md). The FAQ's trial row went with the
+  // visual review of 2026-10-24 (B11), and card fees are the invoice's own row.
+  // No timed trial and no paid plan, anywhere on the page.
+  const trialTerms = page.getByText(diverTranslator("en-US")("marketing.pricing.trialNote"), {
+    exact: true,
+  });
   await expect(trialTerms).toHaveCount(1);
-  await expect(page.getByText("2 weeks, no card", { exact: true })).toHaveCount(0);
+  await expect(page.getByText(/free for 2 weeks|paid plan/i)).toHaveCount(0);
   await expect(page.getByText(/Card fees are Stripe’s|Payment-processing fees/)).toHaveCount(0);
   // The offline row is gone from this page's FAQ, deliberately — the claim
   // lives on the boat manifest page, asserted above.
@@ -844,13 +842,11 @@ test("the setup link opens the form, which answers the hesitation it creates", a
   ).toHaveValue("onboard-demo");
 
   // Asking for a password is the moment of maximum hesitation, so the door
-  // answers it — in one sentence, not the four claims this line used to join
-  // together (ADR 20260827-first-light, decision 1). The half that earns it is
-  // the second: "free for 2 weeks" alone never says what happens on day 22,
-  // and a buyer who has been burned reads an unanswered window as a card wall
-  // (docs/product/marketing-review-20260827.md).
+  // answers it in one sentence, not the four claims this line used to join
+  // together (ADR 20260827-first-light, decision 1): free, no card, and the 1%
+  // (Aaron, 2026-11-24), with no window to run out.
   await expect(
-    page.getByText("Free for 2 weeks, no card, and nothing switches off when the window ends."),
+    page.getByText(diverTranslator("en-US")("account.onboard.trialNote"), { exact: true }),
   ).toBeVisible();
   await expect(page.getByText("No card, no setup fee.")).toHaveCount(0);
   await expect(page.getByText("Your records are ready from day one.")).toHaveCount(0);

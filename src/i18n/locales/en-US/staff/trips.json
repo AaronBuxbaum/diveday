@@ -496,6 +496,60 @@
     "requestGone": "That request is closed or removed.",
     "requestNotOffered": "That request wasn’t offered this departure, so seats here won’t answer it."
   },
+  "pasteList": {
+    "heading": "Paste a list",
+    "listLabel": "Names, emails, and phone numbers",
+    "listDescription": "One person a line, copied from a spreadsheet or another booking tool. Columns in any order.",
+    "chooseFile": "Choose a CSV file",
+    "fileUnreadable": "That file couldn’t be read. Copy its rows into the box instead.",
+    "read": "Read the list",
+    "reading": "Reading…",
+    "refused": {
+      "empty": "Nothing to read yet. Paste one person a line.",
+      "too_large": "That’s more than one trip’s list. Paste one trip at a time.",
+      "too_many_columns": "That list has more columns than a trip list does. Copy just the names, emails, and phone numbers.",
+      "too_many_rows": "A list takes up to {limit, plural, one {# person} other {# people}}. Paste one trip at a time.",
+      "cell_too_long": "One cell is too long to be a name, email, or phone number.",
+      "no_names": "No names found. Put each person’s name in a column of its own.",
+      "invalid": "The list changed before it was added. Read it again."
+    },
+    "toAddOne": "{count} person to add",
+    "toAddOther": "{count} people to add",
+    "skippedOne": "{count} row without a name left out",
+    "skippedOther": "{count} rows without a name left out",
+    "duplicatesOne": "{count} repeated row left out",
+    "duplicatesOther": "{count} repeated rows left out",
+    "whoLabel": "Who {name} is",
+    "newPerson": "New person",
+    "onFile": "{name}, on file",
+    "onFileWith": "{name}, on file ({contact})",
+    "droppedEmail": "Email left off: it isn’t an address",
+    "droppedPhone": "Phone left off: it isn’t a number",
+    "linksGo": "Everyone with an email or phone gets their ready link by email or text.",
+    "seatOne": "Add {count} person",
+    "seatOther": "Add {count} people",
+    "startOver": "Start over",
+    "addedOne": "{count} person added",
+    "addedOther": "{count} people added",
+    "notAddedOne": "{count} not added",
+    "notAddedOther": "{count} not added",
+    "reached": {
+      "email": "email sent",
+      "sms": "text sent",
+      "whatsapp": "WhatsApp sent"
+    },
+    "nothingSent": "no link sent",
+    "held": "held until you confirm it’s them",
+    "refusal": {
+      "full": "the boat is full",
+      "already": "already on this trip",
+      "cards": "their cards don’t reach this trip",
+      "course": "the course can’t take them",
+      "busy": "the boat was busy, add them again",
+      "unavailable": "can’t be added to this trip"
+    },
+    "done": "Done"
+  },
   "inviteSuggestions": {
     "heading": "Dived {site} with you before",
     "description": "Offer a seat sends one email for this departure. Nobody is asked twice in 30 days.",
@@ -518,6 +572,7 @@
     "leadTime": "{weekday} departures usually sell {percent}% of their seats in the last 3 days."
   },
   "roster": {
+    "waiverNothingSent": "Waiver not signed. Nothing could be sent.",
     "addFirstNoteSummary": "Add a private note",
     "addNoteLabel": "Add a note only staff can see",
     "addNotePlaceholder": "Late to the boat, medical question, kit issue…",
@@ -925,6 +980,14 @@
     "emailBody": "Hi {firstName},\n\nA seat is open on {tripTitle} ({tripWhen}) with {shopName}. Grab it here before it goes:\n{bookingUrl}\n\nSee you on the boat!"
   },
   "partyWaiverQueue": {
+    "reachedAll": "Links went out to everyone. A QR code is here for anyone signing at the counter.",
+    "reachedSome": "Links went out to {sent} of {total}. Show the rest a QR code.",
+    "reachedNone": "No link could be sent. Show each person a QR code to sign on their phone.",
+    "sentBy": "Link sent {channels}",
+    "notSent": "Nothing could be sent",
+    "channelEmail": "by email",
+    "channelSms": "by text",
+    "channelWhatsapp": "on WhatsApp",
     "title": "Party waivers",
     "intro": "Show an available QR code for signing on the person’s phone.",
     "back": "Back to departure",
@@ -1103,6 +1166,7 @@
     "sentence": {
       "guestCount": "{count, plural, one {# guest} other {# guests}}",
       "seatsToFill": "{count, plural, one {# seat} other {# seats}} to fill.",
+      "readyOf": "{ready} of {total, plural, one {# guest} other {# guests}} ready.",
       "full": "Every seat is taken.",
       "booked": "{booked} of {capacity} booked",
       "noGuests": "No guests booked.",
@@ -1143,6 +1207,8 @@
       "bookingLinkLine": "For email, text, or social",
       "addYourself": "Add a guest yourself",
       "addYourselfLine": "Phone or walk-in booking",
+      "addGuests": "Add guests",
+      "typeOrPaste": "Type them in, or paste your list",
       "add": "Add",
       "crew": "Crew",
       "plan": "Plan",
@@ -1308,6 +1374,7 @@
       "waiverLapsed": "Waiver lapsed",
       "waiverRunsOut": "Waiver runs out before the trip",
       "waiverPending": "Waiver sent, not signed",
+      "waiverNothingSent": "Waiver unsigned, nothing could be sent",
       "medicalReview": "Needs a doctor’s sign-off",
       "medicalNotCleared": "Not cleared by a physician",
       "waiverSealFailed": "Waiver changed after signing",

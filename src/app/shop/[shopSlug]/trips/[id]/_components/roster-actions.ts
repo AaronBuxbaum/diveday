@@ -5,6 +5,7 @@ import {
 } from "@/app/shop/[shopSlug]/divers/[personId]/agency-check-actions";
 import type { AppDb } from "@/db/client";
 import { markPartyPaidAction, previewPartyPaymentAction } from "../party-payment-actions";
+import { pasteListAction } from "../paste-list-actions";
 import {
   confirmDiverIdentityAction,
   repointDiverIdentityAction,
@@ -58,6 +59,7 @@ export async function tripRosterActions({
   return {
     addBookingAction: seatNewDiverAction.bind(null, "departure", shopSlug),
     addExistingDiverAction: seatExistingDiverAction.bind(null, "departure", shopSlug),
+    pasteListAction: pasteListAction.bind(null, shopSlug, tripId),
     addToWaitlistAction: addToWaitlistAction.bind(null, shopSlug, tripId),
     addKnownToWaitlistAction: addKnownDiverToWaitlistAction.bind(null, shopSlug, tripId),
     createDirectTripInvitationAction: createDirectTripInvitationAction.bind(null, shopSlug, tripId),

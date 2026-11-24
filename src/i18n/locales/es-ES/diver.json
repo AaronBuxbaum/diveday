@@ -3981,7 +3981,7 @@
       "tryLiveDemo": "Probar la demo en vivo",
       "settingUp": "Configurando tu centro…",
       "submit": "Crear centro y empezar la prueba",
-      "trialNote": "Gratis durante 2 semanas, sin tarjeta, y nada se apaga cuando termina el plazo.",
+      "trialNote": "Es gratis y sin tarjeta, y solo nos quedamos con el 1 % de los pagos que recibas en DiveDay.",
       "alreadyHaveShop": "¿Ya tienes un centro?",
       "signIn": "Iniciar sesión",
       "errors": {
@@ -4728,6 +4728,7 @@
       "stopLine": "Responde STOP para darte de baja.",
       "courseForms": "{shopName}: firma los formularios del curso {tripTitle} — {url}",
       "readyLink": "Tu preparación: {url}",
+      "seated": "{shopName}: tu plaza del {date} queda reservada. Para prepararte: {url}",
       "meetingPointMoved": "{shopName}: cambiamos el punto de encuentro de {tripTitle}, {date}, {time}.",
       "rescheduled": "{shopName}: cambiamos {tripTitle} al {date}, {time}.",
       "rescheduledSeat": "{shopName}: pasamos tu plaza a {tripTitle}, el {date}, {time}."

@@ -1021,6 +1021,12 @@ export async function settleJoinWaiverDelivery(
     step: JoinSignStep;
     confirmationSent: boolean;
     /**
+     * Which way the confirmation that carried the step went: its email, or
+     * the text with the seat's readiness link (the Sign step is on it). Email
+     * when both went.
+     */
+    channel?: "email" | "sms";
+    /**
      * The provider's id for the confirmation that carried the link. Stored on
      * the waiver's delivery so a bounce on the confirmation flips the waiver
      * to bounced too (issue #2473), which `applyProviderEmailEvent` does for
@@ -1054,7 +1060,8 @@ export async function settleJoinWaiverDelivery(
     await recordWaiverDelivery(tx, {
       shopId: input.shopId,
       waiverRecordId: input.step.waiverRecordId,
-      channel: "email",
+      // mutation-ok: channel is "email", "sms" or undefined, never an empty string, so ?? and || agree
+      channel: input.channel ?? "email",
       delivery: { status: "sent", providerMessageId: input.confirmationProviderMessageId },
       now: input.now,
     });
