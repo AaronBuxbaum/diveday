@@ -1185,6 +1185,7 @@
       "leavesInDays": "El barco sale en {count, plural, one {# día} other {# días}}."
     },
     "addGuest": "Agregar participante",
+    "offerSeats": "{count, plural, one {Ofrecer una plaza} other {Ofrecer plazas}}",
     "quiet": {
       "gear": "Equipo",
       "crew": "Tripulación",
@@ -1193,13 +1194,16 @@
       "sets": "{count, plural, one {# equipo de alquiler} other {# equipos de alquiler}}",
       "noSets": "nada que entregar",
       "noCrew": "nadie todavía",
-      "rollCallAt": "pase de lista en el muelle, {time}",
-      "gettingReady": "Los preparativos empiezan el {day}, el día anterior"
+      "rollCallAt": "pase de lista en el muelle, {time}"
     },
     "filling": {
       "fillLast": "{count, plural, one {Llena la última plaza} other {Llena las últimas #}}",
-      "pastGuests": "{count, plural, one {# participante anterior} other {# participantes anteriores}}",
-      "invite": "Invitar",
+      "offerFirst": "{count, plural, one {Ofrecer una plaza al primero de la lista} other {Ofrecer una plaza a los primeros # de la lista}}",
+      "offerNames": "{count, plural, one {{names} recibe el enlace de reserva por correo.} other {{names} reciben el enlace de reserva por correo.}}",
+      "sendOffers": "{count, plural, one {Enviar la oferta} other {Enviar # ofertas}}",
+      "offerNext": "{count, plural, one {Ofrecer al siguiente de la lista} other {Ofrecer a los siguientes #}}",
+      "share": "Compartir",
+      "shareLine": "{count, plural, one {Invita a # participante anterior o copia el enlace de reserva} other {Invita a # participantes anteriores o copia el enlace de reserva}}",
       "bookingLink": "Enlace de reserva",
       "addYourself": "Agrega un participante tú mismo",
       "addGuests": "Agrega participantes",
@@ -1216,8 +1220,7 @@
       "courseAge": "Edad mínima {age} (el personal verifica las fechas de nacimiento conocidas)",
       "specialty": "Especialidad de {specialty}",
       "nitrox": "Certificación de nitrox",
-      "orHigher": "{level} o superior",
-      "heading": "Esta salida"
+      "orHigher": "{level} o superior"
     },
     "ready": {
       "paperPassesUnavailable": "Los pases en papel están disponibles en Registro mientras las llegadas estén abiertas.",

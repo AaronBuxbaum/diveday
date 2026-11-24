@@ -101,11 +101,66 @@ describe("Fill the last N", () => {
     expect(within(card).queryByRole("button", { name: "Copy link" })).toBeNull();
   });
 
-  it("folds the past guests behind one Invite row", () => {
-    renderCard({
-      pastGuests: { count: 4, line: "Dived Blue Hole before", list: <p>Ana Ruiz</p> },
+  it("folds the past guests and the booking link behind one Share row", () => {
+    const { container } = renderCard({ pastGuests: { count: 4, list: <p>Ana Ruiz</p> } });
+    const share = container.querySelector("details.group\\/share");
+    if (!(share instanceof HTMLDetailsElement)) throw new Error("no Share disclosure");
+    expect(within(share).getByText("Share")).toBeVisible();
+    expect(within(share).getByText("Invite 4 past guests, or copy the booking link")).toBeVisible();
+    // Both controls live inside it, and nowhere else in the card.
+    expect(share.open).toBe(false);
+    expect(within(share).getByText("Ana Ruiz")).toBeInTheDocument();
+    expect(within(share).getByRole("button", { name: "Copy link", hidden: true })).toBeTruthy();
+    expect(screen.getAllByRole("button", { name: "Copy link", hidden: true })).toHaveLength(1);
+  });
+
+  it("opens Share when the page lands on #invite-suggestions (Today's Invite past divers)", () => {
+    window.location.hash = "#invite-suggestions";
+    const { container } = renderCard({ pastGuests: { count: 4, list: <p>Ana Ruiz</p> } });
+    expect(container.querySelector<HTMLDetailsElement>("details.group\\/share")?.open).toBe(true);
+    window.location.hash = "";
+  });
+
+  it("leaves the booking link a plain row when there is nobody to invite, or no leave to", () => {
+    const { container } = renderCard();
+    expect(container.querySelector("details.group\\/share")).toBeNull();
+    expect(screen.getByRole("button", { name: "Copy link" })).toBeVisible();
+    cleanup();
+    renderCard({ canOffer: false, pastGuests: { count: 4, list: <p>Ana Ruiz</p> } });
+    expect(screen.queryByText("Share")).toBeNull();
+    expect(screen.queryByText("Ana Ruiz")).toBeNull();
+    expect(screen.getByRole("button", { name: "Copy link" })).toBeVisible();
+  });
+});
+
+describe("Offer seats, in the fill card", () => {
+  const batch = {
+    interests: [{ interestId: "i1", name: "Ravi Menon", email: "i1@example.com" }],
+    names: "Ravi Menon gets the booking link by email.",
+    send: "Send the offer",
+    next: "Offer the next in line",
+  };
+
+  it("names the batch behind a closed disclosure, which #offer-seats opens", () => {
+    const { container } = renderCard({
+      bulk: { batch, summary: "Offer the first in line a seat" },
     });
-    expect(screen.getByText("4 past guests")).toBeVisible();
-    expect(screen.getByText("Invite")).toBeVisible();
+    const bulk = container.querySelector<HTMLDetailsElement>("details#offer-seats");
+    expect(bulk?.open).toBe(false);
+    expect(screen.getByText("Offer the first in line a seat")).toBeVisible();
+    cleanup();
+    window.location.hash = "#offer-seats";
+    const again = renderCard({ bulk: { batch, summary: "Offer the first in line a seat" } });
+    expect(again.container.querySelector<HTMLDetailsElement>("details#offer-seats")?.open).toBe(
+      true,
+    );
+    expect(screen.getByText(batch.names)).toBeVisible();
+    expect(screen.getByRole("button", { name: "Send the offer" })).toBeEnabled();
+    window.location.hash = "";
+  });
+
+  it("draws no batch with nobody to offer", () => {
+    const { container } = renderCard();
+    expect(container.querySelector("#offer-seats")).toBeNull();
   });
 });

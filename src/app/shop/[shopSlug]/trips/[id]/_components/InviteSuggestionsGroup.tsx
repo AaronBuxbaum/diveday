@@ -31,7 +31,7 @@ export function InviteSuggestionsGroup({
   const renderPerson = (person: InviteSuggestions["shown"][number]) => (
     <li
       key={person.personId}
-      className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 px-4 py-2.5 text-sm sm:px-5"
+      className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 px-4 py-2.5 text-sm sm:px-6"
     >
       <p className="min-w-0">
         <span className="font-medium text-base">{person.fullName}</span>{" "}
@@ -44,7 +44,8 @@ export function InviteSuggestionsGroup({
         <SubmitButton
           pendingLabel={t("trips.addDiver.offerSeating")}
           ariaLabel={t("trips.addDiver.offerSeatAria", { name: person.fullName })}
-          className={buttonClass({ variant: "secondary", size: "sm" })}
+          // Link weight, like every row's offer in the fill card it sits in.
+          className={buttonClass({ variant: "link", size: "sm" })}
         >
           {t("trips.addDiver.offerSeat")}
         </SubmitButton>
@@ -64,7 +65,7 @@ export function InviteSuggestionsGroup({
       </ul>
       {more > 0 ? (
         <details className="group/invite-more">
-          <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 px-4 py-2 text-base font-medium text-primary focus-visible:focus-ring-inset sm:px-5 [&::-webkit-details-marker]:hidden">
+          <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 px-4 py-2 text-base font-medium text-primary focus-visible:focus-ring-inset sm:px-6 [&::-webkit-details-marker]:hidden">
             <DisclosureCaret className="group-open/invite-more:rotate-90" />
             {t("trips.inviteSuggestions.more", { count: more })}
           </summary>

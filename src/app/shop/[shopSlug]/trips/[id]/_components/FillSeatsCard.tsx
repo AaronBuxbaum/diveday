@@ -5,11 +5,13 @@ import { PersonAvatar } from "@/components/PersonAvatar";
 import { ScrollToHash } from "@/components/ScrollToHash";
 import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
+import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { GroupLabel } from "@/components/ui/group-label";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { publicTripPath } from "@/lib/public-routes";
 import { WHO_WANTS_IN_ID } from "@/lib/trip-clock";
+import { BulkOffer, type BulkOfferBatch } from "./BulkOffer";
 import { CopyLinkButton } from "./CopyLinkButton";
 import {
   type OfferDiscountCopy,
@@ -31,15 +33,19 @@ export type WhoWantsInGroup = {
   more?: WhoWantsInRow[];
 };
 
+/** Where the page's "Offer seats" lands: the batch's own disclosure. */
+export const OFFER_SEATS_ID = "offer-seats";
+
 const ROW_CLASS = "flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 sm:px-6";
 const BADGE_CLASS =
   "flex size-10 shrink-0 items-center justify-center rounded-full bg-primary-tint text-sm font-semibold text-primary";
 
 /**
  * **Fill the last N** (ADR 20261117-trip-page-clock, Filling): every way to
- * fill a seat, in one card. Who asked for a seat, each with **Offer a seat**;
- * the past guests worth inviting; the booking link; and adding a guest by
- * hand. An interest reserves nothing and is never ranked by fit (ADR
+ * fill a seat, in one card. Who asked for a seat, each with **Offer a seat**,
+ * and **Offer seats** to the first few of them at once (`bulkOfferCandidates`);
+ * **Share**, which folds the past guests worth inviting and the booking link;
+ * and adding a guest by hand. An interest reserves nothing and is never ranked by fit (ADR
  * 20260813-wait-list-is-a-lead-list): each group keeps the order people asked in.
  *
  * **One place, one permission rule**: Offer a seat and Invite are drawn only
@@ -55,6 +61,7 @@ export function FillSeatsCard({
   heading,
   groups,
   pastGuests,
+  bulk = null,
   canOffer,
   discount,
   addHref,
@@ -68,7 +75,12 @@ export function FillSeatsCard({
   heading: string;
   groups: WhoWantsInGroup[];
   /** The past guests worth inviting, already drawn (`InviteSuggestionsGroup`), with their count. */
-  pastGuests: { count: number; line: string; list: ReactNode } | null;
+  pastGuests: { count: number; list: ReactNode } | null;
+  /**
+   * "Offer seats": the batch the page's primary opens (`#offer-seats`), named
+   * before it is sent; null with nobody to offer.
+   */
+  bulk?: { batch: BulkOfferBatch; summary: string } | null;
   canOffer: boolean;
   discount: OfferDiscountCopy | null;
   /** "Add a guest yourself": where its Add goes; null when the trip takes nobody. */
@@ -124,7 +136,7 @@ export function FillSeatsCard({
           tripTitle={trip.title}
           tripWhen={trip.when}
           copy={copy}
-          discountFields={discount ? <OfferDiscountRider /> : null}
+          discountFields={discount ? <OfferDiscountRider key="discount" /> : null}
           quiet
         />
       ) : null}
@@ -156,6 +168,20 @@ export function FillSeatsCard({
     </li>
   ) : null;
 
+  // Past guests are invited only by a role that may act on the wait list.
+  const past = pastGuests && canOffer ? pastGuests : null;
+  const linkRow = (
+    <>
+      <span className="min-w-0 flex-1 font-semibold">{t("trips.clock.filling.bookingLink")}</span>
+      <CopyLinkButton
+        path={publicTripPath(trip.shopSlug, trip.id)}
+        label={t("trips.detail.copyBookingLink")}
+        copiedLabel={t("words.did.copied")}
+        failedLabel={t("trips.detail.linkCopyFailed")}
+      />
+    </>
+  );
+
   return (
     <section
       id={WHO_WANTS_IN_ID}
@@ -174,7 +200,32 @@ export function FillSeatsCard({
             <OfferDiscountDisclosure copy={discount} />
           </div>
         ) : null}
-        <ul className="divide-y divide-border">
+        {bulk ? (
+          // The page's primary, "Offer seats", lands here, open.
+          <AutoOpenDetails
+            id={OFFER_SEATS_ID}
+            openOnHash={OFFER_SEATS_ID}
+            className="group/bulk scroll-mt-24 px-4 sm:px-6"
+          >
+            <summary className="inline-flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-sm font-medium text-primary [&::-webkit-details-marker]:hidden">
+              {bulk.summary}
+              <DisclosureCaret direction="down" className="size-4 group-open/bulk:rotate-180" />
+            </summary>
+            <div className="pb-4">
+              <BulkOffer
+                batch={bulk.batch}
+                tripId={trip.id}
+                bookingPath={publicTripPath(trip.shopSlug, trip.id)}
+                shopName={trip.shopName}
+                tripTitle={trip.title}
+                tripWhen={trip.when}
+                copy={copy}
+                discountFields={discount ? <OfferDiscountRider key="discount" /> : null}
+              />
+            </div>
+          </AutoOpenDetails>
+        ) : null}
+        <ul className={`divide-y divide-border ${bulk ? "border-t border-border" : ""}`}>
           {addForm ? addRow : null}
           {shown.map((group) => (
             <li key={group.id}>
@@ -195,44 +246,37 @@ export function FillSeatsCard({
             </li>
           ))}
           {carry ? <li className="px-4 pb-4 sm:px-6">{carry}</li> : null}
-          {pastGuests && canOffer ? (
+          {past ? (
             <li>
-              {/* Today's "Invite past divers" lands here, open. */}
-              <AutoOpenDetails openOnHash="invite-suggestions" className="group/past">
+              {/* Today's "Invite past divers" (`#invite-suggestions`) lands here, open. */}
+              <AutoOpenDetails openOnHash="invite-suggestions" className="group/share">
                 <summary
                   className={`${ROW_CLASS} cursor-pointer list-none [&::-webkit-details-marker]:hidden`}
                 >
                   <span aria-hidden="true" className={BADGE_CLASS}>
-                    {pastGuests.count}
+                    ↗
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block font-semibold">
-                      {t("trips.clock.filling.pastGuests", { count: pastGuests.count })}
+                    <span className="block font-semibold">{t("trips.clock.filling.share")}</span>
+                    <span className="block text-sm text-muted">
+                      {t("trips.clock.filling.shareLine", { count: past.count })}
                     </span>
-                    <span className="block text-sm text-muted">{pastGuests.line}</span>
                   </span>
-                  <span className={buttonClass({ variant: "link", size: "sm" })}>
-                    {t("trips.clock.filling.invite")}
-                  </span>
+                  <DisclosureCaret
+                    direction="down"
+                    className="size-5 text-muted group-open/share:rotate-180"
+                  />
                 </summary>
-                <div className="border-t border-border">{pastGuests.list}</div>
+                {bookingLink ? <div className={`${ROW_CLASS} pt-0`}>{linkRow}</div> : null}
+                <div className="border-t border-border">{past.list}</div>
               </AutoOpenDetails>
             </li>
-          ) : null}
-          {bookingLink ? (
+          ) : bookingLink ? (
             <li className={ROW_CLASS}>
               <span aria-hidden="true" className={BADGE_CLASS}>
                 ↗
               </span>
-              <span className="min-w-0 flex-1 font-semibold">
-                {t("trips.clock.filling.bookingLink")}
-              </span>
-              <CopyLinkButton
-                path={publicTripPath(trip.shopSlug, trip.id)}
-                label={t("trips.detail.copyBookingLink")}
-                copiedLabel={t("words.did.copied")}
-                failedLabel={t("trips.detail.linkCopyFailed")}
-              />
+              {linkRow}
             </li>
           ) : null}
           {addForm ? null : addRow}

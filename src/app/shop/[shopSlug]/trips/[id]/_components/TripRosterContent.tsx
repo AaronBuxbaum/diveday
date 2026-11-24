@@ -28,6 +28,7 @@ import { recordPaperCourseFormAction } from "../course-actions";
 import type { PasteListState } from "../paste-list-actions";
 import { AddDiverSection, type SeatRequestContext } from "./AddDiverSection";
 import { ADD_A_BOOKING_ID } from "./add-a-booking-id";
+import { bulkOfferBatch, fillingBulkOffer } from "./bulk-offer";
 import { carryTargetLabel } from "./carry-target-label";
 import { elearningCodesOffered } from "./course-roster-actions";
 import { DealLeadTime } from "./DealLeadTime";
@@ -182,8 +183,6 @@ export type TripRosterContentContext = {
   tripFixes?: readonly TripFix[];
   /** Quiet lines under the ready guests the day before. */
   afterReady?: ReactNode;
-  /** Beside the guests and the fill card at full width (Filling's trip facts). */
-  beside?: ReactNode;
   /**
    * The shop sells this departure somewhere else (`soldElsewhere`): Filling
    * draws no demand banner, past guests or booking link (who asked for this
@@ -436,24 +435,17 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
 
       <TrainingPlanWithDepth context={context} />
       {context.phase === "filling" ? (
-        // One reading column and a quiet rail: the guests, then the ways to
-        // fill a seat; the trip's facts beside them, under them on a phone.
-        <div
-          data-filling-layout
-          // The rail only beside something: with no guest and no fill card the facts lead.
-          className="grid items-start gap-10 lg:gap-8 lg:has-[[data-fill-seats],[data-guest-folios]]:grid-cols-[minmax(0,1fr)_20rem]"
-        >
-          <div className="min-w-0 space-y-10">
-            {guestsLead ? (
-              rosterSection
-            ) : (
-              // With nobody booked the list draws nothing, so it takes no gap
-              // (`mb-0` over the stack's): the fill card leads the column.
-              <div className="mb-0">{rosterSection}</div>
-            )}
-            {fillCard}
-          </div>
-          {context.beside}
+        // One reading column: the guests, then the ways to fill a seat. The
+        // trip's facts are a line under the sentence (`PhaseHeading`).
+        <div data-filling-layout className="space-y-10">
+          {guestsLead ? (
+            rosterSection
+          ) : (
+            // With nobody booked the list draws nothing, so it takes no gap
+            // (`mb-0` over the stack's): the fill card leads the column.
+            <div className="mb-0">{rosterSection}</div>
+          )}
+          {fillCard}
         </div>
       ) : (
         rosterSection
@@ -504,7 +496,18 @@ function FillingCard({
   // "Add a guest" is the page's one primary, beside the sentence, so the
   // card's own add row is drawn only to hold the open form (`?add=1`).
   const addOpen = acceptsDivers && Boolean(context.addBand?.open);
-  const addHref = addOpen ? (context.addGuestHref ?? null) : null;
+  // "Offer seats" takes the primary's place while there is somebody to offer
+  // (`PhaseHeading` reads the same batch); adding by hand is then a row here.
+  const offer = fillingBulkOffer({
+    guests,
+    canOffer: acceptsDivers && mayInviteFromWaitlist,
+    soldElsewhere: elsewhere,
+    t,
+    locale,
+    timezone,
+  });
+  const addHref =
+    acceptsDivers && (addOpen || offer.length > 0) ? (context.addGuestHref ?? null) : null;
   const carry =
     // **One waiting diver is worth carrying too** (fourth review, item 31).
     // The demand banner carries the list instead, except sold elsewhere,
@@ -546,14 +549,19 @@ function FillingCard({
       }
       groups={groups}
       canOffer={acceptsDivers && mayInviteFromWaitlist}
+      bulk={
+        offer.length > 0
+          ? {
+              batch: bulkOfferBatch(offer, t, locale),
+              summary: t("trips.clock.filling.offerFirst", { count: offer.length }),
+            }
+          : null
+      }
       discount={mayDiscount ? offerDiscountCopy(t, currency, locale) : null}
       pastGuests={
         !elsewhere && acceptsDivers && guests.inviteSuggestions
           ? {
               count: guests.inviteSuggestions.total,
-              line: t("trips.inviteSuggestions.heading", {
-                site: guests.inviteSuggestions.siteName,
-              }),
               list: (
                 <InviteSuggestionsGroup
                   suggestions={guests.inviteSuggestions}

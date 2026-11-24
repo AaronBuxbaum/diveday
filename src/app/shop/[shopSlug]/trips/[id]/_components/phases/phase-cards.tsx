@@ -35,21 +35,19 @@ function FactList({ rows }: { rows: { key: string; label: string; value: ReactNo
 
 /**
  * **The trip's facts, while it fills** (ADR 20261117-trip-page-clock, Filling):
- * crew, plan, price and who can book, each with its own Edit into Edit trip.
+ * crew, plan, price and who can book, one quiet line under the sentence. Each
+ * value is the door to its own section of Edit trip; nothing is edited here.
  * Facts only; what is missing for the day is the fix list's, from Getting ready.
  */
-export function TripFactsCard({
+export function TripFactsLine({
   crew,
   plan,
   price,
   whoCanBook,
   editHref,
-  next = null,
   locale,
   t,
 }: {
-  /** What comes next ("Getting ready starts …"), the list's last row. */
-  next?: string | null;
   crew: string[];
   plan: string[];
   price: string | null;
@@ -59,68 +57,34 @@ export function TripFactsCard({
   locale: string;
   t: StaffTranslator;
 }) {
-  const notSet = <span className="text-muted">{t("trips.clock.filling.notSet")}</span>;
-  const edit = (section: string, label: string) => (
-    <Link
-      href={editHref(section)}
-      className={`${LINK} shrink-0`}
-      aria-label={`${t("trips.clock.filling.edit")} · ${label}`}
-    >
-      {t("trips.clock.filling.edit")}
-    </Link>
-  );
-  const rows = [
-    { key: "crew", section: "crew", label: t("trips.clock.filling.crew"), value: crew },
-    { key: "plan", section: "dives", label: t("trips.clock.filling.plan"), value: plan },
-  ].map((row) => ({
-    key: row.key,
-    label: row.label,
-    value: (
-      <span className="flex items-baseline justify-between gap-x-3">
-        <span className="min-w-0 flex-1">
-          {row.value.length > 0 ? listOf(locale, row.value) : notSet}
-        </span>
-        {edit(row.section, row.label)}
-      </span>
-    ),
-  }));
-  rows.push(
+  const notSet = t("trips.clock.filling.notSet");
+  const facts = [
+    { section: "crew", label: t("trips.clock.filling.crew"), value: listOf(locale, crew) },
+    { section: "dives", label: t("trips.clock.filling.plan"), value: listOf(locale, plan) },
+    { section: "about", label: t("trips.clock.filling.price"), value: price ?? "" },
     {
-      key: "price",
-      label: t("trips.clock.filling.price"),
-      value: (
-        <span className="flex items-baseline justify-between gap-x-3">
-          <span className="min-w-0 flex-1">{price ?? notSet}</span>
-          {edit("about", t("trips.clock.filling.price"))}
-        </span>
-      ),
-    },
-    {
-      key: "who",
+      section: "requirements",
       label: t("trips.clock.filling.whoCanBook"),
-      value: (
-        <span className="flex items-baseline justify-between gap-x-3">
-          <span className="min-w-0 flex-1">{whoCanBook}</span>
-          {edit("requirements", t("trips.clock.filling.whoCanBook"))}
-        </span>
-      ),
+      value: whoCanBook,
     },
-  );
-  if (next)
-    rows.push({ key: "next", label: t("trips.clock.quiet.next"), value: <span>{next}</span> });
+  ];
   return (
-    // No card: the guests and the fill card are the page's two; these facts
-    // are a quiet list beside them, under one rule on a phone.
-    <section
-      aria-labelledby="trip-facts-heading"
-      data-trip-facts
-      className="space-y-3 border-t border-border pt-6 sm:max-w-md lg:border-t-0 lg:pt-4"
-    >
-      <h2 id="trip-facts-heading" className={HEADING}>
-        {t("trips.clock.filling.heading")}
-      </h2>
-      <FactList rows={rows} />
-    </section>
+    <dl data-trip-facts className="flex flex-wrap gap-x-6 gap-y-1 text-sm">
+      {facts.map((fact) => (
+        <div key={fact.section} className="flex min-w-0 gap-x-1.5">
+          <dt className="shrink-0 text-muted">{fact.label}</dt>
+          <dd className="min-w-0 [overflow-wrap:anywhere]">
+            <Link
+              href={editHref(fact.section)}
+              aria-label={`${t("trips.clock.filling.edit")} · ${fact.label}: ${fact.value || notSet}`}
+              className={`underline decoration-border underline-offset-4 hover:decoration-foreground ${fact.value ? "" : "text-muted"}`}
+            >
+              {fact.value || notSet}
+            </Link>
+          </dd>
+        </div>
+      ))}
+    </dl>
   );
 }
 

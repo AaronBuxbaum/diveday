@@ -157,6 +157,45 @@ test.describe("staff and the list", () => {
     );
   });
 
+  test("Offer seats names the first in line, holds one send, and is spent once it leaves", async ({
+    page,
+    request,
+  }) => {
+    // The hold's eight seconds, twice over: one undone, one let go.
+    test.setTimeout(60_000);
+    await joinTheList(request, {
+      fullName: "Nora Quinn",
+      email: "nora.e2e@example.com",
+      certificationLevel: "open_water",
+    });
+    await openWhoWantsIn(page);
+    // The page's one primary is the offer while somebody is in line; adding
+    // by hand stays a row in the card.
+    const primary = page.locator("[data-filling-primary]");
+    await expect(primary).toHaveCount(1);
+    await expect(primary).toHaveText(/^Offer (a seat|seats)$/);
+    const batch = page.locator("#offer-seats");
+    await expect(batch.locator("[data-bulk-offer]")).toBeHidden();
+    await primary.click();
+    // Opening it sends nothing: it names who one press will write to.
+    const panel = batch.locator("[data-bulk-offer]");
+    await expect(panel).toBeVisible();
+    await expect(panel.locator("p").first()).toContainText(/booking link by email\.$/);
+    const send = panel.getByRole("button", { name: /^Send (the offer|\d offers)$/ });
+    await expect(send.locator("xpath=ancestor::form")).toHaveAttribute("data-hydrated", "true");
+    await send.click();
+    // Held, with Undo: undone, nothing left and the batch is whole again.
+    await panel.getByRole("button", { name: staff("shared.sendHold.undo") }).click();
+    await expect(send).toBeEnabled();
+    // Let go, the offers are on the rows, and the batch is spent: its button
+    // is disabled, or gone with the panel once nobody is left in line.
+    await send.click();
+    await expect(page.getByText(/offered just now/).first()).toBeVisible({
+      timeout: HELD_SEND_TIMEOUT_MS,
+    });
+    await expect(panel.locator("form button[type=submit]:enabled")).toHaveCount(0);
+  });
+
   test("a send that fails at Stripe is recorded on the trip, not lost", async ({
     page,
     request,
