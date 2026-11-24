@@ -52,7 +52,7 @@
   "hub": {
     "eyebrow": "Cambiarte a DiveDay",
     "title": "Elige cómo preparar tu próxima salida de buceo",
-    "description": "Elige la herramienta que usas para comparar el trabajo del equipo, revisar los datos y planear una prueba antes del cambio.",
+    "description": "Elige la herramienta que usas para comparar el trabajo del equipo, revisar los datos y planear una primera salida antes del cambio.",
     "spreadsheetTitle": "Vienes de una hoja de cálculo",
     "spreadsheetDescription": "Convierte tu lista en reservas, preparación y pase de lista, empezando por una muestra de la hoja.",
     "switchingFrom": "Cambiando desde {competitor}",

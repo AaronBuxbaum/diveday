@@ -65,7 +65,7 @@ async function PricingBody({ locale, offer }: { locale: DiverLocale; offer: Plan
   "use cache";
   cacheLife("max");
   const t = diverTranslator(locale);
-  const { figure, cadence } = offerFigure(t, offer, locale);
+  const { figure, cadence, params } = offerFigure(t, offer, locale);
   // Generated from the migration-guides registry, never hand-listed, so a new
   // guide can't be silently omitted from this answer.
   const competitors = cachedListFormat(locale, { type: "conjunction" }).format(
@@ -209,9 +209,10 @@ async function PricingBody({ locale, offer }: { locale: DiverLocale; offer: Plan
                   t("marketing.pricing.notes.note1"),
                   t("marketing.pricing.notes.note2"),
                   ...earlyAccessPrice.includedKeys.map((key) => t(key)),
-                  // The try-it-on-one-trip line (Aaron, 2026-11-24): free with
-                  // no card, and the 1% is the whole price.
-                  t("marketing.pricing.trialNote"),
+                  // The try-it-on-one-trip line (Aaron, 2026-11-24): its fee
+                  // comes from the configured offer, never a figure in the
+                  // bundle (ADR 20261124-free-shops-no-trial).
+                  t("marketing.pricing.priceNote", params),
                 ]}
               />
               <Link

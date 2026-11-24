@@ -217,9 +217,9 @@ test.describe("a shop that stops filling nitrox", () => {
 });
 
 // What a *brand new* shop starts with, which no seeded fixture can answer —
-// so this one really does onboard a trial shop rather than take a seeded
+// so this one really does onboard a real shop rather than take a seeded
 // `privateShop`. Its slug is unique per run: a fixed one collides with itself
-// the moment the same database sees this spec twice, and a trial shop is a
+// the moment the same database sees this spec twice, and an onboarded shop is a
 // real shop that no reset ever clears.
 test("a freshly onboarded shop starts without nitrox, and turning it on unlocks the price field", async ({
   page,
@@ -240,8 +240,8 @@ test("a freshly onboarded shop starts without nitrox, and turning it on unlocks 
   await page
     .locator('input[name="ownerPassword"]')
     .filter({ visible: true })
-    .fill("trial-pass-123");
-  await page.getByRole("button", { name: "Create shop & start trial" }).click();
+    .fill("owner-pass-123");
+  await page.getByRole("button", { name: "Create your shop" }).click();
   await expect(page).toHaveURL(new RegExp(`/shop/${slug}`));
 
   // Most shops don't fill nitrox: the row is there, unticked, with its price

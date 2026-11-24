@@ -68,7 +68,7 @@ test("a second shop's owner reaches none of Blue Mantis's staff surfaces", async
   // Mint the second tenant through the real sign-up flow — it ends with us
   // signed in as that shop's owner, which is exactly the actor this spec is
   // about. The slug is unique per run because an onboarded shop is a real
-  // trial shop (`isDemo: false` in src/app/onboard/actions.ts), so unlike a
+  // shop (`isDemo: false` in src/app/onboard/actions.ts), so unlike a
   // minted demo it survives `/api/test/reset`'s `purgeMintedDemoShops`; the
   // worker's database is in-memory and per-run, so it costs nothing to leave
   // behind. Same approach as onboard.spec.ts.
@@ -84,8 +84,8 @@ test("a second shop's owner reaches none of Blue Mantis's staff surfaces", async
   await page
     .locator('input[name="ownerPassword"]')
     .filter({ visible: true })
-    .fill("trial-pass-123");
-  await page.getByRole("button", { name: "Create shop & start trial" }).click();
+    .fill("owner-pass-123");
+  await page.getByRole("button", { name: "Create your shop" }).click();
   await expect(page).toHaveURL(new RegExp(`/shop/${unique}$`));
   // Staff chrome does render — for their *own* shop. Without this the 404s
   // below could just as well mean "this account is not staff anywhere": the

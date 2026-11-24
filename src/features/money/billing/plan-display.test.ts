@@ -26,4 +26,13 @@ describe("plan figures", () => {
       planCopyParams({ plan: "percent_of_volume", monthlyCents: 2_900, basisPoints: 300 }, "en-US"),
     ).toMatchObject({ base: "$29", hasBase: "yes" });
   });
+
+  it("says whether the plan keeps a percent at all", () => {
+    expect(
+      planCopyParams({ plan: "percent_of_volume", monthlyCents: 0, basisPoints: 100 }, "en-US"),
+    ).toMatchObject({ hasPercent: "yes" });
+    expect(
+      planCopyParams({ plan: "flat_monthly", monthlyCents: 9_900, basisPoints: 0 }, "en-US"),
+    ).toMatchObject({ hasPercent: "no", hasBase: "yes" });
+  });
 });

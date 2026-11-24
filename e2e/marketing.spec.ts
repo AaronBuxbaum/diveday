@@ -1,10 +1,18 @@
+import { e2eBuildEnv } from "../scripts/e2e-build-env.mjs";
+import { planCopyParams } from "../src/features/money/billing";
+import { pricingConfig } from "../src/features/money/pricing-flags";
 import { diverTranslator } from "../src/i18n/messages";
+import { configuredPricing } from "../src/lib/billing/pricing-plans";
 import { FEATURE_PAGE_SLUGS, featurePagePath } from "../src/lib/feature-pages";
 import { capabilityGroup, earlyAccessPrice, productCapabilityIndex } from "../src/lib/marketing";
 import { MIGRATION_GUIDES } from "../src/lib/migration-guides";
 import { SWITCH_EMAIL } from "../src/lib/platform-mail";
 import { expect, test } from "./fixtures";
+
 import { mintOnboardFormPath } from "./setup-link";
+
+/** The offer the e2e build serves (`PRICING_*` in `e2eBuildEnv`), as the copy's figures. */
+const offerParams = planCopyParams(configuredPricing(pricingConfig(e2eBuildEnv())), "en-US");
 
 /**
  * Every public "Get set up" door: the set-up request form, carrying the tag of
@@ -593,16 +601,16 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   await expect(
     page.getByText("Today’s price, locked for one year for founding shops."),
   ).toBeVisible();
-  // The trial's own terms, once, in the notes beside the price: try it on one
-  // trip, free, no card, and 1% only of payments taken in DiveDay (Aaron,
-  // 2026-11-24; docs/product/marketing.md). The FAQ's trial row went with the
-  // visual review of 2026-10-24 (B11), and card fees are the invoice's own row.
-  // No timed trial and no paid plan, anywhere on the page.
-  const trialTerms = page.getByText(diverTranslator("en-US")("marketing.pricing.trialNote"), {
-    exact: true,
-  });
-  await expect(trialTerms).toHaveCount(1);
-  await expect(page.getByText(/free for 2 weeks|paid plan/i)).toHaveCount(0);
+  // The price note, once, in the notes beside the price: try it on one trip,
+  // with the fee taken from the configured offer, never a figure in the bundle
+  // (ADR 20261124-free-shops-no-trial; docs/product/marketing.md). There is no
+  // trial, so no timed window and no paid plan, anywhere on the page.
+  const priceNote = page.getByText(
+    diverTranslator("en-US")("marketing.pricing.priceNote", offerParams),
+    { exact: true },
+  );
+  await expect(priceNote).toHaveCount(1);
+  await expect(page.getByText(/free for 2 weeks|two-week trial|paid plan/i)).toHaveCount(0);
   await expect(page.getByText(/Card fees are Stripe’s|Payment-processing fees/)).toHaveCount(0);
   // The offline row is gone from this page's FAQ, deliberately — the claim
   // lives on the boat manifest page, asserted above.
@@ -684,12 +692,12 @@ test("public marketing pages lead to the product and pricing details", async ({ 
     .filter({ hasText: /^(Try the live demo|Get set up)$/ });
   await expect(priceHeroDoors.first()).toHaveText("Try the live demo");
   await expect(priceHeroDoors.nth(1)).toHaveText("Get set up");
-  // The trial terms are a sentence, not a third door. When a page owes a
+  // The price note is a sentence, not a third door. When a page owes a
   // reader a fact at a door it states it rather than opening another one
   // (docs/product/marketing.md, "The budget binds controls, not facts") — and
   // this assertion is what stops the note growing a "See the terms" link that
   // would re-order the two above it.
-  await expect(trialTerms.locator("a, button")).toHaveCount(0);
+  await expect(priceNote.locator("a, button")).toHaveCount(0);
 
   // The page closes on the number it opened with, and that closing door is
   // tagged apart from the hero's. Without it there was no second door below
@@ -828,7 +836,7 @@ test("the setup link opens the form, which answers the hesitation it creates", a
   const signUpForm = page.locator('form:has(input[name="ownerPassword"])');
   await expect(signUpForm).toBeVisible();
   await expect(signUpForm.locator('input[name="source"]')).toHaveCount(0);
-  // The footer's demo door stays link weight, so "Create shop & start trial"
+  // The footer's demo door stays link weight, so "Create your shop"
   // is still the page's one primary (issue #1956).
   const demoDoor = page.getByRole("main").getByRole("button", { name: "Try the live demo" });
   await expect(demoDoor).toBeVisible();
@@ -843,15 +851,17 @@ test("the setup link opens the form, which answers the hesitation it creates", a
 
   // Asking for a password is the moment of maximum hesitation, so the door
   // answers it in one sentence, not the four claims this line used to join
-  // together (ADR 20260827-first-light, decision 1): free, no card, and the 1%
-  // (Aaron, 2026-11-24), with no window to run out.
+  // together (ADR 20260827-first-light, decision 1): what it costs, from the
+  // configured offer (ADR 20261124-free-shops-no-trial), with no window to run out.
   await expect(
-    page.getByText(diverTranslator("en-US")("account.onboard.trialNote"), { exact: true }),
+    page.getByText(diverTranslator("en-US")("account.onboard.priceNote", offerParams), {
+      exact: true,
+    }),
   ).toBeVisible();
   await expect(page.getByText("No card, no setup fee.")).toHaveCount(0);
   await expect(page.getByText("Your records are ready from day one.")).toHaveCount(0);
   await expect(page.getByText("Real support, one email away.")).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Create shop & start trial" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Create your shop" })).toBeVisible();
 });
 
 test("a page's tag reaches the set-up request form, and an unknown one is bucketed", async ({

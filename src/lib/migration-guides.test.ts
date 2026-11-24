@@ -18,7 +18,9 @@ it.each(DIVER_LOCALES)("keeps FareHarbor cutover timing conditional in %s", (loc
     .map((key) => translate(key))
     .join(" ");
   expect(copy).toContain(locale === "en-US" ? "reconcile" : "reconcilia");
-  expect(copy).toContain(locale === "en-US" ? "trial" : "prueba");
+  // A first trip, never a timed trial (ADR 20261124-free-shops-no-trial).
+  expect(copy).toContain(locale === "en-US" ? "one trip" : "ciclo de salidas");
+  expect(copy).not.toMatch(locale === "en-US" ? /\btrial\b/i : /\b(una|la) prueba\b/i);
   expect(copy).not.toContain(translate("marketing.guides.shared.cutover.step4.title"));
   expect(copy).not.toContain(translate("marketing.guides.shared.cutover.step3.title"));
 });
@@ -232,7 +234,7 @@ describe("migration guides", () => {
     expect(guide?.sources.every(({ url }) => /peekpro.com|peek.com/.test(url))).toBe(true);
   });
 
-  it("replaces fixed migration times with a sample and trip trial", () => {
+  it("replaces fixed migration times with a sample and one trip", () => {
     for (const guide of MIGRATION_GUIDES) {
       const copy = [
         guide.heroLede,
@@ -242,7 +244,8 @@ describe("migration guides", () => {
         .map((key) => en(key))
         .join(" ");
       expect(copy).not.toMatch(/an afternoon|one sitting|without downtime/);
-      expect(copy).toMatch(/trial/i);
+      expect(copy).toMatch(/one trip|first trip/i);
+      expect(copy).not.toMatch(/\btrial\b/i);
     }
   });
 
