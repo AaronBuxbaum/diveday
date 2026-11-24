@@ -36,7 +36,7 @@ test("pastes a trip's list, previews it, and seats who fits", async ({ page }) =
         "Paste Ben\t\t+1 305 555 0101",
         "Paste Carla\t\t",
         "Paste Dario\t\t",
-        "Total: 4\t\t",
+        "4\t\t",
       ].join("\n"),
     );
   await band.getByRole("button", { name: t("trips.pasteList.read") }).click();
@@ -44,6 +44,8 @@ test("pastes a trip's list, previews it, and seats who fits", async ({ page }) =
   const preview = band.getByTestId("paste-list-preview");
   await expect(preview.getByText("4 people to add")).toBeVisible();
   await expect(preview.getByText("1 row without a name left out")).toBeVisible();
+  await expect(preview.getByTestId("paste-list-skipped")).toHaveText("4");
+  await expect(preview.getByText(t("trips.pasteList.linksGo"))).toBeVisible();
   await expect(preview.getByText("Paste Dario")).toBeVisible();
 
   await preview.getByRole("button", { name: "Add 4 people" }).click();

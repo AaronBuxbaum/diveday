@@ -131,6 +131,30 @@ describe("seatPastedList", () => {
     expect(martaSeat?.unconfirmed).toBeNull();
   });
 
+  it("seats a second name on a shared inbox with the inbox as the seat's address", async () => {
+    const { db, shop, open, actorPersonId } = await context();
+
+    const outcomes = await seatPastedList(db, {
+      shopId: shop.id,
+      tripId: open.id,
+      actorPersonId,
+      rows: [
+        { row: 1, fullName: "Ana Lopez", email: "a@x.test", choice: "new" },
+        { row: 2, fullName: "Leo Lopez", email: "a@x.test", choice: "new" },
+      ],
+    });
+
+    const leo = outcomes[1];
+    if (!leo?.ok) throw new Error("Leo was not seated");
+    const [seat] = await db
+      .select({ deliveryEmail: bookings.deliveryEmail, email: people.email })
+      .from(bookings)
+      .innerJoin(people, eq(people.id, bookings.personId))
+      .where(eq(bookings.id, leo.bookingId));
+    // Leo's record holds no address; the roster reads the seat's, which is the inbox.
+    expect(seat).toEqual({ deliveryEmail: "a@x.test", email: null });
+  });
+
   it("holds a seat picked from a namesake whose name disagrees, and keeps going", async () => {
     const { db, shop, open, actorPersonId } = await context();
     const namesake = await onFile("Bruno Quillfeathers");

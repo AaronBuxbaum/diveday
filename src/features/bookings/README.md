@@ -30,6 +30,8 @@ payment for the seat (`money`) and the trip itself (`trips`).
 - A staff-seated diver hears about the seat on every contact on file (email, and a text when
   their number can take one), once, never retried; `reached` says which.
 - A pasted list seats each person on a booking of their own; a name on file never stops the
-  list, and a record is chosen only from what that row's preview offered.
+  list, and a record is chosen only from what that row's preview offered. Reading it never
+  drops a person: a name with letters is seated, and a repeat is collapsed only when it carries
+  an email or a phone.
 - Admission is weaker than readiness: nothing here refuses a diver readiness would clear.
 - Codes and deals both resolve in `bookSpot`, and Stripe owns the arithmetic.

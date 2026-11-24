@@ -90,12 +90,33 @@ describe("readPastedList", () => {
     expect(read.people[0]).toMatchObject({ fullName: "Ana López", email: "ana@example.com" });
   });
 
-  it("skips rows with no name to seat, and counts them", () => {
-    const read = people(
-      "Name,Email\nAna López,ana@example.com\n,orphan@example.com\n12,\n---,\nTotal: 4,\n",
-    );
+  it("skips rows with no name to seat, and says what each one held", () => {
+    const read = people("Name,Email\nAna López,ana@example.com\n,orphan@example.com\n12,\n---,\n");
     expect(read.people.map((person) => person.fullName)).toEqual(["Ana López"]);
-    expect(read.skipped).toBe(4);
+    expect(read.skipped).toEqual([
+      { row: 3, text: "orphan@example.com" },
+      { row: 4, text: "12" },
+      { row: 5, text: "---" },
+    ]);
+  });
+
+  it("seats a name with a digit in it, since only a row with no letters is no one", () => {
+    const read = people("Ana López 2\nSam (+1)\nBen Ortiz\n");
+    expect(read.people.map((person) => person.fullName)).toEqual([
+      "Ana López 2",
+      "Sam (+1)",
+      "Ben Ortiz",
+    ]);
+    expect(read.skipped).toEqual([]);
+  });
+
+  it("keeps two people with one name and no contact, since nothing says they are one", () => {
+    const read = people("Maria Garcia\nMaria Garcia\n");
+    expect(read.people.map((person) => [person.row, person.fullName])).toEqual([
+      [1, "Maria Garcia"],
+      [2, "Maria Garcia"],
+    ]);
+    expect(read.duplicates).toBe(0);
   });
 
   it("keeps a person whose contact cannot be read, and says which was left off", () => {

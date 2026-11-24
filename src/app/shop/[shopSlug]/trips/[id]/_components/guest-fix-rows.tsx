@@ -175,9 +175,10 @@ function seatOf(entry: RosterEntry, context: RosterRowContext): Seat {
   const partyLead =
     Boolean(booking.partyLeadBookingId) ||
     rows.roster.some((other) => other.booking.partyLeadBookingId === booking.id);
-  // One tap sends the link only to a guest a link can reach; a party's or a
-  // counter guest's release is signed through its queue, on the opened guest.
-  const reachable = Boolean(person.email) || rows.textableBookings.has(booking.id);
+  // One tap sends the link only to a guest a link can reach (the seat's own
+  // word, `rosterSeat`); a party's or a counter guest's release is signed
+  // through its queue, on the opened guest.
+  const { reachable } = seat;
   const control = seat.waiverControl;
   const waiverSendable = Boolean(
     control.action && reachable && !partyLead && !seat.identityUnconfirmed,

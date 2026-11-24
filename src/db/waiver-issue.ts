@@ -1060,6 +1060,7 @@ export async function settleJoinWaiverDelivery(
     await recordWaiverDelivery(tx, {
       shopId: input.shopId,
       waiverRecordId: input.step.waiverRecordId,
+      // mutation-ok: channel is "email", "sms" or undefined, never an empty string, so ?? and || agree
       channel: input.channel ?? "email",
       delivery: { status: "sent", providerMessageId: input.confirmationProviderMessageId },
       now: input.now,

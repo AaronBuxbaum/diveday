@@ -9,6 +9,7 @@ import {
   type PasteCandidate,
   type PastedPerson,
   type PastedSeatOutcome,
+  type PastedSkip,
   type PasteListRefusal,
   readPastedList,
   seatPastedList,
@@ -41,7 +42,8 @@ export type PasteListState =
       step: "preview";
       text: string;
       rows: PasteListPreviewRow[];
-      skipped: number;
+      /** Each row left out for having no name to seat, as its cells read. */
+      skipped: PastedSkip[];
       duplicates: number;
     }
   | { step: "seated"; outcomes: PastedSeatOutcome[] };

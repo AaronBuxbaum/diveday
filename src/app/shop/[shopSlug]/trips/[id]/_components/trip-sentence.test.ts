@@ -23,7 +23,7 @@ function say(over: Partial<TripSentenceInput>) {
       soldElsewhere: false,
       guests: 11,
       here: 2,
-      blocked: 0,
+      notReady: 0,
       notBack: 0,
       stage: null,
       homeSaidAt: null,
@@ -57,12 +57,12 @@ describe("tripSentence", () => {
       now: new Date("2026-11-11T15:00:00.000Z"),
       soldElsewhere: true,
     };
-    expect(say({ ...filling, booked: 10, guests: 10, blocked: 2 })).toEqual({
+    expect(say({ ...filling, booked: 10, guests: 10, notReady: 2 })).toEqual({
       headline: "8 of 10 guests ready. The boat leaves in 5 days.",
       emphasis: null,
       sub: "10 of 14 booked",
     });
-    expect(say({ ...filling, booked: 0, guests: 0, blocked: 0 })).toEqual({
+    expect(say({ ...filling, booked: 0, guests: 0, notReady: 0 })).toEqual({
       headline: "No guests booked. The boat leaves in 5 days.",
       emphasis: null,
       sub: null,
@@ -70,15 +70,17 @@ describe("tripSentence", () => {
   });
 
   it("Getting ready: who is not ready, and when they meet", () => {
-    expect(say({ phase: "ready", now: new Date("2026-11-15T15:00:00.000Z"), blocked: 2 })).toEqual({
-      headline: "2 guests aren’t ready yet. The boat leaves tomorrow at 9:00 AM.",
-      emphasis: "2 guests",
-      sub: "11 guests · at the dock by 8:30 AM",
-    });
+    expect(say({ phase: "ready", now: new Date("2026-11-15T15:00:00.000Z"), notReady: 2 })).toEqual(
+      {
+        headline: "2 guests aren’t ready yet. The boat leaves tomorrow at 9:00 AM.",
+        emphasis: "2 guests",
+        sub: "11 guests · at the dock by 8:30 AM",
+      },
+    );
   });
 
   it("Check-in: who can't board, minutes to leave, and who is here", () => {
-    expect(say({ blocked: 2 })).toEqual({
+    expect(say({ notReady: 2 })).toEqual({
       headline: "2 guests can’t board yet. The boat leaves in 50 minutes.",
       emphasis: "2 guests",
       sub: "2 of 11 here · at the dock by 8:30 AM",

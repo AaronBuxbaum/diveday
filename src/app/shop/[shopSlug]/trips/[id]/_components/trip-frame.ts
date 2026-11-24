@@ -1,4 +1,3 @@
-import { rosterRowIsBlocked } from "@/features/boarding/roster-filters";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { dockCallAt } from "@/lib/dock-call";
 import { isSameCalendarDay } from "@/lib/format";
@@ -7,6 +6,7 @@ import {
   type MeetingPointTripRow,
   meetingPointOfRows,
 } from "@/lib/meeting-point";
+import type { ReadinessResult } from "@/lib/readiness";
 import {
   CLOCK_PHASES,
   type ClockPhase,
@@ -63,10 +63,7 @@ export function tripFrame({
   };
   shop: MeetingPointShopRow & { timezone: string; dockCallMinutes: number };
   roster: readonly RosterRow[];
-  readiness: ReadonlyMap<
-    string,
-    { readiness?: Parameters<typeof rosterRowIsBlocked>[0] } | undefined
-  >;
+  readiness: ReadonlyMap<string, { readiness?: ReadinessResult } | undefined>;
   /** Seats recorded not back aboard and not counted since. */
   notBack: number;
   askedPhase: string | undefined;
@@ -79,8 +76,10 @@ export function tripFrame({
   const shown: ClockPhase = shownClockPhase(askedPhase, current);
   const active = roster.filter(({ booking }) => booking.status !== "no_show");
   const here = active.filter((entry) => entry.checkedIn).length;
-  const blocked = active.filter(({ booking }) =>
-    rosterRowIsBlocked(readiness.get(booking.id)?.readiness),
+  // Fails closed: a guest is ready only on a reading that says so, and a seat
+  // with no reading (one the read missed) counts as not ready, never as ready.
+  const notReady = active.filter(
+    ({ booking }) => readiness.get(booking.id)?.readiness?.status !== "ready",
   ).length;
   const capacity = seatsOnSale(trip).capacity;
   const elsewhere = soldElsewhere(trip);
@@ -99,7 +98,7 @@ export function tripFrame({
      * departure sold elsewhere, the guests, ready then not.
      */
     bar: elsewhere
-      ? { booked: active.length - blocked, capacity: active.length }
+      ? { booked: active.length - notReady, capacity: active.length }
       : { booked: trip.booked, capacity },
     /** When guests are wanted at the dock: the shop's call, else the departure. */
     dockBy: dockBy ?? nextStartsAt,
@@ -143,7 +142,7 @@ export function tripFrame({
         soldElsewhere: elsewhere,
         guests: active.length,
         here,
-        blocked,
+        notReady,
         notBack,
         stage: boatStageOf(clock),
         homeSaidAt: finalHomeSaid(clock) ? (clock.stage?.recordedAt ?? null) : null,

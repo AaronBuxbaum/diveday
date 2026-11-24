@@ -66,6 +66,8 @@ export type PasteListCopy = {
   onFileWith: string;
   droppedEmail: string;
   droppedPhone: string;
+  /** Said above the add button: everybody on the list is about to be contacted. */
+  linksGo: string;
   seat: Counted;
   seating: string;
   startOver: string;
@@ -198,8 +200,17 @@ function PasteListRound({
         <input type="hidden" name="list" value={state.text} />
         <div className="text-sm">
           <p className="font-semibold">{count(copy.toAdd, state.rows.length, locale)}</p>
-          {state.skipped > 0 ? (
-            <p className="text-muted">{count(copy.skipped, state.skipped, locale)}</p>
+          {state.skipped.length > 0 ? (
+            <>
+              <p className="text-muted">{count(copy.skipped, state.skipped.length, locale)}</p>
+              <ul className="text-muted" data-testid="paste-list-skipped">
+                {state.skipped.map((skip) => (
+                  <li key={skip.row} className="break-words">
+                    {skip.text}
+                  </li>
+                ))}
+              </ul>
+            </>
           ) : null}
           {state.duplicates > 0 ? (
             <p className="text-muted">{count(copy.duplicates, state.duplicates, locale)}</p>
@@ -253,6 +264,7 @@ function PasteListRound({
             </li>
           ))}
         </ul>
+        <p className="text-sm text-muted">{copy.linksGo}</p>
         <FieldActions>
           <SubmitButton pendingLabel={copy.seating} className={buttonClass()}>
             {count(copy.seat, state.rows.length, locale)}

@@ -40,6 +40,7 @@ const COPY: PasteListCopy = {
   onFileWith: "{name}, on file ({contact})",
   droppedEmail: "Email left off",
   droppedPhone: "Phone left off",
+  linksGo: "Each gets a ready link",
   seat: { one: "Add {count} person", other: "Add {count} people" },
   seating: "Adding",
   startOver: "Start over",
@@ -64,7 +65,10 @@ const ON_FILE = "44444444-4444-4444-8444-444444444444";
 const PREVIEW: PasteListState = {
   step: "preview",
   text: "Ana López\tana@example.com\nBen Ortiz",
-  skipped: 1,
+  skipped: [
+    { row: 3, text: "12" },
+    { row: 4, text: "---" },
+  ],
   duplicates: 0,
   rows: [
     {
@@ -122,7 +126,12 @@ describe("PasteListPanel", () => {
     await userEvent.click(screen.getByRole("button", { name: "Read the list" }));
 
     expect(await screen.findByText("2 to adds")).toBeTruthy();
-    expect(screen.getByText("1 skipped")).toBeTruthy();
+    // What was left out is shown as it was pasted, so staff can see nobody was lost.
+    expect(screen.getByText("2 skippeds")).toBeTruthy();
+    expect(screen.getByText("12")).toBeTruthy();
+    expect(screen.getByText("---")).toBeTruthy();
+    // Staff are told the list will be contacted before they add it.
+    expect(screen.getByText("Each gets a ready link")).toBeTruthy();
     expect(screen.getByText("Phone left off")).toBeTruthy();
     const who = screen.getByRole("combobox", { name: "Who Ana López is" }) as HTMLSelectElement;
     expect(who.value).toBe(ON_FILE);

@@ -278,10 +278,13 @@ export function rosterSeat(entry: RosterEntry, settled: boolean, context: Roster
   const seatWaiver = rosterSeatWaiver(seatRow, currentWaiver);
   const waiverStatus = seatWaiver.standing;
   const { refusalRetired } = seatWaiver;
-  // An email or a text can reach the seat. With neither, a release opened for
-  // signing was sent nowhere: its control says Send (which hands over the link
-  // to copy), never "Waiver sent".
-  const reachable = Boolean(person.email) || rows.textableBookings.has(booking.id);
+  // An email or a text can reach the seat. Its email is the seat's address
+  // (`bookingAddress`): a guest on a shared inbox holds none of their own, and
+  // their mail goes to the inbox (`bookings.delivery_email`). With neither, a
+  // release opened for signing was sent nowhere: its control says Send (which
+  // hands over the link to copy), never "Waiver sent".
+  const reachable =
+    Boolean(booking.deliveryEmail ?? person.email) || rows.textableBookings.has(booking.id);
   const waiverControl =
     !reachable && seatWaiver.control === "awaiting_signature"
       ? WAIVER_CONTROLS.none
@@ -467,6 +470,8 @@ export function rosterSeat(entry: RosterEntry, settled: boolean, context: Roster
     currentWaiver,
     waiverStatus,
     refusalRetired,
+    /** An email or a text can reach the seat: its own word for "sent" or "nothing could be sent". */
+    reachable,
     waiverControl,
     nitrox,
     identityUnconfirmed,

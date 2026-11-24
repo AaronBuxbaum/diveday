@@ -43,6 +43,7 @@ export function pasteListCopy(t: StaffTranslator): PasteListCopy {
     onFileWith: t.raw("trips.pasteList.onFileWith") as string,
     droppedEmail: t("trips.pasteList.droppedEmail"),
     droppedPhone: t("trips.pasteList.droppedPhone"),
+    linksGo: t("trips.pasteList.linksGo"),
     seat: counted(t, "trips.pasteList.seatOne", "trips.pasteList.seatOther"),
     seating: t("words.busy.adding"),
     startOver: t("trips.pasteList.startOver"),

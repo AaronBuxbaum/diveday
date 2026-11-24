@@ -525,6 +525,7 @@
     "onFileWith": "{name}, on file ({contact})",
     "droppedEmail": "Email left off: it isn’t an address",
     "droppedPhone": "Phone left off: it isn’t a number",
+    "linksGo": "Everyone with an email or phone gets their ready link by email or text.",
     "seatOne": "Add {count} person",
     "seatOther": "Add {count} people",
     "startOver": "Start over",

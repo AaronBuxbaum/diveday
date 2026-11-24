@@ -35,6 +35,7 @@ describe("soldElsewhere", () => {
 
   it("takes a price of zero as a price: a free dive is still DiveDay's to give", () => {
     expect(soldElsewhere({ priceCents: 0, course: null })).toBe(false);
+    expect(soldElsewhere({ priceCents: null, course: { priceCents: 0 } })).toBe(false);
   });
 });
 

@@ -55,6 +55,14 @@ export type PastedPerson = {
   dropped: PastedContactDrop[];
 };
 
+/** A row left out for having no name to seat. */
+export type PastedSkip = {
+  /** The row's number in what was pasted, from 1, header included. */
+  row: number;
+  /** The row's cells as pasted, blanks dropped. */
+  text: string;
+};
+
 export type PasteListRefusal =
   | "empty"
   | "too_large"
@@ -67,9 +75,16 @@ export type PasteListRead =
   | {
       ok: true;
       people: PastedPerson[];
-      /** Rows with no name to seat: a total line, a blank name, a name too long to be one. */
-      skipped: number;
-      /** Rows that repeat an earlier one exactly (name, email and phone). */
+      /**
+       * Rows with no name to seat (a blank name, one with no letters, one too
+       * long to be a name), each as its cells read, so staff see what was left out.
+       */
+      skipped: PastedSkip[];
+      /**
+       * Rows that repeat an earlier one exactly, name, email and phone, and
+       * carry an email or a phone: two "Maria Garcia" with nothing else may be
+       * two people, and both are kept.
+       */
       duplicates: number;
     }
   | { ok: false; reason: PasteListRefusal };
@@ -213,14 +228,16 @@ export function readPastedList(text: string): PasteListRead {
 
   const people: PastedPerson[] = [];
   const seen = new Set<string>();
-  let skipped = 0;
+  const skipped: PastedSkip[] = [];
   let duplicates = 0;
   body.forEach((row, index) => {
+    const rowNumber = index + 1 + (header ? 1 : 0);
     const fullName = nameOf(row, columns);
-    // A person's name has letters and no digits: "Total: 12", a booking
-    // number or a date row is a line of the export, not somebody to seat.
-    if (!LETTER.test(fullName) || /\d/.test(fullName) || fullName.length > DIVER_NAME_MAX) {
-      skipped++;
+    // A name with letters is somebody, digits and all ("Ana López 2", "Sam
+    // (+1)"): staff see them in the preview and leaving out a real diver is
+    // the worse mistake. A booking number or a rule of dashes has no letters.
+    if (!LETTER.test(fullName) || fullName.length > DIVER_NAME_MAX) {
+      skipped.push({ row: rowNumber, text: row.filter((cell) => cell).join(", ") });
       return;
     }
     const dropped: PastedContactDrop[] = [];
@@ -234,16 +251,18 @@ export function readPastedList(text: string): PasteListRead {
         ? phoneCell
         : undefined;
     if (phoneCell && !phone) dropped.push("phone");
-    const key = [fullName.toLowerCase(), email ?? "", phone ? phoneDigits(phone) : ""].join(
-      "\u0000",
-    );
-    if (seen.has(key)) {
-      duplicates++;
-      return;
+    if (email || phone) {
+      const key = [fullName.toLowerCase(), email ?? "", phone ? phoneDigits(phone) : ""].join(
+        "\u0000",
+      );
+      if (seen.has(key)) {
+        duplicates++;
+        return;
+      }
+      seen.add(key);
     }
-    seen.add(key);
     people.push({
-      row: index + 1 + (header ? 1 : 0),
+      row: rowNumber,
       fullName,
       ...(email ? { email } : {}),
       ...(phone ? { phone } : {}),

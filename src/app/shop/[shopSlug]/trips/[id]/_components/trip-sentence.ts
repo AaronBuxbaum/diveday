@@ -39,8 +39,11 @@ export type TripSentenceInput = {
   guests: number;
   /** Guests checked in. */
   here: number;
-  /** Guests readiness refuses to board. */
-  blocked: number;
+  /**
+   * Guests readiness has not cleared: refused, or with no reading at all
+   * (fails closed, so a missed reading never reads as ready).
+   */
+  notReady: number;
   /** Seats recorded not back aboard at an after-dive count and not counted since. */
   notBack: number;
   /** The crew's word, when it still speaks (`boatStageOf`). */
@@ -76,7 +79,7 @@ export function tripSentence(input: TripSentenceInput, t: StaffTranslator): Trip
           input.guests === 0
             ? t("trips.clock.sentence.noGuests")
             : t("trips.clock.sentence.readyOf", {
-                ready: input.guests - input.blocked,
+                ready: input.guests - input.notReady,
                 total: input.guests,
               });
         return {
@@ -109,12 +112,12 @@ export function tripSentence(input: TripSentenceInput, t: StaffTranslator): Trip
       const lead =
         input.guests === 0
           ? t("trips.clock.sentence.noGuests")
-          : input.blocked > 0
-            ? t("trips.clock.sentence.notReady", { count: input.blocked })
+          : input.notReady > 0
+            ? t("trips.clock.sentence.notReady", { count: input.notReady })
             : t("trips.clock.sentence.allReady");
       return {
         headline: join(lead, leaves),
-        emphasis: input.guests > 0 && input.blocked > 0 ? guestCount(input.blocked) : null,
+        emphasis: input.guests > 0 && input.notReady > 0 ? guestCount(input.notReady) : null,
         sub:
           input.guests === 0
             ? null
@@ -125,12 +128,12 @@ export function tripSentence(input: TripSentenceInput, t: StaffTranslator): Trip
       const lead =
         input.guests === 0
           ? t("trips.clock.sentence.noGuests")
-          : input.blocked > 0
-            ? t("trips.clock.sentence.cantBoard", { count: input.blocked })
+          : input.notReady > 0
+            ? t("trips.clock.sentence.cantBoard", { count: input.notReady })
             : t("trips.clock.sentence.allCanBoard");
       return {
         headline: join(lead, leaves),
-        emphasis: input.guests > 0 && input.blocked > 0 ? guestCount(input.blocked) : null,
+        emphasis: input.guests > 0 && input.notReady > 0 ? guestCount(input.notReady) : null,
         sub:
           input.guests === 0
             ? null

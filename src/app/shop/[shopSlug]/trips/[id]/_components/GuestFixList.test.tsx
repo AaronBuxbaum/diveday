@@ -82,6 +82,30 @@ describe("a row says the name, one phrase, and one button", () => {
     ).toHaveAccessibleDescription("Waiver sent, not signed");
   });
 
+  it("counts a guest on a shared inbox as reached: the seat's mail goes there", () => {
+    const leo = entry("l", "Leo Lopez");
+    renderRoster({
+      roster: [
+        {
+          ...leo,
+          booking: { ...leo.booking, deliveryEmail: "a@x.com" },
+          person: { ...leo.person, email: null, phone: null },
+        },
+      ],
+      readiness: new Map([
+        ["l", readinessRow("blocked", [{ code: "waiver_pending", params: undefined }])],
+      ]) as ReadinessByBooking,
+      waivers: new Map() as WaiverByBooking,
+      selectedBookingId: null,
+      phase: "ready",
+    });
+    const cantBoard = group("cantBoard");
+    expect(
+      within(cantBoard).getByRole("button", { name: "Leo Lopez" }),
+    ).toHaveAccessibleDescription("Waiver sent, not signed");
+    expect(within(cantBoard).queryByRole("link", { name: "Sign at the counter" })).toBeNull();
+  });
+
   it("puts a blocked guest under Can't board yet with the one remedy", () => {
     renderRoster({
       roster: [blocked, ready],

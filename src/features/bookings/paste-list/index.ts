@@ -8,6 +8,7 @@ export {
   PASTE_LIST_MAX_ROWS,
   type PastedContactDrop,
   type PastedPerson,
+  type PastedSkip,
   type PasteListRead,
   type PasteListRefusal,
   readPastedList,

@@ -485,7 +485,9 @@ async function seatConsequences(
         bookingId: outcome.bookingId,
         errorCode: error instanceof Error ? error.name : "unknown_error",
       });
-      if (confirmation === "not_needed") confirmation = reached.length > 0 ? "sent" : "not_sent";
+      // Only a throw before the confirmation was settled leaves it unsaid, and
+      // nothing has reached the diver then: the text's own failure is caught.
+      if (confirmation === "not_needed") confirmation = "not_sent";
       if (waiver === "not_needed") waiver = "failed";
     }
   } else {
