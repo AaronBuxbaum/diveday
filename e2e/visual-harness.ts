@@ -1,5 +1,6 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import sharp from "sharp";
 import {
   type Browser,
   type BrowserContext,
@@ -1328,6 +1329,37 @@ export function isShopPhotoRequest(url: URL): boolean {
 async function tileShopPhotos(context: BrowserContext) {
   await context.route(isShopPhotoRequest, (route) =>
     route.fulfill({ status: 200, contentType: "image/png", body: SHOP_PHOTO_TILE }),
+  );
+}
+
+/**
+ * **A photo drawn far smaller than its file is resampled once, before the browser sees it**
+ * (issue #4963). `conservation-recap` differed from its baseline only inside the recap strip's lead
+ * photo, a 1024px commons file drawn into a 263px (1280) and 174px (390) box, with no code change
+ * reaching the page. That is the second correction's decode-cache signature again (see the long
+ * comment on the image wait): a source four times its box has several legal JPEG decode scales and
+ * the process's cache state picks one. Waiting for `decode()` cannot reach it.
+ *
+ * `marine-life-tiles` closes it for bundled marine-life photos with committed files. These photos
+ * are the diver's own, in the dive-site folder, so a spec that shoots a strip of them calls this:
+ * every request for a `/dive-sites/` file is answered with the same photo, resized once by sharp to
+ * `width` and re-encoded as lossless PNG, which leaves one legal decode and one fixed resample. The
+ * photo is not masked, only fitted. `width` must sit strictly inside (box/2, 2*box) of every box the
+ * page draws it into.
+ */
+export async function fitDiveSitePhotos(context: BrowserContext, width: number) {
+  const fitted = new Map<string, Promise<Buffer>>();
+  await context.route(
+    (url) => decodedPath(url.pathname).startsWith("/dive-sites/"),
+    async (route) => {
+      const file = path.join("public", decodedPath(new URL(route.request().url()).pathname));
+      let body = fitted.get(file);
+      if (!body) {
+        body = sharp(file).resize({ width, withoutEnlargement: true }).png().toBuffer();
+        fitted.set(file, body);
+      }
+      await route.fulfill({ status: 200, contentType: "image/png", body: await body });
+    },
   );
 }
 
