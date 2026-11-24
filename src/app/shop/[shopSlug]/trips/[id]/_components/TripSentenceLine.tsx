@@ -5,34 +5,53 @@ import type { TripSentence } from "./trip-sentence";
 
 /**
  * The sentence under the phase strip, its emphasis in the alarm color, the
- * quieter line under it, and, from Check-in on, the **Roll call** door: the
- * crew's way onto the boat's own screen, dark like the deck it opens.
+ * quieter line under it, and the phase's one door beside it: while the trip
+ * fills, **Add a guest**; from Check-in on, **Roll call**, the crew's way
+ * onto the boat's own screen, dark like the deck it opens.
  */
 export function TripSentenceLine({
   sentence,
   rollCall,
   seats = null,
+  action = null,
 }: {
   sentence: TripSentence;
   /** The door to Roll call, worded; null where the page has none yet. */
   rollCall: { href: string; label: string } | null;
   /** Filling's bar: one block a seat, the booked ones filled; on a departure sold elsewhere, one a guest, the ready ones filled. */
   seats?: { booked: number; capacity: number } | null;
+  /** Filling's one primary action ("Add a guest"), beside the sentence. */
+  action?: { href: string; label: string } | null;
 }) {
   return (
     <div
       data-trip-sentence=""
-      className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:gap-8"
+      // Filling's sentence shares its cards' reading width, so its primary sits over their edge.
+      className={`flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:gap-8 ${seats ? "max-w-3xl" : ""}`}
     >
       <div className="min-w-0">
         <p className={`${SECTION_TITLE_CLASS} text-balance`}>
           <Emphasised text={sentence.headline} emphasis={sentence.emphasis} />
         </p>
-        {sentence.sub ? (
-          <p className="mt-1.5 text-muted tabular-nums sm:mt-2">{sentence.sub}</p>
-        ) : null}
+        {/* The bar draws the headline's count, so it sits right under it;
+            the booked line follows as its own fact. */}
         {seats && seats.capacity > 0 ? <SeatBar {...seats} /> : null}
+        {sentence.sub ? (
+          <p className={`text-muted tabular-nums ${seats ? "mt-3" : "mt-1.5 sm:mt-2"}`}>
+            {sentence.sub}
+          </p>
+        ) : null}
       </div>
+      {action ? (
+        <Link
+          href={action.href}
+          scroll={false}
+          data-filling-primary=""
+          className={`${buttonClass({ variant: "primary" })} shrink-0 self-start`}
+        >
+          {action.label}
+        </Link>
+      ) : null}
       {rollCall ? (
         <Link
           href={rollCall.href}
@@ -47,13 +66,13 @@ export function TripSentenceLine({
 }
 
 /**
- * The seats as blocks, booked then open. Decoration only: the sub line above
- * already says "4 of 6 booked" in words.
+ * The seats as blocks, booked then open. Decoration only: the headline above
+ * and the line under it already say the count in words.
  */
 function SeatBar({ booked, capacity }: { booked: number; capacity: number }) {
   const filled = Math.min(booked, capacity);
   return (
-    <div data-seat-bar="" aria-hidden="true" className="mt-3 flex max-w-md gap-1">
+    <div data-seat-bar="" aria-hidden="true" className="mt-4 flex max-w-md gap-1">
       {Array.from({ length: capacity }, (_, seat) => (
         <span
           // biome-ignore lint/suspicious/noArrayIndexKey: a seat is its position

@@ -553,4 +553,164 @@ describe("while the trip fills", () => {
     expect(within(booked).queryByRole("link", { name: "Check cards" })).toBeNull();
     expect(within(booked).getByText(/Nothing needed from them yet/)).toBeVisible();
   });
+
+  it("says a reminder time the card shares once, on its heading row", () => {
+    const at = new Date("2026-11-29T13:00:00.000Z");
+    renderRoster({
+      roster: [blocked, entry("c", "Cora Dunn")],
+      reminders: new Map([
+        ["a", at],
+        ["c", at],
+      ]),
+      readiness: new Map([
+        ["a", readinessRow("blocked", [{ code: "certification_missing", params: undefined }])],
+        ["c", readinessRow("blocked", [{ code: "waiver_not_sent", params: undefined }])],
+      ]) as ReadinessByBooking,
+      waivers: new Map() as WaiverByBooking,
+      rentalFit: ownGear(["a", "c"]),
+      phase: "filling",
+      selectedBookingId: null,
+    });
+    const booked = group("booked") as HTMLElement;
+    expect(within(booked).getAllByText(/Reminder goes out/)).toHaveLength(1);
+    expect(document.getElementById("guest-phrase-a")).not.toHaveTextContent("Reminder");
+  });
+
+  it("draws no Add a guest of its own: the page's primary is beside the sentence", () => {
+    renderRoster({
+      roster: [blocked, ready],
+      readiness: blockers,
+      waivers,
+      rentalFit: ownGear(["a", "b"]),
+      phase: "filling",
+      selectedBookingId: null,
+      addGuestHref: "/trip?phase=filling&add=1#add-a-booking",
+    });
+    expect(screen.getByRole("button", { name: "Priya Sharma" })).toBeVisible();
+    expect(screen.queryByRole("link", { name: "Add a guest" })).toBeNull();
+  });
+
+  // Fails closed, as the sentence does (`tripFrame`): a seat the read missed is never "fine".
+  it("lists a seat with no readiness reading as needing a look, as the sentence counts it", () => {
+    const readiness = new Map([
+      ["a", readinessRow("blocked", [{ code: "certification_missing", params: undefined }])],
+    ]) as ReadinessByBooking;
+    const roster = [blocked, ready];
+    renderRoster({
+      roster,
+      readiness,
+      waivers,
+      rentalFit: ownGear(["a", "b"]),
+      phase: "filling",
+      selectedBookingId: null,
+    });
+    // The sentence's count: anyone whose reading is not "ready".
+    const notReady = roster.filter(
+      ({ booking }) => readiness.get(booking.id)?.readiness?.status !== "ready",
+    ).length;
+    const booked = group("booked") as HTMLElement;
+    const warned = [...booked.querySelectorAll("[id^='guest-phrase-']")].filter((line) =>
+      line.classList.contains("text-warning-strong"),
+    );
+    expect(notReady).toBe(2);
+    expect(warned).toHaveLength(notReady);
+    expect(document.getElementById("guest-phrase-b")).toHaveTextContent("Couldn’t check readiness");
+    expect(within(booked).queryByText(/Nothing needed from them yet/)).toBeNull();
+  });
+
+  it("says in the warning color only what would stop a guest boarding", () => {
+    const rusty = entry("r", "Olga Rust");
+    renderRoster({
+      roster: [
+        blocked,
+        { ...rusty, booking: { ...rusty.booking, lastDivedBand: "over_five_years" } },
+      ],
+      readiness: new Map([
+        ["a", readinessRow("blocked", [{ code: "waiver_not_sent", params: undefined }])],
+        ["r", readinessRow("ready")],
+      ]) as ReadinessByBooking,
+      waivers: new Map([["r", signedWaiver]]) as WaiverByBooking,
+      rentalFit: ownGear(["a", "r"]),
+      phase: "filling",
+      selectedBookingId: null,
+    });
+    expect(document.getElementById("guest-phrase-a")).toHaveClass("text-warning-strong");
+    // Worth a minute, days ahead: said, quietly.
+    const advisory = document.getElementById("guest-phrase-r");
+    expect(advisory).toHaveClass("text-muted");
+    expect(advisory).not.toHaveClass("text-warning-strong");
+  });
+
+  const rusty = (id: string, name: string) => {
+    const guest = entry(id, name);
+    return { ...guest, booking: { ...guest.booking, lastDivedBand: "over_five_years" as const } };
+  };
+
+  it("says a quiet line every guest shares once, on the heading row, not on each row", () => {
+    renderRoster({
+      roster: [rusty("r", "Olga Rust"), rusty("s", "Sam Rust")],
+      readiness: new Map([
+        ["r", readinessRow("ready")],
+        ["s", readinessRow("ready")],
+      ]) as ReadinessByBooking,
+      waivers: new Map([
+        ["r", signedWaiver],
+        ["s", signedWaiver],
+      ]) as WaiverByBooking,
+      rentalFit: ownGear(["r", "s"]),
+      phase: "filling",
+      selectedBookingId: null,
+    });
+    const booked = group("booked") as HTMLElement;
+    const said = within(booked).getAllByText(/^Everyone: /);
+    expect(said).toHaveLength(1);
+    const line = (said[0]?.textContent ?? "").replace(/^Everyone: /, "");
+    expect(line.length).toBeGreaterThan(0);
+    // Both guests are still listed by name; neither row repeats the line.
+    expect(within(booked).getByRole("button", { name: "Olga Rust" })).toBeVisible();
+    expect(within(booked).getByRole("button", { name: "Sam Rust" })).toBeVisible();
+    for (const id of ["r", "s"]) {
+      expect(document.getElementById(`guest-phrase-${id}`)?.textContent ?? "").not.toContain(line);
+    }
+  });
+
+  it("never folds what would stop a guest boarding: the blocker stays on its row, in warning", () => {
+    renderRoster({
+      roster: [rusty("a", "Priya Sharma"), rusty("r", "Olga Rust")],
+      readiness: new Map([
+        ["a", readinessRow("blocked", [{ code: "waiver_not_sent", params: undefined }])],
+        ["r", readinessRow("ready")],
+      ]) as ReadinessByBooking,
+      waivers: new Map([["r", signedWaiver]]) as WaiverByBooking,
+      rentalFit: ownGear(["a", "r"]),
+      phase: "filling",
+      selectedBookingId: null,
+    });
+    const blocker = document.getElementById("guest-phrase-a");
+    expect(blocker).toHaveClass("text-warning-strong");
+    expect(blocker?.textContent ?? "").not.toBe("");
+    // Whatever the heading row says for everyone, it is never the blocker.
+    for (const shared of screen.queryAllByText(/^Everyone: /)) {
+      expect(shared.textContent).not.toContain(blocker?.textContent ?? "x");
+    }
+  });
+
+  it("keeps the line on its row when not every guest shares it", () => {
+    renderRoster({
+      roster: [rusty("r", "Olga Rust"), ready],
+      readiness: new Map([
+        ["r", readinessRow("ready")],
+        ["b", readinessRow("ready")],
+      ]) as ReadinessByBooking,
+      waivers: new Map([
+        ["r", signedWaiver],
+        ["b", signedWaiver],
+      ]) as WaiverByBooking,
+      rentalFit: ownGear(["r", "b"]),
+      phase: "filling",
+      selectedBookingId: null,
+    });
+    expect(screen.queryByText(/^Everyone: /)).toBeNull();
+    expect(document.getElementById("guest-phrase-r")?.textContent ?? "").not.toBe("");
+  });
 });

@@ -3980,8 +3980,8 @@
       "demoNote": "La demo es un centro de muestra, por si quieres ver uno primero.",
       "tryLiveDemo": "Probar la demo en vivo",
       "settingUp": "Configurando tu centro…",
-      "submit": "Crear centro y empezar la prueba",
-      "trialNote": "Es gratis y sin tarjeta, y solo nos quedamos con el 1 % de los pagos que recibas en DiveDay.",
+      "submit": "Crear tu centro",
+      "priceNote": "{hasBase, select, yes {Cuesta {base} al mes{hasPercent, select, yes {, más el {percent} de los pagos que recibas en DiveDay} other {}}.} other {Es gratis y sin tarjeta{hasPercent, select, yes {, y solo nos quedamos con el {percent} de los pagos que recibas en DiveDay} other {}}.}}",
       "alreadyHaveShop": "¿Ya tienes un centro?",
       "signIn": "Iniciar sesión",
       "errors": {

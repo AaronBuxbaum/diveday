@@ -179,8 +179,8 @@ test("demo role switcher moves from owner to instructor and back", async ({ page
 // online booking page's own demo door, which opens the demo as a diver on the
 // shop's public schedule (see marketing.spec.ts).
 
-test("an onboarded trial shop is a real shop, not demo mode", async ({ page }) => {
-  // Unique per run: a trial shop is a real shop, so nothing ever clears it —
+test("an onboarded shop is a real shop, not demo mode", async ({ page }) => {
+  // Unique per run: an onboarded shop is a real shop, so nothing ever clears it —
   // not the per-test reset, not `purgeMintedDemoShops` — and a fixed slug
   // collides with itself the moment the same database sees this spec twice.
   // `Date.now()` is the runner's real clock; `e2eNow()` is the fleet's frozen
@@ -197,13 +197,13 @@ test("an onboarded trial shop is a real shop, not demo mode", async ({ page }) =
   await page
     .locator('input[name="ownerPassword"]')
     .filter({ visible: true })
-    .fill("trial-pass-123");
+    .fill("owner-pass-123");
   // A real shop is never seeded — there's no sample-data option to toggle. It
   // starts clean and must not be a demo playground (ADR 20260724).
-  await page.getByRole("button", { name: "Create shop & start trial" }).click();
+  await page.getByRole("button", { name: "Create your shop" }).click();
 
   await expect(page).toHaveURL(new RegExp(`/shop/${slug}`));
-  // A trial is a real shop: no Demo shop banner, no destructive reset.
+  // An onboarded shop is a real shop: no Demo shop banner, no destructive reset.
   await expect(page.getByText("Demo shop")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Reset demo data" })).toHaveCount(0);
 });

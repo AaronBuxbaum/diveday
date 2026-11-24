@@ -47,7 +47,7 @@ describe("tripSentence", () => {
     expect(say({ phase: "filling", now: new Date("2026-11-11T15:00:00.000Z") })).toEqual({
       headline: "3 seats to fill. The boat leaves in 5 days.",
       emphasis: null,
-      sub: "11 of 14 booked",
+      sub: null,
     });
   });
 
@@ -60,12 +60,13 @@ describe("tripSentence", () => {
     expect(say({ ...filling, booked: 10, guests: 10, notReady: 2 })).toEqual({
       headline: "8 of 10 guests ready. The boat leaves in 5 days.",
       emphasis: null,
-      sub: "10 of 14 booked",
+      // One count, the bar's: no "booked" line beside it.
+      sub: null,
     });
     expect(say({ ...filling, booked: 0, guests: 0, notReady: 0 })).toEqual({
       headline: "No guests booked. The boat leaves in 5 days.",
       emphasis: null,
-      sub: null,
+      sub: "Type them in, or paste your list",
     });
   });
 

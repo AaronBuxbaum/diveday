@@ -20,12 +20,10 @@
     "pendingEvidence": "Some receipts still need confirmed amounts or tax details before their fee can be finalized."
   },
   "status": {
-    "trialing": "Free trial, {count, plural, one {# day} other {# days}} left",
     "freeTerm": "Free through {date}",
     "active": "Active",
     "pastDue": "Payment failed",
-    "canceled": "Canceled",
-    "trialEnded": "Trial ended"
+    "canceled": "Canceled"
   },
   "notConfigured": "Billing isn’t turned on yet, so nothing is charged.",
   "demo": "A demo shop is never billed.",

@@ -85,13 +85,9 @@ export function tripSentence(input: TripSentenceInput, t: StaffTranslator): Trip
         return {
           headline: join(lead, leaves),
           emphasis: null,
-          sub:
-            input.guests === 0
-              ? null
-              : t("trips.clock.sentence.booked", {
-                  booked: input.booked,
-                  capacity: input.capacity,
-                }),
+          // One count, the one the bar draws: who is ready. With nobody
+          // booked, how the guests get here.
+          sub: input.guests === 0 ? t("trips.clock.filling.typeOrPaste") : null,
         };
       }
       const left = Math.max(0, input.capacity - input.booked);
@@ -102,10 +98,8 @@ export function tripSentence(input: TripSentenceInput, t: StaffTranslator): Trip
       return {
         headline: join(lead, leaves),
         emphasis: null,
-        sub: t("trips.clock.sentence.booked", {
-          booked: input.booked,
-          capacity: input.capacity,
-        }),
+        // The phase strip says "5 of 12" and the bar draws it: no third count here.
+        sub: null,
       };
     }
     case "ready": {

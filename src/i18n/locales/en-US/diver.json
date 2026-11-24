@@ -3980,8 +3980,8 @@
       "demoNote": "The demo is a sample shop, if you want to look at one first.",
       "tryLiveDemo": "Try the live demo",
       "settingUp": "Setting up your shop…",
-      "submit": "Create shop & start trial",
-      "trialNote": "It’s free, with no card, and we keep 1% only of payments you take in DiveDay.",
+      "submit": "Create your shop",
+      "priceNote": "{hasBase, select, yes {It’s {base} a month{hasPercent, select, yes {, plus {percent} of payments you take in DiveDay} other {}}.} other {It’s free, with no card{hasPercent, select, yes {, and we keep {percent} only of payments you take in DiveDay} other {}}.}}",
       "alreadyHaveShop": "Already have a shop?",
       "signIn": "Sign in",
       "errors": {

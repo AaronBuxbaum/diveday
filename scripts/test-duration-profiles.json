@@ -2514,7 +2514,6 @@
         "src/features/shop-setup/setup-request-receipts/store.test.ts": 5521,
         "src/features/shop-setup/shop-contact-email.test.ts": 2413,
         "src/features/shop-setup/shop-signup.test.ts": 6981,
-        "src/features/shop-setup/trial.test.ts": 8,
         "src/features/shop-setup/website-setup.postgres.test.ts": 1542,
         "src/features/shop-setup/website-setup.test.ts": 3731,
         "src/features/sites/conservation.test.ts": 4027,

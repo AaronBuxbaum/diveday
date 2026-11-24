@@ -227,7 +227,7 @@ export async function applyBillingEffect(
         // has already made stale, could wipe the state that event just wrote.
         const [linked] = await db
           .update(shopSubscriptions)
-          .set({ stripeSubscriptionId: effect.subscriptionId, updatedAt: now })
+          .set({ stripeSubscriptionId: effect.subscriptionId, subscribedAt: now, updatedAt: now })
           .where(and(sameCustomer, isNull(shopSubscriptions.stripeSubscriptionId)))
           .returning({ shopId: shopSubscriptions.shopId });
         if (linked) return "linked";
@@ -254,6 +254,14 @@ export async function applyBillingEffect(
             currentPeriodEnd: effect.currentPeriodEnd,
             cancelAtPeriodEnd: effect.cancelAtPeriodEnd,
             lastSubscriptionEventAt: effect.occurredAt,
+            // The card-added instant, the floor under billed money: the
+            // earliest word of this subscription, restarted by a new one.
+            subscribedAt: sql`case
+              when ${shopSubscriptions.subscribedAt} is null
+                or ${shopSubscriptions.stripeSubscriptionId} is distinct from ${effect.subscriptionId}
+              then ${effect.occurredAt.toISOString()}::timestamptz
+              else least(${shopSubscriptions.subscribedAt}, ${effect.occurredAt.toISOString()}::timestamptz)
+            end`,
             updatedAt: now,
           })
           .where(

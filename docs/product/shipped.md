@@ -7,6 +7,14 @@ lives in [features/roadmap.md](features/roadmap.md), which this file keeps unclu
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## A shop is free, with no trial, and every price line follows the configuration (built 2026-11-24)
+
+ADR [20261124-free-shops-no-trial](../architecture/decisions/20261124-free-shops-no-trial.md). The
+14-day trial is gone: no trial timer, no "Free trial, N days left" or "Trial ended" on Settings >
+Billing, and `/onboard`'s button reads "Create your shop". A shop with no card is simply free. The
+`/pricing` and `/onboard` price lines take their percent and any monthly base from the pricing
+configuration as message parameters, so a price change rewrites them.
+
 ## The courses page answers a course-led shop (built 2026-11-16)
 
 Issue #4321. `/product/courses` now lists what a training-heavy shop asked about and DiveDay

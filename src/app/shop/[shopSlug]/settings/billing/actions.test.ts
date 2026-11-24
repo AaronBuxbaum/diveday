@@ -130,7 +130,7 @@ describe("before Stripe is asked", () => {
 });
 
 describe("Add a card", () => {
-  it("mints the shop's customer, records it, and opens Checkout deferred to the end of the trial", async () => {
+  it("mints the shop's customer, records it, and opens Checkout with nothing deferred", async () => {
     const { db, shop, owner, signIn } = await context();
     configure();
     signIn(owner);
@@ -151,6 +151,8 @@ describe("Add a card", () => {
     const checkoutBody = new URLSearchParams(String(fetchMock.mock.calls[1]?.[1]?.body));
     expect(checkoutBody.get("client_reference_id")).toBe(shop.id);
     expect(checkoutBody.get("customer")).toBe("cus_new");
+    // No trial: without a granted free term the first charge is not deferred.
+    expect(checkoutBody.has("subscription_data[trial_end]")).toBe(false);
     expect(checkoutBody.get("success_url")).toBe(
       "https://dive.day/shop/blue-mantis/settings/billing?notice=card-added",
     );

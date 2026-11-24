@@ -51,6 +51,8 @@ export type FixListSection = {
   headless?: boolean;
   /** Quiet lines at the card's foot ("Crew and plan are set"). */
   after?: ReactNode;
+  /** One quiet fact the whole card shares, said once on its heading row ("Reminder goes out …"). */
+  note?: string;
   /** One message to the whole group ("Ask all 3"), beside its count. Never a record. */
   action?: ReactNode;
   rows: FixListRow[];
@@ -200,11 +202,14 @@ export function GuestFixList({
               </div>
             ) : section.headless ? null : (
               <div className="flex items-baseline justify-between gap-4 px-4 pt-4 pb-1 sm:px-6">
-                <h3
-                  className={`font-semibold ${section.tone === "danger" ? "text-danger" : "text-foreground"}`}
-                >
-                  {section.label}
-                </h3>
+                <div className="min-w-0">
+                  <h3
+                    className={`font-semibold ${section.tone === "danger" ? "text-danger" : "text-foreground"}`}
+                  >
+                    {section.label}
+                  </h3>
+                  {section.note ? <p className="text-sm text-muted">{section.note}</p> : null}
+                </div>
                 <span className="flex items-center gap-3">
                   {section.action}
                   {/* People, not reasons: a guest is on one row. */}

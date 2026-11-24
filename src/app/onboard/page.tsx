@@ -11,6 +11,8 @@ import { buttonClass } from "@/components/ui/button";
 import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
 import { controlClass, DateField, Field, FieldGrid, FormStatus } from "@/components/ui/form";
 import { GroupLabel } from "@/components/ui/group-label";
+import { planCopyParams } from "@/features/money/billing";
+import { requestPricingOffer } from "@/features/money/pricing-offer";
 import { MAX_FIRST_DAY_NAME, parseFirstDayFields } from "@/features/shop-setup/first-day";
 import { type DiverMessageKey, diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
@@ -130,7 +132,8 @@ export default async function OnboardPage({
 }) {
   const { error, shopName, shopSlug, timezone, ownerName, ownerEmail, boat, departure, setup } =
     await searchParams;
-  const t = diverTranslator(await requestLocale());
+  const [locale, offer] = await Promise.all([requestLocale(), requestPricingOffer()]);
+  const t = diverTranslator(locale);
 
   // **Shut without an open link** (ADR 20261009-single-use-setup-links).
   const opened = await setupLinkDoor(setup);
@@ -159,7 +162,7 @@ export default async function OnboardPage({
     <div className="flex flex-1 flex-col">
       {/* A door, not a page of the marketing face: the wordmark and the form,
           with no bar whose demo CTA would repeat the footer's and compete with
-          "Create shop & start trial", the one primary here. */}
+          "Create your shop", the one primary here. */}
       <EntryShell
         wordmark
         homeLink
@@ -351,17 +354,13 @@ export default async function OnboardPage({
             {t("account.onboard.submit")}
           </SubmitButton>
           {/* **One sentence, not four** (ADR 20260827-first-light, decision 1).
-              This line used to concatenate "Free for 3 weeks." with three more
-              claims — no card, your records, real support — which read as a
-              vendor listing its virtues at exactly the moment a buyer is
-              deciding whether to type a password. A person about to sign up
-              needs one fact: what it costs. Since 2026-11-24 (Aaron) that is
-              free, no card, and 1% only of payments taken in DiveDay, with no
-              trial window named. The other three claims are shipped and
-              checkable, and they keep their paragraphs on the marketing pages
-              the visitor came from; a door repeats none of them. */}
+              A person about to sign up needs one fact: what it costs. Its
+              figures come from the configured offer (ADR
+              20261124-free-shops-no-trial), so a changed price changes this
+              line with it; the other claims keep their paragraphs on the
+              marketing pages the visitor came from. */}
           <p className="mx-auto max-w-prose text-center text-sm text-muted">
-            {t("account.onboard.trialNote")}
+            {t("account.onboard.priceNote", planCopyParams(offer, locale))}
           </p>
           {errorField === "form" ? (
             <FormStatus tone="danger" className="justify-center">

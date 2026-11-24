@@ -1,11 +1,11 @@
 # shop-setup
 
-Starting and configuring a shop: sign-up and the trial, setup links, the first day, feature
+Starting and configuring a shop: sign-up, setup links, the first day, feature
 switches, integrations, the website and embeds.
 
 ## Owns
 
-- Starting: `shop-signup.ts`, `setup-links.ts`, `setup-request-receipts/`, `trial.ts`,
+- Starting: `shop-signup.ts`, `setup-links.ts`, `setup-request-receipts/`,
   `first-run.ts`, `first-day/`.
 - Configuring: `features-page.ts`, `shop-contact-email.ts`, `shop-activity-page.ts`,
   `website-setup.ts`, `embed-settings-page.ts`.

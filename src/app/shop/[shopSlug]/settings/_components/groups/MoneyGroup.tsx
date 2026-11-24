@@ -182,9 +182,9 @@ export function MoneyGroup({
           </>
         ) : null}
 
-        {/* What DiveDay itself costs: the trial, a free term, the card on
+        {/* What DiveDay itself costs: the plan, a free term, the card on
           file. Its own page, owner only (ADR 20261007-subscription-billing).
-          Purely informational: nothing locks when a trial or a payment lapses.
+          Purely informational: nothing locks when a payment lapses.
           It sat in an Account group beside a staffer's own password; it is the
           shop's subscription, so it lives with the shop's money. */}
         {canViewBilling ? (

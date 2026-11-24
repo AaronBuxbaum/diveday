@@ -28,6 +28,7 @@ import { recordPaperCourseFormAction } from "../course-actions";
 import type { PasteListState } from "../paste-list-actions";
 import { AddDiverSection, type SeatRequestContext } from "./AddDiverSection";
 import { ADD_A_BOOKING_ID } from "./add-a-booking-id";
+import { bulkOfferBatch, fillingBulkOffer } from "./bulk-offer";
 import { carryTargetLabel } from "./carry-target-label";
 import { elearningCodesOffered } from "./course-roster-actions";
 import { DealLeadTime } from "./DealLeadTime";
@@ -182,12 +183,10 @@ export type TripRosterContentContext = {
   tripFixes?: readonly TripFix[];
   /** Quiet lines under the ready guests the day before. */
   afterReady?: ReactNode;
-  /** Beside the guest list at full width (Filling's trip facts). */
-  beside?: ReactNode;
   /**
    * The shop sells this departure somewhere else (`soldElsewhere`): Filling
    * draws no demand banner, past guests or booking link (who asked for this
-   * departure stays), and the add card follows the guests once there are any.
+   * departure stays).
    */
   soldElsewhere?: boolean;
 };
@@ -362,8 +361,8 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
     />
   );
 
-  // Sold elsewhere, the guests and how ready they are lead; the add card follows them.
-  const elsewhereLate = Boolean(context.soldElsewhere) && roster.length > 0;
+  // Filling answers in the desk's order: who is on the trip, then how to fill it.
+  const guestsLead = roster.length > 0 || (context.tripFixes?.length ?? 0) > 0;
   const fillCard =
     context.phase === "filling" && !guests.cancelled ? (
       <FillingCard context={context} whoWantsInGroups={whoWantsInGroups} />
@@ -434,17 +433,24 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
         </section>
       ) : null}
 
-      {elsewhereLate ? null : fillCard}
       <TrainingPlanWithDepth context={context} />
-      {context.beside ? (
-        <div className="grid items-start gap-6 lg:grid-cols-2">
-          <div className="min-w-0">{rosterSection}</div>
-          {context.beside}
+      {context.phase === "filling" ? (
+        // One reading column: the guests, then the ways to fill a seat. The
+        // trip's facts are a line under the sentence (`PhaseHeading`).
+        // Capped at a reading width, so a row's action stays beside its name.
+        <div data-filling-layout className="max-w-3xl space-y-10">
+          {guestsLead ? (
+            rosterSection
+          ) : (
+            // With nobody booked the list draws nothing, so it takes no gap
+            // (`mb-0` over the stack's): the fill card leads the column.
+            <div className="mb-0">{rosterSection}</div>
+          )}
+          {fillCard}
         </div>
       ) : (
         rosterSection
       )}
-      {elsewhereLate ? fillCard : null}
       {/* "Add a guest" outside Filling opens the form under the list (`?add=1`). */}
       {acceptsDivers && context.addBand?.open && context.phase !== "filling" ? (
         <section
@@ -461,10 +467,10 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
 }
 
 /**
- * Filling's add card: every way to fill a seat, or, on a departure sold
+ * Filling's fill card: every way to fill a seat, or, on a departure sold
  * elsewhere (`soldElsewhere`), adding the guests by hand or by paste and
  * whoever asked for this departure, with no past guests to invite and no
- * booking link.
+ * booking link; there it is drawn only while it has something to say.
  */
 function FillingCard({
   context,
@@ -488,6 +494,35 @@ function FillingCard({
   const t = staffTranslator(locale);
   const { trip, demand } = guests;
   const elsewhere = Boolean(context.soldElsewhere);
+  // "Add a guest" is the page's one primary, beside the sentence, so the
+  // card's own add row is drawn only to hold the open form (`?add=1`).
+  const addOpen = acceptsDivers && Boolean(context.addBand?.open);
+  // "Offer seats" takes the primary's place while there is somebody to offer
+  // (`PhaseHeading` reads the same batch); adding by hand is then a row here.
+  const offer = fillingBulkOffer({
+    guests,
+    canOffer: acceptsDivers && mayInviteFromWaitlist,
+    soldElsewhere: elsewhere,
+    t,
+    locale,
+    timezone,
+  });
+  const addHref =
+    acceptsDivers && (addOpen || offer.length > 0) ? (context.addGuestHref ?? null) : null;
+  const carry =
+    // **One waiting diver is worth carrying too** (fourth review, item 31).
+    // The demand banner carries the list instead, except sold elsewhere,
+    // where no banner is drawn and the carry stays here.
+    (!demand || elsewhere) &&
+    isFull(seatsOnSale(trip)) &&
+    actions.carryWaitlistAction &&
+    actions.moveSeat?.targets.length ? (
+      <CarryWaitlistForm
+        action={actions.carryWaitlistAction}
+        targets={actions.moveSeat.targets}
+        t={t}
+      />
+    ) : null;
   // Sold elsewhere, only who asked for this very departure: the date and
   // anytime leads are other customers to sell seats to.
   const groups = elsewhere
@@ -497,6 +532,9 @@ function FillingCard({
     (sum, group) => sum + group.rows.length + (group.more?.length ?? 0),
     0,
   );
+  // Sold elsewhere there is no link or past guest to offer: with nobody
+  // waiting and the form closed, the card would be a bare heading.
+  if (elsewhere && waiting === 0 && !addHref && !carry) return null;
   return (
     <FillSeatsCard
       heading={
@@ -512,14 +550,23 @@ function FillingCard({
       }
       groups={groups}
       canOffer={acceptsDivers && mayInviteFromWaitlist}
+      bulk={
+        acceptsDivers && mayInviteFromWaitlist && !elsewhere
+          ? {
+              batch: bulkOfferBatch(offer, t, locale),
+              result: {
+                sent: t.raw("trips.clock.filling.offerResult"),
+                alreadyEmailed: t.raw("trips.clock.filling.offerAlreadyEmailed"),
+              },
+              locale,
+            }
+          : null
+      }
       discount={mayDiscount ? offerDiscountCopy(t, currency, locale) : null}
       pastGuests={
         !elsewhere && acceptsDivers && guests.inviteSuggestions
           ? {
               count: guests.inviteSuggestions.total,
-              line: t("trips.inviteSuggestions.heading", {
-                site: guests.inviteSuggestions.siteName,
-              }),
               list: (
                 <InviteSuggestionsGroup
                   suggestions={guests.inviteSuggestions}
@@ -531,25 +578,11 @@ function FillingCard({
             }
           : null
       }
-      addHref={acceptsDivers ? (context.addGuestHref ?? null) : null}
-      addForm={acceptsDivers && context.addBand?.open ? <AddDiverGroup context={context} /> : null}
-      addLine={elsewhere ? t("trips.clock.filling.typeOrPaste") : undefined}
+      addHref={addHref}
+      addForm={addOpen ? <AddDiverGroup context={context} /> : null}
+      addLabel={elsewhere ? t("trips.clock.filling.typeOrPaste") : undefined}
       bookingLink={!elsewhere}
-      carry={
-        // **One waiting diver is worth carrying too** (fourth review, item 31).
-        // The demand banner carries the list instead, except sold elsewhere,
-        // where no banner is drawn and the carry stays here.
-        (!demand || elsewhere) &&
-        isFull(seatsOnSale(trip)) &&
-        actions.carryWaitlistAction &&
-        actions.moveSeat?.targets.length ? (
-          <CarryWaitlistForm
-            action={actions.carryWaitlistAction}
-            targets={actions.moveSeat.targets}
-            t={t}
-          />
-        ) : null
-      }
+      carry={carry}
       trip={{
         id: trip.id,
         shopSlug,

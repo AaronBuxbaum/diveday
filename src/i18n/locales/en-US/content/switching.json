@@ -52,7 +52,7 @@
   "hub": {
     "eyebrow": "Switching to DiveDay",
     "title": "Choose what your next dive day could look like",
-    "description": "Find your current tool to compare the crew’s workflow, check what transfers and plan a trial before changing systems.",
+    "description": "Find your current tool to compare the crew’s workflow, check what transfers and plan a first trip before changing systems.",
     "spreadsheetTitle": "Coming from a spreadsheet",
     "spreadsheetDescription": "Turn the list you keep into booking, preparation and roll call, starting with a sample of your sheet.",
     "switchingFrom": "Switching from {competitor}",
