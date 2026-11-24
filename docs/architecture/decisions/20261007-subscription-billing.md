@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-10-07
+- **Superseded in part by:** [20261124-free-shops-no-trial](20261124-free-shops-no-trial.md) — there is no trial: the trial window, the `trialing` and `trial ended` states and the trial as first charge date are gone. The rest stands.
 - **Amended by:** [20261102-stripe-sdk-adapters](20261102-stripe-sdk-adapters.md) — billing calls Stripe through the official SDK now, not `fetch`; the "Stripe SDK" alternative is withdrawn. The rest stands.
 
 ## Context

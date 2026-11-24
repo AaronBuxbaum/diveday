@@ -2329,14 +2329,14 @@
   bootstrapped in every environment as the fixture the e2e/visual-regression fleet tests against,
   and is never reaped. AI suggestions run in a minted demo under a $1 cap and the demo AI
   allowance, $10 a month across every minted demo, kept in `claude_demo_spend` so a reaped
-  demo's spend still counts; Blue Mantis keeps a real shop's cap (Aaron, 2026-10-23). Onboarding a **trial** at `/onboard` — which only the owner's setup link opens, since every shop is set up by hand (ADR 20260925-shops-are-set-up-by-hand) — creates a real shop that is *not* demo mode and is
+  demo's spend still counts; Blue Mantis keeps a real shop's cap (Aaron, 2026-10-23). Onboarding a shop at `/onboard` — which only the owner's setup link opens, since every shop is set up by hand (ADR 20260925-shops-are-set-up-by-hand) — creates a real shop that is *not* demo mode and is
   **never seeded** — it starts empty, with no playground banner or destructive reset (ADR
-  20260724-per-visitor-demo-shops, superseding 20260718-production-demo-seed). A trial runs
-  **2 weeks** from `shops.created_at` (`TRIAL_DURATION_DAYS`, `src/features/shop-setup/trial.ts`), shown to the
-  owner on Settings > Billing as days left / trial ended. Expiry is **soft**: the shop keeps working
-  exactly as before past the window, and nothing gates on **billing standing**. Once billing is
-  turned on, the owner moves to paid by adding a card on that page (see **Subscription** under
-  Money; ADR [20261007-subscription-billing](../../architecture/decisions/20261007-subscription-billing.md)).
+  20260724-per-visitor-demo-shops, superseding 20260718-production-demo-seed). There is no trial:
+  a shop is free with no card, and DiveDay keeps only the configured share of payments taken in
+  DiveDay (ADR [20261124-free-shops-no-trial](../../architecture/decisions/20261124-free-shops-no-trial.md)).
+  Nothing gates on **billing standing**; once billing is turned on, the owner adds a card on
+  Settings > Billing (see **Subscription** under Money; ADR
+  [20261007-subscription-billing](../../architecture/decisions/20261007-subscription-billing.md)).
 - **Demo preview** — a minted demo shop built ahead of time for one prospect, wearing that shop's own name, main colour and town over the usual seeded divers and boats, and the week-long link that opens it signed in as its owner (`/preview/<id>`, `demo_previews`). The founder builds one with `pnpm preview build <site>` and reads them with `pnpm preview list`. Each preview keeps three counts apart: **requested** (any fetch of the link's page, which a mail scanner does), **opened** (a browser ran the page and entered the shop) and **used** (real input inside the shop, the same touch that keeps a staff session alive). Only the first real use mails the founder. The first open replays the seeded day so the boats are this morning's. A preview whose week is up, or whose shop the demo reaper has taken, says it has ended; the record of who looked outlives the shop. A browser the founder marked as his own is never counted. ADR [20261116-demo-previews](../../architecture/decisions/20261116-demo-previews.md).
 - **Owner reporting / monthly report** — the owner's "how's my month" view (`/shop/[slug]/reports`):
   net revenue, bookings, **fill rate**, and **waiver completion** for the trips that departed in a

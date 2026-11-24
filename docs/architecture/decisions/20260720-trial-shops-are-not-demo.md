@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-07-20
+- **Amended by:** [20261124-free-shops-no-trial](20261124-free-shops-no-trial.md) — there is no trial any more; an onboarded shop is simply a real shop. The separation below stands.
 
 Revises the `isDemo` decision of
 [20260718-dynamic-demo-onboarding](20260718-dynamic-demo-onboarding.md); the onboarding flow and
