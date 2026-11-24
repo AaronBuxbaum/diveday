@@ -9,7 +9,7 @@ import {
 } from "@/i18n/readiness-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatCalendarDate } from "@/lib/calendar-date";
-import { formatCalendarDateRange, formatShortDate } from "@/lib/format";
+import { formatShortDate } from "@/lib/format";
 import {
   interestContact,
   LAST_MINUTE_RECIPIENT_PREVIEW_LIMIT,
@@ -233,25 +233,12 @@ export function anytimeInterestRows(input: {
   );
   const rows = review.shown.map(({ recipient, belowRequirement }): WhoWantsInRow => {
     const { interest, person } = recipient;
-    const window =
-      interest.availableFrom && interest.availableUntil
-        ? formatCalendarDateRange(interest.availableFrom, interest.availableUntil, locale)
-        : interest.availableFrom
-          ? t("trips.whoWantsIn.windowFrom", {
-              date: formatCalendarDate(interest.availableFrom, locale),
-            })
-          : interest.availableUntil
-            ? t("trips.whoWantsIn.windowUntil", {
-                date: formatCalendarDate(interest.availableUntil, locale),
-              })
-            : t("trips.whoWantsIn.anyDay");
     return {
       interestId: interest.id,
       name: person.fullName,
       email: person.email,
-      facts: [person.email ? null : t("trips.whoWantsIn.noEmail"), window]
-        .filter(Boolean)
-        .join(" · "),
+      // The window is why they are in this group ("Around these dates"); it is not repeated on every row.
+      facts: person.email ? "" : t("trips.whoWantsIn.noEmail"),
       certification: {
         text: belowRequirement
           ? certificationSummaryBelowRequirementText(t, recipient.certification, locale)

@@ -43,8 +43,8 @@ export function planOf(overview: Pick<Overview, "tripDiveList">): string[] {
 /**
  * **What each phase adds around the guest list** (ADR 20261117-trip-page-clock),
  * composed here so the route stays thin: the trip-level fixes, Filling's trip
- * facts with what comes next under them, Getting ready's settled line, gear
- * and water, and Check-in's quiet line.
+ * facts ending on what comes next, Getting ready's settled line, gear and
+ * water, and Check-in's quiet line.
  */
 export function phaseSlots({
   frame: { shown, current, lookBack, readyFrom, dockBy },
@@ -106,32 +106,27 @@ export function phaseSlots({
   });
   const beside =
     phase === "filling" ? (
-      // One quiet column beside the guests: the trip's facts, then what comes next.
-      <aside data-filling-aside className="min-w-0 space-y-4">
-        <TripFactsCard
-          crew={crew}
-          plan={plan}
-          price={
-            trip.priceCents !== null
-              ? formatMoneyScanned(trip.priceCents, shop.currency, locale)
-              : null
-          }
-          whoCanBook={admissionDisplay(trip.course, requirement, overview.siteRequirement, t)}
-          editHref={(section) => `${tripPath}?view=edit#${section}`}
-          locale={locale}
-          t={t}
-        />
-        {/* "Next" is about the future, so only Filling seen while it is the phase now says it. */}
-        {current === "filling" ? (
-          <p data-filling-next className="px-4 text-sm text-muted sm:px-5">
-            <span className="font-medium text-foreground">{t("trips.clock.quiet.next")}</span>
-            {" · "}
-            {t("trips.clock.quiet.gettingReady", {
-              day: formatShortDate(readyFrom, locale, shop.timezone),
-            })}
-          </p>
-        ) : null}
-      </aside>
+      <TripFactsCard
+        crew={crew}
+        plan={plan}
+        price={
+          trip.priceCents !== null
+            ? formatMoneyScanned(trip.priceCents, shop.currency, locale)
+            : null
+        }
+        whoCanBook={admissionDisplay(trip.course, requirement, overview.siteRequirement, t)}
+        editHref={(section) => `${tripPath}?view=edit#${section}`}
+        // "Next" is about the future, so only Filling seen while it is the phase now says it.
+        next={
+          current === "filling"
+            ? t("trips.clock.quiet.gettingReady", {
+                day: formatShortDate(readyFrom, locale, shop.timezone),
+              })
+            : null
+        }
+        locale={locale}
+        t={t}
+      />
     ) : null;
   // "Crew and plan are set": said once, folded, when neither is a fix.
   const afterReady =

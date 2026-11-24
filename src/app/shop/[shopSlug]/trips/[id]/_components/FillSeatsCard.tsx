@@ -97,7 +97,7 @@ export function FillSeatsCard({
           {row.facts}
           {row.certification ? (
             <>
-              {" · "}
+              {row.facts ? " · " : null}
               <span className={row.certification.unchecked ? "text-warning-strong" : undefined}>
                 {row.certification.text}
               </span>
@@ -125,6 +125,7 @@ export function FillSeatsCard({
           tripWhen={trip.when}
           copy={copy}
           discountFields={discount ? <OfferDiscountRider /> : null}
+          quiet
         />
       ) : null}
     </li>
@@ -210,7 +211,7 @@ export function FillSeatsCard({
                     </span>
                     <span className="block text-sm text-muted">{pastGuests.line}</span>
                   </span>
-                  <span className={buttonClass({ variant: "secondary", size: "sm" })}>
+                  <span className={buttonClass({ variant: "link", size: "sm" })}>
                     {t("trips.clock.filling.invite")}
                   </span>
                 </summary>
@@ -231,7 +232,6 @@ export function FillSeatsCard({
                 label={t("trips.detail.copyBookingLink")}
                 copiedLabel={t("words.did.copied")}
                 failedLabel={t("trips.detail.linkCopyFailed")}
-                variant="secondary"
               />
             </li>
           ) : null}

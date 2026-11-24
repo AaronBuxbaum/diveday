@@ -358,8 +358,6 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
         afterReady: context.afterReady,
         // The list's own door to the add form, gone while that form is open.
         addGuestHref: acceptsDivers && !context.addBand?.open ? context.addGuestHref : null,
-        // Filling's Booked card carries it on its heading row.
-        addGuestInHeader: context.phase === "filling" ? "booked" : undefined,
       }}
     />
   );
@@ -442,7 +440,8 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
         // fill a seat; the trip's facts beside them, under them on a phone.
         <div
           data-filling-layout
-          className="grid items-start gap-10 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-8"
+          // The rail only beside something: with no guest and no fill card the facts lead.
+          className="grid items-start gap-10 lg:gap-8 lg:has-[[data-fill-seats],[data-guest-folios]]:grid-cols-[minmax(0,1fr)_20rem]"
         >
           <div className="min-w-0 space-y-10">
             {guestsLead ? (
@@ -502,13 +501,10 @@ function FillingCard({
   const t = staffTranslator(locale);
   const { trip, demand } = guests;
   const elsewhere = Boolean(context.soldElsewhere);
-  // Once there are guests, "Add a guest" is on their card's heading row, so the
+  // "Add a guest" is the page's one primary, beside the sentence, so the
   // card's own add row is drawn only to hold the open form (`?add=1`).
   const addOpen = acceptsDivers && Boolean(context.addBand?.open);
-  const addHref =
-    acceptsDivers && (guests.roster.length === 0 || addOpen)
-      ? (context.addGuestHref ?? null)
-      : null;
+  const addHref = addOpen ? (context.addGuestHref ?? null) : null;
   const carry =
     // **One waiting diver is worth carrying too** (fourth review, item 31).
     // The demand banner carries the list instead, except sold elsewhere,
@@ -532,8 +528,8 @@ function FillingCard({
     (sum, group) => sum + group.rows.length + (group.more?.length ?? 0),
     0,
   );
-  // Sold elsewhere there is no link or past guest to offer: with guests
-  // booked, nobody waiting and the form closed, the card would be a bare heading.
+  // Sold elsewhere there is no link or past guest to offer: with nobody
+  // waiting and the form closed, the card would be a bare heading.
   if (elsewhere && waiting === 0 && !addHref && !carry) return null;
   return (
     <FillSeatsCard

@@ -16,6 +16,7 @@ import {
   type FixReason,
   type FixRemedy,
   fixListOf,
+  quietOnFilling,
 } from "@/features/trips/trip-fix-list";
 import type { StaffMessageKey } from "@/i18n/staff-messages";
 import { staffParticipantTypeLabel } from "@/i18n/staff-participant-labels";
@@ -24,6 +25,7 @@ import { formatMoneyCents, formatWeekdayTime } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { firstNameOf } from "@/lib/person-name";
 import { diverPhotoDisplayPath } from "@/lib/person-photo";
+import type { ReadinessBlockerCode } from "@/lib/readiness";
 import { rentalFitCompleteness } from "@/lib/rentals";
 import { shopPath } from "@/lib/staff-notices";
 import type { FixListGuest, FixListRow, FixListSection } from "./GuestFixList";
@@ -128,6 +130,25 @@ type Seat = {
 };
 
 /**
+ * The one reminder time every listed guest with a reason shares, or null when
+ * they differ or none is set: Filling says it once on the card's heading row,
+ * not on every line.
+ */
+function sharedReminderOf(
+  items: readonly FixItem[],
+  byId: ReadonlyMap<string, { reminderAt: Date | null }>,
+): Date | null {
+  const times = new Set(
+    items.flatMap((item) => {
+      const at = item.reasons.length > 0 ? byId.get(item.guestId)?.reminderAt : null;
+      return at ? [at.getTime()] : [];
+    }),
+  );
+  const [only] = times;
+  return times.size === 1 && only !== undefined ? new Date(only) : null;
+}
+
+/**
  * **One guest, read for the fix list**: the codes behind the reason lines the
  * row already says (readiness blockers, then each advisory line), so the list
  * and the opened guest can never disagree about what holds someone up.
@@ -141,12 +162,15 @@ function seatOf(entry: RosterEntry, context: RosterRowContext): Seat {
   const { reasonLines } = rowReasonLines({ ...seat, ...rowNotices(seat) });
   const blocked = seat.readiness?.status === "blocked";
   // A held seat says only its own reasons (`heldSeatBlockers`); a blocked
-  // reading with none said still blocks.
-  const blockers = blocked
+  // reading with none said still blocks. A seat with no reading at all fails
+  // closed, as the sentence's count does (`tripFrame`): it is never "fine".
+  const blockers: ReadinessBlockerCode[] = blocked
     ? seat.blockerTexts.length
       ? seat.blockerTexts.map(({ blocker }) => blocker.code)
       : (seat.readiness?.blockers.map((blocker) => blocker.code) ?? ["readiness_unavailable"])
-    : [];
+    : seat.readiness
+      ? []
+      : ["readiness_unavailable"];
   const advisories: AdvisoryReason[] = reasonLines.flatMap((line) => {
     const reason = LINE_REASONS[line.key];
     return reason ? [reason] : [];
@@ -435,7 +459,9 @@ export function guestFixRows(
     return { openLabel: t(REMEDY_KEYS[remedy === "send_waiver" ? "open" : remedy]) };
   };
 
-  const fixRow = (item: FixItem, tone: FixListRow["tone"]): DraftRow => {
+  const reminderLine = (at: Date) =>
+    t("trips.fixList.reminderAt", { when: formatWeekdayTime(at, trip.locale, trip.shopTimezone) });
+  const fixRow = (item: FixItem, tone: FixListRow["tone"], saysReminder = true): DraftRow => {
     const seat = byId.get(item.guestId);
     const {
       control = null,
@@ -443,10 +469,11 @@ export function guestFixRows(
       panelHoldsControl = false,
     } = remedyControl(item.remedy, seat);
     const reminder =
-      seat?.reminderAt && item.reasons.length > 0 && (phase === "filling" || phase === "ready")
-        ? t("trips.fixList.reminderAt", {
-            when: formatWeekdayTime(seat.reminderAt, trip.locale, trip.shopTimezone),
-          })
+      saysReminder &&
+      seat?.reminderAt &&
+      item.reasons.length > 0 &&
+      (phase === "filling" || phase === "ready")
+        ? reminderLine(seat.reminderAt)
         : null;
     const phrase = [phraseOf(item, seat), reminder].filter(Boolean).join(" · ") || null;
     return {
@@ -552,12 +579,13 @@ export function guestFixRows(
   };
 
   const booked = seats.filter((seat) => !seat.guest.released).map((seat) => seat.guest.id);
-  // Days ahead only what would stop a guest boarding takes the warning
-  // color; a thing worth a minute is said in the quiet one, so a glance down
-  // the card finds who is not ready.
+  // Filling's rows: quiet for the day's routine, warning for the rest (`quietOnFilling`).
+  const sharedReminder = sharedReminderOf([...list.blocking, ...list.worthAMinute], byId);
   const quietRows = [
-    ...list.blocking.map((item) => fixRow(item, "warning")),
-    ...list.worthAMinute.map((item) => fixRow(item, "muted")),
+    ...list.blocking.map((item) => fixRow(item, "warning", !sharedReminder)),
+    ...list.worthAMinute.map((item) =>
+      fixRow(item, quietOnFilling(item.reasons) ? "muted" : "warning", !sharedReminder),
+    ),
   ].map((row) => ({ ...row, control: null, openLabel: null }));
   const drafts: DraftSection[] =
     phase === "listed"
@@ -568,6 +596,7 @@ export function guestFixRows(
               key: "booked",
               label: t("trips.fixList.booked"),
               tone: "default",
+              note: sharedReminder ? reminderLine(sharedReminder) : undefined,
               summary: {
                 label: t("trips.clock.sentence.guestCount", { count: list.fine.length }),
                 phrase: t("trips.fixList.nothingYet"),

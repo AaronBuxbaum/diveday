@@ -17,8 +17,7 @@ const t = staffTranslator("en-US");
  * **A trip that sells elsewhere** ("Try it Saturday", items 4 and 5): a
  * departure put on the board three weeks out with no price lands the board on
  * its own week, and its Filling leads with who is ready, not with seats to
- * sell: the add card while nobody is booked, then the guests with "Add a
- * guest" on their card. A party added from it lands on its waivers saying who the links
+ * sell, with "Add a guest" the one primary beside the sentence. A party added from it lands on its waivers saying who the links
  * reached (which channels, `partyReachedParam`, is unit tested: the demo shop
  * holds every send); a guest with no email and no phone is told apart from one
  * with an address.
@@ -36,9 +35,10 @@ test("an unpriced trip leads with readiness, and the add says who the links reac
 
   const sentence = page.locator("[data-trip-sentence]");
   await expect(sentence).toContainText(t("trips.clock.sentence.noGuests"));
-  await expect(
-    page.getByRole("heading", { name: t("trips.clock.filling.addGuests"), exact: true }),
-  ).toBeVisible();
+  // With nobody booked the sentence says how guests get here, beside the one primary.
+  await expect(sentence).toContainText(t("trips.clock.filling.typeOrPaste"));
+  const addGuest = sentence.getByRole("link", { name: t("trips.clock.addGuest"), exact: true });
+  await expect(addGuest).toBeVisible();
   await expect(page.getByText(t("trips.clock.filling.bookingLink"), { exact: true })).toHaveCount(
     0,
   );
@@ -65,15 +65,12 @@ test("an unpriced trip leads with readiness, and the add says who the links reac
 
   await page.getByRole("link", { name: t("trips.partyWaiverQueue.back") }).click();
   await expect(sentence).toContainText(t("trips.clock.sentence.readyOf", { ready: 0, total: 2 }));
-  // With guests booked the add card is gone: "Add a guest" is on their card's heading row.
-  await expect(
-    page.getByRole("heading", { name: t("trips.clock.filling.addGuests"), exact: true }),
-  ).toHaveCount(0);
-  await expect(
-    page
-      .locator('[data-fix-group="booked"]')
-      .getByRole("link", { name: t("trips.clock.addGuest"), exact: true }),
-  ).toBeVisible();
+  // One count, the one the bar draws: no "booked" line beside it, and the primary stays.
+  await expect(sentence).not.toContainText(
+    t("trips.clock.sentence.booked", { booked: 2, capacity: 6 }),
+  );
+  await expect(addGuest).toBeVisible();
+  await expect(page.locator('[data-fix-group="booked"]')).toBeVisible();
   // Nico's waiver is open, but nothing could carry it: the list says so, not "sent".
   await expect(
     page.getByRole("button", { name: "Nico Nocontact" }).first(),

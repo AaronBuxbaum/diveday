@@ -554,7 +554,29 @@ describe("while the trip fills", () => {
     expect(within(booked).getByText(/Nothing needed from them yet/)).toBeVisible();
   });
 
-  it("puts Add a guest on the Booked heading row, beside its count", () => {
+  it("says a reminder time the card shares once, on its heading row", () => {
+    const at = new Date("2026-11-29T13:00:00.000Z");
+    renderRoster({
+      roster: [blocked, entry("c", "Cora Dunn")],
+      reminders: new Map([
+        ["a", at],
+        ["c", at],
+      ]),
+      readiness: new Map([
+        ["a", readinessRow("blocked", [{ code: "certification_missing", params: undefined }])],
+        ["c", readinessRow("blocked", [{ code: "waiver_not_sent", params: undefined }])],
+      ]) as ReadinessByBooking,
+      waivers: new Map() as WaiverByBooking,
+      rentalFit: ownGear(["a", "c"]),
+      phase: "filling",
+      selectedBookingId: null,
+    });
+    const booked = group("booked") as HTMLElement;
+    expect(within(booked).getAllByText(/Reminder goes out/)).toHaveLength(1);
+    expect(document.getElementById("guest-phrase-a")).not.toHaveTextContent("Reminder");
+  });
+
+  it("draws no Add a guest of its own: the page's primary is beside the sentence", () => {
     renderRoster({
       roster: [blocked, ready],
       readiness: blockers,
@@ -563,17 +585,37 @@ describe("while the trip fills", () => {
       phase: "filling",
       selectedBookingId: null,
       addGuestHref: "/trip?phase=filling&add=1#add-a-booking",
-      addGuestInHeader: "booked",
     });
-    const heading = within(group("booked")).getByRole("heading", { name: /Booked/ });
-    expect(heading).toHaveTextContent("Booked2");
-    const row = heading.parentElement as HTMLElement;
-    expect(within(row).getByRole("link", { name: "Add a guest" })).toHaveAttribute(
-      "href",
-      "/trip?phase=filling&add=1#add-a-booking",
+    expect(screen.getByRole("button", { name: "Priya Sharma" })).toBeVisible();
+    expect(screen.queryByRole("link", { name: "Add a guest" })).toBeNull();
+  });
+
+  // Fails closed, as the sentence does (`tripFrame`): a seat the read missed is never "fine".
+  it("lists a seat with no readiness reading as needing a look, as the sentence counts it", () => {
+    const readiness = new Map([
+      ["a", readinessRow("blocked", [{ code: "certification_missing", params: undefined }])],
+    ]) as ReadinessByBooking;
+    const roster = [blocked, ready];
+    renderRoster({
+      roster,
+      readiness,
+      waivers,
+      rentalFit: ownGear(["a", "b"]),
+      phase: "filling",
+      selectedBookingId: null,
+    });
+    // The sentence's count: anyone whose reading is not "ready".
+    const notReady = roster.filter(
+      ({ booking }) => readiness.get(booking.id)?.readiness?.status !== "ready",
+    ).length;
+    const booked = group("booked") as HTMLElement;
+    const warned = [...booked.querySelectorAll("[id^='guest-phrase-']")].filter((line) =>
+      line.classList.contains("text-warning-strong"),
     );
-    // Once, on the card: no second link under the list.
-    expect(screen.getAllByRole("link", { name: "Add a guest" })).toHaveLength(1);
+    expect(notReady).toBe(2);
+    expect(warned).toHaveLength(notReady);
+    expect(document.getElementById("guest-phrase-b")).toHaveTextContent("Couldn’t check readiness");
+    expect(within(booked).queryByText(/Nothing needed from them yet/)).toBeNull();
   });
 
   it("says in the warning color only what would stop a guest boarding", () => {

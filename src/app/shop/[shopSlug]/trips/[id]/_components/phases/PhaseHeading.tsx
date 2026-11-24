@@ -12,6 +12,7 @@ export function PhaseHeading({
   notBack,
   rollCallHero,
   tripPath,
+  addGuest = false,
   strip,
 }: {
   frame: ReturnType<typeof tripFrame>;
@@ -21,6 +22,8 @@ export function PhaseHeading({
   notBack: number;
   rollCallHero: boolean;
   tripPath: string;
+  /** Filling draws "Add a guest": the trip takes guests and the add form is not already open. */
+  addGuest?: boolean;
   strip: ReactNode;
 }) {
   if (showDetails) return null;
@@ -28,6 +31,13 @@ export function PhaseHeading({
     ? { href: `${tripPath}/manifest`, label: record.t("trips.clock.rollCall") }
     : null;
   const seats = frame.shown === "filling" ? frame.bar : null;
+  const action =
+    frame.shown === "filling" && !cancelled && addGuest
+      ? {
+          href: `${tripPath}?phase=filling&add=1#add-a-booking`,
+          label: record.t("trips.clock.addGuest"),
+        }
+      : null;
   const lookBack =
     (frame.lookBack && frame.current === "wrapped") || (cancelled && frame.shown !== "wrapped");
   const showSentence = !cancelled && frame.shown !== "water" && frame.shown !== "wrapped";
@@ -40,7 +50,12 @@ export function PhaseHeading({
             <LookBackCloseOut record={record} cancelled={cancelled} notBack={notBack} />
           ) : null}
           {showSentence ? (
-            <TripSentenceLine sentence={frame.sentence} rollCall={rollCall} seats={seats} />
+            <TripSentenceLine
+              sentence={frame.sentence}
+              rollCall={rollCall}
+              seats={seats}
+              action={action}
+            />
           ) : null}
         </div>
       ) : null}

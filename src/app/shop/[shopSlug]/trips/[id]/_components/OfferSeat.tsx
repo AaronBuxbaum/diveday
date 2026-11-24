@@ -52,6 +52,7 @@ export function OfferSeat({
   tripWhen,
   copy,
   discountFields = null,
+  quiet = false,
 }: {
   /** Unique on the page: the tick boxes name it. */
   formId: string;
@@ -70,6 +71,8 @@ export function OfferSeat({
   copy: OfferSeatCopy;
   /** The discount's rider (`OfferDiscountRider`), for a role that may discount. */
   discountFields?: ReactNode;
+  /** Link weight, for a list where the button repeats on every row (Filling's fill card). */
+  quiet?: boolean;
 }) {
   const router = useRouter();
   const [emailed, setEmailed] = useState(false);
@@ -155,7 +158,11 @@ export function OfferSeat({
           type="submit"
           disabled={count === 0 || discountBlank}
           aria-label={emailed ? undefined : ariaLabel}
-          className={buttonClass({ variant: "secondary", size: "sm", className: "shrink-0" })}
+          className={buttonClass({
+            variant: quiet ? "link" : "secondary",
+            size: "sm",
+            className: "shrink-0",
+          })}
         >
           <span aria-live="polite">{buttonText}</span>
         </button>

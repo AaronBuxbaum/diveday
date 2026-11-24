@@ -91,8 +91,7 @@ export function RosterSection({
   slots?: RosterSlots;
 }) {
   const { locale, shopTimezone } = trip;
-  const { arrival, record, phase = "listed", tripFixes, afterReady } = slots;
-  const { addGuestHref, addGuestInHeader } = slots;
+  const { arrival, record, phase = "listed", tripFixes, afterReady, addGuestHref } = slots;
   const { roster } = rows;
   const t = staffTranslator(locale);
   const controls = waiverControls(t, { rehearsal: trip.rehearsal });
@@ -190,12 +189,9 @@ export function RosterSection({
                 // which is its legend; no other phase is the desk's.
                 top={phase === "checkin" ? arrival?.instrument?.(fixRows.deskWorkOpen) : undefined}
                 addGuest={
-                  addGuestHref
-                    ? {
-                        href: addGuestHref,
-                        label: t("trips.clock.addGuest"),
-                        headerOf: addGuestInHeader,
-                      }
+                  // Filling's "Add a guest" is the page's one primary, beside the sentence.
+                  addGuestHref && phase !== "filling"
+                    ? { href: addGuestHref, label: t("trips.clock.addGuest") }
                     : null
                 }
                 initialOpenId={

@@ -44,9 +44,12 @@ export function TripFactsCard({
   price,
   whoCanBook,
   editHref,
+  next = null,
   locale,
   t,
 }: {
+  /** What comes next ("Getting ready starts …"), the list's last row. */
+  next?: string | null;
   crew: string[];
   plan: string[];
   price: string | null;
@@ -103,11 +106,15 @@ export function TripFactsCard({
       ),
     },
   );
+  if (next)
+    rows.push({ key: "next", label: t("trips.clock.quiet.next"), value: <span>{next}</span> });
   return (
+    // No card: the guests and the fill card are the page's two; these facts
+    // are a quiet list beside them, under one rule on a phone.
     <section
       aria-labelledby="trip-facts-heading"
       data-trip-facts
-      className={sectionCardClass({ className: "space-y-3" })}
+      className="space-y-3 border-t border-border pt-6 sm:max-w-md lg:border-t-0 lg:pt-4"
     >
       <h2 id="trip-facts-heading" className={HEADING}>
         {t("trips.clock.filling.heading")}

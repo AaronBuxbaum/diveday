@@ -322,8 +322,8 @@ for (const scheme of ["light", "dark"] as const) {
 
       /**
        * **Filling on a departure sold elsewhere, with its guests** (the
-       * Filling redesign): the sentence counts who is ready, the Booked card
-       * leads with "Add a guest" on its heading row, and with nobody waiting
+       * Filling redesign): the sentence counts who is ready beside the one
+       * primary, "Add a guest"; the Booked card leads, and with nobody waiting
        * no fill card is drawn at all; the trip's facts sit beside the guests
        * (under them on a phone). No seeded departure is unpriced, so the trip
        * and its pasted list are made here. Safe to mutate: each worker owns
@@ -365,11 +365,8 @@ for (const scheme of ["light", "dark"] as const) {
         await expect(page.locator("[data-trip-sentence]")).toContainText(
           staffCopy("trips.clock.sentence.readyOf", { ready: 0, total: 3 }),
         );
-        await expect(
-          page
-            .locator('[data-fix-group="booked"]')
-            .getByRole("link", { name: staffCopy("trips.clock.addGuest"), exact: true }),
-        ).toBeVisible();
+        await expect(page.locator("[data-filling-primary]")).toBeVisible();
+        await expect(page.locator('[data-fix-group="booked"]')).toBeVisible();
         await capture(page, "trip-filling-sold-elsewhere", scheme);
       });
 

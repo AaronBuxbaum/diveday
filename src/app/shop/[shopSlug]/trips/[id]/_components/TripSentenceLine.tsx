@@ -5,19 +5,23 @@ import type { TripSentence } from "./trip-sentence";
 
 /**
  * The sentence under the phase strip, its emphasis in the alarm color, the
- * quieter line under it, and, from Check-in on, the **Roll call** door: the
- * crew's way onto the boat's own screen, dark like the deck it opens.
+ * quieter line under it, and the phase's one door beside it: while the trip
+ * fills, **Add a guest**; from Check-in on, **Roll call**, the crew's way
+ * onto the boat's own screen, dark like the deck it opens.
  */
 export function TripSentenceLine({
   sentence,
   rollCall,
   seats = null,
+  action = null,
 }: {
   sentence: TripSentence;
   /** The door to Roll call, worded; null where the page has none yet. */
   rollCall: { href: string; label: string } | null;
   /** Filling's bar: one block a seat, the booked ones filled; on a departure sold elsewhere, one a guest, the ready ones filled. */
   seats?: { booked: number; capacity: number } | null;
+  /** Filling's one primary action ("Add a guest"), beside the sentence. */
+  action?: { href: string; label: string } | null;
 }) {
   return (
     <div
@@ -37,6 +41,16 @@ export function TripSentenceLine({
           </p>
         ) : null}
       </div>
+      {action ? (
+        <Link
+          href={action.href}
+          scroll={false}
+          data-filling-primary=""
+          className={`${buttonClass({ variant: "primary" })} shrink-0 self-start`}
+        >
+          {action.label}
+        </Link>
+      ) : null}
       {rollCall ? (
         <Link
           href={rollCall.href}

@@ -219,6 +219,7 @@ export default async function ManageTripPage({
     mayCallOff: mayChangeDeparture,
   });
 
+  const addBand = await addBandFor(db, { shop, shopSlug, tripId, t }, { ...rest, diverq });
   const guestList = showDetails ? null : (
     <TripGuestList
       deskOpen={Boolean(desk)}
@@ -243,7 +244,7 @@ export default async function ManageTripPage({
             // The rebooking record belongs to Wrapped up, not to a look back at an earlier phase.
             record: frame.lookBack ? undefined : record,
             inWaterCrew: overview.crew.inWaterCrew,
-            addBand: await addBandFor(db, { shop, shopSlug, tripId, t }, { ...rest, diverq }),
+            addBand,
             acceptsDivers,
             guests,
             shopSlug,
@@ -289,7 +290,6 @@ export default async function ManageTripPage({
   const rollCall = rollCallPlace({
     ...{ door: frame.rollCallDoor, editing: showDetails, cancelled, shown: frame.shown },
   });
-  const rollCallHero = rollCall === "hero";
   const buddyArgs = { tripId, locale, t, buddyError, context: { db, shop, session } };
   return (
     <>
@@ -301,11 +301,11 @@ export default async function ManageTripPage({
           addGuest={acceptsDivers && frame.capacity > trip.booked}
         />
         <PhaseHeading
-          {...{ frame, showDetails, cancelled }}
+          {...{ frame, showDetails, cancelled, addGuest: acceptsDivers && !addBand.open }}
           record={phase.record}
           notBack={unaccounted.size}
           tripPath={tripPath}
-          rollCallHero={rollCallHero}
+          rollCallHero={rollCall === "hero"}
           strip={
             <TripPhaseStrip
               {...{ shopSlug, tripId }}
@@ -369,7 +369,7 @@ export default async function ManageTripPage({
             buddies={<BuddyTeamsCard {...buddyArgs} surface="checkin" open={buddies === "open"} />}
           />
         ) : frame.shown === "water" ? (
-          <WaterPhase guests={guestList} {...phase} door={rollCallHero} />
+          <WaterPhase guests={guestList} {...phase} door={rollCall === "hero"} />
         ) : (
           <WrappedPhase guests={guestList} roster={guests} {...phase} />
         )}

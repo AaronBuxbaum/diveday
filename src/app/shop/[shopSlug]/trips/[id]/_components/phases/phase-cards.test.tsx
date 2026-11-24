@@ -46,6 +46,25 @@ describe("the trip's facts while it fills", () => {
       "href",
       "/trip?view=edit#requirements",
     );
+    expect(within(card).queryByText("Next")).toBeNull();
+  });
+
+  it("ends on what comes next, when the caller says it", () => {
+    render(
+      <TripFactsCard
+        crew={["Sal Moretti"]}
+        plan={["Blue Hole"]}
+        price={null}
+        whoCanBook="Anyone"
+        editHref={(section) => `/trip?view=edit#${section}`}
+        next="Getting ready starts Sun, Nov 29, the day before"
+        locale="en-US"
+        t={t}
+      />,
+    );
+    const card = screen.getByRole("region", { name: "This trip" });
+    expect(within(card).getByText("Next")).toBeVisible();
+    expect(within(card).getByText(/Getting ready starts Sun, Nov 29/)).toBeVisible();
   });
 });
 

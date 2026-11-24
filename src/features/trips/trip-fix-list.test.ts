@@ -5,6 +5,7 @@ import {
   type FixGuest,
   fixListOf,
   isBlockerReason,
+  quietOnFilling,
   reasonRank,
   remedyFor,
 } from "./trip-fix-list";
@@ -218,5 +219,62 @@ describe("at Check-in", () => {
     expect(list.notHere).toEqual(["a"]);
     expect(list.turnedAway).toEqual(["b"]);
     expect(list.blocking).toEqual([]);
+  });
+});
+
+/**
+ * **What Filling may say quietly** (dock-operator review, 2026-11-24): the
+ * day's routine only. A medical, identity or waiver signal keeps the warning
+ * color days ahead, and so does every readiness blocker.
+ */
+describe("quietOnFilling", () => {
+  it("is quiet for the day's routine: depth, recency, fit, drysuit, contact, balance", () => {
+    expect(
+      quietOnFilling([
+        "depth",
+        "recency",
+        "fit_needed",
+        "drysuit",
+        "contact_missing",
+        "payment_unpaid",
+      ]),
+    ).toBe(true);
+  });
+
+  it("keeps a guest whose only advisory is an earlier referral in the warning color", () => {
+    const list = fixListOf(
+      [
+        {
+          id: "g",
+          blockers: [],
+          advisories: ["earlier_referral"],
+          checkedIn: false,
+          released: null,
+        },
+      ],
+      { mode: "all" },
+    );
+    expect(list.blocking).toEqual([]);
+    expect(list.worthAMinute.map((item) => item.reasons)).toEqual([["earlier_referral"]]);
+    expect(quietOnFilling(list.worthAMinute[0]?.reasons ?? [])).toBe(false);
+  });
+
+  it("is never quiet for a medical, identity, waiver, re-entry or help advisory, alone or mixed", () => {
+    for (const reason of [
+      "earlier_refusal",
+      "earlier_referral",
+      "more_holds",
+      "waiver_unsigned",
+      "re_entry_ask",
+      "help_requested",
+    ] as const) {
+      expect(quietOnFilling([reason])).toBe(false);
+      expect(quietOnFilling(["depth", reason])).toBe(false);
+    }
+  });
+
+  it("is never quiet for a readiness blocker, or for nothing at all", () => {
+    for (const reason of BLOCKER_REASONS) expect(quietOnFilling([reason])).toBe(false);
+    expect(quietOnFilling([])).toBe(false);
   });
 });

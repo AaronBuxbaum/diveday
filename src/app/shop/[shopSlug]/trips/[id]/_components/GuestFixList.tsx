@@ -51,6 +51,8 @@ export type FixListSection = {
   headless?: boolean;
   /** Quiet lines at the card's foot ("Crew and plan are set"). */
   after?: ReactNode;
+  /** One quiet fact the whole card shares, said once on its heading row ("Reminder goes out …"). */
+  note?: string;
   /** One message to the whole group ("Ask all 3"), beside its count. Never a record. */
   action?: ReactNode;
   rows: FixListRow[];
@@ -84,8 +86,7 @@ export function GuestFixList({
   guests: FixListGuest[];
   /** Above the groups: the desk's bar at Check-in. */
   top?: ReactNode;
-  /** Where "Add a guest" goes; `headerOf` names the group whose heading row carries it. */
-  addGuest?: { href: string; label: string; headerOf?: string } | null;
+  addGuest?: { href: string; label: string } | null;
   initialOpenId?: string;
   copy: { close: string };
 }) {
@@ -129,12 +130,6 @@ export function GuestFixList({
   };
   const byId = new Map(guests.map((guest) => [guest.id, guest]));
   const lastFolded = sections.findLast((section) => section.folded && section.rows.length)?.key;
-  const drawn = (section: FixListSection) =>
-    section.rows.length > 0 || (section.summary?.rows.length ?? 0) > 0 || Boolean(section.after);
-  const addInHeader = sections.find(
-    (section) =>
-      section.key === addGuest?.headerOf && !section.folded && !section.headless && drawn(section),
-  )?.key;
 
   return (
     <div
@@ -158,8 +153,6 @@ export function GuestFixList({
             else next.add(key);
             return next;
           });
-        // People, not reasons: a guest is on one row.
-        const people = [...section.rows, ...summaryRows].filter((row) => !row.title).length;
         const rowList = (rows: FixListRow[], className = "") => (
           <ul className={`divide-y divide-border ${className}`}>
             {rows.map((row) => (
@@ -209,29 +202,20 @@ export function GuestFixList({
               </div>
             ) : section.headless ? null : (
               <div className="flex items-baseline justify-between gap-4 px-4 pt-4 pb-1 sm:px-6">
-                <h3
-                  className={`font-semibold ${section.tone === "danger" ? "text-danger" : "text-foreground"}`}
-                >
-                  {section.label}
-                  {/* With "Add a guest" on the row, the count sits by its heading. */}
-                  {section.key === addInHeader ? (
-                    <span className="ms-2 text-sm font-normal text-muted tabular-nums">
-                      {people || null}
-                    </span>
-                  ) : null}
-                </h3>
+                <div className="min-w-0">
+                  <h3
+                    className={`font-semibold ${section.tone === "danger" ? "text-danger" : "text-foreground"}`}
+                  >
+                    {section.label}
+                  </h3>
+                  {section.note ? <p className="text-sm text-muted">{section.note}</p> : null}
+                </div>
                 <span className="flex items-center gap-3">
                   {section.action}
-                  {addGuest && section.key === addInHeader ? (
-                    <a
-                      href={addGuest.href}
-                      className={buttonClass({ variant: "link", size: "sm", flush: true })}
-                    >
-                      {addGuest.label}
-                    </a>
-                  ) : (
-                    <span className="text-sm text-muted tabular-nums">{people || null}</span>
-                  )}
+                  {/* People, not reasons: a guest is on one row. */}
+                  <span className="text-sm text-muted tabular-nums">
+                    {[...section.rows, ...summaryRows].filter((row) => !row.title).length || null}
+                  </span>
                 </span>
               </div>
             )}
@@ -269,7 +253,7 @@ export function GuestFixList({
           </section>
         );
       })}
-      {addGuest && !lastFolded && !addInHeader ? (
+      {addGuest && !lastFolded ? (
         <a href={addGuest.href} className={buttonClass({ variant: "link", flush: true })}>
           {addGuest.label}
         </a>
