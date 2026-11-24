@@ -126,20 +126,21 @@ function BadgeShield() {
 /**
  * The organization's file as published, unaltered, on the ground it was drawn
  * for. The ground does not follow the color scheme: a mark is not recolored for
- * dark mode, so it sits on a small paper or ink tile that reads in both. Empty
- * `alt`, because the pill's words say the same thing.
+ * dark mode, so it sits on a small paper or ink tile that reads in both. Every
+ * logo gets the same height, and a wide wordmark is held to 3.5rem so it does not
+ * outweigh a square emblem. Empty `alt`, because the pill's words say the same thing.
  */
 function BadgeLogoMark({ logo }: { logo: BadgeLogo }) {
   const ground = logo.tone === "dark" ? "bg-device-frame" : "bg-device-frame-foreground";
   return (
-    <span className={`-ms-2 inline-flex h-7 shrink-0 items-center rounded-full px-1.5 ${ground}`}>
+    <span className={`-ms-2 inline-flex h-8 shrink-0 items-center rounded-full px-1.5 ${ground}`}>
       <Image
         src={logo.src}
         alt=""
         width={logo.width}
         height={logo.height}
         unoptimized
-        className="h-5 w-auto max-w-24"
+        className="h-6 w-auto max-w-14"
       />
     </span>
   );
