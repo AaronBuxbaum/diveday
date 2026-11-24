@@ -1,18 +1,17 @@
 import Link from "next/link";
 import { type ClosingCtaMeasure, closingCtaBoxClass } from "@/app/_components/ClosingCtaSkeleton";
+import { heroPriceLine } from "@/app/_components/hero-price-line";
 import { enterDemoAction } from "@/app/actions/demo";
 import { FunnelTag } from "@/components/FunnelTag";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
 import { BANNER_TITLE_CLASS } from "@/components/ui/typography";
-import { planCopyParams } from "@/features/money/billing";
-import { type DiverMessageKey, type DiverTranslator, diverTranslator } from "@/i18n/messages";
+import { type DiverMessageKey, diverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
 import type { PlanTerms } from "@/lib/billing/pricing-plans";
 import type { DemoLanding } from "@/lib/demo-landings";
 import type { DemoRoleId } from "@/lib/demo-roles";
 import { callHref, type FunnelSource, setUpHref } from "@/lib/funnel";
-import { earlyAccessPrice, marketingFee } from "@/lib/marketing";
 import { SUPPORT_EMAIL } from "@/lib/platform-mail";
 
 /**
@@ -158,20 +157,6 @@ export function FunnelCtas({
       ) : null}
     </>
   );
-}
-
-/**
- * The price line under a hero's doors, for the configured offer (ADR
- * 20261022-pricing-ab-test). "No cut of your bookings" is the monthly-only offer’s alone.
- */
-export function heroPriceLine(t: DiverTranslator, offer: PlanTerms, locale: string): string {
-  const params = planCopyParams(offer, locale);
-  return offer.plan === "percent_of_volume"
-    ? t(marketingFee.summaryKey, params)
-    : t("marketing.home.heroPriceLine", {
-        price: params.price,
-        cadence: t(earlyAccessPrice.cadenceKey),
-      });
 }
 
 /**
