@@ -22,6 +22,11 @@ export type BadgeLogo = {
 };
 
 export const BADGE_LOGOS: Partial<Record<BrandBadgeCode, BadgeLogo>> = {
+  // Placeholders found online (owner, 2026-11-24), to be replaced by the official member files.
+  // PADI 5 Star and PADI IDC share the plain PADI mark: no tier mark was found.
+  padi_5_star: { src: "/badges/padi.svg", width: 180, height: 200, tone: "light" },
+  padi_idc: { src: "/badges/padi.svg", width: 180, height: 200, tone: "light" },
+  green_fins: { src: "/badges/green_fins.png", width: 256, height: 256, tone: "light" },
   ssi_diamond: { src: "/badges/ssi_diamond.png", width: 322, height: 173, tone: "light" },
   naui_pro: { src: "/badges/naui_pro.png", width: 200, height: 47, tone: "dark" },
   tripadvisor: { src: "/badges/tripadvisor.svg", width: 3354, height: 713, tone: "light" },
