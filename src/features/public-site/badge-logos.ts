@@ -2,13 +2,11 @@ import type { BrandBadgeCode } from "@/lib/brand";
 
 /**
  * The official logo shown beside a badge's words (owner decision 2026-11-23,
- * H-20261123-badge-logos-shipped). One entry per code that has an official
- * file; a code with no entry keeps the text-and-shield badge. Where each file
- * came from, and when, is `public/badges/SOURCES.md`.
- *
- * **Falling back is a one-line change**: delete the code's line here and the
- * badge reads as text again, with no other edit (legal review is #4938). A mark
- * is never redrawn, recolored or cropped; `tone` is only the ground it sits on,
+ * H-20261123-badge-logos-shipped). One entry per code, and the type
+ * requires it: a badge cannot exist without a logo (owner, 2026-11-24), so a new
+ * code ships with its file. Where each file came from, and when, is
+ * `public/badges/SOURCES.md`. If legal review (#4938) does not clear a mark, remove
+ * the code, its file and its words together. A mark is never redrawn, recolored or cropped; `tone` is only the ground it sits on,
  * because the file is what the organization published (NAUI's is white type on
  * transparent and needs a dark ground, the others need a light one).
  */
@@ -21,7 +19,7 @@ export type BadgeLogo = {
   readonly tone: "light" | "dark";
 };
 
-export const BADGE_LOGOS: Partial<Record<BrandBadgeCode, BadgeLogo>> = {
+export const BADGE_LOGOS: Record<BrandBadgeCode, BadgeLogo> = {
   // Placeholders found online (owner, 2026-11-24), to be replaced by the official member files.
   // PADI 5 Star and PADI IDC share the plain PADI mark: no tier mark was found.
   padi_5_star: { src: "/badges/padi.svg", width: 180, height: 200, tone: "light" },

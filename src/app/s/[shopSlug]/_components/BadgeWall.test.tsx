@@ -31,16 +31,6 @@ describe("BadgeWall", () => {
     expect(container.querySelectorAll("svg")).toHaveLength(0);
   });
 
-  it("keeps the text badge with its shield for a code with no official file", () => {
-    // Reader's Choice has no logo file (see public/badges/SOURCES.md), so it reads as it did
-    // before logos; the year pill wears the same shield.
-    const { container } = render(
-      <BadgeWall badges={["readers_choice"]} establishedYear={1998} t={t} />,
-    );
-    expect(container.querySelectorAll("img")).toHaveLength(0);
-    expect(container.querySelectorAll("svg")).toHaveLength(2);
-  });
-
   it("sits a logo on the ground its file was drawn for, in either color scheme", () => {
     const { container } = render(
       <BadgeWall badges={["naui_pro", "dan_partner"]} establishedYear={null} t={t} />,
@@ -64,14 +54,12 @@ describe("BadgeWall", () => {
     for (const img of images) expect(img).toHaveClass("h-6", "w-auto", "max-w-14");
   });
 
-  it("draws the shield on its ink, so the pill's padding reads the same either side", () => {
+  it("draws the year's shield on its ink, so the pill's padding reads the same either side", () => {
     // In a 16-unit square the ink started 2px inside the box, and the glyph
     // side of each pill measured 14px to the border against the text's 11–12
     // (pixel-craft K-561). Cropped across to the ink at the stroke it is drawn
     // in, and sized by height, the box is the ink.
-    const { container } = render(
-      <BadgeWall badges={["readers_choice"]} establishedYear={null} t={t} />,
-    );
+    const { container } = render(<BadgeWall badges={[]} establishedYear={1998} t={t} />);
     const svg = container.querySelector("svg");
     expect(svg).toHaveAttribute("viewBox", "3.3 0 17.4 24");
     expect(svg).toHaveClass("h-3.5", "w-auto");
