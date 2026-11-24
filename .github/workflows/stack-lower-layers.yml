@@ -7,9 +7,12 @@
 # every job skips and `CI result` passes in seconds. The top layer is never touched. The logic and
 # its attempt cap live in scripts/ci-lower-layer-sweep.mjs.
 #
+# It also watches the top: a red run is retried once after 20 minutes of no push, then reported
+# with a comment and the `ci-stuck` label so a failure never sits silently.
+#
 # `workflow_run` and `pull_request_target` run the default branch's copy of this file and script,
 # and check out nothing from a pull request.
-name: Clear lower stack layers
+name: Watch stacks
 
 on:
   workflow_run:
@@ -17,6 +20,10 @@ on:
     types: [completed]
   pull_request_target:
     types: [opened, reopened, synchronize]
+  # A red top nobody is fixing raises no event of its own, so look every 15 minutes.
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
 
 concurrency:
   group: stack-lower-layers
@@ -25,7 +32,8 @@ concurrency:
 permissions:
   actions: write
   contents: read
-  pull-requests: read
+  pull-requests: write
+  issues: write
 
 jobs:
   sweep:
