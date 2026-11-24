@@ -206,7 +206,7 @@ async function seatsWhoseTextFailed(
   for (const row of rows) latest.set(row.bookingId, row.providerStatus);
   return new Set(
     [...latest]
-      .filter(([, status]) => status === "failed" || status === "bounced")
+      .filter(([, status]) => status === "failed")
       .map(([id]) => id),
   );
 }
