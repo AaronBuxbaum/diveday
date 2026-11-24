@@ -28,10 +28,14 @@ export function TripSentenceLine({
         <p className={`${SECTION_TITLE_CLASS} text-balance`}>
           <Emphasised text={sentence.headline} emphasis={sentence.emphasis} />
         </p>
-        {sentence.sub ? (
-          <p className="mt-1.5 text-muted tabular-nums sm:mt-2">{sentence.sub}</p>
-        ) : null}
+        {/* The bar draws the headline's count, so it sits right under it;
+            the booked line follows as its own fact. */}
         {seats && seats.capacity > 0 ? <SeatBar {...seats} /> : null}
+        {sentence.sub ? (
+          <p className={`text-muted tabular-nums ${seats ? "mt-3" : "mt-1.5 sm:mt-2"}`}>
+            {sentence.sub}
+          </p>
+        ) : null}
       </div>
       {rollCall ? (
         <Link
@@ -47,13 +51,13 @@ export function TripSentenceLine({
 }
 
 /**
- * The seats as blocks, booked then open. Decoration only: the sub line above
- * already says "4 of 6 booked" in words.
+ * The seats as blocks, booked then open. Decoration only: the headline above
+ * and the line under it already say the count in words.
  */
 function SeatBar({ booked, capacity }: { booked: number; capacity: number }) {
   const filled = Math.min(booked, capacity);
   return (
-    <div data-seat-bar="" aria-hidden="true" className="mt-3 flex max-w-md gap-1">
+    <div data-seat-bar="" aria-hidden="true" className="mt-4 flex max-w-md gap-1">
       {Array.from({ length: capacity }, (_, seat) => (
         <span
           // biome-ignore lint/suspicious/noArrayIndexKey: a seat is its position

@@ -553,4 +553,49 @@ describe("while the trip fills", () => {
     expect(within(booked).queryByRole("link", { name: "Check cards" })).toBeNull();
     expect(within(booked).getByText(/Nothing needed from them yet/)).toBeVisible();
   });
+
+  it("puts Add a guest on the Booked heading row, beside its count", () => {
+    renderRoster({
+      roster: [blocked, ready],
+      readiness: blockers,
+      waivers,
+      rentalFit: ownGear(["a", "b"]),
+      phase: "filling",
+      selectedBookingId: null,
+      addGuestHref: "/trip?phase=filling&add=1#add-a-booking",
+      addGuestInHeader: "booked",
+    });
+    const heading = within(group("booked")).getByRole("heading", { name: /Booked/ });
+    expect(heading).toHaveTextContent("Booked2");
+    const row = heading.parentElement as HTMLElement;
+    expect(within(row).getByRole("link", { name: "Add a guest" })).toHaveAttribute(
+      "href",
+      "/trip?phase=filling&add=1#add-a-booking",
+    );
+    // Once, on the card: no second link under the list.
+    expect(screen.getAllByRole("link", { name: "Add a guest" })).toHaveLength(1);
+  });
+
+  it("says in the warning color only what would stop a guest boarding", () => {
+    const rusty = entry("r", "Olga Rust");
+    renderRoster({
+      roster: [
+        blocked,
+        { ...rusty, booking: { ...rusty.booking, lastDivedBand: "over_five_years" } },
+      ],
+      readiness: new Map([
+        ["a", readinessRow("blocked", [{ code: "waiver_not_sent", params: undefined }])],
+        ["r", readinessRow("ready")],
+      ]) as ReadinessByBooking,
+      waivers: new Map([["r", signedWaiver]]) as WaiverByBooking,
+      rentalFit: ownGear(["a", "r"]),
+      phase: "filling",
+      selectedBookingId: null,
+    });
+    expect(document.getElementById("guest-phrase-a")).toHaveClass("text-warning-strong");
+    // Worth a minute, days ahead: said, quietly.
+    const advisory = document.getElementById("guest-phrase-r");
+    expect(advisory).toHaveClass("text-muted");
+    expect(advisory).not.toHaveClass("text-warning-strong");
+  });
 });

@@ -552,11 +552,13 @@ export function guestFixRows(
   };
 
   const booked = seats.filter((seat) => !seat.guest.released).map((seat) => seat.guest.id);
-  const quietRows = [...list.blocking, ...list.worthAMinute].map((item) => ({
-    ...fixRow(item, "warning"),
-    control: null,
-    openLabel: null,
-  }));
+  // Days ahead only what would stop a guest boarding takes the warning
+  // color; a thing worth a minute is said in the quiet one, so a glance down
+  // the card finds who is not ready.
+  const quietRows = [
+    ...list.blocking.map((item) => fixRow(item, "warning")),
+    ...list.worthAMinute.map((item) => fixRow(item, "muted")),
+  ].map((row) => ({ ...row, control: null, openLabel: null }));
   const drafts: DraftSection[] =
     phase === "listed"
       ? [folded("booked", t("trips.fixList.booked"), booked, "none"), ...released]

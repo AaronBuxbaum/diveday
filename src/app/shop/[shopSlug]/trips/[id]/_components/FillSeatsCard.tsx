@@ -48,8 +48,8 @@ const BADGE_CLASS =
  * guest. The names stay either way.
  *
  * **Sold elsewhere** (`soldElsewhere`): the caller passes no past guests,
- * and `addLine` in place of the walk-in line; the booking link is left off,
- * since the seats are sold somewhere else.
+ * and `addLabel` for the add row; the booking link is left off, since the
+ * seats are sold somewhere else.
  */
 export function FillSeatsCard({
   heading,
@@ -59,7 +59,7 @@ export function FillSeatsCard({
   discount,
   addHref,
   addForm,
-  addLine,
+  addLabel,
   bookingLink = true,
   carry,
   trip,
@@ -75,8 +75,8 @@ export function FillSeatsCard({
   addHref: string | null;
   /** The add form itself, once asked for (`?add=1`). */
   addForm: ReactNode;
-  /** The add row's quieter line; the walk-in line when not given. */
-  addLine?: string;
+  /** The add row's words; "Add a guest yourself" when not given. */
+  addLabel?: string;
   /** Draw the booking link's row: off on a departure sold elsewhere. */
   bookingLink?: boolean;
   /** "Carry who’s waiting" to another departure, on a full boat. */
@@ -130,6 +130,31 @@ export function FillSeatsCard({
     </li>
   );
 
+  // The add row, last among the ways to fill a seat; first once its form is
+  // open, so the form opens right under the guests it adds to.
+  const addRow = addHref ? (
+    <li>
+      <div className={ROW_CLASS}>
+        <span aria-hidden="true" className={BADGE_CLASS}>
+          +
+        </span>
+        <span className="min-w-0 flex-1 font-semibold">
+          {addLabel ?? t("trips.clock.filling.addYourself")}
+        </span>
+        {addForm ? null : (
+          <Link
+            href={addHref}
+            scroll={false}
+            className={buttonClass({ variant: "secondary", size: "sm" })}
+          >
+            {t("trips.clock.filling.add")}
+          </Link>
+        )}
+      </div>
+      {addForm}
+    </li>
+  ) : null;
+
   return (
     <section
       id={WHO_WANTS_IN_ID}
@@ -149,6 +174,7 @@ export function FillSeatsCard({
           </div>
         ) : null}
         <ul className="divide-y divide-border">
+          {addForm ? addRow : null}
           {shown.map((group) => (
             <li key={group.id}>
               {labelled ? (
@@ -197,11 +223,8 @@ export function FillSeatsCard({
               <span aria-hidden="true" className={BADGE_CLASS}>
                 ↗
               </span>
-              <span className="min-w-0 flex-1">
-                <span className="block font-semibold">{t("trips.clock.filling.bookingLink")}</span>
-                <span className="block text-sm text-muted">
-                  {t("trips.clock.filling.bookingLinkLine")}
-                </span>
+              <span className="min-w-0 flex-1 font-semibold">
+                {t("trips.clock.filling.bookingLink")}
               </span>
               <CopyLinkButton
                 path={publicTripPath(trip.shopSlug, trip.id)}
@@ -212,33 +235,7 @@ export function FillSeatsCard({
               />
             </li>
           ) : null}
-          {addHref ? (
-            <li>
-              <div className={ROW_CLASS}>
-                <span aria-hidden="true" className={BADGE_CLASS}>
-                  +
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block font-semibold">
-                    {t("trips.clock.filling.addYourself")}
-                  </span>
-                  <span className="block text-sm text-muted">
-                    {addLine ?? t("trips.clock.filling.addYourselfLine")}
-                  </span>
-                </span>
-                {addForm ? null : (
-                  <Link
-                    href={addHref}
-                    scroll={false}
-                    className={buttonClass({ variant: "secondary", size: "sm" })}
-                  >
-                    {t("trips.clock.filling.add")}
-                  </Link>
-                )}
-              </div>
-              {addForm}
-            </li>
-          ) : null}
+          {addForm ? null : addRow}
         </ul>
       </OfferDiscountProvider>
     </section>

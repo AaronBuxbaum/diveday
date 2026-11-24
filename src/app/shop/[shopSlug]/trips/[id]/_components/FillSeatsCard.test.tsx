@@ -78,6 +78,29 @@ describe("Fill the last N", () => {
     expect(within(card).getByRole("button", { name: "Copy link" })).toBeVisible();
   });
 
+  it("opens the add form first in the card, under the guests it adds to", () => {
+    renderCard({ addForm: <p>the add form</p> });
+    const card = screen.getByRole("region", { name: "Fill the last 2" });
+    const rows = within(card).getAllByRole("listitem");
+    expect(rows[0]).toHaveTextContent("Add a guest yourself");
+    expect(within(rows[0] as HTMLElement).getByText("the add form")).toBeVisible();
+    // The form is the add: its row draws no second Add.
+    expect(within(card).queryByRole("link", { name: "Add" })).toBeNull();
+  });
+
+  it("words the add row as the caller says (sold elsewhere: type or paste)", () => {
+    renderCard({
+      heading: "Add guests",
+      groups: [],
+      bookingLink: false,
+      addLabel: "Type them in, or paste your list",
+    });
+    const card = screen.getByRole("region", { name: "Add guests" });
+    expect(within(card).getByText("Type them in, or paste your list")).toBeVisible();
+    expect(within(card).queryByText("Add a guest yourself")).toBeNull();
+    expect(within(card).queryByRole("button", { name: "Copy link" })).toBeNull();
+  });
+
   it("folds the past guests behind one Invite row", () => {
     renderCard({
       pastGuests: { count: 4, line: "Dived Blue Hole before", list: <p>Ana Ruiz</p> },

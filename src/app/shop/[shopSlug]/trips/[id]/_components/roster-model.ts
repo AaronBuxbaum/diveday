@@ -481,6 +481,8 @@ export type RosterSlots = {
   afterReady?: ReactNode;
   /** Where "Add a guest" goes, when the trip takes one. */
   addGuestHref?: string | null;
+  /** The fix-list group whose heading row carries "Add a guest" (Filling's Booked). */
+  addGuestInHeader?: string;
 };
 
 /** Everything the enum holds — for a staffer who may write money off. */

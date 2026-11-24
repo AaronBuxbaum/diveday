@@ -354,7 +354,7 @@ export default async function ManageTripPage({
             lifecycleStatus={lifecycleStatus}
           />
         ) : frame.shown === "filling" ? (
-          <FillingPhase guests={guestList} next={slots.panel} />
+          <FillingPhase guests={guestList} />
         ) : frame.shown === "ready" ? (
           <ReadyPhase
             {...{ ...phase, guests: guestList, deskOpen: Boolean(desk) }}

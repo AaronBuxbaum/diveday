@@ -8,6 +8,7 @@ import type { Page } from "@playwright/test";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import {
+  addGuestForm,
   counterPath,
   createTrip,
   daysFromNow,
@@ -317,6 +318,59 @@ for (const scheme of ["light", "dark"] as const) {
           .getByRole("link", { name: staffTranslator("en-US")("print.counter.passDoor") })
           .waitFor();
         await capture(page, "trip-ready-passes", scheme);
+      });
+
+      /**
+       * **Filling on a departure sold elsewhere, with its guests** (the
+       * Filling redesign): the sentence counts who is ready, the Booked card
+       * leads with "Add a guest" on its heading row, and with nobody waiting
+       * no fill card is drawn at all; the trip's facts sit beside the guests
+       * (under them on a phone). No seeded departure is unpriced, so the trip
+       * and its pasted list are made here. Safe to mutate: each worker owns
+       * its own database and resets before every test.
+       */
+      test(`filling on a trip sold elsewhere leads with its guests (${scheme})`, async ({
+        page,
+      }) => {
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        const title = "Saturday Reef Charter";
+        await createTrip(page, {
+          title,
+          date: daysFromNow(10),
+          departsAt: "09:00",
+          returnsAt: "12:00",
+          capacity: 6,
+        });
+        await openTripFromBoard(page, title);
+        const band = await addGuestForm(page);
+        await band.getByText(staffCopy("trips.pasteList.heading"), { exact: true }).click();
+        await band
+          .getByLabel(staffCopy("trips.pasteList.listLabel"))
+          .fill(
+            [
+              "Pia Castell,pia.castell@example.com,",
+              "Omar Haddad,,+1 305 555 0102",
+              "Lu Nakamura,,",
+            ].join("\n"),
+          );
+        await band.getByRole("button", { name: staffCopy("trips.pasteList.read") }).click();
+        await band
+          .getByTestId("paste-list-preview")
+          .getByRole("button", { name: staffCopy("trips.pasteList.seatOther", { count: 3 }) })
+          .click();
+        await band
+          .getByTestId("paste-list-result")
+          .getByRole("button", { name: staffCopy("trips.pasteList.done") })
+          .click();
+        await expect(page.locator("[data-trip-sentence]")).toContainText(
+          staffCopy("trips.clock.sentence.readyOf", { ready: 0, total: 3 }),
+        );
+        await expect(
+          page
+            .locator('[data-fix-group="booked"]')
+            .getByRole("link", { name: staffCopy("trips.clock.addGuest"), exact: true }),
+        ).toBeVisible();
+        await capture(page, "trip-filling-sold-elsewhere", scheme);
       });
 
       /**
