@@ -42,6 +42,8 @@ export async function seedCollectionBilling(
       pricingPlanSource: "override",
       planMonthlyCents: 0,
       planBasisPoints: 300,
+      // A card on file since the shop opened: card-less money is never billed.
+      subscribedAt: new Date(now.getTime() - 365 * DAY_MS),
     })
     .onConflictDoUpdate({
       target: shopSubscriptions.shopId,
@@ -52,6 +54,7 @@ export async function seedCollectionBilling(
         planMonthlyCents: 0,
         planBasisPoints: 300,
         freeTermEndsOn: null,
+        subscribedAt: new Date(now.getTime() - 365 * DAY_MS),
       },
     });
   const wall = utcToWallTime(now, shop.timezone);
