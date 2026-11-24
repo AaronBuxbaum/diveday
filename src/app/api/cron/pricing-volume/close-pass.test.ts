@@ -21,7 +21,7 @@ import { closePercentMonths, lastClosedMonth } from "./close-pass";
 
 /**
  * The percent plan's monthly close (ADR 20261022-pricing-ab-test), against a
- * real shop in UTC, created well before June 2031 so its trial is over.
+ * real shop in UTC, created well before June 2031.
  */
 const NOW = new Date("2031-07-02T14:13:00Z");
 const ON = { monthlyCents: 0, basisPoints: 300 };

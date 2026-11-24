@@ -22,7 +22,6 @@ import {
   subscriptionSnapshot,
 } from "@/features/money/billing-page";
 import { pricingConfig } from "@/features/money/pricing-flags";
-import { trialDaysRemaining, trialEndsAt } from "@/features/shop-setup/trial";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { percentFeeCents } from "@/lib/billing/pricing-plans";
@@ -42,20 +41,24 @@ export const instant = true;
 /** Static metadata resolves before locale negotiation, so it stays English. */
 export const metadata: Metadata = { title: "Billing — DiveDay" };
 
-const STATUS_TONE: Record<BillingStatus, BadgeTone> = {
-  trialing: "primary",
+/**
+ * The badge beside the plan. A shop with no card has none: that is the
+ * ordinary free state (ADR 20261124-free-shops-no-trial), and the Add a card
+ * button already says it.
+ */
+type BadgedStatus = Exclude<BillingStatus, "no_card">;
+
+const STATUS_TONE: Record<BadgedStatus, BadgeTone> = {
   free_term: "primary",
   active: "success",
   past_due: "danger",
   canceled: "neutral",
-  trial_ended: "warning",
 };
 
-const STATUS_KEY: Record<Exclude<BillingStatus, "trialing" | "free_term">, StaffMessageKey> = {
+const STATUS_KEY: Record<Exclude<BadgedStatus, "free_term">, StaffMessageKey> = {
   active: "billing.status.active",
   past_due: "billing.status.pastDue",
   canceled: "billing.status.canceled",
-  trial_ended: "billing.status.trialEnded",
 };
 
 /**
@@ -68,8 +71,8 @@ const STATUS_KEY: Record<Exclude<BillingStatus, "trialing" | "free_term">, Staff
  * Portal, and Stripe does the rest, including emailing every invoice.
  *
  * Until the three `BILLING_STRIPE_*` values are set the card states that billing
- * is not on and offers no button; the plan and the trial still read true,
- * because they are DiveDay's own facts. Nothing anywhere locks or degrades on
+ * is not on and offers no button; the plan still reads true, because it is
+ * DiveDay's own fact. Nothing anywhere locks or degrades on
  * what this page shows (no paywall; `isInGoodStanding` is the seam a future
  * gate would read).
  */
@@ -101,23 +104,25 @@ export default async function BillingSettingsPage({
   const standing = billingStanding({
     now,
     timeZone: shop.timezone,
-    trialEndsAt: trialEndsAt(shop.createdAt),
     freeTermEndsOn: row?.freeTermEndsOn ?? null,
     subscription: subscriptionSnapshot(row),
   });
   const date = (value: Date) => formatDateWithYear(value, locale, shop.timezone);
 
-  const statusText =
-    standing.status === "trialing"
-      ? t("billing.status.trialing", { count: trialDaysRemaining(shop.createdAt, now) })
-      : standing.status === "free_term"
-        ? t("billing.status.freeTerm", {
-            date: row?.freeTermEndsOn ? formatCalendarDate(row.freeTermEndsOn, locale) : "",
-          })
-        : t(STATUS_KEY[standing.status]);
+  const status = standing.status;
+  const badge =
+    status === "no_card" ? null : (
+      <Badge tone={STATUS_TONE[status]}>
+        {status === "free_term"
+          ? t("billing.status.freeTerm", {
+              date: row?.freeTermEndsOn ? formatCalendarDate(row.freeTermEndsOn, locale) : "",
+            })
+          : t(STATUS_KEY[status])}
+      </Badge>
+    );
 
   // The one date money next moves, or stops: a scheduled charge, an end the
-  // owner chose, or — with no card yet — the day the free time runs out.
+  // owner chose.
   const dateFact = standing.nextChargeAt
     ? { label: t("billing.plan.nextCharge"), value: date(standing.nextChargeAt) }
     : standing.endsAt
@@ -155,7 +160,6 @@ export default async function BillingSettingsPage({
       shop.timezone,
       freePeriodEndsAt({
         timeZone: shop.timezone,
-        trialEndsAt: trialEndsAt(shop.createdAt),
         freeTermEndsOn: row?.freeTermEndsOn ?? null,
       }),
     );
@@ -213,9 +217,7 @@ export default async function BillingSettingsPage({
         padding="lg"
         title={t("billing.plan.heading")}
         description={description}
-        actions={
-          shop.isDemo ? null : <Badge tone={STATUS_TONE[standing.status]}>{statusText}</Badge>
-        }
+        actions={shop.isDemo ? null : badge}
       >
         <p className="text-base">
           {percentPlan

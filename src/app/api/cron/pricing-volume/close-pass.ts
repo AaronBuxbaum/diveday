@@ -14,7 +14,6 @@ import {
   shopPricing,
   soldPricing,
 } from "@/features/money/shop-subscriptions";
-import { trialEndsAt } from "@/features/shop-setup/trial";
 import type { PricingConfig } from "@/lib/billing/pricing-plans";
 import { freePeriodEndsAt } from "@/lib/billing/standing";
 import { addMonths, type MonthRef, monthKey } from "@/lib/calendar";
@@ -133,7 +132,6 @@ export async function closePercentMonths(
             terms,
             freeUntil: freePeriodEndsAt({
               timeZone: shop.timezone,
-              trialEndsAt: trialEndsAt(shop.createdAt),
               freeTermEndsOn: subscription.freeTermEndsOn,
             }),
             endedAt,

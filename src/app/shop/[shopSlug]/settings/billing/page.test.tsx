@@ -104,6 +104,13 @@ describe("the Billing page once billing is on", () => {
     expect(forms.map((form) => form.props.action)).toEqual([startBillingCheckoutAction]);
   });
 
+  it("draws no standing badge for a shop with no card: it is free, with nothing ending", async () => {
+    configure();
+    const { card, lines } = await render(notDemo);
+    expect(findElements(card.props.actions, Badge)).toHaveLength(0);
+    expect(lines.map(String).join(" ")).not.toMatch(/trial|Nothing is charged until/i);
+  });
+
   it("offers Manage billing and Cancel plan to a shop that pays", async () => {
     configure();
     const { forms } = await render(async (db, shopId) => {
