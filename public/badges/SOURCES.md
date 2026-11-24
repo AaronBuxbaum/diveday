@@ -25,12 +25,6 @@ said to search farther and that the real files will replace these. Notes on the 
   water: cropped to the circle, masked to transparent outside it and scaled to 256 px. A little of the
   water's edge shows along its bottom. greenfins.net refused automated requests, so no cleaner file.
 
-## No file, so the badge stays text
-
-| Badge code | Why |
-| --- | --- |
-| `readers_choice` | Scuba Diving magazine's Readers Choice mark: scubadiving.com refused automated requests (403), and no award mark was found on another public source. |
-
 ## Grounds
 
 `tone` in the map is the ground the published file was drawn for. NAUI's file is white type on

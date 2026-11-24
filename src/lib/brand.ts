@@ -79,7 +79,8 @@ export function brandDisplayFontStylesheet(code: BrandDisplayFontCode): string {
  * The badge wall's vocabulary. Every entry is an affiliation a real dive shop
  * puts on its own site (the 2026-09-01 research behind the ADR); DiveDay renders
  * each as a text badge in the reader's language, beside the organization's own
- * logo where `BADGE_LOGOS` has one (H-20261123-badge-logos-shipped).
+ * logo. A badge needs a logo: `BADGE_LOGOS` is keyed by every code, so a code
+ * without one does not compile (H-20261123-badge-logos-shipped).
  */
 export const BRAND_BADGE_CODES = [
   "padi_5_star",
@@ -90,7 +91,6 @@ export const BRAND_BADGE_CODES = [
   "blue_star",
   "green_fins",
   "dan_partner",
-  "readers_choice",
 ] as const;
 
 export type BrandBadgeCode = (typeof BRAND_BADGE_CODES)[number];

@@ -9,8 +9,8 @@ import type { BrandBadgeCode } from "@/lib/brand";
  * The badge wall (Harbor — ADR 20260901-diveday-reimagined, decision 2): the
  * affiliations a shop chose, in the order it chose them, plus the year it
  * opened. Every badge is a pill of DiveDay's words in the reader's language,
- * beside the organization's official logo when `BADGE_LOGOS` has one for the
- * code (H-20261123-badge-logos-shipped) and one drawn glyph when it does not.
+ * beside the organization's official logo, which every badge has
+ * (`BADGE_LOGOS`, H-20261123-badge-logos-shipped); the year wears a drawn glyph.
  * The words always stay, so the logo is decoration, and, like the conservation
  * commitments beside it, each badge is the shop's own claim.
  */
@@ -98,9 +98,8 @@ function Pill({
     <li
       className={`inline-flex min-h-9 items-center gap-1.5 rounded-full border border-border bg-surface px-3 text-sm${figures ? " tabular-nums" : ""} ${className}`.trim()}
     >
-      {/* The shield every text pill wears (visual review 2026-10-24, B41): the
-          year was the one pill without it. A pill with an official logo wears
-          the logo instead. */}
+      {/* A badge wears its logo; the year, which has none, wears the shield
+          (visual review 2026-10-24, B41). */}
       {logo ? <BadgeLogoMark logo={logo} /> : <BadgeShield />}
       {label}
     </li>
