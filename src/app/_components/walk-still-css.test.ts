@@ -1,3 +1,4 @@
+// A walk that is not playing holds its first frame: the pause outranks the beat's own animation shorthand.
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
