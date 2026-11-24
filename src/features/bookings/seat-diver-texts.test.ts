@@ -114,7 +114,8 @@ describe("seatDiver texts the ready link (Try it Saturday, item 3)", () => {
     return db
       .select({ status: notificationDeliveries.status, kind: notificationDeliveries.kind })
       .from(notificationDeliveries)
-      .where(eq(notificationDeliveries.bookingId, bookingId));
+      .where(eq(notificationDeliveries.bookingId, bookingId))
+      .orderBy(notificationDeliveries.kind);
   }
 
   async function waiverChannels(db: AppDb, bookingId: string) {
@@ -159,6 +160,8 @@ describe("seatDiver texts the ready link (Try it Saturday, item 3)", () => {
     // The text is the confirmation a phone-only diver gets, recorded as one.
     expect(await confirmationRows(db, result.bookingId)).toEqual([
       { kind: "booking_confirmation", status: "sent" },
+      // The text keeps its own row, holding the provider's message id (issue #4958).
+      { kind: "seat_text", status: "sent" },
     ]);
     // The Sign step rode in the text's ready link, and the record says so.
     expect(await waiverChannels(db, result.bookingId)).toEqual(["sms"]);
@@ -220,6 +223,8 @@ describe("seatDiver texts the ready link (Try it Saturday, item 3)", () => {
     // One confirmation row: the email's. The text rides beside it.
     expect(await confirmationRows(db, result.bookingId)).toEqual([
       { kind: "booking_confirmation", status: "sent" },
+      // The text keeps its own row, holding the provider's message id (issue #4958).
+      { kind: "seat_text", status: "sent" },
     ]);
     expect(await waiverChannels(db, result.bookingId)).toEqual(["email"]);
   });
