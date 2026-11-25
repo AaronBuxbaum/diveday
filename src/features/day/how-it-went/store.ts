@@ -6,8 +6,8 @@ import { rentalFitByBooking } from "@/db/rental-fit";
 import { activityEvents } from "@/db/schema/index";
 import { getIncidentExport } from "@/features/safety/incident-export";
 import { nowDate } from "@/lib/clock";
-import { isTurnAwayReason, type TurnAwayReason } from "@/lib/turn-away";
 import type { TripManifest } from "@/lib/manifests";
+import { isTurnAwayReason, type TurnAwayReason } from "@/lib/turn-away";
 import { shopDayBounds } from "@/lib/zoned";
 import { type HowItWent, howItWent, seatsTurnedAway } from "./rules";
 
