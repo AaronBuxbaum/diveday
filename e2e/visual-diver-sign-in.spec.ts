@@ -29,7 +29,7 @@ test("light mode diver signs in, reads their profile and books on credit", async
   await page.goto(`/diver-sign-in/${fact.token}`);
   await expect(page).toHaveURL(new RegExp(`/s/${privateShop.slug}/me$`));
   await expect(page.getByRole("heading", { name: "Marisol Vega" })).toBeVisible();
-  await capture(page, "diver-profile", "light");
+  await capture(page, "diver-own-profile", "light");
 
   await page.goto(`/s/${privateShop.slug}/trips/${fact.tripId}`);
   await expect(page.getByRole("checkbox", { name: t("booking.useTripCredit") })).toBeChecked();
