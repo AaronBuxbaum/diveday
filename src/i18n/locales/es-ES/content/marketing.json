@@ -1714,20 +1714,20 @@
     "reply": "Responder a mi correo",
     "replySubject": "Una salida de sábado",
     "screensTitle": "Lo que ve tu tripulación esa mañana",
-    "readyTitle": "Quién puede embarcar y por qué no",
-    "readyNote": "Siete de nueve están listos. Los otros dos muestran cada uno lo único que les falta.",
+    "readyTitle": "Quién está listo para abordar y qué le falta",
+    "readyNote": "Siete de nueve están listos. Cada uno de los otros dos muestra lo que le falta: una exención por firmar, una tarjeta por revisar.",
     "readyLabel": "Una mañana de ejemplo: una salida con 7 de 9 buzos listos, y debajo de Pendiente, una exención sin firmar y una tarjeta por revisar.",
     "countTitle": "El conteo después de cada inmersión",
-    "countNote": "Tu tripulación toca el nombre de cada buzo al volver a bordo, y el conteo dice cuándo han vuelto los nueve.",
+    "countNote": "Cuando todos están listos y a bordo, tu tripulación toca el nombre de cada buzo al volver tras la inmersión, y el conteo marca 9 de 9 cuando han vuelto todos.",
     "countLabel": "El barco después de la inmersión 1: 9 de 9 buzos de vuelta, cada uno marcado por su nombre.",
     "stepsTitle": "Cómo va esa salida",
     "steps": {
-      "list": "Me mandas la lista de pasajeros de una salida de sábado.",
-      "setUp": "Cargo la salida y a tus buzos en DiveDay.",
+      "list": "Me mandas la lista de pasajeros de una salida de sábado y yo la cargo en DiveDay. Con nombres y correos basta.",
       "link": "Cada buzo recibe un correo con un enlace para firmar la exención, agregar su certificación e indicar sus tallas de alquiler.",
       "morning": "Esa mañana tu tripulación revisa la lista en el muelle y cuenta a todos después de cada inmersión. Tu papel puede seguir al lado."
     },
     "price": "{hasBase, select, yes {Cuesta {base} al mes{hasPercent, select, yes {, más el {percent} de los pagos que cobras en DiveDay} other {}}.} other {Es gratis{hasPercent, select, yes {, y DiveDay se queda solo con el {percent} de los pagos que cobras en DiveDay, así que una salida que tus buzos pagaron en otro lado no te cuesta nada} other {}}.}}",
-    "letter": "Soy buzo e ingeniero de software que trabajó en Google, y hice DiveDay para la hora antes de que el barco suelte amarras. Nunca he tenido un centro, así que tu primera salida es donde aprendo qué hice mal. Responde a mi correo o agenda una llamada, y elegimos el sábado."
+    "letter": "Soy buzo e ingeniero de software que trabajó en Google, y hice DiveDay para la hora antes de que el barco suelte amarras. Nunca he tenido un centro, así que tu primera salida es donde aprendo qué hice mal. Responde a mi correo o agenda una llamada, y elegimos el sábado.",
+    "replyAddress": "O escríbeme a {email}."
   }
 }

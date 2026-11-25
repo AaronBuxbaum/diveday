@@ -233,7 +233,9 @@ export function ClosingCta({
  * personal note whose ask was a reply; a demo-first pair asked more of them
  * than the email did.
  *
- * The reply is a mail to the founder with a subject line already in it. The
+ * The reply is a mail to the founder with a subject line already in it, and
+ * the address is printed under the doors for a reader whose mail is in a
+ * browser, where a `mailto:` link opens nothing. The
  * call carries the tag as `utm_content` and the demo posts it, so `hello` and
  * `hello-close` read in the Monday digest the way every other door does.
  */
@@ -278,7 +280,10 @@ export function ReplyFirstCtas({
           </form>
         ) : null}
       </div>
-      {demo ? <p className="mt-3 text-sm text-muted">{t("marketing.common.demoNote")}</p> : null}
+      <p className="mt-3 text-sm text-muted">
+        {t("marketing.hello.replyAddress", { email: FOUNDER_EMAIL })}
+      </p>
+      {demo ? <p className="mt-1 text-sm text-muted">{t("marketing.common.demoNote")}</p> : null}
     </div>
   );
 }

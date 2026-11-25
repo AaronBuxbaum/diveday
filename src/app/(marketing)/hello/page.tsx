@@ -49,10 +49,9 @@ export const metadata: Metadata = {
   },
 };
 
-/** The four things that happen for the one trip, in the order they happen. */
+/** The three things that happen for the one trip, in the order they happen. */
 const STEP_KEYS = [
   "marketing.hello.steps.list",
-  "marketing.hello.steps.setUp",
   "marketing.hello.steps.link",
   "marketing.hello.steps.morning",
 ] as const;
@@ -62,7 +61,7 @@ const STEP_KEYS = [
  * person about one morning, so this page continues it rather than selling the
  * product: the offer (one Saturday trip, set up by Aaron from the shop's
  * passenger list, with its booking tool left alone), the two screens no other
- * tool draws (who is cleared to board and why not, and the head count after a
+ * tool draws (who is ready to board and what is missing, and the head count after a
  * dive), how that trip goes, and the price. It speaks as Aaron and is signed,
  * because the email is from him.
  *
@@ -90,15 +89,21 @@ function HelloBody({ locale, offer }: { locale: DiverLocale; offer: PlanTerms })
   return (
     <main className="flex-1">
       <section className="border-b border-border">
-        <div className="mx-auto w-full max-w-3xl px-6 py-12 lg:py-20">
-          <p className="text-sm font-medium text-muted">{t("marketing.hello.eyebrow")}</p>
-          <h1 className={`mt-3 ${DISPLAY_TITLE_CLASS} sm:text-6xl`}>
-            {t("marketing.hello.heroTitle")}
-          </h1>
-          <p className="mt-5 text-lg leading-8 text-muted sm:text-xl">
-            {t("marketing.hello.heroLede")}
-          </p>
-          <ReplyFirstCtas locale={locale} source="hello" className="mt-8" />
+        <div className="mx-auto w-full max-w-7xl px-6 py-12 lg:py-20">
+          <div className="max-w-3xl">
+            <p className="text-sm font-medium text-muted">{t("marketing.hello.eyebrow")}</p>
+            <h1 className={`mt-3 ${DISPLAY_TITLE_CLASS} sm:text-6xl`}>
+              {t("marketing.hello.heroTitle")}
+            </h1>
+            <p className="mt-5 text-lg leading-8 text-muted sm:text-xl">
+              {t("marketing.hello.heroLede")}
+            </p>
+            <ReplyFirstCtas locale={locale} source="hello" className="mt-8" />
+            {/* What it costs, under the doors: the owner's first question. */}
+            <p className="mt-6 max-w-2xl text-sm leading-6 text-muted">
+              {t("marketing.hello.price", planCopyParams(offer, locale))}
+            </p>
+          </div>
         </div>
       </section>
 
@@ -134,31 +139,36 @@ function HelloBody({ locale, offer }: { locale: DiverLocale; offer: PlanTerms })
       </section>
 
       <section className="border-t border-border bg-surface">
-        <div className="mx-auto w-full max-w-3xl px-6 py-16 lg:py-24">
-          <h2 className={`${BANNER_TITLE_CLASS} sm:text-4xl`}>{t("marketing.hello.stepsTitle")}</h2>
-          <ol className="mt-8 space-y-5">
-            {STEP_KEYS.map((key, index) => (
-              <li key={key} className="flex gap-4">
-                <span className="grid size-8 shrink-0 place-items-center rounded-full border border-border bg-background text-sm font-semibold tabular-nums">
-                  {index + 1}
-                </span>
-                <p className="pt-1 text-lg leading-7">{t(key)}</p>
-              </li>
-            ))}
-          </ol>
-          <p className="mt-8 leading-7 text-muted">
-            {t("marketing.hello.price", planCopyParams(offer, locale))}
-          </p>
+        <div className="mx-auto w-full max-w-7xl px-6 py-16 lg:py-24">
+          <div className="max-w-3xl">
+            <h2 className={`${BANNER_TITLE_CLASS} sm:text-4xl`}>
+              {t("marketing.hello.stepsTitle")}
+            </h2>
+            <ol className="mt-8 space-y-5">
+              {STEP_KEYS.map((key, index) => (
+                <li key={key} className="flex gap-4">
+                  <span className="grid size-8 shrink-0 place-items-center rounded-full border border-border bg-background text-sm font-semibold tabular-nums">
+                    {index + 1}
+                  </span>
+                  <p className="pt-1 text-lg leading-7">{t(key)}</p>
+                </li>
+              ))}
+            </ol>
+          </div>
         </div>
       </section>
 
       {/* The signed close: why Aaron is asking, then all three doors. */}
       <section className="border-t border-border">
-        <div className="mx-auto w-full max-w-3xl px-6 py-16 lg:py-24">
-          <p className="text-lg leading-8 sm:text-xl sm:leading-9">{t("marketing.hello.letter")}</p>
-          <FounderSignature className="mt-6 h-auto w-56 text-foreground sm:w-64" />
-          <p className="sr-only">{FOUNDER_NAME}</p>
-          <ReplyFirstCtas locale={locale} source="hello-close" demo className="mt-8" />
+        <div className="mx-auto w-full max-w-7xl px-6 py-16 lg:py-24">
+          <div className="max-w-3xl">
+            <p className="text-lg leading-8 sm:text-xl sm:leading-9">
+              {t("marketing.hello.letter")}
+            </p>
+            <FounderSignature className="mt-6 h-auto w-56 text-foreground sm:w-64" />
+            <p className="sr-only">{FOUNDER_NAME}</p>
+            <ReplyFirstCtas locale={locale} source="hello-close" demo className="mt-8" />
+          </div>
         </div>
       </section>
     </main>

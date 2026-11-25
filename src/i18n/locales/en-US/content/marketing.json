@@ -1714,20 +1714,20 @@
     "reply": "Reply to my email",
     "replySubject": "One Saturday trip",
     "screensTitle": "What your crew sees that morning",
-    "readyTitle": "Who’s cleared to board, and why not",
-    "readyNote": "Seven of nine are ready. The other two each show the one thing they still need.",
+    "readyTitle": "Who’s ready to board, and what’s missing",
+    "readyNote": "Seven of nine are ready. Each of the other two shows what’s still missing: a waiver to sign, a card to check.",
     "readyLabel": "A sample morning: 7 of 9 divers ready for the boat, then a missing waiver and a card still to check under Needs you.",
     "countTitle": "The head count after each dive",
-    "countNote": "The crew taps each diver back on board by name, and the count says when all nine are back.",
+    "countNote": "Once everyone is ready and aboard, the crew taps each diver back on board by name after the dive, and the count reads 9 of 9 when all are back.",
     "countLabel": "The boat’s list after dive 1: 9 of 9 divers back on board, each tapped by name.",
     "stepsTitle": "How the one trip goes",
     "steps": {
-      "list": "You send me the passenger list for one Saturday trip.",
-      "setUp": "I set the trip up in DiveDay and add your divers.",
+      "list": "You send me the passenger list for one Saturday trip, and I set it up in DiveDay. Names and email addresses are enough.",
       "link": "Each diver gets an email with a link to sign the waiver, add a cert card, and give rental sizes.",
       "morning": "On the morning your crew checks the list at the dock and counts heads after each dive. Your paper can run alongside."
     },
     "price": "{hasBase, select, yes {It’s {base} a month{hasPercent, select, yes {, plus {percent} of payments you take in DiveDay} other {}}.} other {It’s free{hasPercent, select, yes {, and DiveDay keeps {percent} only of payments you take in DiveDay, so a trip your divers paid for somewhere else costs you nothing} other {}}.}}",
-    "letter": "I’m a diver and an ex-Google software engineer, and I built DiveDay for the hour before the boat leaves. I’ve never run a shop, so your first trip is where I learn what I got wrong. Reply to my email or book a call, and we’ll pick the Saturday."
+    "letter": "I’m a diver and an ex-Google software engineer, and I built DiveDay for the hour before the boat leaves. I’ve never run a shop, so your first trip is where I learn what I got wrong. Reply to my email or book a call, and we’ll pick the Saturday.",
+    "replyAddress": "Or write to me at {email}."
   }
 }

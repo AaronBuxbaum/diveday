@@ -929,11 +929,12 @@ the footer or the sitemap, and `noindex`, so a visit is a tap on the email.
   the signed close offers the demo (`ReplyFirstCtas`), because the email's own ask was a reply and
   a demo-first pair asked more than it did.
 - **The question it arrives with:** "what would I have to do, and what does it cost me?" The hero
-  answers the first, the four numbered steps repeat it in order, and the price line under them
-  answers the second from the pricing configuration.
-- **Composition:** a letter column (the note line, the offer as the heading, the two doors), the
-  two drawn screens no booking tool has side by side with one note each (who is cleared to board
-  and why not, the head count after a dive), the steps on the surface fill, then the signed close.
+  answers both: the offer, and the price line (from the pricing configuration) under its doors.
+  Three numbered steps repeat the offer in order, saying names and email addresses are enough.
+- **Composition:** a letter column on the shell's left edge (the note line, the offer as the
+  heading, the two doors, the founder's address in plain text, the price), the two drawn screens no
+  booking tool has side by side with one note each (who is ready to board and what is missing, the
+  head count after a dive), the steps on the surface fill, then the signed close.
   It speaks as Aaron in the first person, since the email is his.
 
 ### The homepage — `/`
