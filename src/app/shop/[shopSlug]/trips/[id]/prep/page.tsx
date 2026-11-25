@@ -5,7 +5,6 @@ import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
 import { buttonClass } from "@/components/ui/button";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
-import { mayStartTripIncidentReport } from "@/db/incident-reports";
 import { requireShopSurface } from "@/features/accounts/session";
 import { getTripPrepPage } from "@/features/trips/trip-prep";
 import { requestLocale } from "@/i18n/request";
@@ -93,7 +92,7 @@ export default async function TripPrepPage({
   // The reader this tab shares with the packet's packing-list sheet: the
   // packing list, the crew's word for the header chip, whether the boat has
   // left the dock, and (once home) every unit still out on this boat.
-  const view = await getTripPrepPage(db, shop, tripId, nowDate());
+  const view = await getTripPrepPage(db, shop, tripId, nowDate(), session.user.personId);
   if (!view) notFound();
   const { prep, sailed, finished, backFromBoat, stageReading, meetingWindows, boat } = view;
   const { trip } = prep;
@@ -157,9 +156,7 @@ export default async function TripPrepPage({
           tripId={tripId}
           rollCall="more"
           addGuest={false}
-          reportIncident={
-            await mayStartTripIncidentReport(db, shop.id, tripId, session.user.personId)
-          }
+          reportIncident={view.mayReportIncident}
           locale={locale}
           timeZone={shop.timezone}
           t={t}

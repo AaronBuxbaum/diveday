@@ -12,6 +12,7 @@ import { rentalFitLineText } from "@/i18n/rental-labels";
 import { certificationRank } from "@/lib/certification-levels";
 import { rentalFitLine } from "@/lib/dive-prep";
 import { formatDateTimeTz } from "@/lib/format";
+import { isDiver } from "@/lib/participant-types";
 import { GuestFact } from "./GuestFact";
 import { GuestRequirements } from "./GuestRequirements";
 import {
@@ -34,37 +35,12 @@ import { SeatPickup } from "./SeatPickup";
 
 const LINK = buttonClass({ variant: "link", size: "sm", flush: true });
 
-/**
- * **A guest opened in place** (ADR 20261117-trip-page-clock; owner,
- * 2026-11-25, "one list, one menu"): what fixes them first, then one list of
- * facts (`GuestFact`: card, waiver, gear, last dive, who to call, pickup,
- * lunch, coming as, notes), each changed from the word at its row's end. The
- * rare acts are one More menu beside Close: the profile, Create order, Move to
- * another trip, Not here, Turn away and Cancel booking, each asking its
- * question in a sheet at the top of the panel. The row above carries the name
- * and the one status phrase; nothing here repeats them.
- */
-export function OpenedGuest({
-  seat,
-  context,
-  reasonLines,
-  chips,
-  fixes,
-  identityCheck,
-  identityContact,
-}: {
-  seat: RosterSeat & Pick<RowOutstanding, "paymentRemedy" | "referenceFacts">;
-  context: RosterRowContext;
-  reasonLines: RowReasonLines["reasonLines"];
-  /** Minor, birthday, or coming as something other than a diver. */
-  chips: ReactNode;
-  /** The remedies not already beside a reason: waiver, course forms, payment, course work. */
-  fixes: ReactNode;
-  identityCheck: ReactNode;
-  identityContact: ReactNode;
-}) {
-  const { booking, person, t, arrival, showsPersonDetail, identityUnconfirmed } = seat;
-  const { rows, actions, trip } = context;
+type Seat = RosterSeat & Pick<RowOutstanding, "paymentRemedy" | "referenceFacts">;
+
+/** The facts on file about the guest that nobody changes from this panel, in the list's order. */
+function factsOnFile(seat: Seat, context: RosterRowContext) {
+  const { booking, person, t, showsPersonDetail } = seat;
+  const { rows, trip } = context;
   const { locale, shopTimezone: timeZone } = trip;
   const readiness = rows.readinessByBooking.get(booking.id);
   const card = [...(readiness?.certifications ?? [])].sort(
@@ -81,7 +57,8 @@ export function OpenedGuest({
   if (seat.minor && seat.age !== null) {
     facts.push({ key: "age", label: t("trips.fixList.facts.age"), value: seat.age });
   }
-  if (showsPersonDetail && booking.participantType !== "rider") {
+  // A snorkeler or a rider needs no card, so the list does not ask for one.
+  if (showsPersonDetail && isDiver(booking.participantType)) {
     facts.push({
       key: "card",
       label: t("trips.fixList.facts.card"),
@@ -123,29 +100,26 @@ export function OpenedGuest({
     facts.push({
       key: "gear",
       label: t("trips.fixList.facts.gear"),
-      value: (
-        <>
-          {rentalFitLineText(
-            t,
-            locale,
-            rentalFitLine(
-              rows.rentalFitByBooking.get(booking.id) ?? null,
-              trip.shopRentalItems,
-              booking.participantType,
-            ),
-          )}
-          {seat.nitrox ? (
-            <>
-              {" · "}
-              {t(
+      value: [
+        rentalFitLineText(
+          t,
+          locale,
+          rentalFitLine(
+            rows.rentalFitByBooking.get(booking.id) ?? null,
+            trip.shopRentalItems,
+            booking.participantType,
+          ),
+        ),
+        ...(seat.nitrox
+          ? [
+              t(
                 seat.nitrox.approved
                   ? "trips.roster.nitroxApproved"
                   : "trips.roster.nitroxUnverified",
-              )}
-            </>
-          ) : null}
-        </>
-      ),
+              ),
+            ]
+          : []),
+      ].join(" · "),
       // Sizes are the diver's own, kept on their profile.
       door: (
         <Link href={`/shop/${trip.shopSlug}/divers/${person.id}#gear`} className="hover:underline">
@@ -186,6 +160,42 @@ export function OpenedGuest({
       ),
     });
   }
+  return facts;
+}
+
+/**
+ * **A guest opened in place** (ADR 20261117-trip-page-clock; owner,
+ * 2026-11-25, "one list, one menu"): what fixes them first, then one list of
+ * facts (`GuestFact`: card, waiver, gear, last dive, who to call, pickup,
+ * lunch, coming as, notes), each changed from the word at its row's end. The
+ * rare acts are one More menu beside Close: the profile, Create order, Move to
+ * another trip, Not here, Turn away and Cancel booking, each asking its
+ * question in a sheet at the top of the panel. The row above carries the name
+ * and the one status phrase; nothing here repeats them.
+ */
+export function OpenedGuest({
+  seat,
+  context,
+  reasonLines,
+  chips,
+  fixes,
+  identityCheck,
+  identityContact,
+}: {
+  seat: Seat;
+  context: RosterRowContext;
+  reasonLines: RowReasonLines["reasonLines"];
+  /** Minor, birthday, or coming as something other than a diver. */
+  chips: ReactNode;
+  /** The remedies not already beside a reason: waiver, course forms, payment, course work. */
+  fixes: ReactNode;
+  identityCheck: ReactNode;
+  identityContact: ReactNode;
+}) {
+  const { booking, person, t, arrival, showsPersonDetail, identityUnconfirmed } = seat;
+  const { rows, actions, trip } = context;
+  const { locale, shopTimezone: timeZone } = trip;
+  const facts = factsOnFile(seat, context);
 
   const menuRow = menuRowClass("quiet", { gutter: false });
   const moves = seat.moveSeat && seat.moveSeat.targets.length > 0 ? seat.moveSeat : null;
@@ -327,6 +337,10 @@ export function OpenedGuest({
           )}
           {fixes}
         </div>
+        {/* A guest checked in and then held: the undo sits under what holds them, above the facts. */}
+        {seat.blockerTexts.length > 0 && seat.arrivalControl ? (
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-1">{seat.arrivalControl}</div>
+        ) : null}
         {showsPersonDetail ? null : (
           // Said, not silently blank: an empty list reads as a guest with no
           // card and no contact, a wrong fact rather than an absent one.
@@ -383,9 +397,6 @@ export function OpenedGuest({
             </summary>
             {seat.referenceFacts}
           </details>
-        ) : null}
-        {seat.blockerTexts.length > 0 && seat.arrivalControl ? (
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-1">{seat.arrivalControl}</div>
         ) : null}
       </div>
     </GuestActionsProvider>

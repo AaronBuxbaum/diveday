@@ -1358,7 +1358,7 @@
   },
   "fact": {
     "edit": "Editar",
-    "add": "Añadir",
+    "add": "Agregar",
     "none": "Ninguno",
     "notes": "Notas privadas",
     "noteCount": "{count, plural, one {# nota} other {# notas}}"
@@ -1467,14 +1467,12 @@
       "gear": "Equipo",
       "lastDive": "Última inmersión",
       "asked": "Pidió",
-      "ifNeeded": "En caso de emergencia",
       "cardChecked": "{level} · verificada",
       "cardUnchecked": "{level} · sin verificar",
       "noCard": "Ninguna registrada",
       "age": "Edad",
       "email": "Correo",
-      "noEmail": "Ninguno registrado",
-      "setFit": "Indicar tallas"
+      "noEmail": "Ninguno registrado"
     }
   }
 }

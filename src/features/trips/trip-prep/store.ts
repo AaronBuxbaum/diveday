@@ -14,6 +14,7 @@ import {
   type TripGearAssignment,
 } from "../../../db/gear";
 import { listTripUnitsToCheckIn } from "../../../db/gear-returns";
+import { mayStartTripIncidentReport } from "../../../db/incident-reports";
 import { listTripPrepDivers } from "../../../db/rental-fit";
 import { meetingWindowsByTrip } from "../../../db/trip-meeting-windows";
 
@@ -450,10 +451,18 @@ export async function screenGearPicks<P extends GearPick>(
  * once home, every unit still out on this boat (fifth-loop ideas, item 5).
  * `null` when there is no such departure in this shop.
  */
-export async function getTripPrepPage(db: AppDb, shop: TripPrepShop, tripId: string, now: Date) {
-  const [prep, stageReading] = await Promise.all([
+export async function getTripPrepPage(
+  db: AppDb,
+  shop: TripPrepShop,
+  tripId: string,
+  now: Date,
+  /** The reader, for the header's "Report an incident"; a printed packet has none. */
+  personId?: string,
+) {
+  const [prep, stageReading, mayReportIncident] = await Promise.all([
     getTripPrep(db, shop, tripId),
     latestTripStage(db, shop.id, tripId),
+    personId ? mayStartTripIncidentReport(db, shop.id, tripId, personId) : false,
   ]);
   if (!prep) return null;
   const { trip } = prep;
@@ -477,7 +486,17 @@ export async function getTripPrepPage(db: AppDb, shop: TripPrepShop, tripId: str
   ]);
   // The raw tap, the meeting days and the boat ride along for the page's header and phase
   // strip (`clockPhaseOf`).
-  return { prep, shownStage, sailed, finished, backFromBoat, stageReading, meetingWindows, boat };
+  return {
+    prep,
+    shownStage,
+    sailed,
+    finished,
+    backFromBoat,
+    stageReading,
+    meetingWindows,
+    boat,
+    mayReportIncident,
+  };
 }
 
 /**

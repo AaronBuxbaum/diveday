@@ -480,11 +480,7 @@ export function guestFixRows(
   const remedyControl = (
     remedy: FixRemedy,
     seat: Seat | undefined,
-  ): {
-    control?: DraftRow["control"];
-    openLabel?: string;
-    panelHoldsControl?: boolean;
-  } => {
+  ): { control?: DraftRow["control"]; openLabel?: string; panelHoldsControl?: boolean } => {
     if (remedy === "send_waiver" && seat?.sendWaiver)
       return { control: seat.sendWaiver, panelHoldsControl: true };
     // Nothing could be sent: the counter's QR code is the way to sign.

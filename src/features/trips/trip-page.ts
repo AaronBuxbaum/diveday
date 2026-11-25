@@ -12,6 +12,7 @@ import { loadTripSharedReads } from "@/features/trips/trip-shared-reads";
 import { latestTripStage } from "@/features/trips/trip-stages";
 import { canPersonRefund, canPersonRetireMedicalRefusal } from "../../db/authz";
 import type { AppDb } from "../../db/client";
+import { mayStartTripIncidentReport } from "../../db/incident-reports";
 import type { Role } from "../../lib/authz";
 
 export type TripManifestShop = TripOverviewShop &
@@ -40,22 +41,25 @@ export async function getTripManifest(
 ) {
   const personId = input.session.user.personId;
   const sharedReads = loadTripSharedReads(db, shop.id, tripId);
-  const [overview, guests, refund, stage, coursePulse, retireMedicalRefusal] = await Promise.all([
-    getTripOverview(db, shop, tripId, personId, undefined, sharedReads),
-    getTripGuests(db, shop, tripId, input.filters, sharedReads),
-    canPersonRefund(db, shop.id, personId),
-    latestTripStage(db, shop.id, tripId),
-    getCoursePulse(db, shop.id, tripId, personId, sharedReads),
-    // Who may give a refused seat a fresh release; the action re-checks.
-    canPersonRetireMedicalRefusal(db, shop.id, personId),
-  ]);
+  const [overview, guests, refund, stage, coursePulse, retireMedicalRefusal, reportIncident] =
+    await Promise.all([
+      getTripOverview(db, shop, tripId, personId, undefined, sharedReads),
+      getTripGuests(db, shop, tripId, input.filters, sharedReads),
+      canPersonRefund(db, shop.id, personId),
+      latestTripStage(db, shop.id, tripId),
+      getCoursePulse(db, shop.id, tripId, personId, sharedReads),
+      // Who may give a refused seat a fresh release; the action re-checks.
+      canPersonRetireMedicalRefusal(db, shop.id, personId),
+      // Who the header's More offers "Report an incident"; the action re-checks.
+      mayStartTripIncidentReport(db, shop.id, tripId, personId),
+    ]);
   if (!overview || !guests) return null;
   return {
     overview,
     coursePulse,
     guests,
     stage,
-    can: { refund, retireMedicalRefusal },
+    can: { refund, retireMedicalRefusal, reportIncident },
   };
 }
 

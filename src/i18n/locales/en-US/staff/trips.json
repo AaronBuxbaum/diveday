@@ -1467,14 +1467,12 @@
       "gear": "Gear",
       "lastDive": "Last dive",
       "asked": "Asked",
-      "ifNeeded": "If needed",
       "cardChecked": "{level} · checked",
       "cardUnchecked": "{level} · not checked",
       "noCard": "None on file",
       "age": "Age",
       "email": "Email",
-      "noEmail": "None on file",
-      "setFit": "Set sizes"
+      "noEmail": "None on file"
     }
   }
 }
