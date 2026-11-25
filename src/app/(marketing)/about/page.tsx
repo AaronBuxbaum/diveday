@@ -3,6 +3,7 @@ import { cacheLife } from "next/cache";
 import Link from "next/link";
 import { Suspense } from "react";
 import { Eyebrow } from "@/app/_components/Eyebrow";
+import { FounderSignature } from "@/app/_components/FounderSignature";
 import { ClosingCta, FunnelCtas } from "@/app/_components/FunnelCtas";
 import { MarketingFooter, MarketingFooterFallback } from "@/components/MarketingFooter";
 import { CaptainPhoneFrame } from "@/components/MarketingSections";
@@ -16,7 +17,6 @@ import type { DiverLocale } from "@/i18n/settings";
 import { switchingHref } from "@/lib/funnel";
 import { sharedLinkCard } from "@/lib/marketing";
 import { SUPPORT_EMAIL } from "@/lib/platform-mail";
-import { FounderSignature } from "./_components/FounderSignature";
 
 // `instant = true`: navigating here paints immediately. Every request-scoped
 // read sits behind a `<Suspense>` boundary — this segment's `loading.tsx`, or
