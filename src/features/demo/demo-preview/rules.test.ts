@@ -5,6 +5,7 @@ import {
   parseDepartureTime,
   parseDepartureTimes,
   parsePreviewInput,
+  previewDayIsStale,
   previewIdFrom,
   previewIsOpen,
 } from "./rules";
@@ -123,5 +124,42 @@ describe("previewIsOpen", () => {
     const expiresAt = new Date(created.getTime() + PREVIEW_TTL_MS);
     expect(previewIsOpen({ expiresAt }, new Date(expiresAt.getTime() - 1))).toBe(true);
     expect(previewIsOpen({ expiresAt }, expiresAt)).toBe(false);
+  });
+});
+
+describe("previewDayIsStale", () => {
+  // 23:30 in Miami on 25 November, which is already the 26th in UTC.
+  const built = new Date("2026-11-26T04:30:00Z");
+  const zone = "America/New_York";
+
+  it("is fresh for the rest of the day it was built, in the shop's own zone", () => {
+    expect(previewDayIsStale({ createdAt: built }, built, zone)).toBe(false);
+    expect(previewDayIsStale({ createdAt: built }, new Date("2026-11-26T04:59:00Z"), zone)).toBe(
+      false,
+    );
+  });
+
+  it("is stale from the shop's next midnight", () => {
+    expect(previewDayIsStale({ createdAt: built }, new Date("2026-11-26T05:00:00Z"), zone)).toBe(
+      true,
+    );
+  });
+
+  it("reads the day in the shop's zone, not UTC", () => {
+    // Both instants fall on 26 November in UTC, but on two days in Miami.
+    expect(
+      previewDayIsStale(
+        { createdAt: new Date("2026-11-26T04:00:00Z") },
+        new Date("2026-11-26T06:00:00Z"),
+        zone,
+      ),
+    ).toBe(true);
+    expect(
+      previewDayIsStale(
+        { createdAt: new Date("2026-11-26T04:00:00Z") },
+        new Date("2026-11-26T06:00:00Z"),
+        "UTC",
+      ),
+    ).toBe(false);
   });
 });

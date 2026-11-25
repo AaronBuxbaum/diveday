@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { parseBrandColor } from "../../../lib/brand";
+import { calendarDateInTimezone } from "../../../lib/calendar-date";
 import { DAY_MS } from "../../../lib/clock";
 
 /** How long a preview link opens its shop: a week, the demo reaper's own window. */
@@ -132,6 +133,23 @@ export function parsePreviewInput(
 /** Whether a preview's link still opens its shop at `now`. */
 export function previewIsOpen(preview: { expiresAt: Date }, now: Date): boolean {
   return preview.expiresAt.getTime() > now.getTime();
+}
+
+/**
+ * Whether a preview's seeded day is no longer today in its shop's own zone.
+ * `issuePreview` builds the shop's history when the preview is made, anchored
+ * to that moment; the first open rebuilds it only when that day has passed,
+ * so a link opened the day it was built goes straight in, and one opened on
+ * day five still shows this morning's boats.
+ */
+export function previewDayIsStale(
+  preview: { createdAt: Date },
+  now: Date,
+  timeZone: string,
+): boolean {
+  return (
+    calendarDateInTimezone(preview.createdAt, timeZone) !== calendarDateInTimezone(now, timeZone)
+  );
 }
 
 /** The path a preview's link points at. */

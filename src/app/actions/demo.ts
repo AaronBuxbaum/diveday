@@ -13,6 +13,7 @@ import { dismissDemoStarts, getShopById, getShopBySlug } from "@/db/shops";
 import { requireStaffSession } from "@/features/accounts/session";
 import {
   findPreview,
+  previewDayIsStale,
   previewIdFrom,
   previewIsOpen,
   previewPath,
@@ -234,8 +235,10 @@ export async function enterDemoAction(formData?: FormData) {
  * id that never existed. The id is the caller's word, so it is throttled per IP
  * before it is looked up.
  *
- * The first open replays the seeded day, so a link opened on day five shows
- * this morning's boats and not last week's. Later opens leave the shop as the
+ * The shop's history is built when the preview is made (`issuePreview`), so an
+ * open on that same day only signs in and redirects. A first open on a later
+ * day replays the seeded day first, so a link opened on day five shows this
+ * morning's boats and not last week's. Later opens leave the shop as the
  * visitor left it. A browser the founder marked as his own enters without
  * being counted (`src/features/demo/quiet-demo-device.ts`).
  */
@@ -263,7 +266,9 @@ export async function enterPreviewAction(formData: FormData) {
     try {
       await db.transaction(async (tx) => {
         const { first } = await recordPreviewOpen(tx, id, now);
-        if (first) {
+        // The history was built with the preview; only a day that has
+        // passed since is rebuilt, so a same-day open only signs in.
+        if (first && previewDayIsStale(preview, now, shop.timezone)) {
           if (await isDemoShopWithDemoOwnerOrCaptainAccount(tx, shop.id)) {
             await resetDemoSchedule(tx, shop.id, "history");
           }

@@ -11,7 +11,7 @@ import {
 } from "@/db/schema";
 import { DEMO_SHOP_BRAND } from "@/db/seed/shop-brand";
 import { findPreview, issuePreview, type PreviewInput } from "@/features/demo/demo-preview";
-import { nowDate } from "@/lib/clock";
+import { DAY_MS, nowDate } from "@/lib/clock";
 import { DEMO_BYPASS_PASSWORD } from "@/lib/demo-bypass";
 import { ALERT_EMAIL } from "@/lib/platform-mail";
 import { fileScopedShopContext } from "@/test/db";
@@ -108,7 +108,8 @@ beforeEach(() => {
 
 describe("enterPreviewAction", () => {
   it("refuses a first open without consuming it when reset encounters a sighting", async () => {
-    const preview = await issuePreview(ctx.db, PROSPECT, NOW);
+    // Built two days ago, so the first open replays the seeded day.
+    const preview = await issuePreview(ctx.db, PROSPECT, new Date(NOW.getTime() - 2 * DAY_MS));
     const [shop] = await ctx.db.select().from(shops).where(eq(shops.slug, preview.shopSlug));
     const [booking] = await ctx.db.select().from(bookings).where(eq(bookings.shopId, shop.id));
     const [staff] = await ctx.db
@@ -137,6 +138,23 @@ describe("enterPreviewAction", () => {
         .where(eq(boardingObservations.id, observation.id)),
     ).toEqual([observation]);
   });
+  it("opens a preview built today without rebuilding its history", async () => {
+    const preview = await issuePreview(ctx.db, PROSPECT, NOW);
+    const [shop] = await ctx.db.select().from(shops).where(eq(shops.slug, preview.shopSlug));
+    const before = await ctx.db
+      .select({ id: bookings.id })
+      .from(bookings)
+      .where(eq(bookings.shopId, shop.id));
+
+    expect(await enter(preview.id)).toBe(`/shop/${preview.shopSlug}`);
+
+    // The same seeded rows, not a fresh seed: the history was built with the preview.
+    expect(
+      await ctx.db.select({ id: bookings.id }).from(bookings).where(eq(bookings.shopId, shop.id)),
+    ).toEqual(before);
+    expect((await findPreview(ctx.db, preview.id))?.openCount).toBe(1);
+  });
+
   it("signs the visitor in as the preview shop's owner, lands on Today, and counts one open", async () => {
     const preview = await issuePreview(ctx.db, PROSPECT, NOW);
 
