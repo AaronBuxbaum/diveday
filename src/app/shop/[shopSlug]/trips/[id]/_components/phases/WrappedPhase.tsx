@@ -150,10 +150,7 @@ export async function WrappedPhase({
       <TripSentenceLine sentence={said} rollCall={null} />
       {/* The owner's short account of the morning (How it went); the page re-checks the gate. */}
       {canExportIncidentRecord(session.user.roles) ? (
-        <Link
-          href={shopPath(shop.slug, "trips", tripId, "how-it-went")}
-          className={buttonClass({ variant: "secondary" })}
-        >
+        <Link href={shopPath(shop.slug, "trips", tripId, "how-it-went")} className={QUIET_ACTION}>
           {t("howItWent.door")}
         </Link>
       ) : null}
