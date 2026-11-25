@@ -10,6 +10,7 @@ import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { TripBuddyTeam } from "@/db/buddy-teams";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { scopedId } from "@/lib/element-id";
+import { CARD_INSET } from "../../_components/trip-ink";
 import { BuddyDragGroups } from "./BuddyDragGroups";
 
 /**
@@ -155,7 +156,7 @@ export function BuddyTeamsPanel({
           fold it came from. */}
       <details className="group/buddypanel" open={buddyErrorText || defaultOpen ? true : undefined}>
         <summary className="-m-2 flex min-h-11 w-fit cursor-pointer list-none items-center gap-2 rounded-lg p-2 text-sm text-muted select-none [&::-webkit-details-marker]:hidden">
-          <SummaryCaret line="h-lh" className="size-4 text-muted group-open/buddypanel:rotate-90" />
+          <SummaryCaret line="h-lh" className="group-open/buddypanel:rotate-90" />
           <span>
             {t("manifest.buddySummaryTeams", { count: buddyTeamsList.length })}
             {unteamedDivers.length > 0
@@ -226,15 +227,8 @@ export function BuddyTeamsPanel({
             asks for. A panel opened on an empty roster instead goes straight to
             the builder, which is the only thing there is to do here. */}
         {buddyTeamsList.length > 0 ? (
-          // Bounded, because each row pushes "Dissolve team" to its far edge:
-          // full-bleed on a desktop manifest that put a destructive button a
-          // thousand pixels from the team it dissolves, aligned to nothing.
-          <ul
-            className={sectionCardClass({
-              padding: "none",
-              className: "mt-3 max-w-4xl divide-y divide-border overflow-hidden",
-            })}
-          >
+          // Rows of the Trip page card the panel sits in, hairline to hairline.
+          <ul className="-mx-4 mt-3 divide-y divide-border border-y border-border sm:-mx-6">
             {buddyTeamsList.map((team, index) => {
               // Members of *this* team can't join another, and neither can a
               // diver already on one — so the "add" picker offers whoever is
@@ -438,7 +432,7 @@ export function BuddyTeamsPanel({
             {/* The panel summary's grammar at the body's size: the caret on
                 the first line, `py-3` round a 20px line for the 44px floor. */}
             <summary className="-mx-2 flex min-h-11 w-fit cursor-pointer list-none items-start gap-2 rounded-lg px-2 py-3 text-sm font-semibold select-none [&::-webkit-details-marker]:hidden">
-              <SummaryCaret className="text-muted group-open/buddies:rotate-90" />
+              <SummaryCaret className="group-open/buddies:rotate-90" />
               {t("manifest.buddyNewTeamHeading")}
             </summary>
             <form action={formBuddyTeamAction} className="mt-2 max-w-4xl">
@@ -528,12 +522,13 @@ function BuddyWarnings({
   );
   return (
     <div className="mb-3 space-y-2">
+      {/* Rows of the card it sits in, hairline to hairline: not a card in a card. */}
       <ul
-        className={sectionCardClass({ padding: "none", className: "divide-y divide-border" })}
+        className="-mx-4 divide-y divide-border border-y border-border sm:-mx-6"
         aria-label={label}
       >
         {warnedTeams.map((team) => (
-          <li key={team.id} className="px-4 py-3 sm:px-6">
+          <li key={team.id} className={`py-3 ${CARD_INSET}`}>
             <p className="font-semibold [overflow-wrap:anywhere]">
               {team.label}
               <span className="font-normal text-muted"> · {team.names}</span>

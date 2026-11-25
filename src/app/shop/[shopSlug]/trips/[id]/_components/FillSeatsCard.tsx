@@ -3,9 +3,8 @@ import type { ReactNode } from "react";
 import { AutoOpenDetails } from "@/components/AutoOpenDetails";
 import { PersonAvatar } from "@/components/PersonAvatar";
 import { ScrollToHash } from "@/components/ScrollToHash";
-import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
-import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
+import { SummaryCaret } from "@/components/ui/disclosure";
 import { GroupLabel } from "@/components/ui/group-label";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
@@ -26,6 +25,7 @@ import {
 } from "./OfferDiscount";
 import { OfferSeat } from "./OfferSeat";
 import { offeredAgoText, offerSeatCopy } from "./offer-seat-copy";
+import { INLINE_SUMMARY, QUIET_ACTION } from "./trip-ink";
 import type { WhoWantsInRow } from "./who-wants-in-rows";
 
 /** One labelled run of wait-list rows. The card draws a group only when it has rows. */
@@ -42,7 +42,7 @@ export type WhoWantsInGroup = {
 export const OFFER_SEATS_ID = "offer-seats";
 
 const ROW_CLASS = "flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 sm:px-6";
-const ROW_LINK = buttonClass({ variant: "link", flush: true });
+const ROW_LINK = QUIET_ACTION;
 
 /**
  * **Fill the last N** (ADR 20261117-trip-page-clock, Filling): every way to
@@ -231,7 +231,10 @@ export function FillSeatsCard({
               <ul className="divide-y divide-border">{group.rows.map(renderRow)}</ul>
               {group.more && group.more.length > 0 ? (
                 <details className="group/more">
-                  <summary className="min-h-11 cursor-pointer list-none px-4 py-2.5 text-sm text-muted underline sm:px-6 [&::-webkit-details-marker]:hidden group-open/more:hidden">
+                  <summary
+                    className={`${INLINE_SUMMARY} mx-4 text-sm text-muted sm:mx-6 group-open/more:hidden`}
+                  >
+                    <SummaryCaret className="group-open/more:rotate-90" />
                     {t("trips.whoWantsIn.showMore", { count: group.more.length })}
                   </summary>
                   <ul className="divide-y divide-border">{group.more.map(renderRow)}</ul>
@@ -245,8 +248,9 @@ export function FillSeatsCard({
               {/* Today's "Invite past divers" (`#invite-suggestions`) lands here, open. */}
               <AutoOpenDetails openOnHash="invite-suggestions" className="group/share">
                 <summary
-                  className={`${ROW_CLASS} cursor-pointer list-none [&::-webkit-details-marker]:hidden`}
+                  className={`${ROW_CLASS} cursor-pointer list-none flex-nowrap items-start [&::-webkit-details-marker]:hidden`}
                 >
+                  <SummaryCaret className="group-open/share:rotate-90" />
                   <span className="min-w-0 flex-1">
                     <span className="block font-medium text-primary">
                       {t("trips.clock.filling.share")}
@@ -255,10 +259,6 @@ export function FillSeatsCard({
                       {t("trips.clock.filling.shareLine", { count: past.count })}
                     </span>
                   </span>
-                  <DisclosureCaret
-                    direction="down"
-                    className="size-5 text-muted group-open/share:rotate-180"
-                  />
                 </summary>
                 {bookingLink ? <div className={`${ROW_CLASS} pt-0`}>{linkRow}</div> : null}
                 <div className="border-t border-border">{past.list}</div>

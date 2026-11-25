@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import { SummaryCaret } from "@/components/ui/disclosure";
 import { DateField, Field } from "@/components/ui/form";
 import type { ExecutedDive } from "@/db/schema";
 import { shiftCalendarDate } from "@/lib/calendar-date";
 import { utcToWallTime } from "@/lib/zoned";
+import { INLINE_SUMMARY } from "../../_components/trip-ink";
 import type { ExecutedDiveLabels } from "./ExecutedDiveLog";
 
 function dateTimeValue(value: Date | null, timeZone: string) {
@@ -80,8 +82,11 @@ export function DiveTimeFields({
       {multiDay ? (
         dateInput(date, Boolean(entry || exit))
       ) : (
-        <details className="sm:col-span-2">
-          <summary className="cursor-pointer text-sm underline">{labels.changeDiveDate}</summary>
+        <details className="group/date sm:col-span-2">
+          <summary className={`${INLINE_SUMMARY} text-sm`}>
+            <SummaryCaret className="group-open/date:rotate-90" />
+            {labels.changeDiveDate}
+          </summary>
           {dateInput(effectiveDate, false)}
         </details>
       )}

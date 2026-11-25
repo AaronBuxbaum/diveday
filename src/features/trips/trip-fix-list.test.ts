@@ -7,6 +7,7 @@ import {
   isBlockerReason,
   quietOnFilling,
   reasonRank,
+  reasonTone,
   remedyFor,
 } from "./trip-fix-list";
 
@@ -227,6 +228,21 @@ describe("at Check-in", () => {
  * day's routine only. A medical, identity or waiver signal keeps the warning
  * color days ahead, and so does every readiness blocker.
  */
+describe("reasonTone: one ink per meaning, in every phase", () => {
+  it("is danger for anything readiness refuses, alongside any advisory", () => {
+    expect(reasonTone(["waiver_not_sent"])).toBe("danger");
+    expect(reasonTone(["depth", "medical_not_cleared"])).toBe("danger");
+  });
+
+  it("is warning for an advisory, the day's routine ones included", () => {
+    for (const reason of ADVISORY_REASONS) expect(reasonTone([reason])).toBe("warning");
+  });
+
+  it("is muted for a line with no reason", () => {
+    expect(reasonTone([])).toBe("muted");
+  });
+});
+
 describe("quietOnFilling", () => {
   it("is quiet for the day's routine: depth, recency, fit, drysuit, contact, balance", () => {
     expect(

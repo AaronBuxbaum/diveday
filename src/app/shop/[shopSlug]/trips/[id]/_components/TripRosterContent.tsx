@@ -7,8 +7,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { UndoToast } from "@/components/UndoToast";
 import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass, TONE_PANEL_CLASS } from "@/components/ui/card";
-import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
-import { DisclosureRowList } from "@/components/ui/disclosure";
+import { DisclosureRowList, SummaryCaret } from "@/components/ui/disclosure";
 import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
 import { groupLabelClass } from "@/components/ui/group-label";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
@@ -435,10 +434,10 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
 
       <TrainingPlanWithDepth context={context} />
       {context.phase === "filling" ? (
-        // One reading column: the guests, then the ways to fill a seat. The
-        // trip's facts are a line under the sentence (`PhaseHeading`).
-        // Capped at a reading width, so a row's action stays beside its name.
-        <div data-filling-layout className="max-w-3xl space-y-10">
+        // One column: the guests, then the ways to fill a seat, as wide as
+        // every other phase's cards. The trip's facts are a line under the
+        // sentence (`PhaseHeading`).
+        <div data-filling-layout className="space-y-10">
           {guestsLead ? (
             rosterSection
           ) : (
@@ -712,13 +711,10 @@ export function TripPromoteAndActivity({
         {showPromote ? (
           <AutoOpenDetails openOnHash="last-minute-deal" className="group/promote scroll-mt-6">
             <summary className={FOOT_ROW_SUMMARY}>
+              <SummaryCaret className="group-open/promote:rotate-90" />
               <span>{t("trips.guests.promoteHeading")}</span>
-              <span className="flex items-center gap-2">
+              <span className="ms-auto text-muted">
                 {t("trips.guests.promoteSentCount", { count: lastMinute.promos.length })}
-                <DisclosureCaret
-                  direction="down"
-                  className="size-4 group-open/promote:rotate-180"
-                />
               </span>
             </summary>
             <div className={FOOT_ROW_BODY}>
@@ -752,8 +748,8 @@ export function TripPromoteAndActivity({
         {!dayOnly ? (
           <details id="trip-activity" className="group/activity scroll-mt-6" open={recordOnly}>
             <summary className={FOOT_ROW_SUMMARY}>
+              <SummaryCaret className="group-open/activity:rotate-90" />
               <span>{t("trips.guests.activityHeading")}</span>
-              <DisclosureCaret direction="down" className="size-4 group-open/activity:rotate-180" />
             </summary>
             <div className={FOOT_ROW_BODY}>
               <ActivityLog

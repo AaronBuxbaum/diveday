@@ -56,7 +56,7 @@ export async function WaterPhase({
   );
   if (view.status !== "ready") {
     return (
-      <div data-phase-panel="water" className="space-y-10">
+      <div data-phase-panel="water" className="space-y-6 sm:space-y-10">
         {cancelled ? null : <TripSentenceLine sentence={sentence} rollCall={door} />}
         {reports}
         {guests}

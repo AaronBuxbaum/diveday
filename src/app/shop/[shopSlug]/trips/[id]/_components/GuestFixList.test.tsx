@@ -219,7 +219,7 @@ describe("a row says the name, one phrase, and one button", () => {
     ).toHaveAccessibleDescription("Hasn’t dived in a while");
   });
 
-  it("gives the list's first fix the one primary button", () => {
+  it("draws every row's remedy secondary: the one primary is the phase heading's", () => {
     const rusty = entry("r", "Olga Rust");
     renderRoster({
       roster: [
@@ -231,7 +231,7 @@ describe("a row says the name, one phrase, and one button", () => {
       selectedBookingId: null,
       phase: "ready",
     });
-    expect(within(group("cantBoard")).getByRole("link", { name: "Check cards" })).toHaveClass(
+    expect(within(group("cantBoard")).getByRole("link", { name: "Check cards" })).not.toHaveClass(
       "bg-primary",
     );
     for (const control of within(group("worth")).getAllByRole("button", { name: /Fit gear|Open/ }))
@@ -620,7 +620,7 @@ describe("while the trip fills", () => {
     ).length;
     const booked = group("booked") as HTMLElement;
     const warned = [...booked.querySelectorAll("[id^='guest-phrase-']")].filter((line) =>
-      line.classList.contains("text-warning-strong"),
+      line.classList.contains("text-danger"),
     );
     expect(notReady).toBe(2);
     expect(warned).toHaveLength(notReady);
@@ -628,7 +628,7 @@ describe("while the trip fills", () => {
     expect(within(booked).queryByText(/Nothing needed from them yet/)).toBeNull();
   });
 
-  it("says in the warning color only what would stop a guest boarding", () => {
+  it("says what would stop a guest boarding in danger and an advisory in warning, as every phase does", () => {
     const rusty = entry("r", "Olga Rust");
     renderRoster({
       roster: [
@@ -644,11 +644,10 @@ describe("while the trip fills", () => {
       phase: "filling",
       selectedBookingId: null,
     });
-    expect(document.getElementById("guest-phrase-a")).toHaveClass("text-warning-strong");
-    // Worth a minute, days ahead: said, quietly.
+    expect(document.getElementById("guest-phrase-a")).toHaveClass("text-danger");
+    // Worth a minute, days ahead: the advisory's own ink, not a quieter one.
     const advisory = document.getElementById("guest-phrase-r");
-    expect(advisory).toHaveClass("text-muted");
-    expect(advisory).not.toHaveClass("text-warning-strong");
+    expect(advisory).toHaveClass("text-warning-strong");
   });
 
   const rusty = (id: string, name: string) => {
@@ -684,7 +683,7 @@ describe("while the trip fills", () => {
     }
   });
 
-  it("never folds what would stop a guest boarding: the blocker stays on its row, in warning", () => {
+  it("never folds what would stop a guest boarding: the blocker stays on its row, in danger", () => {
     renderRoster({
       roster: [rusty("a", "Priya Sharma"), rusty("r", "Olga Rust")],
       readiness: new Map([
@@ -697,7 +696,7 @@ describe("while the trip fills", () => {
       selectedBookingId: null,
     });
     const blocker = document.getElementById("guest-phrase-a");
-    expect(blocker).toHaveClass("text-warning-strong");
+    expect(blocker).toHaveClass("text-danger");
     expect(blocker?.textContent ?? "").not.toBe("");
     // Whatever the heading row says for everyone, it is never the blocker.
     for (const shared of screen.queryAllByText(/^Everyone: /)) {

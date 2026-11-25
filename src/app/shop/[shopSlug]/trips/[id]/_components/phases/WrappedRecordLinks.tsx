@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { buttonClass } from "@/components/ui/button";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { shopPath } from "@/lib/staff-notices";
 import { diveLogHash } from "../TripDiveRecord";
+import { QUIET_ACTION } from "../trip-ink";
 
 /** Links only to disclosures drawn on this Wrapped up page. */
 export function WrappedRecordLinks({
@@ -31,11 +31,7 @@ export function WrappedRecordLinks({
     <nav aria-label={t("trips.clock.wrapped.records")} className="flex flex-wrap gap-x-6 gap-y-2">
       {sightingsEnabled
         ? dives.map((dive) => (
-            <Link
-              key={dive}
-              href={diveLogHash(dive)}
-              className={buttonClass({ variant: "link", flush: true })}
-            >
+            <Link key={dive} href={diveLogHash(dive)} className={QUIET_ACTION}>
               {t("trips.clock.wrapped.diveSpecies", { dive })}
             </Link>
           ))
@@ -46,14 +42,14 @@ export function WrappedRecordLinks({
             <a
               key={`seen-${dive}`}
               href={`${shopPath(shopSlug, "trips", tripId, "manifest")}?checkpoint=after_dive_${dive}#seen-heading`}
-              className={buttonClass({ variant: "link", flush: true })}
+              className={QUIET_ACTION}
             >
               {t("trips.clock.wrapped.diveSightings", { dive })}
             </a>
           ))
         : null}
       {lostFoundEnabled ? (
-        <Link href="#found-aboard" className={buttonClass({ variant: "link", flush: true })}>
+        <Link href="#found-aboard" className={QUIET_ACTION}>
           {t("desk.lostFound.heading")}
         </Link>
       ) : null}

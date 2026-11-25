@@ -1,8 +1,7 @@
 import type { ReactNode } from "react";
 import { AutoOpenDetails } from "@/components/AutoOpenDetails";
+import { FACT_BODY, FACT_ROW as ROW } from "./trip-ink";
 
-const ROW =
-  "grid min-h-11 grid-cols-[6.5rem_minmax(0,1fr)_auto] items-baseline gap-x-4 py-2.5 text-sm sm:grid-cols-[10rem_minmax(0,1fr)_auto]";
 const DOOR = "font-medium text-primary";
 
 /**
@@ -62,7 +61,7 @@ export function GuestFact({
         {cells}
         <span className={DOOR}>{edit.label}</span>
       </summary>
-      <div className="pb-4 sm:ps-[11rem]">{edit.form}</div>
+      <div className={FACT_BODY}>{edit.form}</div>
     </AutoOpenDetails>
   );
 }

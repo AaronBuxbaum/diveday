@@ -1,5 +1,5 @@
 import { AutoOpenDetails } from "@/components/AutoOpenDetails";
-import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
+import { SummaryCaret } from "@/components/ui/disclosure";
 import { PASTE_CHOICE_FIELD, PASTE_LIST_MAX_ROWS } from "@/features/bookings/paste-list";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import type { PasteListState } from "../paste-list-actions";
@@ -86,12 +86,9 @@ export function PasteListSection({
       openOnHash={PASTE_A_LIST_ID}
       className="group/paste scroll-mt-24 rounded-lg border border-border bg-surface"
     >
-      <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 rounded-lg px-3 py-2 font-medium focus-visible:focus-ring [&::-webkit-details-marker]:hidden">
+      <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 rounded-lg px-3 py-2 font-medium focus-visible:focus-ring [&::-webkit-details-marker]:hidden">
+        <SummaryCaret className="group-open/paste:rotate-90" />
         {t("trips.pasteList.heading")}
-        <DisclosureCaret
-          direction="down"
-          className="size-4 text-muted group-open/paste:rotate-180"
-        />
       </summary>
       <div className="px-3 pt-1 pb-4">
         <PasteListPanel

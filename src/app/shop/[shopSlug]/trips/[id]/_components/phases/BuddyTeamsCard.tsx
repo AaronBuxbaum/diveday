@@ -1,3 +1,4 @@
+import { sectionCardClass } from "@/components/ui/card";
 import type { requireShopSurface } from "@/features/accounts/session";
 import { staffDiveIntentLine } from "@/features/trips/dive-intent";
 import type { StaffTranslator } from "@/i18n/staff-messages";
@@ -11,6 +12,7 @@ import {
   teamUpPartiesAction,
 } from "../../manifest/actions";
 import type { BuddySurface } from "../../manifest/buddy-landing";
+import { CARD_HEADING, CARD_INSET } from "../trip-ink";
 
 /** The id the Gear to pack card's "Buddy teams" link scrolls to. */
 export const BUDDY_TEAMS_ID = "buddy-teams";
@@ -44,7 +46,14 @@ export async function BuddyTeamsCard({
   if (view.status !== "ready") return null;
   const actionContext = { ...view.actionContext, buddySurface: surface };
   return (
-    <div id={BUDDY_TEAMS_ID} className="scroll-mt-24">
+    // A Trip page card, the heading inside it like every other section's.
+    <div
+      id={BUDDY_TEAMS_ID}
+      className={sectionCardClass({
+        padding: "none",
+        className: `scroll-mt-24 py-4 ${CARD_INSET}`,
+      })}
+    >
       <BuddyTeamsPanel
         defaultOpen={open}
         intentLine={staffDiveIntentLine(t, view.diveIntents, locale)}
@@ -56,7 +65,7 @@ export async function BuddyTeamsCard({
         removeBuddyTeamMemberAction={removeBuddyTeamMemberAction.bind(null, actionContext)}
         dissolveBuddyTeamAction={dissolveBuddyTeamAction.bind(null, actionContext)}
         // The Trip page's section heads are row-sized (finding 9).
-        headingClass="font-semibold"
+        headingClass={CARD_HEADING}
         t={t}
       />
     </div>

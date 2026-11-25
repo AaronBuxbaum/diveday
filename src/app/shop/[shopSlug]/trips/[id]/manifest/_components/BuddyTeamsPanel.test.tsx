@@ -191,12 +191,13 @@ describe("a buddy team's row", () => {
  * teams" heading.
  */
 describe("the panel's disclosure line", () => {
-  it("draws its caret at size-4, beside the section title", () => {
+  it("leads its line with the Trip page's one caret, at its one size", () => {
     renderPanel([]);
     const summary = document.querySelector("summary");
     const caret = summary?.querySelector("svg");
     expect(caret).not.toBeNull();
-    expect(caret).toHaveClass("size-4");
+    expect(caret).toHaveClass("size-3");
+    expect(summary?.firstElementChild?.contains(caret ?? null)).toBe(true);
     expect(document.querySelector("details")?.open).toBe(true);
   });
 

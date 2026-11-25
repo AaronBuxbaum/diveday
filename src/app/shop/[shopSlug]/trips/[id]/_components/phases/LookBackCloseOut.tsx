@@ -1,10 +1,10 @@
 import Link from "next/link";
-import { buttonClass } from "@/components/ui/button";
 import { listFlySafeFollowUps } from "@/db/fly-safe-correction";
 import { listTripUnitsToCheckIn } from "@/db/gear";
 import { listTripIncidentReports } from "@/db/incident-reports";
 import { shopPath } from "@/lib/staff-notices";
 import { readManifestView } from "../../manifest/_components/manifest-view";
+import { QUIET_ACTION } from "../trip-ink";
 import { closeOutItems } from "../wrapped-close-out";
 import type { PhaseRecordContext } from "./WaterPhase";
 import { waterStandingOf } from "./water-reading";
@@ -45,10 +45,7 @@ export async function LookBackCloseOut({
           {t("trips.clock.water.alerts", { count: alerts })}
         </p>
       ) : null}
-      <Link
-        href={`${shopPath(shop.slug, "trips", tripId)}?phase=wrapped`}
-        className={buttonClass({ variant: "link", flush: true })}
-      >
+      <Link href={`${shopPath(shop.slug, "trips", tripId)}?phase=wrapped`} className={QUIET_ACTION}>
         {items.length > 0 && standing !== null
           ? t("trips.clock.wrapped.lookBackOpen", { count: items.length })
           : t("trips.clock.wrapped.lookBackWarning")}

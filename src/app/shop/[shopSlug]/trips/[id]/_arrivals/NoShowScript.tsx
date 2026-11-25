@@ -1,12 +1,13 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
 import { RowActionForm } from "./RowActionForm";
 
 /**
- * Localized native disclosure for recording a diver as not here. Its closed
- * label is the factual "Not here"; confirmation is explicit, undoable, and
- * names the diver accessibly. Rebooking and seat-salvage precedence is
+ * Recording a diver as not here, from the opened guest's "Not here" (its
+ * More menu): the confirm is explicit, undoable, and names the diver
+ * accessibly. Rebooking and seat-salvage precedence is
  * resolved upstream (`src/lib/no-show.ts`, `src/features/boarding/no-show.ts`); fare decisions
  * are described in copy, with no charge or refund action here. ADR
  * 20260730-staff-copy-localization covers page-resolved staff copy.
@@ -30,76 +31,40 @@ export type NoShowScriptCopy = {
   sendFailed: string;
 };
 
-export function NoShowScript({
-  action,
-  bookingId,
-  copy,
-}: {
-  action: (formData: FormData) => Promise<void>;
-  bookingId: string;
-  copy: NoShowScriptCopy;
-}) {
-  return (
-    // Native <details> supplies keyboard and screen-reader disclosure
-    // semantics. The row stays quiet when closed; open, it shows the
-    // consequence and one confirmation.
-    <details className="group/no-show pb-2">
-      <summary
-        className={buttonClass({
-          variant: "ghost",
-          size: "sm",
-          flush: true,
-          className: "cursor-pointer list-none [&::-webkit-details-marker]:hidden",
-        })}
-      >
-        {copy.door}
-      </summary>
-      {/* **The confirm ends on the row's edge** (K-253), where the row's own
-          Check in ends: the sentence grows from its own width and the line
-          packs to its end, so the button stands at the end beside the
-          sentence, or under it once the two do not share a line. `grow`, not
-          `flex-1`, whose zero basis never wraps and squeezed the sentence into
-          a narrow column beside the button on a phone. */}
-      <NoShowConfirm
-        action={action}
-        bookingId={bookingId}
-        copy={copy}
-        className="mt-1 rounded-lg bg-surface-sunken p-3"
-      />
-    </details>
-  );
-}
-
 /**
- * The confirm itself: what the tap records, and the one button. Under "Not
- * here" on the desk's row, and as the opened guest's sheet (its More menu).
+ * The confirm itself: what the tap records, and the one button, as the opened
+ * guest's sheet (its More menu), with "Never mind" beside it as every sheet has.
  */
 export function NoShowConfirm({
   action,
   bookingId,
   copy,
-  className = "",
+  dismiss,
 }: {
   action: (formData: FormData) => Promise<void>;
   bookingId: string;
   copy: Omit<NoShowScriptCopy, "door">;
-  className?: string;
+  /** "Never mind", beside the confirm as on every sheet of the opened guest. */
+  dismiss?: ReactNode;
 }) {
   return (
-    <div className={`flex flex-wrap items-center justify-end gap-3 ${className}`}>
-      <p className="min-w-0 grow text-sm text-muted">{copy.consequence}</p>
-      <RowActionForm action={action} sendFailedLabel={copy.sendFailed}>
-        <input type="hidden" name="bookingId" value={bookingId} />
-        <SubmitButton
-          pendingLabel={copy.confirming}
-          ariaLabel={copy.confirmAriaLabel}
-          observabilityAction="mark_no_show"
-          className={buttonClass({ variant: "secondary", size: "sm" })}
-        >
-          {copy.confirm}
-        </SubmitButton>
-      </RowActionForm>
-    </div>
+    <RowActionForm action={action} sendFailedLabel={copy.sendFailed}>
+      <input type="hidden" name="bookingId" value={bookingId} />
+      <div className="space-y-3">
+        <p className="text-sm">{copy.consequence}</p>
+        <div className="flex flex-wrap gap-3">
+          <SubmitButton
+            pendingLabel={copy.confirming}
+            ariaLabel={copy.confirmAriaLabel}
+            observabilityAction="mark_no_show"
+            className={buttonClass({ variant: "secondary", size: "sm" })}
+          >
+            {copy.confirm}
+          </SubmitButton>
+          {dismiss}
+        </div>
+      </div>
+    </RowActionForm>
   );
 }
 

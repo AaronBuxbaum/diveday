@@ -24,7 +24,7 @@ export async function CheckInPhase({
   const { db, shop, session } = context;
   const incidents = await listTripIncidentReports(db, shop.id, tripId, session.user.personId);
   return (
-    <div data-phase-panel="checkin" className="space-y-6">
+    <div data-phase-panel="checkin" className="space-y-6 sm:space-y-10">
       {guests}
       {quiet}
       <IncidentsLine incidents={incidents} shopSlug={shop.slug} tripId={tripId} t={t} />

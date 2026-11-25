@@ -2,7 +2,7 @@
 
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { NoShowSalvage, type NoShowSalvageCopy, NoShowScript } from "./NoShowScript";
+import { NoShowConfirm, NoShowSalvage, type NoShowSalvageCopy } from "./NoShowScript";
 
 // The script's confirm posts through `RowActionForm`, which refreshes the row
 // in place on a successful send — so this render needs a stand-in for the
@@ -36,64 +36,39 @@ function salvage(overrides: Partial<NoShowSalvageCopy> = {}): NoShowSalvageCopy 
   return { line: "Nobody is waiting for this seat.", links: [], money, ...overrides };
 }
 
-describe("NoShowScript", () => {
-  /**
-   * Closed, the door is three words and nothing else. The counter's promise is
-   * a name and one large tap, and a second peer control beside that tap is the
-   * mis-tap this surface spent a slice removing — so the consequence sentence
-   * and the confirm live inside the disclosure, not beside the check-in row.
-   */
-  it("keeps the confirm inside the disclosure rather than beside the row's tap", () => {
-    const { container } = render(
-      <NoShowScript action={vi.fn()} bookingId="booking-1" copy={scriptCopy} />,
-    );
-    expect(screen.getByText("Not here")).toBeTruthy();
-    const details = container.querySelector("details");
-    expect(details).toBeTruthy();
-    expect(
-      details?.contains(screen.getByRole("button", { name: scriptCopy.confirmAriaLabel })),
-    ).toBe(true);
-  });
-
+describe("NoShowConfirm", () => {
   /**
    * One row's confirm must not read like every other row's: three families can
    * be at the counter at once, and "Mark not here" repeated nine times is nine
    * identical accessible names over nine different people.
    */
   it("names the diver on the confirm", () => {
-    render(<NoShowScript action={vi.fn()} bookingId="booking-1" copy={scriptCopy} />);
+    render(<NoShowConfirm action={vi.fn()} bookingId="booking-1" copy={scriptCopy} />);
     expect(screen.getByRole("button", { name: "Mark Nadia Petrov as not here" })).toBeTruthy();
   });
 
   it("carries the booking the tap is about", () => {
     const { container } = render(
-      <NoShowScript action={vi.fn()} bookingId="booking-1" copy={scriptCopy} />,
+      <NoShowConfirm action={vi.fn()} bookingId="booking-1" copy={scriptCopy} />,
     );
     expect(container.querySelector('input[name="bookingId"]')?.getAttribute("value")).toBe(
       "booking-1",
     );
   });
 
-  /**
-   * **The confirm stands in the row's control column** (pixel-craft class 3,
-   * K-253). It followed its sentence a `gap-3` along, so it ended wherever
-   * the sentence did (1011 at 1280, against the Check in circle's 1063), and
-   * the sailed script's longer sentence wrapped it to the line's start. The
-   * sentence grows from its own width and the row packs to its end, so the
-   * button ends on the row's edge beside the sentence, and under it, still on
-   * that edge, once the two do not fit on one line. `grow`, not `flex-1`: a
-   * zero basis never wraps, and squeezed the sentence into a narrow column
-   * beside the button on a phone.
-   */
-  it("ends its confirm on the row's edge, beside the sentence or under it", () => {
-    render(<NoShowScript action={vi.fn()} bookingId="booking-1" copy={scriptCopy} />);
-    const sentence = screen.getByText(scriptCopy.consequence);
-    const line = sentence.parentElement;
-    expect(line).toHaveClass("flex", "flex-wrap", "justify-end");
-    expect(sentence).toHaveClass("min-w-0", "grow");
-    expect(sentence).not.toHaveClass("flex-1");
-    expect(line?.lastElementChild).toContainElement(
-      screen.getByRole("button", { name: scriptCopy.confirmAriaLabel }),
+  /** Every sheet of the opened guest ends on its confirm and "Never mind" (Move, Cancel). */
+  it("draws its dismiss beside the confirm", () => {
+    render(
+      <NoShowConfirm
+        action={vi.fn()}
+        bookingId="booking-1"
+        copy={scriptCopy}
+        dismiss={<button type="button">Never mind</button>}
+      />,
+    );
+    const confirm = screen.getByRole("button", { name: scriptCopy.confirmAriaLabel });
+    expect(confirm.parentElement).toContainElement(
+      screen.getByRole("button", { name: "Never mind" }),
     );
   });
 });
