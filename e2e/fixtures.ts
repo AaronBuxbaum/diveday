@@ -354,9 +354,12 @@ async function longestFrameGap(page: Page): Promise<number> {
   if (page.isClosed()) return 0;
   return page
     .evaluate(() => {
-      const beat = (window as unknown as { __frameBeat?: { last: number; longest: number } })
-        .__frameBeat;
-      return beat ? Math.max(beat.longest, performance.now() - beat.last) : 0;
+      const beat = (
+        window as unknown as {
+          __frameBeat?: { last: number; longest: number; now: () => number };
+        }
+      ).__frameBeat;
+      return beat ? Math.max(beat.longest, beat.now() - beat.last) : 0;
     })
     .catch(() => 0);
 }
@@ -836,23 +839,28 @@ export const test = base.extend<
   // unchanged, and real timers are left alone — so event- and timer-driven UI
   // (the offline reconcile, debounced search) behaves exactly as in production.
   context: async ({ context, workerBaseURL }, use) => {
-    await pinBrowserClock(context, E2E_FROZEN_CLOCK);
-
     // Frame heartbeat (#4517): the renderer can stop producing frames while its
     // main thread stays alive, so Playwright's rAF-based "stable" check waits
     // forever and a trivial `evaluate` still answers. The longest gap between
     // frames is what a failed test's transcript reports.
     await context.addInitScript(() => {
-      const beat = { last: performance.now(), longest: 0 };
+      // The browser's own frame callback and clock, taken before any test
+      // installs a fake clock (`page.clock`), which replaces both and would
+      // make this loop run on fake time.
+      const nativeFrame = window.requestAnimationFrame.bind(window);
+      const nativeNow = performance.now.bind(performance);
+      const beat = { last: nativeNow(), longest: 0, now: nativeNow };
       (window as unknown as { __frameBeat: typeof beat }).__frameBeat = beat;
       const tick = () => {
-        const now = performance.now();
+        const now = nativeNow();
         beat.longest = Math.max(beat.longest, now - beat.last);
         beat.last = now;
-        requestAnimationFrame(tick);
+        nativeFrame(tick);
       };
-      requestAnimationFrame(tick);
+      nativeFrame(tick);
     });
+
+    await pinBrowserClock(context, E2E_FROZEN_CLOCK);
 
     await context.addInitScript(() => {
       const isOfflineCookie = document.cookie
