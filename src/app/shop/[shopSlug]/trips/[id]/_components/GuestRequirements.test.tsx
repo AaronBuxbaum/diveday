@@ -27,9 +27,7 @@ describe("independent guest requirements", () => {
         }))}
       />,
     );
-    const task = screen
-      .getByRole("heading", { name: "Certification" })
-      .closest("section") as HTMLElement;
+    const task = screen.getByRole("region", { name: "Certification" });
     for (const text of texts) expect(within(task).getByText(text)).toBeVisible();
     expect(within(task).getAllByRole("link", { name: "Review cards" })).toHaveLength(1);
   });
@@ -46,7 +44,7 @@ describe("independent guest requirements", () => {
         ]}
       />,
     );
-    const task = screen.getByRole("heading", { name: "Payment" }).closest("section") as HTMLElement;
+    const task = screen.getByRole("region", { name: "Payment" });
     expect(within(task).getByText("Balance is outstanding")).toBeVisible();
     expect(within(task).getByRole("button", { name: "Record payment" })).toBeVisible();
     expect(screen.queryByText("Not paid yet")).toBeNull();

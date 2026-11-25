@@ -1356,6 +1356,13 @@
     },
     "cancelledOn": "{cause, select, weather {Suspendida por mal tiempo} run_ended {Cancelada al detenerse su serie} other {Cancelada}} el {date}."
   },
+  "fact": {
+    "edit": "Editar",
+    "add": "Añadir",
+    "none": "Ninguno",
+    "notes": "Notas privadas",
+    "noteCount": "{count, plural, one {# nota} other {# notas}}"
+  },
   "fixList": {
     "groups": {
       "cantBoard": "Aún no puede embarcar",

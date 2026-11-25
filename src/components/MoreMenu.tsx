@@ -30,7 +30,8 @@ import { useMenuDismissal } from "@/components/useMenuDismissal";
  * that would push it off the left of the screen (a phone's wrapped header).
  *
  * It closes on a second tap, Escape (focus back to the trigger), a tap
- * outside, any navigation (`useMenuDismissal`), or following one of its links. The first row takes focus
+ * outside, any navigation (`useMenuDismissal`), following one of its links, or a row marked
+ * `data-menu-close` (one that opens something elsewhere on the page). The first row takes focus
  * as it opens.
  */
 export function MoreMenu({
@@ -80,7 +81,8 @@ export function MoreMenu({
     const panel = panelRef.current;
     if (!open || !panel) return;
     const onClick = (event: MouseEvent) => {
-      if (event.target instanceof Element && event.target.closest("a[href]")) close();
+      if (event.target instanceof Element && event.target.closest("a[href], [data-menu-close]"))
+        close();
     };
     panel.addEventListener("click", onClick);
     return () => panel.removeEventListener("click", onClick);

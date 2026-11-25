@@ -1356,6 +1356,13 @@
     },
     "cancelledOn": "{cause, select, weather {Called off for weather} run_ended {Canceled when its run stopped} other {Canceled}} on {date}."
   },
+  "fact": {
+    "edit": "Edit",
+    "add": "Add",
+    "none": "None",
+    "notes": "Private notes",
+    "noteCount": "{count, plural, one {# note} other {# notes}}"
+  },
   "fixList": {
     "groups": {
       "cantBoard": "Can’t board yet",

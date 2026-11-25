@@ -3,7 +3,14 @@
 
 import { cleanup, fireEvent, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { entry, readinessRow, renderRoster, signedWaiver } from "./roster-test-fixtures";
+import {
+  chooseGuestAction,
+  entry,
+  openGuestMenu,
+  readinessRow,
+  renderRoster,
+  signedWaiver,
+} from "./roster-test-fixtures";
 import type { ReadinessByBooking, RentalFitByBooking, RosterEntry, WaiverByBooking } from "./types";
 
 /** A fit stated and renting nothing: no gear to fit. */
@@ -37,12 +44,10 @@ function desk(ids: string[], below = new Map()) {
       ]),
     ),
     below,
-    details: new Map(
+    acts: new Map(
       ids.map((id) => [
         id,
-        <button key={id} type="button">
-          Not here
-        </button>,
+        [{ key: "not-here", label: "Not here", sheet: <p>Release this seat?</p> }],
       ]),
     ),
     boarded: new Set<string>(),
@@ -327,11 +332,16 @@ describe("a guest opened in place", () => {
     });
     const opened = document.querySelector("li#booking-a") as HTMLElement;
     expect(within(opened).getByText("No certification is on file for this trip.")).toBeVisible();
-    // The rare actions wait behind one More.
-    expect(within(opened).getByRole("button", { name: "Not here" })).not.toBeVisible();
-    fireEvent.click(within(opened).getByText("More"));
-    expect(within(opened).getByRole("button", { name: "Not here" })).toBeVisible();
-    expect(within(opened).getByRole("link", { name: "Open guest profile" })).toBeVisible();
+    // The rare actions are one More menu, beside Close.
+    expect(within(opened).queryByRole("button", { name: "Not here" })).toBeNull();
+    const menu = openGuestMenu();
+    expect(opened).toContainElement(menu);
+    expect(within(menu).getByRole("link", { name: "Open guest profile" })).toBeVisible();
+    // "Not here" asks its question in a sheet; the menu row posts nothing.
+    const sheet = opened.querySelector('[data-guest-sheet="not-here"]') as HTMLElement;
+    expect(sheet).not.toBeVisible();
+    chooseGuestAction("Not here");
+    expect(sheet).toBeVisible();
     // The rest of the list stays put.
     expect(screen.getByRole("button", { name: "Lena Fischer" })).toBeVisible();
     expect(window.location.hash).toBe("#booking-a");

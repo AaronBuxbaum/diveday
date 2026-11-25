@@ -507,6 +507,8 @@ export function guestFixRows(
             {t(REMEDY_KEYS.review_cards)}
           </Link>
         ),
+        // The opened guest's certification line carries the same door.
+        panelHoldsControl: true,
       };
     const remote = seat ? seatRemedyControl(remedy, seat, t, trip.shopSlug) : null;
     if (remote) return remote;
