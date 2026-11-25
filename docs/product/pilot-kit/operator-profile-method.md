@@ -47,32 +47,32 @@ Claude can do the research pass and the drafting pass. Run it in a Claude Code s
 >
 > Evidence. For every field, give a short quote, its URL and the date read with timezone. Anything not read is "not published". Then reopen each cited URL and confirm the quote is there. Mark any field that fails.
 >
-> Score 0 to 6: own boat with stated capacity (2), named decision-maker with an address (2), a quoted booking-to-boat handoff (1), open and not stale (1). Tag the jurisdiction (US, Canada, UK/EU, Australia, other); do not judge legality.
+> Score 0 to 6: own boat of about 12 or more divers or several boats (2), named decision-maker with an address (2), a quoted booking-to-boat handoff (1), open and not stale (1). Tag the jurisdiction (US, Canada, UK/EU, Australia, other); do not judge legality.
 >
-> Draft only for a score of 4 or more. Use the template's main email, its no-detail line when no handoff was quoted, or the forwarding variant for a general inbox or form. The researched statement must restate a quoted fact and say why it caught your eye, never claim how they work. Never name their booking vendor, a competitor, a price, the offer or anything unshipped. Keep the water paragraph word for word.
+> Draft only for a score of 4 or more. Use the template's main email, its no-detail line when no handoff was quoted, or the forwarding variant for a general inbox or form. The researched statement must restate a quoted fact and say why it caught your eye, never claim how they work. Never name their booking vendor, a competitor, a price, the offer or anything unshipped. Keep the template's text word for word apart from its slots.
 >
 > Hand over one markdown file and one CSV in [SHARED FOLDER]. Use the method's columns plus trip_types, own_boat, cert_agencies, email_kind, jurisdiction, score, evidence, quote_check, excluded_reason and dedup_key, and leave sent_on, follow_up_on and reply empty for Aaron. End with what you could not verify.
 
 ## The email
 
-The first email is the [cold email template](cold-email-template.md), rewritten 2026-11-11 on Aaron's call that it should say plainly it is outreach. It states who he is (a diver and ex-Google software engineer), what DiveDay is, why this shop (one fact read on its own page), where the product honestly stands, and one small ask: a 15-minute call or a test alongside the shop's paper count. Price, trial terms, the fly-in offer and the shop's booking tool stay out of the first email, because they belong in the reply (H-20260724-public-founding-shop-price is still open).
+The first email is the [cold email template](cold-email-template.md), rewritten 2026-11-11 on Aaron's call that it should say plainly it is outreach. It states who he is (a diver and ex-Google software engineer), what DiveDay is, why this shop (one fact read on its own page), where the product honestly stands, and one small ask. As of the 2026-11-24 review it is being shortened to under 90 words, opening on the shop's morning, with the ask a one-line answer or a passenger list and the link a preview in the shop's name; see the template's Status section. Price and terms are the pricing page's, never typed from paper.
 
 ## Follow-up and channel
 
-- One email in the same thread about six business days later, then one phone call at about twelve, weekdays 2 to 4 pm when the boats are back. A 20-second voicemail, then stop. No third email.
-- A shop with no printed owner email gets a phone call first, then a message on its Facebook or Instagram page using the forwarding wording. A dock visit only on a day Aaron is already in town.
+- Four touches, then stop: email day 1, a two-line note day 4, a Facebook or Instagram message day 10, a last email day 17 ([the rhythm](cold-email-template.md#the-rhythm-four-touches-then-stop)). Calls only when a shop replies, or for the few strongest fits.
+- A shop with no printed owner email starts at the day-10 channel, a message on its Facebook or Instagram page using the forwarding wording. A dock visit only on a day Aaron is already in town.
 - Every reply gets a call note within the hour and the call list updated.
-- Reply moves: "we're fine" gets "what did last Saturday morning look like?" and "who else should I ask?"; "what's it cost" waits until the founding-shop price decision is settled; "we use [tool]" gets "what doesn't it do for you?".
+- Reply moves: "we're fine" gets "what did last Saturday morning look like?" and "who else should I ask?"; "what's it cost" gets the pricing page and one sentence from it; "we use [tool]" gets "what doesn't it do for you?".
 
 ## Which operators to go after first
 
 Reviewed 2026-11-11. Best first angle: owner-run Florida day charters with one boat of about 6 to 20 divers, where the owner works the boat and a booking-to-boat handoff visibly breaks. Reach them by phone or a dock visit before email, and make the first ask a ride-along as a paying diver, then a week alongside their paper count.
 
-- Pure six-pack captains are good places to run the boat test but weak partners: with six aboard, paper is fine and their bookings sit in a marketplace tool.
+- Pure six-pack captains booked on FareHarbor or Peek are out: those tools already give them waivers and a boat list for no monthly fee. See the call list's disqualifiers.
 - Shops with a named owner, their own booking link and rentals, nitrox and cert handoffs fit best.
 - Warm routes (the owner who showed Aaron his spreadsheet, dive clubs) convert best per contact but are too few to fill three slots.
 - Outside Florida is out until the legal review covers it.
-- Kill rules: if 6 of the first 8 conversations say the morning is not a problem, drop the angle; if 10 emails get no reply in 14 days, switch to calls and visits; if 5 conversations give no ride-along in 30 days, go back to warm routes.
+- Kill rules: if 6 of the first 8 conversations say the morning is not a problem, drop the angle; if 20 shops get all four touches and none replies, rethink the email and the list before sending more; if 5 conversations give no ride-along in 30 days, go back to warm routes.
 
 ## Known gaps in the kit
 
