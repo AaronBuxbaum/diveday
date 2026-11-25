@@ -1,18 +1,25 @@
 import { e2eBuildEnv } from "../scripts/e2e-build-env.mjs";
+import { heroPriceLine } from "../src/app/_components/hero-price-line";
+import { offerFigure } from "../src/app/(marketing)/pricing/faq";
 import { planCopyParams } from "../src/features/money/billing";
 import { pricingConfig } from "../src/features/money/pricing-flags";
 import { diverTranslator } from "../src/i18n/messages";
-import { configuredPricing } from "../src/lib/billing/pricing-plans";
+import { configuredPricing, termsFor } from "../src/lib/billing/pricing-plans";
 import { FEATURE_PAGE_SLUGS, featurePagePath } from "../src/lib/feature-pages";
-import { capabilityGroup, earlyAccessPrice, productCapabilityIndex } from "../src/lib/marketing";
+import { capabilityGroup, productCapabilityIndex } from "../src/lib/marketing";
 import { MIGRATION_GUIDES } from "../src/lib/migration-guides";
 import { SWITCH_EMAIL } from "../src/lib/platform-mail";
 import { expect, test } from "./fixtures";
 
 import { mintOnboardFormPath } from "./setup-link";
 
-/** The offer the e2e build serves (`PRICING_*` in `e2eBuildEnv`), as the copy's figures. */
-const offerParams = planCopyParams(configuredPricing(pricingConfig(e2eBuildEnv())), "en-US");
+/** The offer the e2e build serves (`PRICING_*` in `e2eBuildEnv`). */
+const offerConfig = pricingConfig(e2eBuildEnv());
+const offer = configuredPricing(offerConfig);
+/** That offer as the copy's figures. */
+const offerParams = planCopyParams(offer, "en-US");
+/** The price line a hero renders under its doors for that offer. */
+const offerHeroLine = heroPriceLine(diverTranslator("en-US"), offer, "en-US");
 
 /**
  * Every public "Get set up" door: the set-up request form, carrying the tag of
@@ -92,7 +99,7 @@ test("the homepage hero offers one demo door without a price sentence", async ({
   await expect(shopLinks).toHaveCount(1);
   await expect(shopLinks).toHaveAttribute("href", "/get-set-up?from=home-hero");
 
-  await expect(heroSection.getByText(/^One flat price of/)).toHaveCount(0);
+  await expect(heroSection.getByText(offerHeroLine, { exact: true })).toHaveCount(0);
 });
 
 test("the crew's group chat plays to nine of nine ready, and the visitor can send the nudge", async ({
@@ -518,10 +525,8 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   const productHero = productMain.locator("section").first();
   await expect(productHero.locator("button:not([disabled])")).toHaveCount(1);
   await expect(productHero.getByRole("link")).toHaveCount(1);
-  const productHeroPrice = productHero.getByText(/^One flat price of/);
+  const productHeroPrice = productHero.getByText(offerHeroLine, { exact: true });
   await expect(productHeroPrice).toBeVisible();
-  await expect(productHeroPrice).toContainText(earlyAccessPrice.price);
-  await expect(productHeroPrice).toContainText("no cut of your bookings.");
   await expect(productHeroPrice.locator("a, button")).toHaveCount(0);
   // The hero says what DiveDay runs, then what each row below holds. It was
   // five annotated screens of the day from 2026-09-24 until 2026-10-05, when
@@ -590,7 +595,9 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   // One "Notes" list below the comparison (the invoice above it is gone).
   await expect(page.getByRole("heading", { name: "Notes", exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Notes on the invoice" })).toHaveCount(0);
-  await expect(pricingHero.getByText("$99", { exact: true })).toBeVisible();
+  const { figure, cadence } = offerFigure(diverTranslator("en-US"), offer, "en-US");
+  await expect(pricingHero.getByText(figure, { exact: true })).toBeVisible();
+  await expect(pricingHero.getByText(cadence, { exact: true })).toBeVisible();
   // And the terms stand at the figure and at the door, which is the whole of
   // this slice (docs/product/marketing-review-20260827.md, "the terms never
   // stand at the doors"). The lock is a restatement of a binding commercial
@@ -1032,7 +1039,7 @@ test("the about page tells why DiveDay exists, who builds it, and how a shop get
   // Setup, pricing and arrival remain available beside the practical records facts.
   const aboutPriceDoor = aboutMain.getByRole("link", { name: "See pricing" });
   await expect(aboutPriceDoor).toHaveAttribute("href", "/pricing");
-  await expect(aboutMain).not.toContainText(earlyAccessPrice.price);
+  await expect(aboutMain).not.toContainText(offerHeroLine);
   await expect(aboutMain).not.toContainText("If DiveDay ever shuts down");
   await expect(
     aboutMain.getByRole("link", {
@@ -1427,7 +1434,7 @@ test("a feature page lists all of its feature and leads on to the next question"
   await expect(hero).toContainText(
     "The demo opens on the release and every signed copy, as the owner.",
   );
-  await expect(hero).not.toContainText(earlyAccessPrice.price);
+  await expect(hero).not.toContainText(offerHeroLine);
 
   // The checklist is the page's whole group from the capability index, not a
   // selection: the list a buyer holds against a competitor's feature page.
@@ -2096,9 +2103,20 @@ test("the legal pages are published, honest about what is unsettled, and reachab
   // and saying so is worth more than an SLA with no track record behind it.
   await expect(page.getByRole("heading", { name: "What we do not promise" })).toBeVisible();
 
-  // H-20260724-public-founding-shop-price: one source for the price, which is /pricing. A terms page quoting a
-  // stale figure is worse than one that quotes none.
-  await expect(page.getByText("$99")).toHaveCount(0);
+  // The percent plan's fee clause quotes the configured public rate, or says the
+  // agreed one when the public offer has none (#2947); no other figure is restated.
+  const percentTerms = termsFor("percent_of_volume", offerConfig);
+  await expect(
+    page.getByText(
+      percentTerms.basisPoints > 0
+        ? diverTranslator("en-US")(
+            "marketing.terms.percentPlan.feeBody",
+            planCopyParams(percentTerms, "en-US"),
+          )
+        : diverTranslator("en-US")("marketing.terms.percentPlan.feeBodyAgreed"),
+      { exact: true },
+    ),
+  ).toBeVisible();
 
   // Both pages say who operates DiveDay, once, in the contact section (Aaron,
   // 2026-11-11; #4323). The name and address come from src/features/public-site/company-identity.ts.

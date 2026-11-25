@@ -47,9 +47,9 @@ const serverEnv = {
   DATABASE_URL_UNPOOLED: "",
   PGLITE_DATA_DIR: "memory",
   DIVEDAY_E2E: "1",
-  // Stable legacy-offer fixture; default percentage copy is covered in marketing-pricing.test.tsx.
-  PRICING_MONTHLY_CENTS: "9900",
-  PRICING_BASIS_POINTS: "0",
+  // The default offer: free, with 1% of money recorded as received (see pricing-flags.ts).
+  PRICING_MONTHLY_CENTS: "0",
+  PRICING_BASIS_POINTS: "100",
   DIVEDAY_E2E_SECRET: E2E_TEST_ROUTE_SECRET,
   // Lets a spec fire a scheduled pass — see E2E_CRON_SECRET in e2e/servers.ts.
   CRON_SECRET: E2E_CRON_SECRET,
