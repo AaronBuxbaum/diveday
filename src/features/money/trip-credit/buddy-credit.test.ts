@@ -106,6 +106,57 @@ describe("buddy credit", () => {
     expect((await readTripCredit(db, shop.id, referrerId, "usd")).balanceCents).toBe(1);
   });
 
+  it("skips a referral when the shop currency cannot be written to the ledger", async () => {
+    const { db, shop } = await referral();
+    await db.update(shops).set({ currency: "USD" }).where(eq(shops.id, shop.id));
+    expect(await grantBuddyCredits(db, { now: nowDate() })).toEqual({
+      granted: 0,
+      busy: 0,
+      skipped: 1,
+    });
+    expect(await referralEntries(shop.id)).toHaveLength(0);
+  });
+
+  it("skips a referral when the existing ledger balance is negative", async () => {
+    const { db, shop, booking, actor, referrerId } = await referral();
+    await db.insert(tripCreditEntries).values({
+      id: randomUUID(),
+      shopId: shop.id,
+      personId: referrerId,
+      actorPersonId: actor.id,
+      currency: "usd",
+      kind: "redeem",
+      amountCents: 1,
+      bookingId: booking.id,
+    });
+    expect(await grantBuddyCredits(db, { now: nowDate() })).toEqual({
+      granted: 0,
+      busy: 0,
+      skipped: 1,
+    });
+    expect(await referralEntries(shop.id)).toHaveLength(0);
+  });
+
+  it("reports an entry ID conflict as skipped rather than granted", async () => {
+    const { db, shop, seat, actor, referrerId } = await referral();
+    await db.insert(tripCreditEntries).values({
+      id: buddyCreditEntryId(seat.id),
+      shopId: shop.id,
+      personId: referrerId,
+      actorPersonId: actor.id,
+      currency: "usd",
+      kind: "grant",
+      amountCents: 1,
+      reason: "goodwill",
+    });
+    expect(await grantBuddyCredits(db, { now: nowDate() })).toEqual({
+      granted: 0,
+      busy: 0,
+      skipped: 1,
+    });
+    expect(await referralEntries(shop.id)).toHaveLength(0);
+  });
+
   it("credits a friend once, not each seat they book on the same link", async () => {
     const { db, shop, booking, friend, past, referrerId } = await referral();
     const [again] = await db
