@@ -29,7 +29,7 @@ function probeAttachment(result) {
         typeof attachment.body === "string"
           ? Buffer.from(attachment.body, "base64").toString("utf8")
           : readFileSync(attachment.path, "utf8");
-      return /^renderer: no answer to evaluate\(\(\) => true\) in \d+ms — wedged, not slow\r?\n/.test(
+      return /^renderer: (?:no answer to evaluate\(\(\) => true\) in|no animation frame for) \d+ms(?: while evaluate answered)? — wedged, not slow\r?\n/.test(
         text,
       );
     } catch {

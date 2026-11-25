@@ -918,6 +918,25 @@ which leaves for the thread), because they are one surface: `EntryShell` is the 
 - **Composition:** wordmark, h1, one form or one sentence, one primary, quiet footer — and two
   dead-link tiers: account tokens never name a shop, booking tokens always offer the shop's hand.
 
+### The email-link page — `/hello`
+
+**Built 2026-11-25** for the cold email's link (the outreach review's build 1). Not in the nav,
+the footer or the sitemap, and `noindex`, so a visit is a tap on the email.
+
+- **One idea:** try DiveDay on one Saturday boat, set up by Aaron from the shop's passenger list,
+  with the shop's booking tool left where it is.
+- **The one ask:** reply to the email. The 20-minute call is second and the demo third, and only
+  the signed close offers the demo (`ReplyFirstCtas`), because the email's own ask was a reply and
+  a demo-first pair asked more than it did.
+- **The question it arrives with:** "what would I have to do, and what does it cost me?" The hero
+  answers both: the offer, and the price line (from the pricing configuration) under its doors.
+  Three numbered steps repeat the offer in order, saying names and email addresses are enough.
+- **Composition:** a letter column on the shell's left edge (the note line, the offer as the
+  heading, the two doors, the founder's address in plain text, the price), the two drawn screens no
+  booking tool has side by side with one note each (who is ready to board and what is missing, the
+  head count after a dive), the steps on the surface fill, then the signed close.
+  It speaks as Aaron in the first person, since the email is his.
+
 ### The homepage — `/`
 
 **Reviewed 2026-08-27** — the conversion pass in

@@ -74,6 +74,8 @@ export const EXCLUDED_COLUMNS: Record<string, string[]> = {
     // `recap_auto_send_at`. The roll-call events travel in their own file.
     "roll_call_alerted_at",
     "roll_call_shore_alerted_at",
+    // When the owners were sent How it went: the same once-per-departure send state.
+    "how_it_went_sent_at",
     // How many times this installation has re-issued the calendar events whose
     // UIDs are `trip-<uuid>@diveday`: a counter about *our* published revisions.
     // A re-imported bundle mints new trip ids and so new UIDs, and no subscriber

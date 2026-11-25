@@ -90,7 +90,8 @@ test("a snorkeler books from the public page and is on the manifest and the roll
   await page.goto(tripUrl);
   await openTripTab(page, "Trip");
   const row = await seatRow(page, guest);
-  await expect(row.getByText("Snorkeler", { exact: true })).toBeVisible();
+  // The chip beside the name; the opened guest's "Coming as" row says it again.
+  await expect(row.getByText("Snorkeler", { exact: true }).first()).toBeVisible();
 
   // And on the manifest: in the head count's split, and on the roll-call row
   // the crew calls back after the dive.
@@ -109,7 +110,9 @@ test("a snorkeler books from the public page and is on the manifest and the roll
   await seat.getByLabel("Coming as").selectOption("rider");
   await seat.getByRole("button", { name: "Save" }).click();
   await page.waitForURL(/notice=participant-type-set/);
-  await expect((await seatRow(page, guest)).getByText("Rider", { exact: true })).toBeVisible();
+  await expect(
+    (await seatRow(page, guest)).getByText("Rider", { exact: true }).first(),
+  ).toBeVisible();
 
   await openTripTab(page, "Manifest");
   await expect((await manifestRow(page, guest)).getByText("Rider", { exact: true })).toBeVisible();

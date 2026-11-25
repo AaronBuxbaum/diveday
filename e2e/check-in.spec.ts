@@ -260,10 +260,10 @@ test("a diver added by name alone books straight onto a boat with no email requi
   await expect(walkIn).toHaveCount(1);
   await openRosterDetails(walkIn);
   const facts = staffTranslator("en-US");
-  // The opened guest's facts are a term and its definition; Email's says none.
+  // The opened guest's facts are a label and what is on file; Email's says none.
   await expect(
-    walkIn.locator("dt", { hasText: facts("trips.fixList.facts.email") }).locator("+ dd"),
-  ).toHaveText(facts("trips.fixList.facts.noEmail"));
+    walkIn.locator("[data-guest-fact]", { hasText: facts("trips.fixList.facts.email") }),
+  ).toContainText(facts("trips.fixList.facts.noEmail"));
   await expect(
     walkIn.getByRole("link", { name: "Sign at the counter", exact: true }),
   ).toBeVisible();
@@ -361,7 +361,7 @@ test("a walk-in seated off the name prompt is confirmed and checked in without l
 
   const words = staffTranslator("en-US");
   const row = await deskRow(page, "Zoe Bennett");
-  await expect(row.getByRole("heading", { name: "Confirm identity", exact: true })).toBeVisible();
+  await expect(row.getByRole("region", { name: "Confirm identity", exact: true })).toBeVisible();
   await expect(
     row.getByText(
       words("shared.identityCheck.reasonPickedName", {

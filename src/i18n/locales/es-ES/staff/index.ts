@@ -47,6 +47,7 @@ import emailSettings from "./emailSettings.json";
 import feed from "./feed.json";
 import gear from "./gear.json";
 import gearRentals from "./gearRentals.json";
+import howItWent from "./howItWent.json";
 import inbox from "./inbox.json";
 import incidentExport from "./incidentExport.json";
 import incidents from "./incidents.json";
@@ -108,6 +109,7 @@ const staff = {
   settings,
   checkIn,
   closeout,
+  howItWent,
   waiversStaff,
   shopHome,
   shared,

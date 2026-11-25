@@ -61,6 +61,13 @@ it("recognizes only the same timed-out test probe attachment, rejecting missing 
     },
   ];
   expect(canRetryWedges(report(failure))).toBe(true);
+  failure.results[0].attachments[0].body = Buffer.from(
+    "renderer: no animation frame for 55000ms while evaluate answered — wedged, not slow\n",
+  ).toString("base64");
+  expect(canRetryWedges(report(failure))).toBe(true);
+  failure.results[0].attachments[0].body = Buffer.from(
+    "renderer: no answer to evaluate(() => true) in 2000ms — wedged, not slow\n",
+  ).toString("base64");
   failure.results[0].status = "failed";
   expect(canRetryWedges(report(failure))).toBe(false);
   failure.results[0].status = "timedOut";

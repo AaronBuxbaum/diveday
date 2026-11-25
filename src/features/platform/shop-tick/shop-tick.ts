@@ -9,10 +9,12 @@ import { bringDemoBoatsAtSeaHome } from "@/db/seed";
 import { sendDueRecaps } from "@/features/after-the-dive/recap";
 import { sendStaleRollCallAlerts } from "@/features/boarding/roll-call-alerts";
 import { sendSeatSoldAlerts } from "@/features/bookings/seat-sold-alerts";
+import { sendDueHowItWentEmails } from "@/features/day/how-it-went";
 import { sendDueServiceReminders } from "@/features/gear/work-order-follow-up";
 import { sendTrailingDeskPings } from "@/features/messages/desk-pings";
 import { sendDueReminders } from "@/features/messages/reminders";
 import { sendDueCheckoutRecoveries } from "@/features/money/checkout-recovery";
+import { grantBuddyCredits } from "@/features/money/trip-credit";
 import { sentry } from "@/features/platform/sentry-server";
 import { marineLifeNamesIn } from "@/i18n/marine-life-labels";
 import { errorClassToken, errorCodeToken } from "@/lib/error-token";
@@ -48,6 +50,7 @@ export const SHOP_TICK_SCANS = [
   "held-sends",
   "service-reminders",
   "recaps",
+  "how-it-went",
   "crew-notices",
   "roll-call-alerts",
   "missing-diver-alerts",
@@ -55,6 +58,7 @@ export const SHOP_TICK_SCANS = [
   "seat-sold-alerts",
   "dock-observations",
   "package-gifts",
+  "buddy-credits",
 ] as const;
 
 export type ShopTickScan = (typeof SHOP_TICK_SCANS)[number];
@@ -87,6 +91,8 @@ const RUNS = {
   "service-reminders": (db, now) => sendDueServiceReminders(db, { now }),
   // The post-dive recap, never before four hours, normally within an hour after.
   recaps: (db, now) => sendDueRecaps(db, { marineLifeNamesIn, now }),
+  // The owner's account of a departure, once the recap is due (glossary, "How it went").
+  "how-it-went": (db, now) => sendDueHowItWentEmails(db, { now }),
   // Crew hear about their boats (ADR 20261009-crew-hear-about-their-boats).
   "crew-notices": (db, now) => sendDueCrewNotices(db, { now }),
   // An after-dive count still open after the boat was due back.
@@ -104,6 +110,8 @@ const RUNS = {
   // A dive package bought as a gift: its email on the chosen date, in the
   // shop's zone and send window (issue #4629).
   "package-gifts": (db, now) => sendDuePackageGifts(db, { now }),
+  // A diver's trip credit for a friend who booked on their link and has dived (issue #4260).
+  "buddy-credits": (db, now) => grantBuddyCredits(db, { now }),
 } satisfies Record<ShopTickScan, (db: AppDb, now: Date) => Promise<unknown>>;
 
 export type ShopTickSummary = {

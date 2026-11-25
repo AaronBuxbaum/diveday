@@ -183,6 +183,19 @@ export const WELCOME_TEXT_MAX = 280;
 
 export const DIVEDAY_BRAND_COLOR = "#0064d2";
 
+/**
+ * The ready-made looks a shop can start from (#4824): a colour and a headline
+ * face that go together. A look is a shortcut into the two fields, never a
+ * stored setting of its own, so a shop that picks one and then changes the
+ * colour simply has its own. Words live in the staff bundle under the code.
+ */
+export const BRAND_LOOKS = [
+  { code: "harbor", color: "#0b6e99", font: "outfit" },
+  { code: "reef", color: "#c2410c", font: "bricolage_grotesque" },
+  { code: "deep", color: "#1e2a5a", font: "playfair_display" },
+  { code: "kelp", color: "#2f6b3a", font: "lora" },
+] as const satisfies readonly { code: string; color: string; font: BrandDisplayFontCode }[];
+
 export const AA_TEXT_CONTRAST = 4.5;
 const WHITE = "#ffffff";
 /** DiveDay's ink, the darker of the two candidate texts on a brand fill. */

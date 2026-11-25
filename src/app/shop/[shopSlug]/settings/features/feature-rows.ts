@@ -41,7 +41,13 @@ export type FeatureRow = {
   /** The row's name, on the page and in ⌘K. */
   headingKey: StaffMessageKey;
   /** Where its value settings live; shown beside the switch once it is on. */
-  link?: { path: string; labelKey: "settings.features.crewTarget" | "settings.features.boats" };
+  link?: {
+    path: string;
+    labelKey:
+      | "settings.features.crewTarget"
+      | "settings.features.boats"
+      | "settings.features.buddyCredit";
+  };
 };
 
 /** An optional feature's row: its words follow `settings.main.features.<id>`. */
@@ -77,7 +83,10 @@ export const FEATURE_ROWS: readonly FeatureRow[] = [
   { id: "tax", group: "bookings", gate: "payments", headingKey: "settings.main.tax.heading" },
   optional("checkoutRecovery", "bookings", "settings"),
   optional("walletPasses", "bookings", "settings"),
-  optional("buddyLinks", "bookings", "settings"),
+  {
+    ...optional("buddyLinks", "bookings", "settings"),
+    link: { path: "/settings#buddy-credit", labelKey: "settings.features.buddyCredit" },
+  },
   optional("selfRegistration", "bookings", "settings"),
   optional("waitlist", "bookings", "settings"),
   optional("pastDiverInvites", "bookings", "settings"),

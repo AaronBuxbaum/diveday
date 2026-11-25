@@ -1,0 +1,161 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "2edd890a-8c0c-4fb0-8ef7-b941f9d17689",
+  "prevIds": [
+    "cf1ac6e6-9b99-43b2-9f25-c740682c2891"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "shops",
+        "buddy_credit_cents"
+      ],
+      "writes": [
+        "s|col|public.shops.buddy_credit_cents",
+        "n|col|public.shops.buddy_credit_cents",
+        "e|col|public.shops.buddy_credit_cents"
+      ],
+      "reads": [
+        "n|tbl|public.shops",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "trip_credit_entries",
+        "trip_credit_entries_referral_once"
+      ],
+      "writes": [
+        "s|idx|public.trip_credit_entries_referral_once",
+        "n|idx|public.trip_credit_entries_referral_once",
+        "e|idx|public.trip_credit_entries_referral_once",
+        "n|rel|public.trip_credit_entries_referral_once"
+      ],
+      "reads": [
+        "n|tbl|public.trip_credit_entries",
+        "n|sch|public",
+        "n|col|public.trip_credit_entries.shop_id",
+        "n|col|public.trip_credit_entries.booking_id"
+      ]
+    },
+    {
+      "statementType": "add_check",
+      "statementTarget": [
+        "table",
+        "public",
+        "shops"
+      ],
+      "writes": [
+        "s|ck|public.shops.shops_buddy_credit_cents_range",
+        "n|ck|public.shops.shops_buddy_credit_cents_range",
+        "e|ck|public.shops.shops_buddy_credit_cents_range",
+        "n|con|public.shops.shops_buddy_credit_cents_range"
+      ],
+      "reads": [
+        "n|tbl|public.shops",
+        "n|sch|public",
+        "n|col|public.shops.buddy_credit_cents"
+      ]
+    },
+    {
+      "statementType": "alter_check",
+      "statementTarget": [
+        "table",
+        "public",
+        "trip_credit_entries"
+      ],
+      "writes": [
+        "s|ck|public.trip_credit_entries.trip_credit_entries_shape"
+      ],
+      "reads": [
+        "n|tbl|public.trip_credit_entries",
+        "n|sch|public",
+        "n|col|public.trip_credit_entries.kind",
+        "n|col|public.trip_credit_entries.reason",
+        "n|col|public.trip_credit_entries.booking_id",
+        "n|col|public.trip_credit_entries.restores_entry_id",
+        "n|col|public.trip_credit_entries.actor_person_id",
+        "e|col|public.trip_credit_entries.kind",
+        "e|col|public.trip_credit_entries.reason",
+        "e|col|public.trip_credit_entries.booking_id",
+        "e|col|public.trip_credit_entries.restores_entry_id",
+        "e|col|public.trip_credit_entries.actor_person_id"
+      ],
+      "sqlHash": "6b9344a27e448862"
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "shops",
+        "name": "buddy_credit_cents",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "0",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "trip_credit_entries",
+        "name": "trip_credit_entries_referral_once",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "shop_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "booking_id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": true,
+        "where": "\"reason\" = 'referral'",
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "shops",
+        "name": "shops_buddy_credit_cents_range",
+        "value": "\"buddy_credit_cents\" between 0 and 1000000",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "alter",
+      "key": "checks\u0000[\"public\",\"trip_credit_entries\",\"trip_credit_entries_shape\"]",
+      "set": {
+        "value": "(\n    (\"kind\" = 'grant' and \"reason\" is not null and \"reason\" in ('goodwill', 'promotion') and \"booking_id\" is null and \"restores_entry_id\" is null and \"actor_person_id\" is not null)\n    or (\"kind\" = 'grant' and \"reason\" is not null and \"reason\" = 'referral' and \"booking_id\" is not null and \"restores_entry_id\" is null and \"actor_person_id\" is null)\n    or (\"kind\" = 'redeem' and \"reason\" is null and \"booking_id\" is not null and \"restores_entry_id\" is null and \"actor_person_id\" is not null)\n    or (\"kind\" = 'restore' and \"reason\" is null and \"booking_id\" is not null and \"restores_entry_id\" is not null)\n  )"
+      }
+    }
+  ]
+}

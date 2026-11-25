@@ -25,6 +25,7 @@ import {
 import { MAX_IMAGE_MB } from "@/lib/storage/limits";
 import { saveProfileAction } from "../../website-actions";
 import { BrandColorField } from "../BrandColorField";
+import { BrandLooks } from "../BrandLooks";
 import { BrandPreview } from "../BrandPreview";
 import type { SettingsShop } from "../groups/kit";
 import { PickField } from "./PickField";
@@ -156,6 +157,15 @@ export function ProfileForm({
           />
         </div>
       </Field>
+      <BrandLooks
+        legend={t("settings.main.profile.looks")}
+        names={{
+          harbor: t("settings.main.profile.lookNames.harbor"),
+          reef: t("settings.main.profile.lookNames.reef"),
+          deep: t("settings.main.profile.lookNames.deep"),
+          kelp: t("settings.main.profile.lookNames.kelp"),
+        }}
+      />
       <FieldGrid columns={2} className="device-text-profile-grid">
         <Field
           label={t("settings.main.profile.brandColor")}

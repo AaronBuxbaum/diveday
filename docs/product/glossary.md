@@ -161,6 +161,7 @@ word in a message bundle fails `pnpm check:repo`. The Spanish reasoning is
 
 - Billing standing
 - Booking lead time
+- Buddy credit
 - Cancellation notice
 - Card dispute
 - Checkout sale / tip sale
@@ -469,6 +470,7 @@ word in a message bundle fails `pnpm check:repo`. The Spanish reasoning is
 - Earliest flight
 - Executed dive
 - Field guide
+- How it went
 - Log entry file
 - Marine-life catalog
 - Material generation

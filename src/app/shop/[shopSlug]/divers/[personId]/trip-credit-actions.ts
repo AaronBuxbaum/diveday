@@ -11,7 +11,7 @@ import {
 } from "@/features/money/trip-credit";
 import { parseForm } from "@/features/platform/form-parse";
 import { currencyFractionDigits, majorToMinor } from "@/lib/money";
-import { TRIP_CREDIT_REASONS } from "@/lib/trip-credit";
+import { STAFF_TRIP_CREDIT_REASONS } from "@/lib/trip-credit";
 
 const fields = z.object({
   kind: z.enum(["grant", "redeem"]),
@@ -19,7 +19,7 @@ const fields = z.object({
   attemptId: z.uuid(),
   currency: z.string().regex(/^[a-z]{3}$/),
   amount: z.string().max(100).optional(),
-  reason: z.enum(TRIP_CREDIT_REASONS).optional(),
+  reason: z.enum(STAFF_TRIP_CREDIT_REASONS).optional(),
   bookingId: z.uuid().optional(),
   expectedFareCents: z.coerce.number().int().positive().optional(),
 });

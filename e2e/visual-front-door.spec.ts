@@ -48,6 +48,7 @@ for (const scheme of ["light", "dark"] as const) {
         for (const [route, name] of [
           ["/", "landing"],
           ["/about", "about"],
+          ["/hello", "hello"],
           ["/product", "product"],
           ["/pricing", "pricing"],
           ["/get-set-up", "get-set-up"],
@@ -689,6 +690,14 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/status");
         await page.getByRole("heading", { level: 1 }).waitFor();
         await capture(page, "status", scheme);
+      });
+
+      // The page the cold email links to: the offer, the two drawn screens and
+      // the signed close with its three doors in the email's order.
+      test(`the email-link page renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/hello");
+        await page.getByRole("heading", { level: 1 }).waitFor();
+        await capture(page, "hello", scheme);
       });
 
       test(`the about page renders true to the design (${scheme})`, async ({ page }) => {

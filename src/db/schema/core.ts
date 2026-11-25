@@ -282,6 +282,12 @@ export const shops = pgTable(
      * credit; credits already earned stay.
      */
     buddyLinksEnabled: boolean("buddy_links_enabled").notNull().default(true),
+    /**
+     * **Buddy credit**: the promotional trip credit, in the shop's minor units,
+     * a diver earns once a friend who booked through their link has dived
+     * (issue #4260, ADR 20261125-buddy-referral-trip-credit). Zero earns none.
+     */
+    buddyCreditCents: integer("buddy_credit_cents").notNull().default(0),
     /** Optional trip planning; membership never controls presence or readiness. */
     buddyTeamsEnabled: boolean("buddy_teams_enabled").notNull().default(true),
     /**
@@ -830,6 +836,7 @@ export const shops = pgTable(
     check("shops_one_pick", sql`${table.pickTripId} is null or ${table.pickCourseId} is null`),
     check("shops_storefront_leads_known", sql`${table.storefrontLeads} in ('schedule', 'courses')`),
     check("shops_dock_call_minutes_nonnegative", sql`${table.dockCallMinutes} >= 0`),
+    check("shops_buddy_credit_cents_range", sql`${table.buddyCreditCents} between 0 and 1000000`),
     check("shops_offline_erasure_epoch_nonnegative", sql`${table.offlineErasureEpoch} >= 0`),
     // H-20261014-stale-roll-call-recipients: an address DiveDay sends to exists only with its recorded consent.
     check(
@@ -1589,6 +1596,14 @@ export const userAccounts = pgTable(
      * `weekly_digest` is.
      */
     afterHoursPing: boolean("after_hours_ping"),
+    /**
+     * This person's own answer to the "How it went" email after each
+     * departure (`src/features/day/how-it-went/email.ts`). Null until they give
+     * one, and null means their role's default: on for an owner, off for
+     * everyone else (`howItWentEmailWanted`), stored as the answer for the
+     * reason `weekly_digest` is.
+     */
+    howItWentEmail: boolean("how_it_went_email"),
     /**
      * When the last after-hours ping went to this person: the batching clock.
      * A ping is claimed by moving this forward only when it is older than

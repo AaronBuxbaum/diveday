@@ -9,5 +9,9 @@
     "heading": "Mensajes fuera de horario",
     "description": "Un correo cuando los buceadores escriben fuera del horario de atención, de {opens} a {closes} {zone}. Como mucho, uno cada media hora. Uno que no salió a tiempo puede llegar dentro de la hora."
   },
+  "howItWent": {
+    "heading": "Cómo fue cada salida",
+    "description": "Un correo unas horas después de la hora de regreso de cada barco, con un enlace a sus recuentos, lo que se resolvió antes de embarcar y las exenciones."
+  },
   "saveFailed": "No se guardó. Inténtalo de nuevo."
 }

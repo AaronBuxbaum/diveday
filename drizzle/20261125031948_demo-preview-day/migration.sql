@@ -1,0 +1,2 @@
+ALTER TABLE "demo_previews" ADD COLUMN "departure_times" text[] DEFAULT '{}'::text[] NOT NULL;--> statement-breakpoint
+ALTER TABLE "demo_previews" ADD COLUMN "boat_names" text[] DEFAULT '{}'::text[] NOT NULL;
