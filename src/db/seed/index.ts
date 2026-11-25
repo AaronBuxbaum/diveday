@@ -149,9 +149,11 @@ import { MINTED_DEMO_BRAND_COLOR } from "./identifiers";
 import { seedListedShops } from "./listed-shops";
 import { seedPackages } from "./packages";
 import { seedPreDepartureChecklist } from "./pre-departure-checklist";
+import { dressPreviewShop, undressPreviewBoats } from "./preview-day";
 import { type SeedShape, seedDemoSchedule, shapeHas } from "./schedule";
 import { DEMO_SHOP_BRAND, DEMO_SHOP_DESK } from "./shop-brand";
 import { seedStaffPortraits } from "./staff-portraits";
+import { seedStaffProfiles } from "./staff-profiles";
 
 const DEMO_BOAT_CAPACITIES = {
   "Mantis I": 17,
@@ -551,6 +553,11 @@ export async function seedDemo(db: DbExecutor, shape: SeedShape): Promise<void> 
     shop.id,
     staff.map((person, index) => ({ id: person.id, local: staffDefs[index].local })),
   );
+  await seedStaffProfiles(
+    db,
+    shop.id,
+    staff.map((person, index) => ({ id: person.id, local: staffDefs[index].local })),
+  );
   // The shop's own checklist items are settings, not schedule (ADR
   // 20260824-pre-departure-safety-check): seeded once here, never re-seeded by
   // a reset, which is why it is not inside seedDemoSchedule. Before it, so the
@@ -837,6 +844,11 @@ export async function createDemoShop(
     shop.id,
     staff.map((person, index) => ({ id: person.id, local: staffDefs[index].local })),
   );
+  await seedStaffProfiles(
+    db,
+    shop.id,
+    staff.map((person, index) => ({ id: person.id, local: staffDefs[index].local })),
+  );
   // A visitor's demo should carry the same owner-facing story as the
   // canonical demo, including sailed trips, tips, and reviews. Test-only
   // private shops can opt into the lean schedule when they need isolation
@@ -899,8 +911,13 @@ export async function resetDemoSchedule(
   if (!isTransactionExecutor(db)) {
     return db.transaction((tx) => resetDemoSchedule(tx, shopId, shape));
   }
+  // A preview shop's hulls wear its prospect's names and its day boats its
+  // prospect's times; the sample day is re-seeded under the sample names and
+  // dressed again after (src/db/seed/preview-day.ts).
+  await undressPreviewBoats(db, shopId);
   const cleared = await clearDemoSchedule(db, shopId);
   await reseedClearedDemoSchedule(db, shopId, cleared, shape);
+  await dressPreviewShop(db, shopId);
 }
 
 /** What {@link clearDemoSchedule} read before it deleted, for the re-seed to put back. */
@@ -1573,6 +1590,7 @@ export {
   reapExpiredDemoShops,
 } from "./demo-lifecycle";
 export { DEMO_RECAP_BOOKING_ID } from "./identifiers";
+export { dressPreviewShop, PREVIEW_SAMPLE_BOATS } from "./preview-day";
 export { seedRecentRecaps } from "./recent-recaps";
 export { SEED_SHAPES, type SeedShape, seedDemoSchedule, shapeHas } from "./schedule";
-export { syncDemoShopBrand, syncDemoShopPackingCopy } from "./shop-brand";
+export { syncDemoShopBrand, syncDemoShopPackingCopy, syncDemoShopWelcome } from "./shop-brand";

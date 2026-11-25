@@ -183,6 +183,23 @@ it("keeps insufficient boats visible, names their seats, and carries the party t
   expect(rows({ partySize: 4, isEmbed: true })[0]?.href).toBe("/s/blue-mantis/embed/trip/t1");
 });
 
+it("says Full on a full boat when no party size was chosen, never 0 seats left", () => {
+  const full = [{ ...listed[0], booked: 10 }] as unknown as UpcomingTrips;
+  expect(rows({ listedTrips: full })[0]?.capacityText).toBe("Full");
+});
+
+it("says Full on a full boat even when a party size was chosen", () => {
+  const full = [{ ...listed[0], booked: 10 }] as unknown as UpcomingTrips;
+  const row = rows({ listedTrips: full, partySize: 2 })[0];
+  expect(row?.capacityText).toBe("Full");
+  expect(row?.insufficientSeats).toBe(true);
+});
+
+it("names the party only when a chosen size does not fit the seats left", () => {
+  expect(rows({ partySize: 4 })[0]?.capacityText).toBe("1 seat left · party of 4");
+  expect(rows({ partySize: 1 })[0]?.capacityText).toBe(t("fallback.spotsLeft", { count: 1 }));
+});
+
 it("uses only the first planned site’s photo and keeps the embed unchanged", () => {
   const listedTrips = [
     {
@@ -218,4 +235,39 @@ it("marks a trip as departed at its scheduled start", () => {
   expect(result[0]?.capacityTone).toBe("full");
   expect(result[0]?.linkLabel).toContain("This one’s already sailed");
   expect(result[1]?.capacityText).not.toBe("This one’s already sailed");
+  expect(result[0]?.departed).toBe(true);
+  expect(result[1]?.departed).toBeFalsy();
+});
+
+it("does not say the same sighting under every boat to the same site", () => {
+  const site = { id: "reef", imageUrls: [] };
+  const listedTrips = [0, 1, 2].map((index) => ({
+    ...listed[0],
+    id: `trip-${index}`,
+    diveSite: site,
+    waterTemperatureC: null,
+    visibilityMeters: null,
+    surfaceConditions: null,
+    conditionsSummary: null,
+  })) as unknown as UpcomingTrips;
+  const now = new Date("2026-07-24T12:00:00Z");
+  const tally = (speciesSlug: string) => ({ speciesSlug, dives: 3, total: 3, lastSeenAt: now });
+  const facts = {
+    now,
+    shop: { depthUnit: "feet" as const, temperatureUnit: "fahrenheit" as const },
+    sightings: new Map([
+      [
+        "reef",
+        {
+          diveSiteId: "reef",
+          dives: 3,
+          species: [tally("southern-stingray"), tally("nurse-shark")],
+        },
+      ],
+    ]),
+  };
+  const facted = rows({ listedTrips, facts }).map((row) => row.fact);
+  expect(facted[0]).toBe("Southern stingrays seen on recent dives");
+  expect(facted[1]).toBe("Nurse sharks seen on recent dives");
+  expect(facted[2]).toBe("Southern stingrays seen on recent dives");
 });

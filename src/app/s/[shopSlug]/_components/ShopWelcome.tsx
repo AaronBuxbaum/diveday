@@ -123,6 +123,7 @@ export function ShopWelcome({
               establishedYear={shop.establishedYear}
               t={t}
               className="mt-3"
+              phoneLimit={3}
             />
             {newToDivingHref || seeScheduleHref ? (
               <div className="mt-5 flex flex-col gap-3 sm:flex-row">

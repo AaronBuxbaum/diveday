@@ -91,10 +91,10 @@ export function TripArrivalCard({
           className="mb-5 aspect-[16/9] rounded-inset"
           sizes="(max-width: 640px) calc(100vw - 56px), 576px"
         />
-      ) : showMap && facts.mapQuery ? (
+      ) : showMap && facts.mapCenter ? (
         <ArrivalMap
           title={t("trip.arrivalMapTitle", { place: facts.label })}
-          query={facts.mapQuery}
+          center={facts.mapCenter}
           zoomHint={t("trip.mapZoomHint")}
         />
       ) : null}

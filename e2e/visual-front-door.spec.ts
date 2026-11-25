@@ -48,6 +48,7 @@ for (const scheme of ["light", "dark"] as const) {
         for (const [route, name] of [
           ["/", "landing"],
           ["/about", "about"],
+          ["/hello", "hello"],
           ["/product", "product"],
           ["/pricing", "pricing"],
           ["/get-set-up", "get-set-up"],
@@ -394,7 +395,7 @@ for (const scheme of ["light", "dark"] as const) {
 
       // Where a shop the owner has spoken to is opened: two group labels over
       // the fields, the storefront address written under the shop link, and
-      // the one trial sentence (ADR 20260827-first-light, decision 1). Only
+      // the one price sentence (ADR 20260827-first-light, decision 1). Only
       // behind the setup key (ADR 20260925-shops-are-set-up-by-hand).
       test(`the onboarding form renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto(await mintOnboardFormPath(page));
@@ -691,6 +692,14 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "status", scheme);
       });
 
+      // The page the cold email links to: the offer, the two drawn screens and
+      // the signed close with its three doors in the email's order.
+      test(`the email-link page renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/hello");
+        await page.getByRole("heading", { level: 1 }).waitFor();
+        await capture(page, "hello", scheme);
+      });
+
       test(`the about page renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/about");
         await capture(page, "about", scheme);
@@ -910,14 +919,13 @@ for (const scheme of ["light", "dark"] as const) {
        * **Two captures in one test, deliberately.** `settings-billing` is
        * this shop's Settings > Billing page — demo shops have no Billing door
        * and are never billed, so `blue-mantis` (the seeded demo shop the
-       * other settings captures use) can never show a trial's standing. Both
+       * other settings captures use) can never show a real shop's plan. Both
        * images contain the shop's slug — the first-run checklist renders the
        * public schedule URL. The onboardForm fixture owns the setup link and
        * tears down only the shop that link created, so all five nightly repeats
        * use the same visible slug without leaking a real shop. The captures
-       * share one onboarded session. The trial's standing is clock-anchored and
-       * deterministic: this shop's `created_at` is the harness's one frozen
-       * instant, so "14 days left" and the end date never drift between runs.
+       * share one onboarded session. A shop with no card shows no standing
+       * badge (ADR 20261124-free-shops-no-trial), so nothing on it drifts.
        */
       test(`a freshly onboarded shop's Today tab renders true to the design (${scheme})`, async ({
         page,
@@ -946,8 +954,8 @@ for (const scheme of ["light", "dark"] as const) {
         await page
           .locator('input[name="ownerPassword"]')
           .filter({ visible: true })
-          .fill("trial-pass-123");
-        await page.getByRole("button", { name: "Create shop & start trial" }).click();
+          .fill("owner-pass-123");
+        await page.getByRole("button", { name: "Create your shop" }).click();
         await page.waitForURL(new RegExp(`/shop/${unique}$`));
         await page.getByRole("heading", { name: "First morning" }).waitFor();
         // The canvas's `FirstMorning` board: the setup ledger as the day
@@ -1018,9 +1026,9 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { name: "Nothing upcoming on the board" }).waitFor();
         await capture(page, "schedule-builder-empty", scheme);
 
-        // Same session, straight to Settings > Billing: the one place a trial
-        // shop's owner sees its standing (days left, and — with the billing
-        // env absent here, as in every e2e build — "billing isn't turned on").
+        // Same session, straight to Settings > Billing: the one place a new
+        // shop's owner sees its plan (and, with the billing env absent here,
+        // as in every e2e build, "billing isn't turned on").
         await page.goto(`/shop/${unique}/settings/billing`);
         await page.getByRole("heading", { name: "Your plan" }).waitFor();
         await capture(page, "settings-billing", scheme);
@@ -1063,8 +1071,8 @@ for (const scheme of ["light", "dark"] as const) {
         await page
           .locator('input[name="ownerPassword"]')
           .filter({ visible: true })
-          .fill("trial-pass-123");
-        await page.getByRole("button", { name: "Create shop & start trial" }).click();
+          .fill("owner-pass-123");
+        await page.getByRole("button", { name: "Create your shop" }).click();
         await page.waitForURL(new RegExp(`/shop/${unique}$`));
 
         // The first (and only-ever-first) departure, dated off the frozen

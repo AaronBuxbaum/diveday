@@ -126,21 +126,46 @@ describe("the mid-season answer is one shared key", () => {
  * The pricing page's terms, pinned as rules rather than sentences
  * (docs/product/marketing-review-20260827.md, "the terms never stand at the
  * doors" — roadmap slice 12c). Every assertion here is a claims-policy
- * obligation: the trial note has to say the four things a burned buyer is
- * actually asking, and it has to say nothing beyond them, because billing
- * cadence, taxes and the contract flow are still undecided (H-20260724-public-founding-shop-price).
+ * obligation: the price note says what a shop trying DiveDay on one trip is
+ * asking (Aaron, 2026-11-24: keep your booking tool, free, no card, a percent
+ * only of payments taken in DiveDay, and nothing more), and it says nothing
+ * beyond that, because billing cadence, taxes and the contract flow are still
+ * undecided (H-20260724-public-founding-shop-price). There is no trial (ADR
+ * 20261124-free-shops-no-trial), so a timed window or a paid plan would
+ * contradict it. The figures are parameters from the pricing configuration,
+ * never written into the bundle; `src/app/(marketing)/pricing/price-note.test.ts`
+ * renders the note for more than one configuration.
  */
-describe("the trial's terms stand at the pricing doors", () => {
+describe("the price note's terms stand at the pricing doors", () => {
   /** What the note must name, in each locale's own words. */
-  const trialTerms = {
-    "en-US": [/free/i, /2 weeks/, /no card/i, /keeps working/i],
-    "es-ES": [/gratis/i, /2 semanas/, /sin tarjeta/i, /sigue funcionando/i],
+  const noteTerms = {
+    "en-US": [/booking tool/i, /one trip/i, /free/i, /no card/i, /\{percent\}/, /whole price/i],
+    "es-ES": [
+      /sistema de reservas/i,
+      /una salida/i,
+      /gratis/i,
+      /sin tarjeta/i,
+      /\{percent\}/,
+      /todo el precio/i,
+    ],
+  } as const;
+  /** What it must never say again: a timed trial, or a plan to move to. */
+  const retiredTerms = {
+    "en-US": [/weeks?\b/i, /paid plan/i, /\btrial\b/i, /\{email\}/, /\d\s?%/, /\$\d/],
+    "es-ES": [
+      /semanas?\b/i,
+      /plan de pago/i,
+      /\bprueba gratuita\b/i,
+      /\{email\}/,
+      /\d\s?%/,
+      /\$\d/,
+    ],
   } as const;
 
   /**
-   * Billing vocabulary the page may not grow on its own. The trial's FAQ row
+   * Billing vocabulary the page may not grow on its own. The old trial FAQ row
    * left `/pricing` on 2026-10-24 (visual review B11: the notes beside the
-   * invoice already say it), so the note is the trial's one statement, and it
+   * invoice already say it), so the note is the price’s one statement, and it
    * may name the card it does not take and no other billing term: publishing
    * billing terms needs the decision H-20260724-public-founding-shop-price leaves open.
    */
@@ -175,14 +200,15 @@ describe("the trial's terms stand at the pricing doors", () => {
   } as const;
 
   for (const locale of DIVER_LOCALES) {
-    it(`names free, three weeks, no card and the soft expiry in ${locale}`, () => {
-      const note = marketingMessages(locale)["marketing.pricing.trialNote"];
+    it(`names one trip, free, no card and the configured percent in ${locale}`, () => {
+      const note = marketingMessages(locale)["marketing.pricing.priceNote"];
       expect(note).toBeDefined();
-      for (const pattern of trialTerms[locale]) expect(note).toMatch(pattern);
+      for (const pattern of noteTerms[locale]) expect(note).toMatch(pattern);
+      for (const pattern of retiredTerms[locale]) expect(note).not.toMatch(pattern);
     });
 
     it(`names no billing term beyond the card it does not take in ${locale}`, () => {
-      const note = marketingMessages(locale)["marketing.pricing.trialNote"].toLowerCase();
+      const note = marketingMessages(locale)["marketing.pricing.priceNote"].toLowerCase();
       const allowed = locale === "en-US" ? ["card"] : ["tarjeta"];
       const invented = billingVocabulary[locale].filter(
         (term) => note.includes(term) && !allowed.includes(term),
@@ -336,11 +362,11 @@ describe("the builder's notes say we", () => {
  * stated the trial five times (the invoice row, the hero's note, the closing
  * band's copy of it, a margin note and the FAQ) and card fees three times (the
  * invoice row, a margin note and a footnote under the included list). The
- * trial keeps one line in the notes beside the invoice (its FAQ row went on
+ * price note keeps one line in the notes beside the invoice (its FAQ row went on
  * 2026-10-24, visual review B11); card fees keep the invoice's row. The deleted keys are absence checks, because the failure they guard is
  * an editor filling one back in.
  */
-describe("the pricing page says the trial and card fees once", () => {
+describe("the pricing page says the price note and card fees once", () => {
   for (const locale of DIVER_LOCALES) {
     it(`keeps card fees out of the notes in ${locale}`, () => {
       const messages = marketingMessages(locale);
@@ -348,11 +374,10 @@ describe("the pricing page says the trial and card fees once", () => {
       expect(messages["marketing.pricing.notes.note3"]).toBeUndefined();
     });
 
-    it(`keeps the trial in the notes beside the price alone in ${locale}`, () => {
+    it(`keeps the price note beside the price alone, and no trial, in ${locale}`, () => {
       const messages = marketingMessages(locale);
-      expect(messages["marketing.pricing.trialNote"]).toBeDefined();
-      // How a trial becomes paid, through the upgrade inbox (marketing.md).
-      expect(messages["marketing.pricing.trialNote"]).toContain("{email}");
+      expect(messages["marketing.pricing.priceNote"]).toBeDefined();
+      expect(messages["marketing.pricing.trialNote"]).toBeUndefined();
       expect(messages["marketing.pricing.faq.trialMeaning.answer"]).toBeUndefined();
       expect(messages["marketing.pricing.invoice.trial.label"]).toBeUndefined();
       expect(messages["marketing.pricing.notes.note4"]).toBeUndefined();

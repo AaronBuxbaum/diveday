@@ -49,6 +49,21 @@
   remain separate. Initials stand in without a photo. A held seat, printed sheet and offline copy
   show no photo. Removing or erasing the reference retires the stored object for cleanup; copies
   already downloaded cannot be recalled.
+- **How it went** — the owner's short account of one departure (`howItWent`,
+  `src/features/day/how-it-went/`; the page `/shop/<slug>/trips/<id>/how-it-went`, linked from
+  Wrapped up). Each head count gives the divers and the crew recorded aboard (never summed, since
+  one person may hold a seat and crew), who was not back, who two devices disagree on (not counted
+  either way), who **Didn't sail**, and who has no result. After a dive, "no result" names everyone
+  an earlier count recorded aboard even when nobody started that count, because a count nobody took
+  is never read as everyone back (**Unaccounted for**). A diver recorded not back and later back
+  aboard keeps both times. It also lists what was **sorted before boarding**: a waiver signed, a
+  card checked (as captured at boarding) or a rental fit stated during the departure, no later
+  than the diver's dock mark, and "not known" when no dock count was taken. It names who was
+  turned away and who boarded while blocked (the boarding event's own snapshot). Waivers are
+  split into signed ahead, on the day, after the departure, waiting on a doctor, not cleared, and
+  not signed. Owner-only, on the departure log's gate. Each owner is emailed a link to it once the
+  **recap** is due, for a departure somebody counted (`sendDueHowItWentEmails`; off per owner in
+  their email settings); the email names nobody. This is not the diver's **recap**.
 - **Field guide** — the faces a **dive site** is known for: up to eight catalog species a shop picks
   for that site (`dive_site_creatures`, `MAX_SITE_CREATURES`), in the order it chose. A **briefing
   selection**, not an inventory — the point is to tell a diver what to *expect*, so it holds the

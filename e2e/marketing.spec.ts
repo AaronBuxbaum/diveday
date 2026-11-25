@@ -1,10 +1,25 @@
+import { e2eBuildEnv } from "../scripts/e2e-build-env.mjs";
+import { heroPriceLine } from "../src/app/_components/hero-price-line";
+import { offerFigure } from "../src/app/(marketing)/pricing/faq";
+import { planCopyParams } from "../src/features/money/billing";
+import { pricingConfig } from "../src/features/money/pricing-flags";
 import { diverTranslator } from "../src/i18n/messages";
+import { configuredPricing, termsFor } from "../src/lib/billing/pricing-plans";
 import { FEATURE_PAGE_SLUGS, featurePagePath } from "../src/lib/feature-pages";
-import { capabilityGroup, earlyAccessPrice, productCapabilityIndex } from "../src/lib/marketing";
+import { capabilityGroup, productCapabilityIndex } from "../src/lib/marketing";
 import { MIGRATION_GUIDES } from "../src/lib/migration-guides";
-import { ONBOARDING_EMAIL, SWITCH_EMAIL } from "../src/lib/platform-mail";
+import { SWITCH_EMAIL } from "../src/lib/platform-mail";
 import { expect, test } from "./fixtures";
+
 import { mintOnboardFormPath } from "./setup-link";
+
+/** The offer the e2e build serves (`PRICING_*` in `e2eBuildEnv`). */
+const offerConfig = pricingConfig(e2eBuildEnv());
+const offer = configuredPricing(offerConfig);
+/** That offer as the copy's figures. */
+const offerParams = planCopyParams(offer, "en-US");
+/** The price line a hero renders under its doors for that offer. */
+const offerHeroLine = heroPriceLine(diverTranslator("en-US"), offer, "en-US");
 
 /**
  * Every public "Get set up" door: the set-up request form, carrying the tag of
@@ -84,7 +99,7 @@ test("the homepage hero offers one demo door without a price sentence", async ({
   await expect(shopLinks).toHaveCount(1);
   await expect(shopLinks).toHaveAttribute("href", "/get-set-up?from=home-hero");
 
-  await expect(heroSection.getByText(/^One flat price of/)).toHaveCount(0);
+  await expect(heroSection.getByText(offerHeroLine, { exact: true })).toHaveCount(0);
 });
 
 test("the crew's group chat plays to nine of nine ready, and the visitor can send the nudge", async ({
@@ -510,10 +525,8 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   const productHero = productMain.locator("section").first();
   await expect(productHero.locator("button:not([disabled])")).toHaveCount(1);
   await expect(productHero.getByRole("link")).toHaveCount(1);
-  const productHeroPrice = productHero.getByText(/^One flat price of/);
+  const productHeroPrice = productHero.getByText(offerHeroLine, { exact: true });
   await expect(productHeroPrice).toBeVisible();
-  await expect(productHeroPrice).toContainText(earlyAccessPrice.price);
-  await expect(productHeroPrice).toContainText("no cut of your bookings.");
   await expect(productHeroPrice.locator("a, button")).toHaveCount(0);
   // The hero says what DiveDay runs, then what each row below holds. It was
   // five annotated screens of the day from 2026-09-24 until 2026-10-05, when
@@ -582,7 +595,9 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   // One "Notes" list below the comparison (the invoice above it is gone).
   await expect(page.getByRole("heading", { name: "Notes", exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Notes on the invoice" })).toHaveCount(0);
-  await expect(pricingHero.getByText("$99", { exact: true })).toBeVisible();
+  const { figure, cadence } = offerFigure(diverTranslator("en-US"), offer, "en-US");
+  await expect(pricingHero.getByText(figure, { exact: true })).toBeVisible();
+  await expect(pricingHero.getByText(cadence, { exact: true })).toBeVisible();
   // And the terms stand at the figure and at the door, which is the whole of
   // this slice (docs/product/marketing-review-20260827.md, "the terms never
   // stand at the doors"). The lock is a restatement of a binding commercial
@@ -593,18 +608,16 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   await expect(
     page.getByText("Today’s price, locked for one year for founding shops."),
   ).toBeVisible();
-  // The trial's own terms, once, in the notes beside the price — free, three
-  // weeks, no card, and the soft expiry that src/features/shop-setup/trial.ts actually
-  // implements. The FAQ's trial row went with the visual review of 2026-10-24
-  // (B11: the FAQ keeps only what the table and notes do not answer), and card
-  // fees are the invoice's own row, nowhere else. The note also says how a
-  // trial becomes paid, through the upgrade inbox (docs/product/marketing.md).
-  const trialTerms = page.getByText(
-    diverTranslator("en-US")("marketing.pricing.trialNote", { email: ONBOARDING_EMAIL }),
+  // The price note, once, in the notes beside the price: try it on one trip,
+  // with the fee taken from the configured offer, never a figure in the bundle
+  // (ADR 20261124-free-shops-no-trial; docs/product/marketing.md). There is no
+  // trial, so no timed window and no paid plan, anywhere on the page.
+  const priceNote = page.getByText(
+    diverTranslator("en-US")("marketing.pricing.priceNote", offerParams),
     { exact: true },
   );
-  await expect(trialTerms).toHaveCount(1);
-  await expect(page.getByText("2 weeks, no card", { exact: true })).toHaveCount(0);
+  await expect(priceNote).toHaveCount(1);
+  await expect(page.getByText(/free for 2 weeks|two-week trial|paid plan/i)).toHaveCount(0);
   await expect(page.getByText(/Card fees are Stripe’s|Payment-processing fees/)).toHaveCount(0);
   // The offline row is gone from this page's FAQ, deliberately — the claim
   // lives on the boat manifest page, asserted above.
@@ -686,12 +699,12 @@ test("public marketing pages lead to the product and pricing details", async ({ 
     .filter({ hasText: /^(Try the live demo|Get set up)$/ });
   await expect(priceHeroDoors.first()).toHaveText("Try the live demo");
   await expect(priceHeroDoors.nth(1)).toHaveText("Get set up");
-  // The trial terms are a sentence, not a third door. When a page owes a
+  // The price note is a sentence, not a third door. When a page owes a
   // reader a fact at a door it states it rather than opening another one
   // (docs/product/marketing.md, "The budget binds controls, not facts") — and
   // this assertion is what stops the note growing a "See the terms" link that
   // would re-order the two above it.
-  await expect(trialTerms.locator("a, button")).toHaveCount(0);
+  await expect(priceNote.locator("a, button")).toHaveCount(0);
 
   // The page closes on the number it opened with, and that closing door is
   // tagged apart from the hero's. Without it there was no second door below
@@ -830,7 +843,7 @@ test("the setup link opens the form, which answers the hesitation it creates", a
   const signUpForm = page.locator('form:has(input[name="ownerPassword"])');
   await expect(signUpForm).toBeVisible();
   await expect(signUpForm.locator('input[name="source"]')).toHaveCount(0);
-  // The footer's demo door stays link weight, so "Create shop & start trial"
+  // The footer's demo door stays link weight, so "Create your shop"
   // is still the page's one primary (issue #1956).
   const demoDoor = page.getByRole("main").getByRole("button", { name: "Try the live demo" });
   await expect(demoDoor).toBeVisible();
@@ -844,18 +857,18 @@ test("the setup link opens the form, which answers the hesitation it creates", a
   ).toHaveValue("onboard-demo");
 
   // Asking for a password is the moment of maximum hesitation, so the door
-  // answers it — in one sentence, not the four claims this line used to join
-  // together (ADR 20260827-first-light, decision 1). The half that earns it is
-  // the second: "free for 2 weeks" alone never says what happens on day 22,
-  // and a buyer who has been burned reads an unanswered window as a card wall
-  // (docs/product/marketing-review-20260827.md).
+  // answers it in one sentence, not the four claims this line used to join
+  // together (ADR 20260827-first-light, decision 1): what it costs, from the
+  // configured offer (ADR 20261124-free-shops-no-trial), with no window to run out.
   await expect(
-    page.getByText("Free for 2 weeks, no card, and nothing switches off when the window ends."),
+    page.getByText(diverTranslator("en-US")("account.onboard.priceNote", offerParams), {
+      exact: true,
+    }),
   ).toBeVisible();
   await expect(page.getByText("No card, no setup fee.")).toHaveCount(0);
   await expect(page.getByText("Your records are ready from day one.")).toHaveCount(0);
   await expect(page.getByText("Real support, one email away.")).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Create shop & start trial" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Create your shop" })).toBeVisible();
 });
 
 test("a page's tag reaches the set-up request form, and an unknown one is bucketed", async ({
@@ -1026,7 +1039,7 @@ test("the about page tells why DiveDay exists, who builds it, and how a shop get
   // Setup, pricing and arrival remain available beside the practical records facts.
   const aboutPriceDoor = aboutMain.getByRole("link", { name: "See pricing" });
   await expect(aboutPriceDoor).toHaveAttribute("href", "/pricing");
-  await expect(aboutMain).not.toContainText(earlyAccessPrice.price);
+  await expect(aboutMain).not.toContainText(offerHeroLine);
   await expect(aboutMain).not.toContainText("If DiveDay ever shuts down");
   await expect(
     aboutMain.getByRole("link", {
@@ -1421,7 +1434,7 @@ test("a feature page lists all of its feature and leads on to the next question"
   await expect(hero).toContainText(
     "The demo opens on the release and every signed copy, as the owner.",
   );
-  await expect(hero).not.toContainText(earlyAccessPrice.price);
+  await expect(hero).not.toContainText(offerHeroLine);
 
   // The checklist is the page's whole group from the capability index, not a
   // selection: the list a buyer holds against a competitor's feature page.
@@ -2090,9 +2103,20 @@ test("the legal pages are published, honest about what is unsettled, and reachab
   // and saying so is worth more than an SLA with no track record behind it.
   await expect(page.getByRole("heading", { name: "What we do not promise" })).toBeVisible();
 
-  // H-20260724-public-founding-shop-price: one source for the price, which is /pricing. A terms page quoting a
-  // stale figure is worse than one that quotes none.
-  await expect(page.getByText("$99")).toHaveCount(0);
+  // The percent plan's fee clause quotes the configured public rate, or says the
+  // agreed one when the public offer has none (#2947); no other figure is restated.
+  const percentTerms = termsFor("percent_of_volume", offerConfig);
+  await expect(
+    page.getByText(
+      percentTerms.basisPoints > 0
+        ? diverTranslator("en-US")(
+            "marketing.terms.percentPlan.feeBody",
+            planCopyParams(percentTerms, "en-US"),
+          )
+        : diverTranslator("en-US")("marketing.terms.percentPlan.feeBodyAgreed"),
+      { exact: true },
+    ),
+  ).toBeVisible();
 
   // Both pages say who operates DiveDay, once, in the contact section (Aaron,
   // 2026-11-11; #4323). The name and address come from src/features/public-site/company-identity.ts.
@@ -2221,4 +2245,29 @@ test("each page's closing band offers the founder's 20-minute call once, and the
     await expect(call).toHaveCount(1);
     await expect(call).toHaveAttribute("href", /^https:\/\/calendar\.app\.google\//);
   }
+});
+
+// The page the cold email links to asks in the email's order: reply to the
+// email, then the call, then (at the close) the demo, each tagged `hello` or
+// `hello-close`. It is kept out of search, so its tap count is the email's.
+test("the email-link page asks for a reply first and tags its doors", async ({ page }) => {
+  const t = diverTranslator("en-US");
+  await page.goto("/hello");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(t("marketing.hello.heroTitle"));
+  await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
+
+  const replies = page.getByRole("link", { name: t("marketing.hello.reply") });
+  await expect(replies).toHaveCount(2);
+  await expect(replies.first()).toHaveAttribute("href", /^mailto:aaron@dive\.day\?subject=/);
+
+  const calls = page.getByRole("link", { name: t("marketing.common.bookCall") });
+  await expect(calls.first()).toHaveAttribute("href", /utm_content=hello$/);
+  await expect(calls.last()).toHaveAttribute("href", /utm_content=hello-close$/);
+
+  // One demo door in the page itself (the nav keeps its own), at the close, posting its tag.
+  const main = page.getByRole("main");
+  await expect(main.getByRole("button", { name: t("marketing.common.tryDemo") })).toHaveCount(1);
+  await expect(main.locator('input[name="source"]')).toHaveValue("hello-close");
+
+  await expect(page.getByText(t("marketing.hello.price", offerParams))).toBeVisible();
 });

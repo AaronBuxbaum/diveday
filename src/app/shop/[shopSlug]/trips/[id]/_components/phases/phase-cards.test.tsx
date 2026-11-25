@@ -4,7 +4,7 @@ import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import type { GearToPack } from "@/features/trips/trip-prep";
 import { staffTranslator } from "@/i18n/staff-messages";
-import { CheckInQuietLine, GearToPackCard, TomorrowsWaterCard, TripFactsCard } from "./phase-cards";
+import { CheckInQuietLine, GearToPackCard, TomorrowsWaterCard, TripFactsLine } from "./phase-cards";
 
 const t = staffTranslator("en-US");
 afterEach(cleanup);
@@ -19,10 +19,16 @@ const gear = (over: Partial<GearToPack> = {}): GearToPack => ({
 });
 
 describe("the trip's facts while it fills", () => {
-  it("says what is not set yet, and opens Edit trip at each fact", () => {
+  const line = () => {
+    const found = document.querySelector("[data-trip-facts]");
+    if (!(found instanceof HTMLElement)) throw new Error("no facts line");
+    return found;
+  };
+
+  it("is one line of facts, each the door to its own section of Edit trip", () => {
     render(
-      <TripFactsCard
-        crew={[]}
+      <TripFactsLine
+        crew={["Sal Moretti"]}
         plan={["Blue Hole", "Coral Garden"]}
         price="$95.00"
         whoCanBook="Anyone"
@@ -31,20 +37,55 @@ describe("the trip's facts while it fills", () => {
         t={t}
       />,
     );
-    const card = screen.getByRole("region", { name: "This trip" });
-    expect(within(card).getByText("Not set")).toBeVisible();
-    expect(within(card).getByText("Blue Hole and Coral Garden")).toBeVisible();
-    expect(within(card).getByRole("link", { name: "Edit · Crew" })).toHaveAttribute(
-      "href",
-      "/trip?view=edit#crew",
-    );
-    expect(within(card).getByRole("link", { name: "Edit · Plan" })).toHaveAttribute(
+    const door = (name: string) => within(line()).getByRole("link", { name });
+    expect(door("Edit · Crew: Sal Moretti")).toHaveAttribute("href", "/trip?view=edit#crew");
+    expect(door("Edit · Plan: Blue Hole and Coral Garden")).toHaveAttribute(
       "href",
       "/trip?view=edit#dives",
     );
-    expect(within(card).getByRole("link", { name: "Edit · Who can book" })).toHaveAttribute(
+    expect(door("Edit · Price: $95.00")).toHaveAttribute("href", "/trip?view=edit#about");
+    expect(door("Edit · Who can book: Anyone")).toHaveAttribute(
       "href",
       "/trip?view=edit#requirements",
+    );
+    expect(within(line()).queryByText(/^Add /)).toBeNull();
+  });
+
+  it("names everything not set in one link, to the first of it, with no Not set apiece", () => {
+    render(
+      <TripFactsLine
+        crew={[]}
+        plan={[]}
+        price={null}
+        whoCanBook="Open Water or higher"
+        editHref={(section) => `/trip?view=edit#${section}`}
+        locale="en-US"
+        t={t}
+      />,
+    );
+    expect(within(line()).getByRole("link", { name: "Add crew, plan, and price" })).toHaveAttribute(
+      "href",
+      "/trip?view=edit#crew",
+    );
+    expect(within(line()).queryByText("Not set")).toBeNull();
+    expect(within(line()).getAllByRole("link")).toHaveLength(2);
+  });
+
+  it("names only what is missing: a trip with crew and plan but no price", () => {
+    render(
+      <TripFactsLine
+        crew={["Sal Moretti"]}
+        plan={["Blue Hole"]}
+        price={null}
+        whoCanBook="Anyone"
+        editHref={(section) => `/trip?view=edit#${section}`}
+        locale="en-US"
+        t={t}
+      />,
+    );
+    expect(within(line()).getByRole("link", { name: "Add price" })).toHaveAttribute(
+      "href",
+      "/trip?view=edit#about",
     );
   });
 });

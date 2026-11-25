@@ -1,18 +1,18 @@
 import Link from "next/link";
 import { type ClosingCtaMeasure, closingCtaBoxClass } from "@/app/_components/ClosingCtaSkeleton";
+import { heroPriceLine } from "@/app/_components/hero-price-line";
 import { enterDemoAction } from "@/app/actions/demo";
 import { FunnelTag } from "@/components/FunnelTag";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
 import { BANNER_TITLE_CLASS } from "@/components/ui/typography";
-import { planCopyParams } from "@/features/money/billing";
-import { type DiverMessageKey, type DiverTranslator, diverTranslator } from "@/i18n/messages";
+import { FOUNDER_EMAIL } from "@/features/public-site/company-identity";
+import { type DiverMessageKey, diverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
 import type { PlanTerms } from "@/lib/billing/pricing-plans";
 import type { DemoLanding } from "@/lib/demo-landings";
 import type { DemoRoleId } from "@/lib/demo-roles";
 import { callHref, type FunnelSource, setUpHref } from "@/lib/funnel";
-import { earlyAccessPrice, marketingFee } from "@/lib/marketing";
 import { SUPPORT_EMAIL } from "@/lib/platform-mail";
 
 /**
@@ -161,20 +161,6 @@ export function FunnelCtas({
 }
 
 /**
- * The price line under a hero's doors, for the configured offer (ADR
- * 20261022-pricing-ab-test). "No cut of your bookings" is the monthly-only offer’s alone.
- */
-export function heroPriceLine(t: DiverTranslator, offer: PlanTerms, locale: string): string {
-  const params = planCopyParams(offer, locale);
-  return offer.plan === "percent_of_volume"
-    ? t(marketingFee.summaryKey, params)
-    : t("marketing.home.heroPriceLine", {
-        price: params.price,
-        cadence: t(earlyAccessPrice.cadenceKey),
-      });
-}
-
-/**
  * **The one close a marketing page ends on** (visual review 2026-10-24, B15):
  * a left-aligned heading saying what the shop gets, one line naming who reads
  * a set-up request and the support address, then the shared pair. `/`,
@@ -236,5 +222,68 @@ export function ClosingCta({
         <FunnelCtas locale={locale} source={source} demo={demo} call className="mt-8" />
       </div>
     </section>
+  );
+}
+
+/**
+ * **The doors of `/hello`, the page the cold email links to** (2026-11-25), in
+ * the email's own order: reply to the email first, then the founder's 20-minute
+ * call, then (at the page's close only, `demo`) the live demo. It is the one
+ * arrangement where the demo does not lead, because the reader arrived from a
+ * personal note whose ask was a reply; a demo-first pair asked more of them
+ * than the email did.
+ *
+ * The reply is a mail to the founder with a subject line already in it, and
+ * the address is printed under the doors for a reader whose mail is in a
+ * browser, where a `mailto:` link opens nothing. The
+ * call carries the tag as `utm_content` and the demo posts it, so `hello` and
+ * `hello-close` read in the Monday digest the way every other door does.
+ */
+export function ReplyFirstCtas({
+  locale,
+  source,
+  demo = false,
+  className,
+}: {
+  locale: DiverLocale;
+  source: Extract<FunnelSource, "hello" | "hello-close">;
+  /** The close offers the demo after the reply and the call. */
+  demo?: boolean;
+  /** Placement only: margins. */
+  className?: string;
+}) {
+  const t = diverTranslator(locale);
+  const mail = `mailto:${FOUNDER_EMAIL}?subject=${encodeURIComponent(t("marketing.hello.replySubject"))}`;
+  return (
+    <div className={className}>
+      <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
+        <a href={mail} className={buttonClass({ className: "w-full sm:w-auto" })}>
+          {t("marketing.hello.reply")}
+        </a>
+        <a
+          href={callHref(source)}
+          target="_blank"
+          rel="noreferrer"
+          className={buttonClass({ variant: "outline", className: "w-full sm:w-auto" })}
+        >
+          {t("marketing.common.bookCall")}
+        </a>
+        {demo ? (
+          <form action={enterDemoAction} className="contents">
+            <FunnelTag source={source} />
+            <SubmitButton
+              pendingLabel={t("marketing.common.gettingReady")}
+              className={`${tapTargetLinkClass} font-medium text-primary hover:underline sm:ms-3`}
+            >
+              {t("marketing.common.tryDemo")}
+            </SubmitButton>
+          </form>
+        ) : null}
+      </div>
+      <p className="mt-3 text-sm text-muted">
+        {t("marketing.hello.replyAddress", { email: FOUNDER_EMAIL })}
+      </p>
+      {demo ? <p className="mt-1 text-sm text-muted">{t("marketing.common.demoNote")}</p> : null}
+    </div>
   );
 }

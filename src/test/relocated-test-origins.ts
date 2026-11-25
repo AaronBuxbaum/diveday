@@ -213,7 +213,6 @@ export const RELOCATED_TEST_ORIGINS: Readonly<Record<string, string>> = {
   "src/features/day/today-catch-up.postgres.test.ts": "src/db/today-catch-up.postgres.test.ts",
   "src/features/day/today-catch-up.test.ts": "src/db/today-catch-up.test.ts",
   "src/features/day/today-catch-up-token.test.ts": "src/lib/today-catch-up-token.test.ts",
-  "src/features/shop-setup/trial.test.ts": "src/lib/trial.test.ts",
   "src/features/trips/trip-calendar.test.ts": "src/lib/trip-calendar.test.ts",
   "src/features/trips/trip-paper-identity.postgres.test.ts":
     "src/db/trip-paper-identity.postgres.test.ts",
@@ -579,7 +578,6 @@ export const RELOCATED_TEST_PROJECTS: Readonly<Record<string, string>> = {
   "src/features/day/today-catch-up.postgres.test.ts": "db",
   "src/features/day/today-catch-up.test.ts": "db",
   "src/features/day/today-catch-up-token.test.ts": "lib",
-  "src/features/shop-setup/trial.test.ts": "lib",
   "src/features/trips/trip-calendar.test.ts": "lib",
   "src/features/trips/trip-paper-identity.postgres.test.ts": "db",
   "src/features/trips/trip-paper-identity.test.ts": "db",

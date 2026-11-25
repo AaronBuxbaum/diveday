@@ -1,0 +1,81 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "0b24a0c0-80a9-405a-ab03-9f6291572adc",
+  "prevIds": [
+    "d2e5ce50-7340-4710-9817-38f96cc6c76e"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "user_accounts",
+        "how_it_went_email"
+      ],
+      "writes": [
+        "s|col|public.user_accounts.how_it_went_email",
+        "n|col|public.user_accounts.how_it_went_email",
+        "e|col|public.user_accounts.how_it_went_email"
+      ],
+      "reads": [
+        "n|tbl|public.user_accounts",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "trips",
+        "how_it_went_sent_at"
+      ],
+      "writes": [
+        "s|col|public.trips.how_it_went_sent_at",
+        "n|col|public.trips.how_it_went_sent_at",
+        "e|col|public.trips.how_it_went_sent_at"
+      ],
+      "reads": [
+        "n|tbl|public.trips",
+        "n|sch|public"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "user_accounts",
+        "name": "how_it_went_email",
+        "type": "boolean",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "trips",
+        "name": "how_it_went_sent_at",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    }
+  ]
+}

@@ -62,6 +62,28 @@ const DESK_ADVISORIES: ReadonlySet<FixReason> = new Set<FixReason>([
   "help_requested",
 ]);
 
+/**
+ * **What Filling says quietly** (dock-operator review, 2026-11-24): days
+ * ahead, the advisories that are the crew's or the desk's routine on the day
+ * (a depth to talk through, a long gap, a fit, a balance, a contact). A
+ * physician's earlier word, a second held seat, an unsigned waiver, a re-entry
+ * ask and a call for help keep the warning color on every phase, as every
+ * readiness blocker does.
+ */
+const QUIET_ON_FILLING: ReadonlySet<FixReason> = new Set<FixReason>([
+  "depth",
+  "recency",
+  "fit_needed",
+  "drysuit",
+  "contact_missing",
+  "payment_unpaid",
+]);
+
+/** A guest's line may be said quietly while the trip fills only when every reason on it may. */
+export function quietOnFilling(reasons: readonly FixReason[]): boolean {
+  return reasons.length > 0 && reasons.every((reason) => QUIET_ON_FILLING.has(reason));
+}
+
 export function isBlockerReason(reason: FixReason): reason is ReadinessBlockerCode {
   return reason in BLOCKER_CATEGORY;
 }

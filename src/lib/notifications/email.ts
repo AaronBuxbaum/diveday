@@ -1226,7 +1226,7 @@ type DemoStartedAlertEmailInput = {
 
 /**
  * Internal, English, and deliberately anonymous — the demo half of the same
- * founder alert `newAccountAlertEmail` sends for a trial (docs ADR
+ * founder alert `newAccountAlertEmail` sends for a new shop (docs ADR
  * 20260805-demo-try-alerts). There is nobody to address: a demo visitor never
  * identifies themselves, so this names the throwaway shop, the role they looked
  * through, and the marketing page that sent them, and nothing else. Every value

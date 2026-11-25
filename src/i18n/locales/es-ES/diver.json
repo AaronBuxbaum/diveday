@@ -79,6 +79,7 @@
       "newToDiving": "¿Nuevo en el buceo?",
       "seeSchedule": "Ver el calendario"
     },
+    "aboutShop": "Sobre el centro",
     "shopPhotos": "Fotos del centro",
     "photoLarge": "Foto ampliada",
     "photoClose": "Cerrar",
@@ -132,6 +133,7 @@
     "tripCardLabel": "{when} · {trip} · {capacity}",
     "previousMonth": "Mes anterior",
     "nextMonth": "Mes siguiente",
+    "departedToday": "{count, plural, one {# barco ya salió hoy} other {# barcos ya salieron hoy}}",
     "tripListLabel": "Próximas salidas",
     "monthNav": "Explorar por mes",
     "monthView": "Ver el calendario del mes",
@@ -3984,8 +3986,8 @@
       "demoNote": "La demo es un centro de muestra, por si quieres ver uno primero.",
       "tryLiveDemo": "Probar la demo en vivo",
       "settingUp": "Configurando tu centro…",
-      "submit": "Crear centro y empezar la prueba",
-      "trialNote": "Gratis durante 2 semanas, sin tarjeta, y nada se apaga cuando termina el plazo.",
+      "submit": "Crear tu centro",
+      "priceNote": "{hasBase, select, yes {Cuesta {base} al mes{hasPercent, select, yes {, más el {percent} de los pagos que recibas en DiveDay} other {}}.} other {Es gratis y sin tarjeta{hasPercent, select, yes {, y solo nos quedamos con el {percent} de los pagos que recibas en DiveDay} other {}}.}}",
       "alreadyHaveShop": "¿Ya tienes un centro?",
       "signIn": "Iniciar sesión",
       "errors": {
@@ -4732,6 +4734,7 @@
       "stopLine": "Responde STOP para darte de baja.",
       "courseForms": "{shopName}: firma los formularios del curso {tripTitle} — {url}",
       "readyLink": "Tu preparación: {url}",
+      "seated": "{shopName}: tu plaza del {date} queda reservada. Para prepararte: {url}",
       "meetingPointMoved": "{shopName}: cambiamos el punto de encuentro de {tripTitle}, {date}, {time}.",
       "rescheduled": "{shopName}: cambiamos {tripTitle} al {date}, {time}.",
       "rescheduledSeat": "{shopName}: pasamos tu plaza a {tripTitle}, el {date}, {time}."
@@ -4861,6 +4864,12 @@
       "shoreSent": "Enviado: {when}. Es el único mensaje que recibirás sobre esta salida. DiveDay no envía ningún aviso de que todo está en orden; pregunta a {shopName}.",
       "shoreWhy": "Recibes este aviso porque {shopName} te tiene como su contacto en tierra para los avisos del pase de lista.",
       "shoreStop": "Dejar de recibir estos avisos"
+    },
+    "howItWent": {
+      "subject": "{shopName}: cómo fue la salida del {weekday} a las {time}",
+      "body": "{tripTitle}, el {weekday} a las {time}: los recuentos después de cada inmersión, lo que se resolvió antes de embarcar y las exenciones, en una sola página.",
+      "open": "Ver cómo fue",
+      "turnOff": "Desactívalos en tu configuración de correo"
     },
     "incidentMissingDiver": {
       "subject": "{shopName}: buceador desaparecido en {tripTitle}",
@@ -5023,6 +5032,7 @@
     }
   },
   "brand": {
+    "moreBadges": "{count} más",
     "since": "Desde {year}",
     "badges": {
       "padi_5_star": "Centro de buceo PADI 5 estrellas",
@@ -5032,8 +5042,7 @@
       "tripadvisor": "Recomendado en Tripadvisor",
       "blue_star": "Operador Blue Star",
       "green_fins": "Miembro de Green Fins",
-      "dan_partner": "Socio empresarial de DAN",
-      "readers_choice": "Premio Readers’ Choice"
+      "dan_partner": "Socio empresarial de DAN"
     }
   },
   "embed": {

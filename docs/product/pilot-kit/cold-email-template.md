@@ -2,19 +2,32 @@
 
 The letter that opens a conversation with a shop the founder has no warm route into. It is the
 written cousin of the [first-call script](first-call-script.md), and it inherits that script's
-posture: **it is outreach, and it says so.** Aaron decided on 2026-11-11 that a letter calling itself "a question, not a pitch" reads as a sales call in disguise. It is a short, honest first contact: who he is, what he is building, why this shop, and one small ask. Its job is a one-line reply, a call, or a forward to whoever runs the boat.
+posture: **it is outreach, and it says so.** Aaron decided on 2026-11-11 that a letter calling itself "a question, not a pitch" reads as a sales call in disguise. It is a short, honest first contact: who he is, what he is building, why this shop, and one small ask. Its job is a one-line reply, a passenger list for one trip, or a forward to whoever runs the boat. A call comes after a reply, not instead of one.
 
 The founder personalizes and sends every one of these by hand, from his own mailbox. Nothing here
-is sent automatically, in a sequence, or in bulk (`commercial-outreach` skill: no autonomous
+is sent automatically, in a sequence, or in bulk (the four steps in [the rhythm](#the-rhythm-four-touches-then-stop) are four hand-sent messages) (`commercial-outreach` skill: no autonomous
 outreach). Governed by the [claims policy](../marketing.md#claims-policy-hard-rules) exactly as a
 public page is.
+
+## Status: what the 2026-11-24 review changed
+
+Aaron decided from the outreach review (Parts 2 and 3 of the report, kept in the shared project files) that the email gets shorter and smaller. The rules below already follow it. **The email text itself does not yet.** It waits for Aaron to pick draft A, B, or C from Part 3, and it is co-written with him, so do not rewrite it from this list alone.
+
+What the new text must do:
+
+- **Under 90 words.** The text below is about 150.
+- **Open on the shop's morning, not on the founder.** The credential shrinks to one clause or the signature.
+- **One small ask:** a one-line answer, or "send me Saturday's passenger list and I'll set that trip up." Not a call. A call is offered once they reply.
+- **Lead with what no other tool does:** the list of who is cleared to board and why not, and the head count after each dive.
+- **Link to a preview in their name, or to the email-link page when it exists, never the home page.** See [preview links](preview-links.md).
+- **Keep the tool they book with.** The offer is one Saturday trip alongside it, and a shop that takes payment elsewhere pays nothing.
 
 ## The problem this email is written against
 
 The reader is not shopping. Whatever they use today works well enough, the season is on, and they
 delete software email without reading past line one. **Switching cost is the blocker, not price**
-([first-call script](first-call-script.md), hypothesis 5) — so a free offer does not solve the
-objection, and leading with one signals that we misread the room.
+([first-call script](first-call-script.md), hypothesis 5). The answer to switching cost is not a
+discount; it is not switching: try one Saturday trip and keep the tool they book with.
 
 The deeper trap is subtler: **anything shaped like sales is answered like sales.** Objection
 handling, risk reversal, a benefits list, a discount — each one tells the reader this is a
@@ -23,13 +36,13 @@ be a letter from a person who can relate to the shop's morning and wants to lear
 
 Four consequences shape every line below:
 
-1. **One small ask, with a way out.** A 20-minute call, and a one-line "we're fine" is welcome too.
-   No signup, no trial terms, no demo homework. The reader can satisfy this email with four words
-   typed at a dock.
+1. **One small ask, with a way out.** A one-line answer or a passenger list, and "we're fine" is
+   welcome too. No signup, no terms, no demo homework, and no call yet. The reader can satisfy this
+   email with four words typed at a dock.
 2. **It tells a little and asks a little.** One sentence says what DiveDay is and one says why this
    shop. No benefits list, because a description invites evaluation and evaluation of an unproven
    product ends one way.
-3. **No offer.** See [Why the offer is not in this email](#why-the-offer-is-not-in-this-email).
+3. **No terms.** See [Where the offer is said](#where-the-offer-is-said).
 4. **The honest weakness is the hook, not a confession to bury.** The founder has never run a shop,
    and the offline count has never been on a boat. That is the truthful reason to be writing to
    shops one at a time rather than advertising, and it is the one opener no marketing department
@@ -57,6 +70,8 @@ Saturdays. It must be current and checkable.
 Never invent a shop to send to — the [call list](florida-call-list.md)'s rule binds here too.
 
 ## The email
+
+> **Pending Aaron's pick of draft A, B, or C** (see [Status](#status-what-the-2026-11-24-review-changed)). The text below is the 2026-11-11 version, kept until then. Do not send it as is: it is too long, opens on the founder, asks for a call, and links the home page.
 
 **Subject:** `the hour before the boat leaves`
 
@@ -102,11 +117,11 @@ Checks, in the order they'd fail:
 - [ ] **No merge field in the subject line.**
 - [ ] **`[PROBLEM SENTENCE]` is the default, or restates something actually read on their pages** — or the no-detail
       version above is used instead. No guesses, and no vendor named.
-- [ ] **No phone number in the first email** (Aaron, 2026-11-11). The ask is a call; the number is
-      shared in the reply once they say yes.
-- [ ] **Send date written into the call list's `Last contact` column**, with the follow-up date in
-      `Next action`. "About six business days later" is only enforceable if it is written down
-      somewhere ([florida-call-list.md](florida-call-list.md)).
+- [ ] **No phone number in the first email** (Aaron, 2026-11-11). Calls are offered in the reply, and the number is shared once they say yes.
+- [ ] **The link is a preview or the email-link page, not the home page.**
+- [ ] **Every send is logged the same day**: date, channel, which step of the rhythm, and the date
+      of the next step, in the list kept outside the repo ([florida-call-list.md](florida-call-list.md)).
+      The four steps are only enforceable if they are written down.
 
 ### Why each part is there
 
@@ -116,7 +131,7 @@ Checks, in the order they'd fail:
 | "I've never run a shop" | The honest weakness, said inside the 'where it stands' paragraph. It sets the relationship as someone who can relate and wants to learn, and it is why the ask to test alongside their paper count is reasonable. |
 | The researched statement | Placed where the owner story used to be. It proves the founder read this shop's pages, shows he can relate to their morning, and asserts nothing about how they work, so there is nothing to defend. The owner story was cut for length; the "I've never run a shop" clause carries the same job. |
 | The water paragraph | The genuine reason this email exists rather than an ad, and the thing the reader has that the founder needs. It asserts only the half that is true and says the rest is untested — see [the offline line](#the-offline-line--read-this-before-editing-the-water-paragraph). |
-| The ask, last | A 20-minute call, with "a one-line 'we\'re fine' helps me too" as the easy way out. That line makes a *no* safe to send; without it the reader assumes a no invites a rebuttal and says nothing at all. |
+| The ask, last | One small thing: a one-line answer, or the passenger list for one trip. A way out ("we're fine" helps me too) makes a *no* safe to send; without it the reader assumes a no invites a rebuttal and says nothing at all. |
 | "I'd be glad to be pointed their way" | The forwarding hatch, phrased as a request to a person rather than an instruction to a lead. A reader who isn't the decider gets a way to not-decide, which is the outcome this email most often wins. |
 | What is **absent** | No benefits list, no price or discount, no export pitch, no trial terms, no competitor named. Those belong in the reply, where they answer a question that was actually asked. |
 
@@ -151,39 +166,38 @@ a real boat" once V-02 is recorded without replacing the paragraph's reason for 
 to the reader is *help me find out*; if that stops being true the email needs a different third
 paragraph, not a stronger adjective.
 
-## Why the offer is not in this email
+## Where the offer is said
 
-Six free months is authorized (H-20260724-public-founding-shop-price, amended 2026-08-12) and it is deliberately **not** stated here.
+The offer is small and true: try DiveDay on one Saturday trip, keep the tool you book with, and send the passenger list. A shop that takes payment elsewhere pays nothing (Aaron, 2026-11-24). Whether the first email says so in one sentence or leaves it for the reply is part of Aaron's draft pick.
 
-A discount is the most advertising-shaped thing an email can contain. Arriving unasked, in the same
-paragraph as "nobody uses this yet", it invites the reader to price the risk of being first — which
-is arithmetic that never comes out in our favor and which the email never needed them to do. It
-also manufactures the question *what's the catch* at the exact moment the letter should be closing,
-and it converts a discovery conversation into a price negotiation before the founder has learned
-anything.
+Whatever the email says, the terms are the live [pricing page](https://www.dive.day/pricing)'s, in its words. If a shop asks what it costs, the answer is a link to that page and one sentence from it. The figure is never typed from paper: it has one source (`src/lib/marketing.ts` and the pricing configuration), and a number copied into a note goes stale the day pricing changes. The six-free-months term this kit used to describe is gone from it.
 
-The sibling artifact already settled this: [first-call script](first-call-script.md) §E is titled
-"**Only if they ask:** the offer." An email that volunteers on contact what the call withholds
-until asked is two artifacts in one kit pointing opposite ways.
+A discount, a longer free term, or a term the page does not state is still off limits, for the reasons in [the improvise trap](#if-they-write-back--the-improvise-a-commitment-trap).
 
-So the offer lives in the reply and on the call, stated in
-[the one-pager's exact terms](../stakeholders/design-partner-one-pager.md) plus the six-month
-amendment. **Do not** re-add it to the first send. If a shop asks what it costs — a good reply, and
-a common one — that is the moment, and the answer is a link to the pricing page and the six months
-in one sentence.
+## The rhythm: four touches, then stop
 
-## Follow-up — about six business days later
+Decided from the 2026-11-24 review: one email and one six-day follow-up gave a reader too little to answer and the founder too little to learn. Each shop gets four touches over seventeen days, by hand, then nothing. The day counts from the first email.
 
-Same thread, no new subject, no guilt, and an easy out. It **re-asks the ask** rather than only
-offering a door marked no: six days on, in a threaded reply with the original collapsed, a message
-whose only frictionless action is a decline harvests closure instead of conversations, and nothing
-at all from the many readers who simply forgot.
+| Day | Touch | What it is |
+| --- | --- | --- |
+| 1 | Email | The first email above, in the founder's mailbox. |
+| 4 | Two-line note | Same thread. Re-asks the one small ask and gives the way out. |
+| 10 | Facebook or Instagram message | A different door, the shop's own page. Same ask, one or two sentences, no link beyond the preview. |
+| 17 | Last email | Same thread. Says it is the last, repeats the ask once, offers a forward. Then stop. |
 
-> One follow-up, then I'll stop.
->
-> Following up on my note about the hour before the boat leaves. Is a 20-minute call something you'd be open to? If it's a no, or just not this season, say the word and I'll leave it there.
->
-> Aaron
+After day 17 the shop is parked with the reason written down, not retried. Nothing about it changes the list's next pass until a season has gone by.
+
+**Calls only when a shop replies, or for the few strongest fits.** Aaron is willing to call but would rather not, so the rhythm is email-led. A reply gets a call offered, and the few shops that fit best on every rule in the [call list](florida-call-list.md#qualification-criteria--what-earns-a-call) may get a call after the day-10 message goes unanswered. A shop with no printed email goes straight to the day-10 channel.
+
+Each touch re-asks the ask rather than only offering a door marked no: a message whose only frictionless action is a decline harvests closure instead of conversations.
+
+Draft wording for days 4, 10, and 17 for Aaron to react to, not final copy. They are plain text and written unwrapped:
+
+> **Day 4.** Following up on my note about [the one-line version of the first email's opening]. Could you send me Saturday's passenger list, or just tell me if it's not for you?
+
+> **Day 10, Facebook or Instagram.** Hi [SHOP] crew, I emailed on [DATE] about [the same opening]. If it's easier here: could you send me Saturday's passenger list so I can set that trip up in DiveDay? [PREVIEW LINK]
+
+> **Day 17, last email.** This is my last note. If now isn't the time, no reply needed, and if someone else runs the boat I'd be glad to be pointed their way. Aaron
 
 ## Forwarding variant — a general inbox
 
@@ -204,22 +218,19 @@ vendor in its first eight words. Open on the hour, the same as the main email.
 
 ## Cadence, and what counts as working
 
-**Ten to fifteen a week, sent one at a time, by hand.** Not a sequencer, not a mail merge.
+**Ten to fifteen new shops a week at most, sent one at a time, by hand.** Not a sequencer, not a mail merge. With four touches each, the log is the only way to know who is due on which day.
 
 **A good reply is four words from a phone at the dock.** "We're fine, thanks" is a good reply — it
 is a live thread and a person who now knows the founder's name. So are "what's it cost", "send me
 the link", and "that's Dave's, copying him". A forward is the best outcome available and the last
 line is built for it. Do not measure this in calls booked.
 
+Count what the review could not: sends, replies, forwards, bounces, and whether a link was opened (`pnpm preview list`). Five sends were too few to read; judge the approach after at least twenty shops have had all four touches.
+
 Every reply gets a call note within the hour, in the
 [first-call script](first-call-script.md#within-ten-minutes-of-hanging-up)'s format. A reply that
 changes a standing assumption is H-20261025-product-has-never-had evidence and belongs in
 [human-decisions/](../human-decisions/README.md), never here.
-
-**The 25-shop cap counts shops that take the offer, not emails sent.** H-20260724-public-founding-shop-price's founding cohort is
-capped at 25, and six free months is a promise kept by hand with no product mechanism behind it
-(see the flags below) — so the number to watch is acceptances. It binds the day a twenty-fifth shop
-says yes, which is the day to stop stating the term, not the day to stop writing.
 
 ## If they write back — the improvise-a-commitment trap
 
@@ -230,10 +241,10 @@ each is an existing rule rather than a new one:
   a reply becomes the thing the shop judges everything by.
 - **Anything about how fast support answers.** That promise was retired 2026-08-05
   ([H-20260724-public-founding-shop-price/H-20260802-what-game-is-this](../human-decisions/README.md#decision-register)) and has not been replaced.
-- **A discount, a longer free term, or a price different from the site's.** Six months is the whole
+- **A discount, a free term, or terms different from the pricing page's.** The page is the whole
   commercial position. Anything beyond it gets written down and taken away, never agreed to live.
 - **The price as a number in prose.** Send the pricing page; the figure has one source
-  (`earlyAccessPrice` in `src/lib/marketing.ts`).
+  (`src/lib/marketing.ts` and the pricing configuration).
 - **Roll call "proven" without signal, on the boat, or with no bars.** Divers and rostered crew can both be counted on a device copy with no signal (H-20260814-where-diveday-sit-between), but V-02 has not run, so it has never been on a real boat and that is the only offline claim the email makes. Do not describe it as proven.
 - **A field test that stands in for the shop's own paper.** V-02 rides *alongside* the printed
   manifest and whatever the crew already does, never in place of either; a missing, expired, or
@@ -255,22 +266,8 @@ each is an existing rule rather than a new one:
 
 Not knowing something is a fine answer with this audience. An invented one costs the account.
 
-## Flagged — settle before the offer is stated on a call
+## Flagged: settle before a shop says yes
 
-**The six-month term is defined in exactly one place: H-20260724-public-founding-shop-price's 2026-08-12 amendment**
-([human-decisions/](../human-decisions/README.md#decision-register)). What it covers, what it leaves
-open (the still-live legal/tax dependency, the missing start-event decision, the day-22 Settings
-contradiction), and the 25-shop cohort cap all live there, and this page does not restate them —
-a term described in two documents is a term that will drift in one of them. Read that row before
-the first time the offer is spoken aloud.
-
-What that means *here*, and only here:
-
-- **Keeping the term out of the first email buys time on the open questions; it does not close
-  them.** The first shop that accepts will hit every one of them, so the H-20260724-public-founding-shop-price row needs to be
-  settled before a reply turns into a yes, not before a send.
-- **Whatever start event H-20260724-public-founding-shop-price lands on gets said the same way every time.** The improvise trap
-  above exists because the second shop asking will otherwise get a different answer than the first.
-- **The C-card and waiver wording is safety-adjacent copy** and carries the same
-  `dive-domain-expert` bar as any other surface. Reviewed 2026-08-12; re-run that review if the
-  Saturday or water paragraph is rewritten.
+- **The commercial terms in older documents may not match the pricing page.** The human-decisions register's row for the public founding-shop price, the design-partner one-pager, and the first-call script still describe a founding price with a two-year lock and a free pilot. The pricing page now says free, with a small percentage of money recorded as received in DiveDay and no monthly fee. Until Aaron settles which governs a pilot shop, say only what the pricing page says, and write down anything else a shop asks for.
+- **The C-card and waiver wording is safety-adjacent copy** and carries the same `dive-domain-expert` bar as any other surface. Reviewed 2026-08-12; re-run that review if the readiness or cleared-to-board copy in the email is rewritten.
+- **When a shop says yes**, use [the one-trip checklist](one-trip-checklist.md).

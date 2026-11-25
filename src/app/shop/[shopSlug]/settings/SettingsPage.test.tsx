@@ -703,7 +703,7 @@ describe("the rail and the pane say the same thing", () => {
 
   /**
    * **Nothing on the pane is missing from the map** (Aaron, 2026-10-03: the
-   * rail and the list disagreed). The counter card and the trial row were
+   * rail and the list disagreed). The counter card and the billing row were
    * rows with no section id, so the test above never saw them and the rail
    * never named them.
    */

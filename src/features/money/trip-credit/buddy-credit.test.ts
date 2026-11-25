@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import type { AppDb } from "@/db/client";
 import { createPerson } from "@/db/people";
 import {
   bookingReferrals,
@@ -15,11 +16,26 @@ import { nowDate } from "@/lib/clock";
 import { buddyCreditEntryId } from "@/lib/trip-credit";
 import { fileScopedShopContext } from "@/test/db";
 import { tripCreditTestFixture } from "@/test/trip-credit-fixture";
-import { grantBuddyCredits } from "./buddy-credit";
+import { BUDDY_CREDIT_SWEEP_LIMIT, grantBuddyCredits } from "./buddy-credit";
 import { grantTripCredit, readTripCredit } from "./store";
 
 const ctx = fileScopedShopContext();
 const DAY = 86_400_000;
+
+/** Insert a real database change between the candidate read and its transaction. */
+function beforeGrantTransaction(db: AppDb, before: () => Promise<unknown>): AppDb {
+  return new Proxy(db, {
+    get(target, property, receiver) {
+      if (property === "transaction") {
+        return async (...args: Parameters<AppDb["transaction"]>) => {
+          await before();
+          return target.transaction(...args);
+        };
+      }
+      return Reflect.get(target, property, receiver);
+    },
+  });
+}
 
 /**
  * A referrer (the fixture's diver, on its own upcoming seat), a friend who
@@ -71,6 +87,10 @@ async function referralEntries(shopId: string) {
 }
 
 describe("buddy credit", () => {
+  it("bounds each hourly sweep to 200 referrals", () => {
+    expect(BUDDY_CREDIT_SWEEP_LIMIT).toBe(200);
+  });
+
   it("credits the referrer once, however often the referral is read", async () => {
     const { db, shop, seat, referrerId } = await referral();
     expect(await grantBuddyCredits(db, { now: nowDate() })).toMatchObject({ granted: 1 });
@@ -89,6 +109,205 @@ describe("buddy credit", () => {
       }),
     ]);
     expect((await readTripCredit(db, shop.id, referrerId, "usd")).balanceCents).toBe(2_500);
+  });
+
+  it("credits even the smallest enabled amount and reports the whole sweep", async () => {
+    const { db, shop, referrerId } = await referral();
+    await db.update(shops).set({ buddyCreditCents: 1 }).where(eq(shops.id, shop.id));
+    expect(await grantBuddyCredits(db, { now: nowDate() })).toEqual({
+      granted: 1,
+      busy: 0,
+      skipped: 0,
+    });
+    expect((await readTripCredit(db, shop.id, referrerId, "usd")).balanceCents).toBe(1);
+  });
+
+  it("rechecks each candidate against its own booking when multiple shops have referrals", async () => {
+    const first = await referral();
+    const second = await referral();
+    expect(await grantBuddyCredits(first.db, { now: nowDate() })).toEqual({
+      granted: 2,
+      busy: 0,
+      skipped: 0,
+    });
+    expect(await referralEntries(first.shop.id)).toHaveLength(1);
+    expect(await referralEntries(second.shop.id)).toHaveLength(1);
+  });
+
+  it("does not let a skipped referral mask a later shop's eligible referral", async () => {
+    const first = await referral();
+    const second = await referral();
+    await first.db.update(shops).set({ currency: "USD" }).where(eq(shops.id, first.shop.id));
+    await first.db
+      .update(trips)
+      .set({ endsAt: new Date(first.past.endsAt.getTime() - 60_000) })
+      .where(eq(trips.id, first.past.id));
+    expect(await grantBuddyCredits(first.db, { now: nowDate() })).toEqual({
+      granted: 1,
+      busy: 0,
+      skipped: 1,
+    });
+    expect(await referralEntries(first.shop.id)).toHaveLength(0);
+    expect(await referralEntries(second.shop.id)).toHaveLength(1);
+  });
+
+  it("skips a referral when the shop currency cannot be written to the ledger", async () => {
+    const { db, shop } = await referral();
+    await db.update(shops).set({ currency: "USD" }).where(eq(shops.id, shop.id));
+    expect(await grantBuddyCredits(db, { now: nowDate() })).toEqual({
+      granted: 0,
+      busy: 0,
+      skipped: 1,
+    });
+    expect(await referralEntries(shop.id)).toHaveLength(0);
+  });
+
+  it("rechecks a credit amount changed after the candidate read", async () => {
+    const { db, shop } = await referral();
+    const interleaved = beforeGrantTransaction(db, () =>
+      db.update(shops).set({ buddyCreditCents: 0 }).where(eq(shops.id, shop.id)),
+    );
+    expect(await grantBuddyCredits(interleaved, { now: nowDate() })).toEqual({
+      granted: 0,
+      busy: 0,
+      skipped: 1,
+    });
+    expect(await referralEntries(shop.id)).toHaveLength(0);
+  });
+
+  it("rechecks that the referrer is live after the candidate read", async () => {
+    const { db, shop, referrerId } = await referral();
+    const interleaved = beforeGrantTransaction(db, () =>
+      db.update(people).set({ deletedAt: nowDate() }).where(eq(people.id, referrerId)),
+    );
+    expect(await grantBuddyCredits(interleaved, { now: nowDate() })).toEqual({
+      granted: 0,
+      busy: 0,
+      skipped: 1,
+    });
+    expect(await referralEntries(shop.id)).toHaveLength(0);
+  });
+
+  it("skips a referral when the existing ledger balance is negative", async () => {
+    const { db, shop, booking, actor, referrerId } = await referral();
+    await db.insert(tripCreditEntries).values({
+      id: randomUUID(),
+      shopId: shop.id,
+      personId: referrerId,
+      actorPersonId: actor.id,
+      currency: "usd",
+      kind: "redeem",
+      amountCents: 1,
+      bookingId: booking.id,
+    });
+    expect(await grantBuddyCredits(db, { now: nowDate() })).toEqual({
+      granted: 0,
+      busy: 0,
+      skipped: 1,
+    });
+    expect(await referralEntries(shop.id)).toHaveLength(0);
+  });
+
+  it("refuses a grant that would make a large ledger balance unsafe", async () => {
+    const { db, shop, actor, referrerId } = await referral();
+    const entryId = randomUUID();
+    await db.insert(tripCreditEntries).values({
+      id: entryId,
+      shopId: shop.id,
+      personId: referrerId,
+      actorPersonId: actor.id,
+      currency: "usd",
+      kind: "grant",
+      amountCents: 1,
+      reason: "goodwill",
+    });
+    // Represent the sum of millions of valid grants without materializing them.
+    // The read-only view keeps every other ledger column and query unchanged.
+    await db.execute(
+      sql.raw(`CREATE TEMP VIEW trip_credit_entries AS
+      SELECT id, shop_id, person_id, currency, kind,
+        CASE WHEN id = '${entryId}' THEN 9007199254740991::bigint ELSE amount_cents END AS amount_cents,
+        reason, booking_id, restores_entry_id, actor_person_id, occurred_at, seq
+      FROM public.trip_credit_entries`),
+    );
+    expect(await grantBuddyCredits(db, { now: nowDate() })).toEqual({
+      granted: 0,
+      busy: 0,
+      skipped: 1,
+    });
+    expect(await referralEntries(shop.id)).toHaveLength(0);
+  });
+
+  it("reports an entry ID conflict as skipped rather than granted", async () => {
+    const { db, shop, seat, actor, referrerId } = await referral();
+    await db.insert(tripCreditEntries).values({
+      id: buddyCreditEntryId(seat.id),
+      shopId: shop.id,
+      personId: referrerId,
+      actorPersonId: actor.id,
+      currency: "usd",
+      kind: "grant",
+      amountCents: 1,
+      reason: "goodwill",
+    });
+    expect(await grantBuddyCredits(db, { now: nowDate() })).toEqual({
+      granted: 0,
+      busy: 0,
+      skipped: 1,
+    });
+    expect(await referralEntries(shop.id)).toHaveLength(0);
+  });
+
+  it.each([
+    ["55P03", true],
+    ["23514", false],
+  ] as const)("handles database error %s during a grant", async (code, busy) => {
+    const { db, shop } = await referral();
+    // Exercise the real transaction and error wrapping, with a database trigger
+    // standing in for a lock refusal or an unrelated constraint failure.
+    await db.execute(
+      sql.raw(`CREATE OR REPLACE FUNCTION test_buddy_credit_failure() RETURNS trigger AS $$
+      BEGIN RAISE EXCEPTION 'injected grant failure' USING ERRCODE = '${code}'; END;
+    $$ LANGUAGE plpgsql`),
+    );
+    await db.execute(
+      sql.raw(`CREATE TRIGGER test_buddy_credit_failure BEFORE INSERT ON trip_credit_entries
+      FOR EACH ROW EXECUTE FUNCTION test_buddy_credit_failure()`),
+    );
+    if (busy) {
+      expect(await grantBuddyCredits(db, { now: nowDate() })).toEqual({
+        granted: 0,
+        busy: 1,
+        skipped: 0,
+      });
+    } else {
+      await expect(grantBuddyCredits(db, { now: nowDate() })).rejects.toThrow();
+    }
+    expect(await referralEntries(shop.id)).toHaveLength(0);
+  });
+
+  it("bounds lock waits inside the credit transaction", async () => {
+    const { db, shop } = await referral();
+    await db.execute(
+      sql.raw(`CREATE OR REPLACE FUNCTION test_buddy_credit_lock_timeout() RETURNS trigger AS $$
+      BEGIN
+        IF current_setting('lock_timeout') <> '5s' THEN
+          RAISE EXCEPTION 'buddy credit lock timeout is not bounded';
+        END IF;
+        RETURN NEW;
+      END;
+    $$ LANGUAGE plpgsql`),
+    );
+    await db.execute(
+      sql.raw(`CREATE TRIGGER test_buddy_credit_lock_timeout BEFORE INSERT ON trip_credit_entries
+      FOR EACH ROW EXECUTE FUNCTION test_buddy_credit_lock_timeout()`),
+    );
+    expect(await grantBuddyCredits(db, { now: nowDate() })).toEqual({
+      granted: 1,
+      busy: 0,
+      skipped: 0,
+    });
+    expect(await referralEntries(shop.id)).toHaveLength(1);
   });
 
   it("credits a friend once, not each seat they book on the same link", async () => {
@@ -113,7 +332,11 @@ describe("buddy credit", () => {
       origin: "counter",
     });
     await bookFriend(shop.id, past.id, second.id, booking.id);
-    await grantBuddyCredits(db, { now: nowDate() });
+    expect(await grantBuddyCredits(db, { now: nowDate() })).toEqual({
+      granted: 2,
+      busy: 0,
+      skipped: 1,
+    });
     await grantBuddyCredits(db, { now: nowDate() });
     expect(await referralEntries(shop.id)).toHaveLength(2);
     expect((await readTripCredit(db, shop.id, referrerId, "usd")).balanceCents).toBe(5_000);

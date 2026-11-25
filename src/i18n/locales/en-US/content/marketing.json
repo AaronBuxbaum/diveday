@@ -158,7 +158,7 @@
   },
   "export": {
     "claim": "Settings → Data export downloads one ZIP of plain, documented CSVs (divers, bookings, waiver records, payment history), led by a contacts file shaped for another system’s import wizard. Every stored photo (certification evidence, dive-site pictures, trip recaps) is in it as a file.",
-    "terms": "No export fee, no support ticket, no minimum stay, and the same download works on the first day of a trial.",
+    "terms": "No export fee, no support ticket, no minimum stay, and the same download works on your first day.",
     "continuity": "If DiveDay ever shuts down, you get 90 days’ notice, your export, and your backups keep running until the last day."
   },
   "capabilities": {
@@ -343,7 +343,7 @@
     },
     "records": {
       "title": "Your records, and what they connect to",
-      "item1": "One ZIP of every record in documented CSVs, trial days included",
+      "item1": "One ZIP of every record in documented CSVs, from your first day",
       "item2": "Photos as real files, not links that expire with the account",
       "item3": "A contacts file shaped for another system’s import wizard",
       "item4": "An importer that marks what it trusted and what it left behind",
@@ -383,7 +383,7 @@
         },
         "step1": {
           "title": "Choose where each booking is managed",
-          "detail": "Keep taking bookings in your current system during the trial. If you prepare the same trip in DiveDay, staff create its departure and add the divers; importing history does not book their seats."
+          "detail": "Keep taking bookings in your current system while you try DiveDay on one trip. If you prepare the same trip in DiveDay, staff create its departure and add the divers; importing history does not book their seats."
         },
         "step2": {
           "title": "Check bookings and balances together",
@@ -394,10 +394,10 @@
           "detail": "A contact re-import can update records matched by email. It does not transfer new bookings, cancellations or reschedules automatically. Assign someone to check those changes in both systems."
         },
         "step4": {
-          "title": "Set the date after your trial",
+          "title": "Set the date after your first trip",
           "detail": "Allow time to correct the file, collect missing documents and let the crew practice. The size and quality of your records determine the work; we review that with you before the move."
         },
-        "midSeason": "You can trial DiveDay mid-season while your current system stays in use. Start with a sample export and one trip, then review the remaining work before choosing a handover date."
+        "midSeason": "You can try DiveDay mid-season while your current system stays in use. Start with a sample export and one trip, then review the remaining work before choosing a handover date."
       },
       "scopeTable": {
         "contact": {
@@ -585,7 +585,7 @@
       "metaDescription": "Compare FareHarbor and DiveDay for dive-shop bookings and trip preparation. Review the manual transfer, distribution tradeoffs and records before switching.",
       "heroEyebrow": "Switching from FareHarbor",
       "heroTitle": "Keep the bookings coming. Prepare every diver for the boat",
-      "heroLede": "If your crew still checks cards, chases forms and builds the boat list outside FareHarbor, try that work in DiveDay. Decide whether to keep your booking channel or take new bookings here after a trial.",
+      "heroLede": "If your crew still checks cards, chases forms and builds the boat list outside FareHarbor, try that work in DiveDay on one trip. Then decide whether to keep your booking channel or take new bookings here.",
       "context": {
         "item1": "FareHarbor handles booking and distribution. If its reseller relationships bring you customers, include that value in your decision: DiveDay does not provide an equivalent distribution network.",
         "item2": "The useful comparison is a real departure. Can your crew find the missing form, check the required certification and account for each diver after the dive? Try those tasks in the demo against the process you use now.",
@@ -593,7 +593,7 @@
       },
       "coexist": {
         "heading": "Choose what stays in FareHarbor",
-        "intro": "Keep your booking channel while testing DiveDay with one departure, or move new direct bookings after the trial. Either path needs a clear handover for the crew.",
+        "intro": "Keep your booking channel while testing DiveDay with one departure, or move new direct bookings after it. Either path needs a clear handover for the crew.",
         "bridgeNote": "There is no automatic connection to FareHarbor. CSV imports bring supported contacts and historical records; staff create upcoming departures and seat divers in DiveDay, then check new bookings, changes, and cancellations in both places.",
         "replaceHeading": "Take new direct bookings in DiveDay",
         "replaceBody": "Your booking link can open the DiveDay schedule, with payment through your Stripe account. Test the booking and preparation flow, then review outstanding bookings and balances before replacing the link."
@@ -736,7 +736,7 @@
           "detail": "For each trip cycle, staff reconcile new bookings, changes, and cancellations in FareHarbor and DiveDay. Re-importing contacts updates matched diver records; staff still update live bookings in each system."
         },
         "timing": {
-          "title": "Set the handover date after a trial",
+          "title": "Set the handover date after one trip cycle",
           "detail": "Try a representative file and one trip cycle first. Allow time to correct rows, gather missing records and train the crew before changing your booking link."
         }
       }
@@ -747,7 +747,7 @@
       "metaDescription": "Compare Rezdy and DiveDay for dive-shop bookings and trip preparation. Review the manual transfer, distribution tradeoffs and records before switching.",
       "heroEyebrow": "Switching from Rezdy",
       "heroTitle": "Know who is ready after the booking comes in",
-      "heroLede": "If your crew still checks cards, chases forms and builds the boat list outside Rezdy, try that work in DiveDay. Decide whether to keep your booking channel or take new bookings here after a trial.",
+      "heroLede": "If your crew still checks cards, chases forms and builds the boat list outside Rezdy, try that work in DiveDay on one trip. Then decide whether to keep your booking channel or take new bookings here.",
       "context": {
         "item1": "Rezdy handles booking and distribution. If its reseller relationships bring you customers, include that value in your decision: DiveDay does not provide an equivalent distribution network.",
         "item2": "The useful comparison is a real departure. Can your crew find the missing form, check the required certification and account for each diver after the dive? Try those tasks in the demo against the process you use now.",
@@ -755,7 +755,7 @@
       },
       "coexist": {
         "heading": "Choose what stays in Rezdy",
-        "intro": "Keep your booking channel while testing DiveDay with one departure, or move new direct bookings after the trial. Either path needs a clear handover for the crew.",
+        "intro": "Keep your booking channel while testing DiveDay with one departure, or move new direct bookings after it. Either path needs a clear handover for the crew.",
         "bridgeNote": "There is no automatic connection to Rezdy. CSV imports bring supported contacts and historical records; staff create upcoming departures and seat divers in DiveDay, then check new bookings, changes, and cancellations in both places.",
         "replaceHeading": "Take new direct bookings in DiveDay",
         "replaceBody": "Your booking link can open the DiveDay schedule, with payment through your Stripe account. Test the booking and preparation flow, then review outstanding bookings and balances before replacing the link."
@@ -972,7 +972,7 @@
   "pricing": {
     "heroTitle": "Pricing",
     "lockNote": "Today’s price, locked for one year for founding shops.",
-    "trialNote": "Try a shop of your own free for 2 weeks, with no card. Your shop keeps working after the trial while you arrange the move to a paid plan with {email}.",
+    "priceNote": "Keep your booking tool and try DiveDay on one trip. {hasBase, select, yes {It’s {base} a month{hasPercent, select, yes {, and if you take payments in DiveDay, we also keep {percent}} other {, with no other fee}}.} other {It’s free, with no card.{hasPercent, select, yes { If you take payments in DiveDay, we keep {percent}, and that’s the whole price.} other {}}}}",
     "earlyAccessBadge": "Early access",
     "notes": {
       "title": "Notes",
@@ -1706,5 +1706,28 @@
     "harborAlt": "Illustration of divers and a crew member meeting beside a moored dive boat.",
     "classroomAlt": "Illustration of an instructor and two adults talking over dive equipment in a coastal shop.",
     "gear-handoverAlt": "Illustration of a dive-shop team member handing a pair of fins to a guest at the rental counter."
+  },
+  "hello": {
+    "eyebrow": "A note from Aaron at DiveDay",
+    "heroTitle": "Try one Saturday boat on DiveDay",
+    "heroLede": "Keep the tool you book with. Send me that trip’s passenger list and I’ll set it up, so each diver signs, adds a cert card, and gives rental sizes before they arrive.",
+    "reply": "Reply to my email",
+    "replySubject": "One Saturday trip",
+    "screensTitle": "What your crew sees that morning",
+    "readyTitle": "Who’s ready to board, and what’s missing",
+    "readyNote": "Seven of nine are ready. Each of the other two shows what’s still missing: a waiver to sign, a card to check.",
+    "readyLabel": "A sample morning: 7 of 9 divers ready for the boat, then a missing waiver and a card still to check under Needs you.",
+    "countTitle": "The head count after each dive",
+    "countNote": "Once everyone is ready and aboard, the crew taps each diver back on board by name after the dive, and the count reads 9 of 9 when all are back.",
+    "countLabel": "The boat’s list after dive 1: 9 of 9 divers back on board, each tapped by name.",
+    "stepsTitle": "How the one trip goes",
+    "steps": {
+      "list": "You send me the passenger list for one Saturday trip, and I set it up in DiveDay. Names and email addresses are enough.",
+      "link": "Each diver gets an email with a link to sign the waiver, add a cert card, and give rental sizes.",
+      "morning": "On the morning your crew checks the list at the dock and counts heads after each dive. Your paper can run alongside."
+    },
+    "price": "{hasBase, select, yes {It’s {base} a month{hasPercent, select, yes {, plus {percent} of payments you take in DiveDay} other {}}.} other {It’s free{hasPercent, select, yes {, and DiveDay keeps {percent} only of payments you take in DiveDay, so a trip your divers paid for somewhere else costs you nothing} other {}}.}}",
+    "letter": "I’m a diver and an ex-Google software engineer, and I built DiveDay for the hour before the boat leaves. I’ve never run a shop, so your first trip is where I learn what I got wrong. Reply to my email or book a call, and we’ll pick the Saturday.",
+    "replyAddress": "Or write to me at {email}."
   }
 }

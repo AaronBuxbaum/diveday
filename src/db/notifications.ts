@@ -1921,7 +1921,7 @@ export async function drainNotificationRetries(
  * not a `notification_deliveries` row.
  */
 type TrackedNotification = Extract<Notification, { bookingId: string }>;
-type TrackedNotificationKind = TrackedNotification["kind"] | "waiver_request";
+type TrackedNotificationKind = TrackedNotification["kind"] | "waiver_request" | "seat_text";
 
 type RecordNotificationDeliveryInput = {
   shopId: string;

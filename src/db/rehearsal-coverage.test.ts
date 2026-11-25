@@ -294,6 +294,8 @@ const SENDERS: Record<string, string> = {
   "src/features/after-the-dive/recap/store.ts":
     "the candidate scan carries `notRehearsal()`, so no email or text",
   "src/db/waiver-issue.ts": "a rehearsal's link is hand-over only, never texted or emailed",
+  "src/features/bookings/seat-confirmation-text.ts":
+    "holds the text itself, before any send, for a rehearsal departure, a demo shop or a number a party's lead typed",
   "src/db/crew-notices.ts": "a rehearsal's crew news is never recorded",
   "src/features/bookings/interest-replies.ts":
     "a reply answers a date request, which names no departure, so no rehearsal reaches it",
@@ -320,6 +322,8 @@ const SENDERS: Record<string, string> = {
   "src/db/departure-notes.ts": "its departure read carries `notRehearsal()`, so no note goes",
   "src/features/bookings/move-ask-alerts.ts":
     "its ask read carries `notRehearsal()`, so a practice run's ask emails nobody",
+  "src/features/day/how-it-went/email.ts":
+    "its departure read carries `notRehearsal()`, so a practice run emails nobody",
   "src/features/bookings/seat-sold-alerts.ts":
     "its sales read carries `notRehearsal()`, so a practice run's seats email nobody",
   "src/features/day/lost-items/store.ts":

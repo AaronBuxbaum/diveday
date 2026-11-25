@@ -6,7 +6,7 @@
  * every language, so they live here and reach a sentence as a parameter.
  *
  * The site still speaks as "we" (H-20261022-the-site-says-we). The founder's
- * name signs `/about` and appears nowhere else.
+ * name signs `/about` and `/hello`, the page his cold email links to.
  */
 
 /** The company that operates DiveDay. */
@@ -15,10 +15,10 @@ export const COMPANY_LEGAL_NAME = "Pseudorandom LLC"; // i18n-exempt: a register
 /** Its address, on one line as a letter would carry it. */
 export const COMPANY_POSTAL_ADDRESS = "12851 Capital St, Suite 100, Oak Park, MI 48237"; // i18n-exempt: a postal address
 
-/** The founder, who signs `/about`. */
+/** The founder, who signs `/about` and `/hello`. */
 export const FOUNDER_NAME = "Aaron Buxbaum"; // i18n-exempt: a person's name
 
-/** Where `/about` lets a reader write to the founder (Aaron, 2026-11-17). */
+/** Where `/about` and `/hello` let a reader write to the founder (Aaron, 2026-11-17). */
 export const FOUNDER_EMAIL = "aaron@dive.day"; // i18n-exempt: a mailbox address
 
 /** Governing law confirmed by Aaron on #4323, 2026-11-11. */

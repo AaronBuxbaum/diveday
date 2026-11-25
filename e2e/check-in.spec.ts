@@ -293,7 +293,7 @@ test("a family is seated together from one form", async ({ page }) => {
   await page.getByRole("button", { name: "Add to trip" }).click();
 
   await expect(page).toHaveURL(
-    new RegExp(`/shop/blue-mantis/trips/${tripId}/party/[0-9a-f-]{36}/waivers$`),
+    new RegExp(`/shop/blue-mantis/trips/${tripId}/party/[0-9a-f-]{36}/waivers\\?reached=`),
   );
   for (const name of ["Quillon Brightwater", "Mia Brightwater", "Odo Brightwater"]) {
     await expect(page.getByText(name, { exact: true })).toBeVisible();

@@ -12,7 +12,7 @@ import type { DiverTranslator } from "@/i18n/messages";
  * which sent a visitor back to the homepage to find the demo again.
  *
  * Link weight, never the primary variant: the page's one primary is its own
- * mail or "Create shop & start trial", and this is the aside the nav's hidden
+ * mail or "Create your shop", and this is the aside the nav's hidden
  * CTA would otherwise have been. It is a `<div>`, not the `<p>` the link sat
  * in, because a `<form>` may not be a descendant of a paragraph. The `-my-3`
  * is the 44px target reaching past the line, the same trade the footer's

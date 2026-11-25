@@ -151,7 +151,8 @@ function eligibleReferrals(db: DbExecutor, now: Date, buddyBookingId?: string) {
       )
       // diveday:allow-time-id-order: a sweep's drain order, never shown to anyone
       .orderBy(asc(trips.endsAt), asc(bookings.id))
-      .limit(buddyBookingId ? 1 : BUDDY_CREDIT_SWEEP_LIMIT)
+      // A booking id is unique, so the recheck already returns at most one row.
+      .limit(BUDDY_CREDIT_SWEEP_LIMIT)
   );
 }
 
@@ -174,9 +175,11 @@ async function grantOne(
         .select({ currency: shops.currency, amountCents: shops.buddyCreditCents })
         .from(shops)
         .where(eq(shops.id, candidate.shopId))
+        // mutation-ok: lock contention cannot be provoked on PGlite's single connection; see the ADR
         .for("share", { noWait: true });
       if (!shop || !/^[a-z]{3}$/.test(shop.currency) || !validTripCreditAmount(shop.amountCents))
         return "skipped";
+      // mutation-ok: the eligibleReferrals recheck below refuses the same cases; this is defense in depth
       if (!(await lockTripCreditPerson(tx, candidate.shopId, candidate.referrerPersonId)))
         return "skipped";
       const [still] = await eligibleReferrals(tx, now, candidate.buddyBookingId);

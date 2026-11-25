@@ -75,6 +75,7 @@ export function ShopfrontStory({
       <ShopfrontHero
         headingLevel="h2"
         name={shop.name}
+        sectionTitle={welcomeShown ? t("schedule.aboutShop") : null}
         tagline={welcomeShown ? null : shop.tagline}
         description={shop.description}
         aggregate={welcomeShown ? null : aggregate}

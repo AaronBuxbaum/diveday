@@ -4,6 +4,7 @@ import { nowDate } from "@/lib/clock";
 import type { CourtesyProviders } from "@/lib/notifications/courtesy";
 import { fileScopedShopContext } from "@/test/db";
 import { createBooking } from "./bookings";
+import { applyProviderEmailEvent, recordNotificationDelivery } from "./notifications";
 import { bookings, people } from "./schema";
 import { recordSmsKeyword } from "./sms-opt-outs";
 import { upcomingTripsWithCounts } from "./trips-queries.test-support";
@@ -114,5 +115,28 @@ describe("can be texted (issue #4039)", () => {
       await issueAndDeliverWaiver(db, shop.id, bookingId, { textProviders: providers }),
     ).toMatchObject({ ok: true, delivery: "no_email", textable: true });
     expect(providers.whatsapp?.send).not.toHaveBeenCalled();
+  });
+
+  // A failed SNS receipt for the seat's ready-link text takes the seat off "textable", so the
+  // roster offers the counter QR instead of "Waiver sent" (issue #4958).
+  it("is not, once the carrier reports the seat's ready-link text failed", async () => {
+    configureSms();
+    const { db, shop, bookingId } = await phoneOnlySeat();
+    await recordNotificationDelivery(db, {
+      shopId: shop.id,
+      bookingId,
+      kind: "seat_text",
+      delivery: { status: "sent", providerMessageId: "sns-seat-text-1" },
+    });
+    expect(await textableSeats(db, shop.id, [{ bookingId, phone: PHONE }])).toEqual(
+      new Set([bookingId]),
+    );
+    await applyProviderEmailEvent(db, {
+      providerMessageId: "sns-seat-text-1",
+      status: "failed",
+      detail: "Phone has blocked SMS",
+      occurredAt: nowDate(),
+    });
+    expect(await textableSeats(db, shop.id, [{ bookingId, phone: PHONE }])).toEqual(new Set());
   });
 });

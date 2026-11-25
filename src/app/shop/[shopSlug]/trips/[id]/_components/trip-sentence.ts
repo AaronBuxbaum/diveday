@@ -30,12 +30,20 @@ export type TripSentenceInput = {
   dockCallAt: Date | null;
   booked: number;
   capacity: number;
+  /**
+   * The shop sells this departure's seats somewhere else (`soldElsewhere`):
+   * Filling says who is ready, not what is left to sell.
+   */
+  soldElsewhere: boolean;
   /** Active guests on the roster, turned away and no-shows left out. */
   guests: number;
   /** Guests checked in. */
   here: number;
-  /** Guests readiness refuses to board. */
-  blocked: number;
+  /**
+   * Guests readiness has not cleared: refused, or with no reading at all
+   * (fails closed, so a missed reading never reads as ready).
+   */
+  notReady: number;
   /** Seats recorded not back aboard at an after-dive count and not counted since. */
   notBack: number;
   /** The crew's word, when it still speaks (`boatStageOf`). */
@@ -66,6 +74,22 @@ export function tripSentence(input: TripSentenceInput, t: StaffTranslator): Trip
 
   switch (input.phase) {
     case "filling": {
+      if (input.soldElsewhere) {
+        const lead =
+          input.guests === 0
+            ? t("trips.clock.sentence.noGuests")
+            : t("trips.clock.sentence.readyOf", {
+                ready: input.guests - input.notReady,
+                total: input.guests,
+              });
+        return {
+          headline: join(lead, leaves),
+          emphasis: null,
+          // One count, the one the bar draws: who is ready. With nobody
+          // booked, how the guests get here.
+          sub: input.guests === 0 ? t("trips.clock.filling.typeOrPaste") : null,
+        };
+      }
       const left = Math.max(0, input.capacity - input.booked);
       const lead =
         left === 0
@@ -74,22 +98,20 @@ export function tripSentence(input: TripSentenceInput, t: StaffTranslator): Trip
       return {
         headline: join(lead, leaves),
         emphasis: null,
-        sub: t("trips.clock.sentence.booked", {
-          booked: input.booked,
-          capacity: input.capacity,
-        }),
+        // The phase strip says "5 of 12" and the bar draws it: no third count here.
+        sub: null,
       };
     }
     case "ready": {
       const lead =
         input.guests === 0
           ? t("trips.clock.sentence.noGuests")
-          : input.blocked > 0
-            ? t("trips.clock.sentence.notReady", { count: input.blocked })
+          : input.notReady > 0
+            ? t("trips.clock.sentence.notReady", { count: input.notReady })
             : t("trips.clock.sentence.allReady");
       return {
         headline: join(lead, leaves),
-        emphasis: input.guests > 0 && input.blocked > 0 ? guestCount(input.blocked) : null,
+        emphasis: input.guests > 0 && input.notReady > 0 ? guestCount(input.notReady) : null,
         sub:
           input.guests === 0
             ? null
@@ -100,12 +122,12 @@ export function tripSentence(input: TripSentenceInput, t: StaffTranslator): Trip
       const lead =
         input.guests === 0
           ? t("trips.clock.sentence.noGuests")
-          : input.blocked > 0
-            ? t("trips.clock.sentence.cantBoard", { count: input.blocked })
+          : input.notReady > 0
+            ? t("trips.clock.sentence.cantBoard", { count: input.notReady })
             : t("trips.clock.sentence.allCanBoard");
       return {
         headline: join(lead, leaves),
-        emphasis: input.guests > 0 && input.blocked > 0 ? guestCount(input.blocked) : null,
+        emphasis: input.guests > 0 && input.notReady > 0 ? guestCount(input.notReady) : null,
         sub:
           input.guests === 0
             ? null

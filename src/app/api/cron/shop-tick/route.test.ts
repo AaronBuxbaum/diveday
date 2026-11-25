@@ -20,6 +20,7 @@ vi.mock("../../../../features/gear/work-order-follow-up/store", () => ({
   sendDueServiceReminders: vi.fn(),
 }));
 vi.mock("../../../../features/after-the-dive/recap/store", () => ({ sendDueRecaps: vi.fn() }));
+vi.mock("../../../../features/day/how-it-went/email", () => ({ sendDueHowItWentEmails: vi.fn() }));
 vi.mock("@/db/crew-notices", () => ({ sendDueCrewNotices: vi.fn() }));
 vi.mock("../../../../features/boarding/roll-call-alerts/store", () => ({
   sendStaleRollCallAlerts: vi.fn(),
@@ -52,6 +53,7 @@ const { sendDueServiceReminders } = await import(
   "../../../../features/gear/work-order-follow-up/store"
 );
 const { sendDueRecaps } = await import("../../../../features/after-the-dive/recap/store");
+const { sendDueHowItWentEmails } = await import("../../../../features/day/how-it-went/email");
 const { sendDueCrewNotices } = await import("@/db/crew-notices");
 const { sendStaleRollCallAlerts } = await import(
   "../../../../features/boarding/roll-call-alerts/store"
@@ -85,6 +87,7 @@ const ALL_SCANS = [
   drainNotificationRetries,
   sendDueServiceReminders,
   sendDueRecaps,
+  sendDueHowItWentEmails,
   sendDueCrewNotices,
   sendStaleRollCallAlerts,
   sendMissingDiverAlerts,
@@ -132,6 +135,9 @@ beforeEach(() => {
   vi.mocked(sendDueRecaps)
     .mockReset()
     .mockResolvedValue({ sent: 2 } as never);
+  vi.mocked(sendDueHowItWentEmails)
+    .mockReset()
+    .mockResolvedValue({ sent: 0 } as never);
   vi.mocked(sendDueCrewNotices)
     .mockReset()
     .mockResolvedValue({ sent: 0 } as never);

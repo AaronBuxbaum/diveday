@@ -704,6 +704,14 @@ export const trips = pgTable(
      * Null until then, and for ever on a shop with no confirmed shore contact.
      */
     rollCallShoreAlertedAt: timestamp("roll_call_shore_alerted_at", { withTimezone: true }),
+    /**
+     * **When the owners' "How it went" email went out for this departure**
+     * (glossary, "How it went"; `sendDueHowItWentEmails`,
+     * src/features/day/how-it-went/email.ts): claimed with a conditional update
+     * once the recap rung is crossed, so the email goes once per departure
+     * however many passes see it. Given back when no owner was reached.
+     */
+    howItWentSentAt: timestamp("how_it_went_sent_at", { withTimezone: true }),
     createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [

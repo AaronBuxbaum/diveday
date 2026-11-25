@@ -1,4 +1,3 @@
-import { rosterRowIsBlocked } from "@/features/boarding/roster-filters";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { dockCallAt } from "@/lib/dock-call";
 import { isSameCalendarDay } from "@/lib/format";
@@ -7,6 +6,7 @@ import {
   type MeetingPointTripRow,
   meetingPointOfRows,
 } from "@/lib/meeting-point";
+import type { ReadinessResult } from "@/lib/readiness";
 import {
   CLOCK_PHASES,
   type ClockPhase,
@@ -19,7 +19,7 @@ import {
   shownClockPhase,
 } from "@/lib/trip-clock";
 import { boatStageOf, finalHomeSaid, type tripPhaseOf } from "@/lib/trip-phase";
-import { seatsOnSale } from "@/lib/trips";
+import { seatsOnSale, soldElsewhere } from "@/lib/trips";
 import { tripFacts } from "./TripHeader";
 import { phaseStripCopy } from "./trip-clock-copy";
 import { tripHeaderDaySpan } from "./trip-header-price";
@@ -58,13 +58,12 @@ export function tripFrame({
     booked: number;
     capacity: number;
     sellableCapacity: number;
+    priceCents: number | null;
+    course: { priceCents: number | null } | null;
   };
   shop: MeetingPointShopRow & { timezone: string; dockCallMinutes: number };
   roster: readonly RosterRow[];
-  readiness: ReadonlyMap<
-    string,
-    { readiness?: Parameters<typeof rosterRowIsBlocked>[0] } | undefined
-  >;
+  readiness: ReadonlyMap<string, { readiness?: ReadinessResult } | undefined>;
   /** Seats recorded not back aboard and not counted since. */
   notBack: number;
   askedPhase: string | undefined;
@@ -77,10 +76,13 @@ export function tripFrame({
   const shown: ClockPhase = shownClockPhase(askedPhase, current);
   const active = roster.filter(({ booking }) => booking.status !== "no_show");
   const here = active.filter((entry) => entry.checkedIn).length;
-  const blocked = active.filter(({ booking }) =>
-    rosterRowIsBlocked(readiness.get(booking.id)?.readiness),
+  // Fails closed: a guest is ready only on a reading that says so, and a seat
+  // with no reading (one the read missed) counts as not ready, never as ready.
+  const notReady = active.filter(
+    ({ booking }) => readiness.get(booking.id)?.readiness?.status !== "ready",
   ).length;
   const capacity = seatsOnSale(trip).capacity;
+  const elsewhere = soldElsewhere(trip);
   const nextStartsAt = nextMeetingStart(clock);
   const dockBy = dockCallAt(nextStartsAt, shop.dockCallMinutes);
   return {
@@ -89,6 +91,15 @@ export function tripFrame({
     /** The phase on screen is an earlier one, seen after the boat left (`isLookBack`). */
     lookBack: isLookBack(shown, current),
     capacity,
+    /** The shop sells the seats somewhere else (`soldElsewhere`): Filling leads with readiness. */
+    soldElsewhere: elsewhere,
+    /**
+     * Filling's bar under the sentence: the seats, booked then open, or, on a
+     * departure sold elsewhere, the guests, ready then not.
+     */
+    bar: elsewhere
+      ? { booked: active.length - notReady, capacity: active.length }
+      : { booked: trip.booked, capacity },
     /** When guests are wanted at the dock: the shop's call, else the departure. */
     dockBy: dockBy ?? nextStartsAt,
     /** When Getting ready opens: shop-local midnight of the day before. */
@@ -128,9 +139,10 @@ export function tripFrame({
         dockCallAt: dockBy,
         booked: trip.booked,
         capacity,
+        soldElsewhere: elsewhere,
         guests: active.length,
         here,
-        blocked,
+        notReady,
         notBack,
         stage: boatStageOf(clock),
         homeSaidAt: finalHomeSaid(clock) ? (clock.stage?.recordedAt ?? null) : null,

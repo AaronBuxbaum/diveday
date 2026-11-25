@@ -761,8 +761,8 @@ test.describe("a long shop name on a phone", () => {
     await page
       .locator('input[name="ownerPassword"]')
       .filter({ visible: true })
-      .fill("trial-pass-123");
-    await page.getByRole("button", { name: "Create shop & start trial" }).click();
+      .fill("owner-pass-123");
+    await page.getByRole("button", { name: "Create your shop" }).click();
     await expect(page).toHaveURL(new RegExp(`/shop/${unique}$`));
 
     const name = page

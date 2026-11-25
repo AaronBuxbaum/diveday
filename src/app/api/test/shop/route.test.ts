@@ -526,7 +526,7 @@ describe("onboarding teardown", () => {
         timezone: "America/New_York",
         ownerName: "Nour Haddad",
         ownerEmail: "teardown@example.com",
-        ownerPassword: "trial-pass-123",
+        ownerPassword: "owner-pass-123",
         firstChecklistLine: "Oxygen is aboard",
       },
       DEFAULT_PRICING_CONFIG,

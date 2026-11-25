@@ -80,6 +80,14 @@ export const shopSubscriptions = pgTable(
     freeTermEndsOn: date("free_term_ends_on", { mode: "string" }),
     firstPaidAt: timestamp("first_paid_at", { withTimezone: true }),
     /**
+     * When the subscription in `stripe_subscription_id` was first linked or
+     * described: the card-added instant. Money recorded before it is never
+     * billed (ADR 20261124-free-shops-no-trial), so a shop that ran card-less
+     * for months is not charged for them the day it adds a card. Rewritten
+     * when a new subscription replaces an ended one.
+     */
+    subscribedAt: timestamp("subscribed_at", { withTimezone: true }),
+    /**
      * The pricing A/B test's plan (ADR 20261022-pricing-ab-test). Null until
      * one is stored: at signup (the arm the set-up request saw), at "Add a
      * card" (the plan Checkout sold), or by `pnpm billing:pricing-plan`. Read

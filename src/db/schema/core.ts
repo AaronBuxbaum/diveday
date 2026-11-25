@@ -812,9 +812,12 @@ export const shops = pgTable(
     /**
      * The badge wall: coded affiliations the shop chooses to show, in the
      * order it chose them — `BRAND_BADGE_CODES` in `src/lib/brand.ts`. Codes,
-     * never words or logos: a code arrives in every language, and DiveDay
-     * draws a text badge rather than a mark it has no right to show. Like every
-     * badge, these are shop claims.
+     * never words or logo files: a code arrives in every language. DiveDay
+     * writes the words, and shows the organization's own official logo beside
+     * them where `BADGE_LOGOS` (`src/features/public-site/badge-logos.ts`) has a file taken
+     * from that organization's site (Aaron, 2026-11-23, H-20261123-badge-logos-shipped;
+     * legal review #4938); a mark not cleared falls back to the text badge. This
+     * reverses the earlier text-only rule. Like every badge, these are shop claims.
      */
     brandBadges: jsonb("brand_badges").$type<string[]>().notNull().default([]),
     latitude: doublePrecision("latitude"),
@@ -1593,6 +1596,14 @@ export const userAccounts = pgTable(
      * `weekly_digest` is.
      */
     afterHoursPing: boolean("after_hours_ping"),
+    /**
+     * This person's own answer to the "How it went" email after each
+     * departure (`src/features/day/how-it-went/email.ts`). Null until they give
+     * one, and null means their role's default: on for an owner, off for
+     * everyone else (`howItWentEmailWanted`), stored as the answer for the
+     * reason `weekly_digest` is.
+     */
+    howItWentEmail: boolean("how_it_went_email"),
     /**
      * When the last after-hours ping went to this person: the batching clock.
      * A ping is claimed by moving this forward only when it is older than

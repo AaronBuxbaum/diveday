@@ -352,6 +352,7 @@ word in a message bundle fails `pnpm check:repo`. The Spanish reasoning is
 - Paper pass
 - Participant type
 - Party / Came together
+- Paste a list
 - Payment event
 - Per-trip crew role
 - Physician clearance
@@ -362,6 +363,7 @@ word in a message bundle fails `pnpm check:repo`. The Spanish reasoning is
 - Private session / private course
 - Progression order
 - Radio identity
+- Ready link by text
 - Reconciliation
 - Referral student
 - Rehearsal
@@ -406,6 +408,7 @@ word in a message bundle fails `pnpm check:repo`. The Spanish reasoning is
 - SMS channel
 - Snorkel-suitable
 - Snorkeler
+- Sold elsewhere
 - Souls on board
 - Staff invite
 - Stale roll call
@@ -467,6 +470,7 @@ word in a message bundle fails `pnpm check:repo`. The Spanish reasoning is
 - Earliest flight
 - Executed dive
 - Field guide
+- How it went
 - Log entry file
 - Marine-life catalog
 - Material generation

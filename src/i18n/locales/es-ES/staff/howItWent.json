@@ -1,0 +1,44 @@
+{
+  "title": "Cómo fue la salida del {weekday} a las {time}",
+  "door": "Cómo fue",
+  "sheetName": "Cómo fue",
+  "counts": {
+    "heading": "Recuentos",
+    "dock": "En el muelle",
+    "afterDive": "Tras la inmersión {dive}",
+    "afterDiveAt": "Tras la inmersión {dive}, {site}",
+    "aboard": "A bordo: {divers, plural, one {# buceador} other {# buceadores}} y {crew, plural, one {# tripulante} other {# tripulantes}}",
+    "lastMark": "última marca a las {time}, por {name}",
+    "notTaken": "No se hizo",
+    "notBack": "No volvió a bordo: {names}",
+    "notRecorded": "Sin resultado: {names}",
+    "unsettled": "Marcas en desacuerdo, sin contar: {names}",
+    "ashore": "No salió: {names}",
+    "recovered": "{name}: registrado fuera del barco a las {notBack}, de vuelta a bordo a las {back}"
+  },
+  "sorted": {
+    "heading": "Resuelto antes de embarcar",
+    "empty": "No se resolvió nada antes de embarcar.",
+    "unknown": "No se hizo el recuento en el muelle, así que no se sabe.",
+    "line": "{name}: {fixes}",
+    "fix": {
+      "waiver": "exención firmada a las {time}",
+      "card": "tarjeta revisada a las {time}",
+      "rentalFit": "tallas de alquiler tomadas a las {time}"
+    },
+    "turnedAway": "No embarcó: {name}{reason, select, medical {, visto bueno médico} waiver {, exención} card {, tarjeta} age {, edad} identity {, identidad} payment {, pago} other {}}",
+    "boardedBlocked": "Embarcó con un bloqueo {dive, select, 0 {en el muelle} other {tras la inmersión {dive}}}: {name} ({blockers})"
+  },
+  "waivers": {
+    "heading": "Exenciones",
+    "ahead": "{count, plural, =0 {Nadie firmó por adelantado.} one {# buceador firmó por adelantado.} other {# buceadores firmaron por adelantado.}}",
+    "onTheDay": "{count, plural, one {# firmó el mismo día:} other {# firmaron el mismo día:}}",
+    "line": "{name}, {time}",
+    "linePaper": "{name}, {time}, en papel",
+    "after": "Firmó después de la salida: {list}",
+    "doctorPending": "Pendiente del visto bueno médico: {names}",
+    "doctorDeclined": "Un médico no dio el visto bueno: {names}",
+    "notSigned": "Sin exención firmada: {names}",
+    "held": "{count, plural, one {# plaza está retenida} other {# plazas están retenidas}} por una verificación de identidad, así que no se {count, plural, one {muestra su exención} other {muestran sus exenciones}}."
+  }
+}

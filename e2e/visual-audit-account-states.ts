@@ -258,7 +258,7 @@ export function registerAccountAuditCaptures(capture: AuditCapture, flowTimeout:
       await page.locator('input[name="ownerName"]').fill("Nour Haddad");
       await page.locator('input[name="ownerEmail"]').fill("first-light.review@example.com");
       await page.locator('input[name="ownerPassword"]').fill("reef-review-password-123");
-      await page.getByRole("button", { name: "Create shop & start trial" }).click();
+      await page.getByRole("button", { name: "Create your shop" }).click();
       await expect(page).toHaveURL(new RegExp(`/shop/${slug}$`));
       await page.goto(`/shop/${slug}/divers`);
       await page.getByText("No divers on file yet", { exact: true }).waitFor();

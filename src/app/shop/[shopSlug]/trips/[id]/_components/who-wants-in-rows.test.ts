@@ -248,12 +248,14 @@ function anytime(recipients: AnytimeRecipient[], bar: CertRequirementSource | nu
 }
 
 describe("anytimeInterestRows", () => {
-  it("prints the window they are around, and an open window as any day", () => {
+  // The group's heading ("Around these dates") says why they are listed; the
+  // window is not repeated on every row (Filling redesign, 2026-11-24).
+  it("does not repeat the window on the row, whatever it is", () => {
     const [row] = anytime([recipient("a", "Fay Ng", openWater)], null).shown;
-    expect(plain(row?.facts)).toBe("Oct 10 – 20, 2026");
+    expect(row?.facts).toBe("");
     const open = recipient("b", "Gus Ode");
     open.interest = { ...open.interest, availableFrom: null, availableUntil: null };
-    expect(anytime([open], null).shown[0]?.facts).toContain("Any day");
+    expect(anytime([open], null).shown[0]?.facts).toBe("");
   });
 
   it("lifts a name under the bar to the top and caps the preview, keeping the rest", () => {

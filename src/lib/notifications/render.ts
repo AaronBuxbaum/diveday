@@ -51,6 +51,7 @@ import {
   welcomeEmail,
   wrapEmailHtml,
 } from "./email";
+import { howItWentEmail } from "./how-it-went-email";
 import { incidentMissingDiverEmail, incidentMissingDiverFoundEmail } from "./incident-emails";
 import { interestReceivedAckEmail } from "./interest-received-ack";
 import type { Notification } from "./kinds";
@@ -265,6 +266,7 @@ function rawMessageFor(notification: Notification): NotificationEmail {
   if (notification.kind === "move_ask_soon") return moveAskSoonEmail(notification);
   if (notification.kind === "roll_call_stale") return rollCallStaleEmail(notification);
   if (notification.kind === "roll_call_stale_shore") return rollCallStaleShoreEmail(notification);
+  if (notification.kind === "how_it_went") return howItWentEmail(notification);
   if (notification.kind === "incident_missing_diver")
     return incidentMissingDiverEmail(notification);
   if (notification.kind === "incident_missing_diver_found") {

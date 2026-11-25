@@ -94,6 +94,11 @@ export const notificationKind = pgEnum("notification_kind", [
   // booking, by whichever channel carried it, so the roster can show who
   // heard.
   "trip_rescheduled",
+  // The ready link a staff seating texts to the diver's phone (src/features/bookings/seat-confirmation-text.ts).
+  // One row per text, beside the email's `booking_confirmation`, so the SMS receipt that
+  // names its message id can mark this seat's text failed and the roster can offer the
+  // counter QR instead of "Waiver sent".
+  "seat_text",
 ]);
 
 export const notificationDeliveryStatus = pgEnum("notification_delivery_status", [

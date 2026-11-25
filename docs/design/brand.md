@@ -56,6 +56,9 @@ Use the mark as a simple, recognizable signal:
 - Give it breathing room. At minimum, keep one small-bubble diameter of clear space around it;
   use more space when the mark is next to a wordmark.
 - Do not use the mark to imply certification, safety approval, or an agency relationship.
+- DiveDay's own collateral carries no agency logo. A shop's public badge wall is the one place an
+  organization's official logo appears, beside the badge's words and never altered
+  (H-20261123-badge-logos-shipped, `src/features/public-site/badge-logos.ts`).
 
 **On a surface that belongs to a shop, the mark is a credit, not a headline.** A shop's public
 schedule and its departure pages are the shop's own work, and so are the link-preview cards they
@@ -328,7 +331,7 @@ screen, with short notes from the person who built it pointing at specific thing
   count").
 - The first person is "we", and a fact only the builders would know is the kind of note worth
   writing ("We tried a spinner here and the captain read it as the phone thinking"). The site says
-  "we" (H-20261022-the-site-says-we); the one person named is the founder, who signs `/about`.
+  "we" (H-20261022-the-site-says-we); the one person named is the founder, who signs `/about` and speaks as "I" on `/hello`, the page his cold email links to.
 - Every screen a visitor could open leads to **one door into the demo as that role**, and the
   page's one primary stays the shared pair. On a feature page that door is the hero's; under a
   screen on a page that argues something else it is the screen's own (`ScreenDoor`, link-weight,
@@ -537,7 +540,8 @@ Production defaults:
 - [ ] Artwork uses sea teal, paper/slate, ink, and a restrained amber accent.
 - [ ] Wordmark is Plex-like and readable at the finished size.
 - [ ] Contrast works on the actual garment or material in daylight.
-- [ ] No feedback colors, fake claims, agency logos, or unexplained symbols were added.
+- [ ] No feedback colors, fake claims, agency logos, or unexplained symbols were added (merch and
+      DiveDay's own collateral only; a shop's badge wall shows official logos, per the decision above).
 - [ ] A product owner has approved the final proof before purchase.
 
 ## Source map and maintenance

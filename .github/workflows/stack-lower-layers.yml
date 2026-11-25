@@ -1,0 +1,49 @@
+# Keeps the layers under a stack's top from showing a red or cancelled `CI result`.
+#
+# A layer runs full CI while it is the top. When the next layer opens, that run is already red or
+# was cancelled by a push, and nothing re-evaluates it, so GitHub refuses "Merge as a stack" on a
+# layer CI was meant to skip (2026-11-23). After every CI run ends, and when a pull request opens
+# or moves, re-run any such run on a lower layer: the stack gate then answers "not the top",
+# every job skips and `CI result` passes in seconds. The top layer is never touched. The logic and
+# its attempt cap live in scripts/ci-lower-layer-sweep.mjs.
+#
+# It also watches the top: a red run is retried once after 20 minutes of no push, then reported
+# with a comment and the `ci-stuck` label so a failure never sits silently.
+#
+# `workflow_run` and `pull_request_target` run the default branch's copy of this file and script,
+# and check out nothing from a pull request.
+name: Watch stacks
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+  pull_request_target:
+    types: [opened, reopened, synchronize]
+  # A red top nobody is fixing raises no event of its own, so look every 15 minutes.
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: stack-lower-layers
+  cancel-in-progress: false
+
+permissions:
+  actions: write
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  sweep:
+    name: Re-run stale lower layers
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+      - run: node scripts/ci-lower-layer-sweep.mjs
+        env:
+          GITHUB_TOKEN: ${{ github.token }}

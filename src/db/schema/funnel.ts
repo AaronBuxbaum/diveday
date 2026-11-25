@@ -166,6 +166,15 @@ export const demoPreviews = pgTable(
     prospectName: text("prospect_name").notNull(),
     /** The public site the name and colour were read from, when there was one. */
     prospectSite: text("prospect_site"),
+    /**
+     * When the prospect's boats leave, 24-hour "HH:MM" shop-local times read
+     * off their site or typed by the founder. The demo's upcoming day boats
+     * move to the nearest of them each time the shop is seeded or reset
+     * (`src/db/seed/preview-day.ts`). Empty keeps the sample times.
+     */
+    departureTimes: text("departure_times").array().notNull().default(sql`'{}'::text[]`),
+    /** The prospect's boat names, worn by the demo's two hulls in order. Empty keeps the sample names. */
+    boatNames: text("boat_names").array().notNull().default(sql`'{}'::text[]`),
     createdAt: appNowTimestamp("created_at").notNull(),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
     fetchCount: integer("fetch_count").notNull().default(0),

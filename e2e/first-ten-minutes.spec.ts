@@ -51,9 +51,9 @@ test("a brand-new shop is bookable within the four-screen budget, and is shown t
   await page
     .locator('input[name="ownerPassword"]')
     .filter({ visible: true })
-    .fill("trial-pass-123");
+    .fill("owner-pass-123");
   // Timezone was already detected from the device — no decision to make.
-  await page.getByRole("button", { name: "Create shop & start trial" }).click();
+  await page.getByRole("button", { name: "Create your shop" }).click();
 
   // ── Screen 2: Today, which owns "what do I do next" ─────────────────────
   await page.waitForURL(new RegExp(`/shop/${unique}$`));
@@ -122,8 +122,8 @@ test("the second trip does not repeat the bookable moment", async ({ page }) => 
   await page
     .locator('input[name="ownerPassword"]')
     .filter({ visible: true })
-    .fill("trial-pass-123");
-  await page.getByRole("button", { name: "Create shop & start trial" }).click();
+    .fill("owner-pass-123");
+  await page.getByRole("button", { name: "Create your shop" }).click();
   await page.waitForURL(new RegExp(`/shop/${unique}$`));
 
   const tomorrow = new Date(Date.parse(E2E_FROZEN_CLOCK) + 24 * 60 * 60 * 1000)
@@ -181,8 +181,8 @@ test("a shop with a departure today is not treated as a shop with no departures"
   await page
     .locator('input[name="ownerPassword"]')
     .filter({ visible: true })
-    .fill("trial-pass-123");
-  await page.getByRole("button", { name: "Create shop & start trial" }).click();
+    .fill("owner-pass-123");
+  await page.getByRole("button", { name: "Create your shop" }).click();
   await page.waitForURL(new RegExp(`/shop/${unique}$`));
   await expect(page.getByRole("heading", { name: "First morning" })).toBeVisible();
 

@@ -1,6 +1,7 @@
 import { isPlausibleDateOfBirth } from "./age";
 import { isValidCalendarDate } from "./calendar-date";
 import { PARTICIPANT_TYPES, type ParticipantType } from "./participant-types";
+import { diverEmailSchema, diverPhoneSchema } from "./person-fields";
 
 /**
  * **The new-diver form's party rows** (fifth loop, item 9): the field names the
@@ -20,11 +21,12 @@ export const PARTY_FIRST_ROW = 0;
 /** What the on-file choice posts for "New person"; otherwise it posts the record's id. */
 export const PARTY_NEW_PERSON = "new";
 
-export type PartyMemberField = "name" | "minor" | "dob" | "type" | "match";
+export type PartyMemberField = "name" | "email" | "phone" | "minor" | "dob" | "type" | "match";
 
 /**
- * A party row's field: `member-<n>-name`, `-minor` ("Under 18"), `-dob` (the
- * date of birth asked beside it), `-type` ("Coming as") or `-match` (the
+ * A party row's field: `member-<n>-name`, `-email` and `-phone` (each
+ * optional, so the person gets their own link), `-minor` ("Under 18"), `-dob`
+ * (the date of birth asked beside it), `-type` ("Coming as") or `-match` (the
  * on-file choice: a record's id, or {@link PARTY_NEW_PERSON}).
  */
 export function partyMemberField(row: number, field: PartyMemberField): string {
@@ -44,6 +46,10 @@ export type PartyMemberFacts = {
 export type PartyRow = PartyMemberFacts & {
   row: number;
   fullName: string;
+  /** Their own address, when the staffer typed one; a name alone still seats them. */
+  email?: string;
+  /** Their own number, when typed: the ready link then goes to it by text. */
+  phone?: string;
   participantType?: ParticipantType;
 };
 
@@ -58,8 +64,9 @@ export type SeatParty = {
   rows: PartyRow[];
   /**
    * Something the form could not have sent: more rows than it allows, an
-   * unknown type, a date that is not a plausible birth date, or a choice that
-   * is neither "new" nor an id. The action refuses the whole form rather than
+   * unknown type, a date that is not a plausible birth date, an address that is
+   * not one, a number too long to be one, or a choice that is neither "new"
+   * nor an id. The action refuses the whole form rather than
    * seat a party with somebody quietly left off (security review N5).
    */
   invalid: boolean;
@@ -90,7 +97,7 @@ function facts(raw: Raw): { facts: PartyMemberFacts; invalid: boolean } {
 export function readParty(entries: Iterable<[string, FormDataEntryValue]>): SeatParty {
   const byRow = new Map<number, Raw>();
   for (const [name, value] of entries) {
-    const match = /^member-(\d{1,4})-(name|minor|dob|type|match)$/.exec(name);
+    const match = /^member-(\d{1,4})-(name|email|phone|minor|dob|type|match)$/.exec(name);
     if (!match || typeof value !== "string") continue;
     const row = Number(match[1]);
     const current = byRow.get(row) ?? {};
@@ -109,10 +116,16 @@ export function readParty(entries: Iterable<[string, FormDataEntryValue]>): Seat
     const type = raw.type?.trim() || undefined;
     const typeInvalid =
       type !== undefined && !(PARTICIPANT_TYPES as readonly string[]).includes(type);
-    invalid ||= read.invalid || typeInvalid;
+    const email = raw.email?.trim() || undefined;
+    const emailInvalid = email !== undefined && !diverEmailSchema.safeParse(email).success;
+    const phone = raw.phone?.trim() || undefined;
+    const phoneInvalid = phone !== undefined && !diverPhoneSchema.safeParse(phone).success;
+    invalid ||= read.invalid || typeInvalid || emailInvalid || phoneInvalid;
     rows.push({
       row,
       fullName,
+      ...(email && !emailInvalid ? { email } : {}),
+      ...(phone && !phoneInvalid ? { phone } : {}),
       ...read.facts,
       ...(type && !typeInvalid ? { participantType: type as ParticipantType } : {}),
     });
