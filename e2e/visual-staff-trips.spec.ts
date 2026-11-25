@@ -24,6 +24,7 @@ import {
   openTripFromBoard,
   openTripPhase,
   openTripTab,
+  reportTripIncident,
   rosterRow,
   seatFromRoster,
   seededTripId,
@@ -885,8 +886,7 @@ for (const scheme of ["light", "dark"] as const) {
       test(`a new incident report renders true to the design (${scheme})`, async ({ page }) => {
         await openReefTrip(page);
         await openTripPhase(page, "water");
-        await page.locator("#incidents").getByRole("button", { name: "Report one" }).click();
-        await page.waitForURL(/\/incidents\/[0-9a-f-]+$/);
+        await reportTripIncident(page);
         await page.getByRole("region", { name: "File the report" }).waitFor();
         await capture(page, "incident-report-draft", scheme);
       });
@@ -897,8 +897,7 @@ for (const scheme of ["light", "dark"] as const) {
       test(`an unfiled incident report is one line on Today (${scheme})`, async ({ page }) => {
         await openReefTrip(page);
         await openTripPhase(page, "water");
-        await page.locator("#incidents").getByRole("button", { name: "Report one" }).click();
-        await page.waitForURL(/\/incidents\/[0-9a-f-]+$/);
+        await reportTripIncident(page);
         await page.goto("/shop/blue-mantis");
         await page.getByText(/1 incident report not filed, started today by /).waitFor();
         await capture(page, "today-incident-unfiled", scheme);
@@ -910,8 +909,7 @@ for (const scheme of ["light", "dark"] as const) {
         await openReefTrip(page);
         const tripPath = new URL(page.url()).pathname;
         await openTripPhase(page, "water");
-        await page.locator("#incidents").getByRole("button", { name: "Report one" }).click();
-        await page.waitForURL(/\/incidents\/[0-9a-f-]+$/);
+        await reportTripIncident(page);
         await page.goto(`${tripPath}/log`);
         const section = page.locator('section[aria-labelledby="incident-reports-heading"]');
         await section.getByText(/^Draft not filed, started by /).waitFor();

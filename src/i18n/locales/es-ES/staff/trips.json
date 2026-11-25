@@ -1161,6 +1161,7 @@
     "more": "Más",
     "printPacket": "Imprimir paquete de la salida",
     "activity": "Actividad",
+    "reportIncident": "Informar de un incidente",
     "sentence": {
       "guestCount": "{count, plural, one {# participante} other {# participantes}}",
       "seatsToFill": "{count, plural, one {Queda # plaza} other {Quedan # plazas}} por llenar.",
@@ -1318,7 +1319,6 @@
       "notLogged": "Sin registrar",
       "incidents": "Incidentes",
       "none": "Ninguno",
-      "reportOne": "Informar uno",
       "reportDraft": "Borrador · {name}",
       "reportFiled": "Presentado · {name}",
       "noShows": "No se presentaron",

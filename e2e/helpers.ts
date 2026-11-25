@@ -492,6 +492,27 @@ export async function openTripMenuLink(page: Page, name: string): Promise<void> 
 }
 
 /**
+ * Start an incident report from the trip header's More menu ("Report an
+ * incident"), the one door that starts one, and wait for the new draft's page.
+ */
+export async function reportTripIncident(page: Page): Promise<void> {
+  const t = staffTranslator("en-US");
+  const more = { name: t("trips.clock.more"), exact: true };
+  const menu = page
+    .locator("[data-more-menu]")
+    .filter({ has: page.getByRole("button", more) })
+    .filter({ visible: true })
+    .first();
+  const trigger = menu.getByRole("button", more);
+  if ((await trigger.getAttribute("aria-expanded")) !== "true") await trigger.click();
+  await menu
+    .locator("[data-more-menu-panel]")
+    .getByRole("button", { name: t("trips.clock.reportIncident"), exact: true })
+    .click();
+  await page.waitForURL(/\/incidents\/[0-9a-f-]+$/);
+}
+
+/**
  * Open the trip's add form (`#add-a-booking`, `?add=1`): from the header's
  * More menu while the trip has a seat, by its address on a full one (whose
  * form wait-lists). Returns the form.

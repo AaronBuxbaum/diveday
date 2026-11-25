@@ -18,7 +18,6 @@ vi.mock("@/db/gear", () => ({ listTripUnitsToCheckIn: reads.rentals }));
 vi.mock("@/db/fly-safe-correction", () => ({ listFlySafeFollowUps: reads.flySafe }));
 vi.mock("../../manifest/_components/manifest-view", () => ({ readManifestView: reads.view }));
 vi.mock("./water-reading", () => ({ waterStandingOf: reads.standing }));
-vi.mock("../../incidents/actions", () => ({ startIncidentReportAction: vi.fn() }));
 const t = staffTranslator("en-US");
 const record = {
   context: {
@@ -45,15 +44,20 @@ beforeEach(() => {
   });
 });
 
-it("uses the incident reader's authorization on Check-in", async () => {
-  reads.incidents.mockResolvedValueOnce({ reports: [], mayStart: true });
+it("reads Check-in's incident reports as this viewer and draws only the ones that exist", async () => {
   const props = { record, guests: null, quiet: null, buddies: null };
   const { unmount } = render(await CheckInPhase(props));
   expect(reads.incidents).toHaveBeenCalledWith(record.context.db, "shop-1", "trip-1", "person-1");
-  expect(screen.getByRole("button", { name: t("trips.clock.wrapped.reportOne") })).toBeVisible();
+  expect(document.getElementById("incidents")).toBeNull();
   unmount();
+  reads.incidents.mockResolvedValueOnce({
+    reports: [{ id: "report-1", status: "filed", createdByName: "Ana" }],
+    mayStart: true,
+  });
   render(await CheckInPhase(props));
-  expect(screen.queryByRole("button", { name: t("trips.clock.wrapped.reportOne") })).toBeNull();
+  expect(
+    screen.getByRole("link", { name: t("trips.clock.wrapped.reportFiled", { name: "Ana" }) }),
+  ).toBeVisible();
 });
 
 it("links a historical look-back to the open roll-call item when someone is not recorded back", async () => {

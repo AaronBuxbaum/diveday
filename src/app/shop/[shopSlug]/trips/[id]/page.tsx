@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { after } from "next/server";
 import { FlashParams } from "@/components/FlashParams";
 import { PageBodyHydrated } from "@/components/PageBodyHydrated";
+import { mayStartTripIncidentReport } from "@/db/incident-reports";
 import { requireShopSurface } from "@/features/accounts/session";
 import { readTripPage } from "@/features/trips/trip-page";
 import { requestLocale } from "@/i18n/request";
@@ -298,6 +299,9 @@ export default async function ManageTripPage({
           {...{ trip, shopSlug, tripId, locale, t, facts: frame.facts, timeZone: shop.timezone }}
           rollCall={rollCall}
           addGuest={acceptsDivers && frame.capacity > trip.booked}
+          reportIncident={
+            await mayStartTripIncidentReport(db, shop.id, tripId, session.user.personId)
+          }
         />
         <PhaseHeading
           {...{ frame, showDetails, cancelled, guests, tripPath, meta: slots.facts }}

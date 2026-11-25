@@ -5,6 +5,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
 import { buttonClass } from "@/components/ui/button";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
+import { mayStartTripIncidentReport } from "@/db/incident-reports";
 import { requireShopSurface } from "@/features/accounts/session";
 import { getTripPrepPage } from "@/features/trips/trip-prep";
 import { requestLocale } from "@/i18n/request";
@@ -84,7 +85,7 @@ export default async function TripPrepPage({
     if (!bookingId) notFound();
     return <RentalTicketSheet shopSlug={shopSlug} tripId={tripId} bookingId={bookingId} />;
   }
-  const { db, shop } = await requireShopSurface(shopSlug);
+  const { session, db, shop } = await requireShopSurface(shopSlug);
   // Staff read dates in the language their own device asks for, same
   // negotiation as the public pages (docs ADR 20260729-diver-copy-localization).
   const locale = await requestLocale(shop.defaultLocale);
@@ -156,6 +157,9 @@ export default async function TripPrepPage({
           tripId={tripId}
           rollCall="more"
           addGuest={false}
+          reportIncident={
+            await mayStartTripIncidentReport(db, shop.id, tripId, session.user.personId)
+          }
           locale={locale}
           timeZone={shop.timezone}
           t={t}

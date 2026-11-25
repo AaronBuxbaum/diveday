@@ -18,7 +18,7 @@ const card = (records?: Parameters<typeof WhatHappenedCard>[0]["records"]) =>
       standing={standing}
       depth={(meters) => `${meters} m`}
       logRow={() => null}
-      incidents={{ reports: [], mayStart: false }}
+      incidents={{ reports: [] }}
       noShows={[]}
       turnedAway={[]}
       print={null}
@@ -81,7 +81,7 @@ describe("a dive recorded not made", () => {
         standing={standing}
         depth={(meters) => `${meters} m`}
         logRow={() => null}
-        incidents={{ reports: [], mayStart: false }}
+        incidents={{ reports: [] }}
         noShows={[]}
         turnedAway={[]}
         print={null}

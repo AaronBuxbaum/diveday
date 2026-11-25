@@ -1161,6 +1161,7 @@
     "more": "More",
     "printPacket": "Print trip packet",
     "activity": "Activity",
+    "reportIncident": "Report an incident",
     "sentence": {
       "guestCount": "{count, plural, one {# guest} other {# guests}}",
       "seatsToFill": "{count, plural, one {# seat} other {# seats}} to fill.",
@@ -1318,7 +1319,6 @@
       "notLogged": "Not logged",
       "incidents": "Incidents",
       "none": "None",
-      "reportOne": "Report one",
       "reportDraft": "Draft · {name}",
       "reportFiled": "Filed · {name}",
       "noShows": "No-shows",
