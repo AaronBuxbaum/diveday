@@ -175,9 +175,11 @@ async function grantOne(
         .select({ currency: shops.currency, amountCents: shops.buddyCreditCents })
         .from(shops)
         .where(eq(shops.id, candidate.shopId))
+        // mutation-ok: lock contention cannot be provoked on PGlite's single connection; see the ADR
         .for("share", { noWait: true });
       if (!shop || !/^[a-z]{3}$/.test(shop.currency) || !validTripCreditAmount(shop.amountCents))
         return "skipped";
+      // mutation-ok: the eligibleReferrals recheck below refuses the same cases; this is defense in depth
       if (!(await lockTripCreditPerson(tx, candidate.shopId, candidate.referrerPersonId)))
         return "skipped";
       const [still] = await eligibleReferrals(tx, now, candidate.buddyBookingId);
