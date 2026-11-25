@@ -6,7 +6,7 @@ import type {
   IncidentWaiverStatus,
 } from "@/lib/incident-export";
 import type { RollCallCheckpoint } from "@/lib/roll-call";
-import { type HowItWentInput, howItWent } from "./rules";
+import { type HowItWentInput, howItWent, seatsTurnedAway } from "./rules";
 
 // A Saturday in Key Largo in November (EST): the shop's date runs 05:00Z to 05:00Z.
 const DAY = { from: new Date("2026-11-28T05:00:00Z"), to: new Date("2026-11-29T05:00:00Z") };
@@ -385,6 +385,41 @@ describe("howItWent: head counts", () => {
     );
     expect(recap.counts[1]?.recovered).toEqual([
       { name: "Ned", notBackAt: "2026-11-28T16:02:00Z", backAt: "2026-11-28T16:09:00Z" },
+    ]);
+  });
+});
+
+describe("seatsTurnedAway", () => {
+  const priya = { bookingId: "b-priya", fullName: "Priya Sharma" } as IncidentRosterEntry;
+  const sam = { bookingId: "b-sam", fullName: "Sam Lee" } as IncidentRosterEntry;
+
+  it("names a seat the desk turned away even after the boat recorded it", () => {
+    expect(
+      seatsTurnedAway(
+        [],
+        [priya, sam],
+        [
+          { bookingId: "b-priya", turnedAway: true, turnedAwayReason: "medical" },
+          { bookingId: "b-sam", turnedAway: false, turnedAwayReason: null },
+        ],
+      ),
+    ).toEqual([{ bookingId: "b-priya", fullName: "Priya Sharma", reason: "medical" }]);
+  });
+
+  it("names a seat once when the log already has it, and keeps an erased reason as unknown", () => {
+    const logged = [{ bookingId: "b-sam", fullName: "Sam Lee", reason: null }];
+    expect(
+      seatsTurnedAway(
+        logged,
+        [priya, sam],
+        [
+          { bookingId: "b-sam", turnedAway: true, turnedAwayReason: "medical" },
+          { bookingId: "b-priya", turnedAway: true, turnedAwayReason: null },
+        ],
+      ),
+    ).toEqual([
+      { bookingId: "b-sam", fullName: "Sam Lee", reason: null },
+      { bookingId: "b-priya", fullName: "Priya Sharma", reason: null },
     ]);
   });
 });
