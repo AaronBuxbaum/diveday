@@ -7,7 +7,7 @@ import { cachedListFormat } from "@/lib/intl-cache";
 import type { AutomatedMarineForecast } from "@/lib/marine-forecast";
 import type { TemperatureUnit } from "@/lib/temperature-units";
 import { ConditionsOutlook } from "../ConditionsSection";
-import { type Fact, FactList, QUIET_ACTION, TripCard } from "../trip-ink";
+import { type Fact, FactList, QUIET_ACTION, QUIET_LINK_INLINE, TripCard } from "../trip-ink";
 
 /** "Sal, Ana and Joe", in the reader's language. */
 function listOf(locale: string, items: readonly string[]): string {
@@ -62,7 +62,7 @@ export function TripFactsLine({
               <Link
                 href={editHref(fact.section)}
                 aria-label={`${t("trips.clock.filling.edit")} · ${fact.label}: ${fact.value}`}
-                className={QUIET_ACTION}
+                className={QUIET_LINK_INLINE}
               >
                 {fact.value}
               </Link>
@@ -75,7 +75,7 @@ export function TripFactsLine({
           <dd>
             <Link
               href={editHref(unset[0].section)}
-              className={QUIET_ACTION}
+              className={QUIET_LINK_INLINE}
               data-trip-facts-unset=""
             >
               {t("trips.clock.filling.addFacts", {

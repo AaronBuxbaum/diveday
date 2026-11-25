@@ -191,6 +191,7 @@ export async function WrappedPhase({
               popupBlockedLabel={t("shared.printButton.popupBlocked")}
               recordAction={recordTripPrintPdfAction.bind(null, shop.slug, tripId)}
               flush
+              link
             />
           }
           {...ids}

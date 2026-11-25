@@ -196,11 +196,19 @@ export function ExecutedDiveLog({
           <summary
             className={cardSummaryClass({
               className: inList
-                ? "group/summary min-h-14 items-start px-4 py-3 sm:px-6"
+                ? "group/summary relative min-h-14 items-start px-4 py-3 sm:px-6"
                 : "group/summary min-h-14 px-4 py-4",
             })}
           >
-            <SummaryCaret className={`group-open/dive:rotate-90${inList ? " mt-1" : ""}`} />
+            {/* In a list the caret leads in the row's inset, so the row's
+                columns stay on its neighbours' (a fact list's label column). */}
+            {inList ? (
+              <span className="absolute start-1 top-3 sm:start-2.5">
+                <SummaryCaret className="group-open/dive:rotate-90" />
+              </span>
+            ) : (
+              <SummaryCaret className="group-open/dive:rotate-90" />
+            )}
             {inList ? (
               <span className="min-w-0 flex-1">{inList}</span>
             ) : (

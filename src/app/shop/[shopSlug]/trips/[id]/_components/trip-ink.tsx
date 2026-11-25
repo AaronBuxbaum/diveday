@@ -14,6 +14,12 @@ import { sectionCardClass } from "@/components/ui/card";
 export const QUIET_ACTION = buttonClass({ variant: "link", size: "sm", flush: true });
 
 /**
+ * The same door inside a line of words (Filling's facts line): the quiet
+ * action's ink and weight without its box, so it keeps the line's baseline.
+ */
+export const QUIET_LINK_INLINE = "font-medium text-primary hover:underline focus-visible:underline";
+
+/**
  * A row's remedy (Send waiver, Check in, Call Tom, Add contact), the same
  * weight in every phase. Only a phase heading's one main action is primary.
  */
