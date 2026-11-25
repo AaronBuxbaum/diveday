@@ -4,12 +4,12 @@ This module owns a demo shop built ahead of time for one prospect, and the recor
 
 ## Owns
 
-- `rules.ts`: what a preview may be dressed in, how long its link lasts, and whether a row is still open.
+- `rules.ts`: what a preview may be dressed in (name, colour, town, departure times, boat names), how long its link lasts, and whether a row is still open.
 - `store.ts`: building a preview, finding one by its link, and recording a fetch, an open and real activity.
 
 ## Does not own
 
-The demo shop itself (`src/db/seed/index.ts`), the demo reaper (`src/db/seed/demo-lifecycle.ts`), sign-in (`src/app/actions/demo.ts`), and the page (`src/app/(token)/preview/[token]`).
+The demo shop itself (`src/db/seed/index.ts`) and how a preview's times and boat names dress it (`src/db/seed/preview-day.ts`), the demo reaper (`src/db/seed/demo-lifecycle.ts`), sign-in (`src/app/actions/demo.ts`), and the page (`src/app/(token)/preview/[token]`).
 
 ## Invariants
 

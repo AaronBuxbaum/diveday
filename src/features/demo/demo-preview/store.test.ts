@@ -27,6 +27,8 @@ function input(overrides: Partial<PreviewInput> = {}): PreviewInput {
     locality: "Islamorada",
     region: "FL",
     position: null,
+    departureTimes: [],
+    boatNames: [],
     ...overrides,
   };
 }
