@@ -319,3 +319,36 @@ export function howItWent(input: HowItWentInput): HowItWent {
     waivers: waiversOf(input),
   };
 }
+
+/**
+ * Everyone the desk turned away, whatever the boat recorded first. The departure log lets a seat
+ * the boat recorded at any count stay on its roster, so it leaves `turnedAway`; the desk's refusal
+ * (and its reason) still stands on the seat's row, and this page names it from there.
+ */
+export function seatsTurnedAway(
+  logged: readonly IncidentTurnedAwayEntry[],
+  roster: readonly IncidentRosterEntry[],
+  seats: readonly {
+    bookingId: string;
+    turnedAway?: boolean;
+    turnedAwayReason?: TurnAwayReason | null;
+  }[],
+): IncidentTurnedAwayEntry[] {
+  const named = new Set(logged.map((seat) => seat.bookingId));
+  const refused = new Map<string, TurnAwayReason | null>();
+  for (const seat of seats) {
+    if (seat.turnedAway && !named.has(seat.bookingId)) {
+      refused.set(seat.bookingId, seat.turnedAwayReason ?? refused.get(seat.bookingId) ?? null);
+    }
+  }
+  return [
+    ...logged,
+    ...roster
+      .filter((diver) => refused.has(diver.bookingId))
+      .map((diver) => ({
+        bookingId: diver.bookingId,
+        fullName: diver.fullName,
+        reason: refused.get(diver.bookingId) ?? null,
+      })),
+  ];
+}

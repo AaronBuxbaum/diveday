@@ -345,6 +345,11 @@ test("the walkthrough's bar fills as the clock, and holding the screen freezes i
   // the page shortens under the reader when it does.
   await expect(walk.locator("ol[data-walk-list]")).toHaveAttribute("data-walk", "");
   await walk.scrollIntoViewIfNeeded();
+  // The first card holds its page for FIRST_CARD_HOLD_MS before its bar moves; the second starts at
+  // once, so a test that waits on the fill opens that one rather than racing the hold.
+  await walk
+    .getByRole("button", { name: t("marketing.home.walk.goTo", { n: 2 }), exact: true })
+    .click();
   const fill = walk.locator("[data-walk-controls] ~ div > button > span > span").last();
   const filled = async () =>
     Number.parseFloat((await fill.evaluate((el) => (el as HTMLElement).style.transform)).slice(7));

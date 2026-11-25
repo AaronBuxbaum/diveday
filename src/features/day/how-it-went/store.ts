@@ -6,7 +6,7 @@ import { getIncidentExport } from "@/features/safety/incident-export";
 import { nowDate } from "@/lib/clock";
 import type { TripManifest } from "@/lib/manifests";
 import { shopDayBounds } from "@/lib/zoned";
-import { type HowItWent, howItWent } from "./rules";
+import { type HowItWent, howItWent, seatsTurnedAway } from "./rules";
 
 /**
  * The marks the live manifest does not settle, per checkpoint: a dock mark two
@@ -72,7 +72,11 @@ export async function getHowItWentPage(
     checkpoints: doc.meta.checkpoints,
     roster: doc.roster,
     crew: doc.crew,
-    turnedAway: doc.turnedAway,
+    turnedAway: seatsTurnedAway(
+      doc.turnedAway,
+      doc.roster,
+      (manifests ?? []).flatMap((manifest) => manifest.divers),
+    ),
     executedDives: doc.executedDives,
     timeline: doc.timeline,
     unsettled: unsettledMarks(manifests ?? []),
