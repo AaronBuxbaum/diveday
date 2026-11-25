@@ -1,9 +1,10 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { AgencyCheckRow } from "@/app/shop/[shopSlug]/_components/agency-check/AgencyCheckRow";
-import { AutoOpenDetails } from "@/components/AutoOpenDetails";
+import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
+import { menuRowClass } from "@/components/ui/menu";
 import { STAFF_RE_ENTRY_KEYS } from "@/features/trips/dive-intent";
 import { guardianCoSignedText } from "@/i18n/guardian-labels";
 import { CERTIFICATION_LEVEL_KEYS, STAFF_DIVE_RECENCY_KEYS } from "@/i18n/readiness-labels";
@@ -11,54 +12,35 @@ import { rentalFitLineText } from "@/i18n/rental-labels";
 import { certificationRank } from "@/lib/certification-levels";
 import { rentalFitLine } from "@/lib/dive-prep";
 import { formatDateTimeTz } from "@/lib/format";
-import { TurnAwayRowStateProvider } from "../_arrivals/TurnAwayScript";
+import { isDiver } from "@/lib/participant-types";
+import { GuestFact } from "./GuestFact";
 import { GuestRequirements } from "./GuestRequirements";
+import {
+  GuestActionDismiss,
+  GuestActionSheet,
+  GuestActionsProvider,
+  GuestMenuAction,
+  GuestMoreMenu,
+} from "./guest-actions";
+import { MoveSeatControl } from "./MoveSeatControl";
 import type { RosterRowContext } from "./RosterRow";
 import type { RowOutstanding } from "./roster-row-outstanding";
 import type { RowReasonLines } from "./roster-row-reasons";
 import type { RosterSeat } from "./roster-seat";
 import { SeatComingAs } from "./SeatComingAs";
 import { SeatEmergencyContact } from "./SeatEmergencyContact";
-import { SeatFootActions } from "./SeatFootActions";
 import { SeatLunchNote } from "./SeatLunchNote";
 import { SeatNotes } from "./SeatNotes";
 import { SeatPickup } from "./SeatPickup";
 
 const LINK = buttonClass({ variant: "link", size: "sm", flush: true });
 
-/**
- * **A guest opened in place** (ADR 20261117-trip-page-clock, drawing
- * `24-clock-guest-opened`): the buttons that fix them first, then a short list
- * of facts (card, waiver, gear, last dive, what they asked for, who to call),
- * then the rare actions behind one More. The row above it carries the name and
- * the one status phrase; nothing here repeats them as headings.
- *
- * Every action the old folio held is still here: the fixes and their forms,
- * the private details behind one disclosure, Not here and Turn away, Move to
- * another trip, Cancel booking, Create order, pickup, lunch, coming as, notes,
- * and the profile.
- */
-export function OpenedGuest({
-  seat,
-  context,
-  reasonLines,
-  chips,
-  fixes,
-  identityCheck,
-  identityContact,
-}: {
-  seat: RosterSeat & Pick<RowOutstanding, "paymentRemedy" | "referenceFacts">;
-  context: RosterRowContext;
-  reasonLines: RowReasonLines["reasonLines"];
-  /** Minor, birthday, or coming as something other than a diver. */
-  chips: ReactNode;
-  /** The remedies not already beside a reason: waiver, course forms, payment, course work. */
-  fixes: ReactNode;
-  identityCheck: ReactNode;
-  identityContact: ReactNode;
-}) {
-  const { booking, person, t, arrival, showsPersonDetail, identityUnconfirmed } = seat;
-  const { rows, actions, trip } = context;
+type Seat = RosterSeat & Pick<RowOutstanding, "paymentRemedy" | "referenceFacts">;
+
+/** The facts on file about the guest that nobody changes from this panel, in the list's order. */
+function factsOnFile(seat: Seat, context: RosterRowContext) {
+  const { booking, person, t, showsPersonDetail } = seat;
+  const { rows, trip } = context;
   const { locale, shopTimezone: timeZone } = trip;
   const readiness = rows.readinessByBooking.get(booking.id);
   const card = [...(readiness?.certifications ?? [])].sort(
@@ -70,12 +52,13 @@ export function OpenedGuest({
     (seat.waiverStatus === "signed" || seat.waiverStatus === "guardian_missing")
       ? waiver.completedAt
       : null;
-  const facts: { key: string; label: string; value: ReactNode }[] = [];
+  const facts: { key: string; label: string; value: ReactNode; door?: ReactNode }[] = [];
   // A minor's age is said in years: it decides who signs and how deep they go.
   if (seat.minor && seat.age !== null) {
     facts.push({ key: "age", label: t("trips.fixList.facts.age"), value: seat.age });
   }
-  if (showsPersonDetail && booking.participantType !== "rider") {
+  // A snorkeler or a rider needs no card, so the list does not ask for one.
+  if (showsPersonDetail && isDiver(booking.participantType)) {
     facts.push({
       key: "card",
       label: t("trips.fixList.facts.card"),
@@ -117,35 +100,31 @@ export function OpenedGuest({
     facts.push({
       key: "gear",
       label: t("trips.fixList.facts.gear"),
-      // The door on a line of its own: inline, its 44px target stood one
-      // wrapped line of sizes apart from the next like a blank line.
-      value: (
-        <>
-          <span className="block">
-            {rentalFitLineText(
-              t,
-              locale,
-              rentalFitLine(
-                rows.rentalFitByBooking.get(booking.id) ?? null,
-                trip.shopRentalItems,
-                booking.participantType,
+      value: [
+        rentalFitLineText(
+          t,
+          locale,
+          rentalFitLine(
+            rows.rentalFitByBooking.get(booking.id) ?? null,
+            trip.shopRentalItems,
+            booking.participantType,
+          ),
+        ),
+        ...(seat.nitrox
+          ? [
+              t(
+                seat.nitrox.approved
+                  ? "trips.roster.nitroxApproved"
+                  : "trips.roster.nitroxUnverified",
               ),
-            )}
-            {seat.nitrox ? (
-              <>
-                {" · "}
-                {t(
-                  seat.nitrox.approved
-                    ? "trips.roster.nitroxApproved"
-                    : "trips.roster.nitroxUnverified",
-                )}
-              </>
-            ) : null}
-          </span>
-          <Link href={`/shop/${trip.shopSlug}/divers/${person.id}#gear`} className={LINK}>
-            {t("trips.fixList.facts.setFit")}
-          </Link>
-        </>
+            ]
+          : []),
+      ].join(" · "),
+      // Sizes are the diver's own, kept on their profile.
+      door: (
+        <Link href={`/shop/${trip.shopSlug}/divers/${person.id}#gear`} className="hover:underline">
+          {t("trips.fact.edit")}
+        </Link>
       ),
     });
   }
@@ -181,145 +160,245 @@ export function OpenedGuest({
       ),
     });
   }
+  return facts;
+}
 
-  const content = (
-    <div data-opened-guest={booking.id} className="space-y-5">
-      {chips ? <div className="flex flex-wrap items-center gap-3">{chips}</div> : null}
-      <div className="space-y-4">
-        <GuestRequirements
-          lines={reasonLines}
-          blockers={seat.blockerTexts}
-          payment={seat.paymentRemedy}
-          contact={
-            <a href={`#guest-contact-${booking.id}`} className={LINK}>
-              {t("trips.folio.reviewContact")}
-            </a>
-          }
-          t={t}
-        />
-        {arrival ? null : identityContact}
-        {identityCheck}
-        {seat.arrivalBelow}
-        {identityUnconfirmed || !actions.agencyCheckAction ? null : (
-          <AgencyCheckRow
-            personId={person.id}
-            cards={rows.agencyCheckCardsByPerson?.get(person.id) ?? []}
-          />
-        )}
-        {fixes}
-      </div>
-      {showsPersonDetail ? null : (
-        // Said, not silently blank: an empty list reads as a guest with no
-        // card and no contact, a wrong fact rather than an absent one.
-        <p className="text-sm text-muted">{t("trips.roster.identityWithheldDetails")}</p>
-      )}
-      <dl className="grid grid-cols-[minmax(5.5rem,auto)_minmax(0,1fr)] gap-x-6 gap-y-2 text-sm">
-        {facts.map((fact) => (
-          <div key={fact.key} className="contents">
-            <dt className="text-muted">{fact.label}</dt>
-            <dd className="[overflow-wrap:anywhere]">{fact.value}</dd>
-          </div>
-        ))}
-        <div id={`guest-contact-${booking.id}`} className="contents">
-          <dt className="scroll-mt-24 text-muted">{t("trips.fixList.facts.ifNeeded")}</dt>
-          <dd>
-            {showsPersonDetail ? (
-              <SeatEmergencyContact
-                bookingId={booking.id}
-                contact={{ name: person.emergencyContactName, phone: person.emergencyContactPhone }}
-                holdOpen={seat.holdOpen}
-                t={t}
-                saveEmergencyContactAction={seat.saveEmergencyContactAction}
-                bare
-              />
-            ) : (
-              <SeatEmergencyContact
-                bookingId={booking.id}
-                contact={{
-                  name: booking.heldEmergencyContactName ?? null,
-                  phone: booking.heldEmergencyContactPhone ?? null,
-                }}
-                held
-                holdOpen={seat.holdOpen}
-                t={t}
-                saveEmergencyContactAction={seat.saveEmergencyContactAction}
-                bare
-              />
-            )}
-          </dd>
-        </div>
-      </dl>
-      {/* A flagged medical answer, and a held seat's matched record, stay one tap further in. */}
-      {seat.flaggedPrompts.length > 0 || (arrival && identityContact) ? (
-        <details className="group/private">
-          <summary className="flex min-h-11 cursor-pointer items-center gap-2 text-sm font-semibold">
-            {t("trips.fixList.private")}
-            <DisclosureCaret direction="down" className="size-4 group-open/private:rotate-180" />
-          </summary>
-          {seat.referenceFacts}
-        </details>
-      ) : null}
-      {seat.blockerTexts.length > 0 && seat.arrivalControl ? (
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-1">{seat.arrivalControl}</div>
-      ) : null}
-      {/* **The rare actions behind one More** (design review of the final screens,
-          finding 10): the fixes and facts lead; releasing, moving, cancelling,
-          the profile, pickup, lunch, coming as and notes wait one tap in. A
-          refusal or a "Move to another departure" link arrives with it open. */}
-      <AutoOpenDetails
-        openOnHash={`move-booking-${booking.id}`}
-        open={seat.holdOpen}
-        className="group/guestmore"
-      >
-        <summary
-          data-guest-more={booking.id}
-          className="flex min-h-11 w-fit cursor-pointer list-none items-center gap-2 text-sm font-semibold [&::-webkit-details-marker]:hidden"
-        >
-          {t("trips.clock.more")}
-          <DisclosureCaret direction="down" className="size-4 group-open/guestmore:rotate-180" />
-        </summary>
-        <div className="space-y-4 pt-2">
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-1">
-            {arrival?.details?.get(booking.id)}
-            <SeatFootActions
-              booking={booking}
-              person={person}
-              t={t}
-              shopSlug={trip.shopSlug}
-              offersCreateOrder={seat.offersCreateOrder}
-              removeBookingAction={seat.removeBookingAction}
-              aboardAtSea={seat.removeRefusedAboard}
-              moveSeat={seat.moveSeat}
-              carriedChartersNote={seat.carriedChartersNote}
-            />
-            <Link href={`/shop/${trip.shopSlug}/divers/${person.id}`} className={LINK}>
-              {t("trips.folio.openProfile")}
+/**
+ * **A guest opened in place** (ADR 20261117-trip-page-clock; owner,
+ * 2026-11-25, "one list, one menu"): what fixes them first, then one list of
+ * facts (`GuestFact`: card, waiver, gear, last dive, who to call, pickup,
+ * lunch, coming as, notes), each changed from the word at its row's end. The
+ * rare acts are one More menu beside Close: the profile, Create order, Move to
+ * another trip, Not here, Turn away and Cancel booking, each asking its
+ * question in a sheet at the top of the panel. The row above carries the name
+ * and the one status phrase; nothing here repeats them.
+ */
+export function OpenedGuest({
+  seat,
+  context,
+  reasonLines,
+  chips,
+  fixes,
+  identityCheck,
+  identityContact,
+}: {
+  seat: Seat;
+  context: RosterRowContext;
+  reasonLines: RowReasonLines["reasonLines"];
+  /** Minor, birthday, or coming as something other than a diver. */
+  chips: ReactNode;
+  /** The remedies not already beside a reason: waiver, course forms, payment, course work. */
+  fixes: ReactNode;
+  identityCheck: ReactNode;
+  identityContact: ReactNode;
+}) {
+  const { booking, person, t, arrival, showsPersonDetail, identityUnconfirmed } = seat;
+  const { rows, actions, trip } = context;
+  const { locale, shopTimezone: timeZone } = trip;
+  const facts = factsOnFile(seat, context);
+
+  const menuRow = menuRowClass("quiet", { gutter: false });
+  const moves = seat.moveSeat && seat.moveSeat.targets.length > 0 ? seat.moveSeat : null;
+  const moveRefusal = moves?.refusal?.bookingId === booking.id ? moves.refusal.text : undefined;
+  const acts = arrival?.acts?.get(booking.id) ?? [];
+  const neverMind = <GuestActionDismiss>{t("words.dismiss.neverMind")}</GuestActionDismiss>;
+  return (
+    <GuestActionsProvider
+      initial={moveRefusal ? "move" : null}
+      // The Inbox's "Move to another departure" lands on this fragment.
+      openOnHash={{ [`move-booking-${booking.id}`]: "move" }}
+    >
+      <div data-opened-guest={booking.id} className="space-y-4">
+        <GuestMoreMenu bookingId={booking.id} label={t("trips.clock.more")}>
+          <Link href={`/shop/${trip.shopSlug}/divers/${person.id}`} className={menuRow}>
+            {t("trips.folio.openProfile")}
+          </Link>
+          {/* One orders door per row, and only when the shop can take money at all. */}
+          {seat.offersCreateOrder ? (
+            <Link
+              href={`/shop/${trip.shopSlug}/orders?add=1&personId=${person.id}&bookingId=${booking.id}`}
+              className={menuRow}
+            >
+              {t("trips.roster.createOrder")}
             </Link>
-          </div>
-          <div className="space-y-1 text-sm">
-            <SeatPickup booking={booking} t={t} updatePickupAction={seat.updatePickupAction} />
-            <SeatLunchNote booking={booking} t={t} updateAction={seat.updateDietaryNoteAction} />
-            {seat.setParticipantTypeAction ? (
-              <SeatComingAs
-                booking={booking}
-                t={t}
-                certRefused={seat.participantTypeCertBookingId === booking.id}
-                setParticipantTypeAction={seat.setParticipantTypeAction}
-              />
-            ) : null}
-            <SeatNotes
+          ) : null}
+          {moves ? (
+            <GuestMenuAction action="move">{t("trips.roster.moveSeat")}</GuestMenuAction>
+          ) : null}
+          {acts.map((act) => (
+            <GuestMenuAction key={act.key} action={act.key}>
+              {act.label}
+            </GuestMenuAction>
+          ))}
+          <GuestMenuAction action="cancel" tone="danger">
+            {t("trips.roster.removeBooking")}
+          </GuestMenuAction>
+        </GuestMoreMenu>
+        {moves ? (
+          <GuestActionSheet id={`move-booking-${booking.id}`} action="move">
+            <MoveSeatControl
+              sheet
+              dismiss={neverMind}
               bookingId={booking.id}
-              notes={seat.notes}
-              t={t}
-              locale={locale}
-              shopTimezone={timeZone}
-              addNoteAction={seat.addNoteAction}
-              deleteNoteAction={seat.deleteNoteAction}
+              copy={{
+                trigger: t("trips.roster.moveSeat"),
+                label: t("trips.roster.moveSeatTo"),
+                note: t("trips.roster.moveSeatNote"),
+                choose: t("trips.roster.moveSeatChoose"),
+                pending: t("trips.roster.moveSeatPending"),
+                submit: t("trips.roster.moveSeatSubmit"),
+                cancel: t("words.dismiss.neverMind"),
+              }}
+              targets={moves.targets.map((target) => ({
+                ...target,
+                availability: t(
+                  target.seatsLeft > 0
+                    ? "trips.roster.moveSeatAvailability"
+                    : "trips.roster.moveSeatFull",
+                  { count: Math.max(0, target.seatsLeft) },
+                ),
+              }))}
+              action={moves.action}
+              refusal={moveRefusal}
+              carriedChartersNote={seat.carriedChartersNote}
+              partySeats={moves.partySeats}
+              partyNote={
+                moves.partySeats
+                  ? t("trips.roster.moveSeatParty", { count: moves.partySeats })
+                  : undefined
+              }
             />
-          </div>
+          </GuestActionSheet>
+        ) : null}
+        {acts.map((act) => (
+          <GuestActionSheet key={act.key} action={act.key}>
+            {act.sheet}
+          </GuestActionSheet>
+        ))}
+        <GuestActionSheet action="cancel">
+          {seat.removeRefusedAboard ? (
+            // The boat carried this seat or may be carrying it (H-20261015-aboard-diver-removal-at):
+            // the sheet says why it will not cancel, and there is nothing to confirm.
+            <p role="status" className="text-sm font-medium text-danger">
+              {t(
+                seat.removeRefusedAboard === "uncertain"
+                  ? "trips.roster.removePresenceUncertain"
+                  : seat.removeRefusedAboard === "uncounted"
+                    ? "trips.roster.removeUncounted"
+                    : "trips.roster.removeAboard",
+                { name: person.fullName },
+              )}
+            </p>
+          ) : (
+            // A cancel inside the shop's refund window fires an automatic Stripe
+            // refund the Undo banner cannot claw back, so it asks first
+            // (docs/design/principles.md §7).
+            <form action={seat.removeBookingAction} className="space-y-3">
+              <input type="hidden" name="bookingId" value={booking.id} />
+              <p className="text-sm">
+                {t("trips.roster.confirmRemoveBooking", { name: person.fullName })}
+              </p>
+              {seat.carriedChartersNote ? (
+                <p className="text-sm text-muted">{seat.carriedChartersNote}</p>
+              ) : null}
+              <div className="flex flex-wrap gap-3">
+                <SubmitButton
+                  pendingLabel={t("words.busy.removing")}
+                  className={buttonClass({ variant: "danger", size: "sm" })}
+                >
+                  {t("trips.roster.removeBookingConfirmButton")}
+                </SubmitButton>
+                {neverMind}
+              </div>
+            </form>
+          )}
+        </GuestActionSheet>
+        {chips ? <div className="flex flex-wrap items-center gap-3">{chips}</div> : null}
+        <div className="space-y-4 empty:hidden">
+          <GuestRequirements
+            lines={reasonLines}
+            blockers={seat.blockerTexts}
+            payment={seat.paymentRemedy}
+            contact={
+              <a href={`#guest-contact-${booking.id}`} className={LINK}>
+                {t("trips.folio.reviewContact")}
+              </a>
+            }
+            t={t}
+          />
+          {arrival ? null : identityContact}
+          {identityCheck}
+          {seat.arrivalBelow}
+          {identityUnconfirmed || !actions.agencyCheckAction ? null : (
+            <AgencyCheckRow
+              personId={person.id}
+              cards={rows.agencyCheckCardsByPerson?.get(person.id) ?? []}
+            />
+          )}
+          {fixes}
         </div>
-      </AutoOpenDetails>
-    </div>
+        {/* A guest checked in and then held: the undo sits under what holds them, above the facts. */}
+        {seat.blockerTexts.length > 0 && seat.arrivalControl ? (
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-1">{seat.arrivalControl}</div>
+        ) : null}
+        {showsPersonDetail ? null : (
+          // Said, not silently blank: an empty list reads as a guest with no
+          // card and no contact, a wrong fact rather than an absent one.
+          <p className="text-sm text-muted">{t("trips.roster.identityWithheldDetails")}</p>
+        )}
+        <div data-guest-facts="" className="divide-y divide-border border-t border-border">
+          {facts.map((fact) => (
+            <GuestFact key={fact.key} label={fact.label} value={fact.value} door={fact.door} />
+          ))}
+          <SeatEmergencyContact
+            row
+            bookingId={booking.id}
+            held={!showsPersonDetail}
+            contact={
+              showsPersonDetail
+                ? { name: person.emergencyContactName, phone: person.emergencyContactPhone }
+                : {
+                    name: booking.heldEmergencyContactName ?? null,
+                    phone: booking.heldEmergencyContactPhone ?? null,
+                  }
+            }
+            holdOpen={seat.holdOpen}
+            t={t}
+            saveEmergencyContactAction={seat.saveEmergencyContactAction}
+          />
+          {seat.setParticipantTypeAction ? (
+            <SeatComingAs
+              row
+              booking={booking}
+              t={t}
+              certRefused={seat.participantTypeCertBookingId === booking.id}
+              setParticipantTypeAction={seat.setParticipantTypeAction}
+            />
+          ) : null}
+          <SeatPickup row booking={booking} t={t} updatePickupAction={seat.updatePickupAction} />
+          <SeatLunchNote row booking={booking} t={t} updateAction={seat.updateDietaryNoteAction} />
+          <SeatNotes
+            row
+            bookingId={booking.id}
+            notes={seat.notes}
+            t={t}
+            locale={locale}
+            shopTimezone={timeZone}
+            addNoteAction={seat.addNoteAction}
+            deleteNoteAction={seat.deleteNoteAction}
+          />
+        </div>
+        {/* A flagged medical answer, and a held seat's matched record, stay one tap further in. */}
+        {seat.flaggedPrompts.length > 0 || (arrival && identityContact) ? (
+          <details className="group/private">
+            <summary className="flex min-h-11 cursor-pointer items-center gap-2 text-sm font-semibold">
+              {t("trips.fixList.private")}
+              <DisclosureCaret direction="down" className="size-4 group-open/private:rotate-180" />
+            </summary>
+            {seat.referenceFacts}
+          </details>
+        ) : null}
+      </div>
+    </GuestActionsProvider>
   );
-  return arrival ? <TurnAwayRowStateProvider>{content}</TurnAwayRowStateProvider> : content;
 }

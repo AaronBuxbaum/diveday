@@ -47,8 +47,8 @@ export type ExecutedDiveLabels = {
   observedSpeciesHint: string;
   /** The empty option: a dive where nothing stood out is an ordinary dive. */
   observedSpeciesNone: string;
-  speciesAdd: string;
-  speciesRemove: string;
+  /** "Add “{name}”", the name filled in as it is typed. */
+  speciesAddTyped: string;
   speciesPlaceholder: string;
   /**
    * **Why the boat did not dive the plan** (issue #1184, delight report D24).
@@ -319,7 +319,8 @@ function ExecutedDiveForm({
   // orders the list and never bounds it (dive-domain review, 2026-09-04).
   // Changing the site reorders it and drops nothing, because a sighting is a
   // claim about a moment rather than about a row in the site library.
-  const guideSlugs = new Set((speciesBySite[actualSiteId] ?? []).map((entry) => entry.slug));
+  const guideSpecies = speciesBySite[actualSiteId] ?? [];
+  const guideSlugs = new Set(guideSpecies.map((entry) => entry.slug));
   const speciesOptions = [
     ...catalogSpecies.filter((entry) => guideSlugs.has(entry.slug)),
     ...catalogSpecies.filter((entry) => !guideSlugs.has(entry.slug)),
@@ -467,8 +468,8 @@ function ExecutedDiveForm({
         </Field>
         {sightingsOn ? (
           <SpeciesPicker
-            diveNumber={diveNumber}
             options={speciesOptions}
+            guide={guideSpecies}
             row={row?.executed}
             labels={labels}
           />

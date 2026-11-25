@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import { ITEM_TITLE_CLASS } from "@/components/ui/typography";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { BLOCKER_CATEGORY } from "@/lib/readiness";
 import type { RowReasonLines } from "./roster-row-reasons";
@@ -83,13 +82,19 @@ export function GuestRequirements({
           >
             <div className="divide-y divide-border">
               {rows.map(([family, row]) => (
-                <section key={family} className="py-3 first:pt-0">
+                <section key={family} aria-label={titles[family]} className="py-3 first:pt-0">
                   <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-5 gap-y-3">
                     <div className="min-w-0">
-                      <h3 className={ITEM_TITLE_CLASS}>{titles[family]}</h3>
-                      <div className="mt-1 space-y-1 text-sm text-muted">
-                        {row.text.map((text) => (
-                          <p key={text}>{text}</p>
+                      {/* The sentence is the title: the family's name ("Certification")
+                          only repeated it, under a status line that had said it already. */}
+                      <div className="space-y-1 text-sm text-muted">
+                        {row.text.map((text, index) => (
+                          <p
+                            key={text}
+                            className={index === 0 ? "font-semibold text-foreground" : ""}
+                          >
+                            {text}
+                          </p>
                         ))}
                       </div>
                     </div>

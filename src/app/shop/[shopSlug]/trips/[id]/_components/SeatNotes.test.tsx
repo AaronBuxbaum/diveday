@@ -34,15 +34,16 @@ function renderNotes(notes: RosterPrivateNote[]) {
 }
 
 describe("the roster's row geometry", () => {
-  it("keeps the notes in their own band of the seat's panel, ruled off from the facts", () => {
+  it("draws the notes as the last row of the opened guest's facts, changed like every other", () => {
     const { container } = renderRoster(fixtures);
 
-    const row = container.querySelector(`#booking-${blocked.booking.id}`);
-    const notes = within(row as HTMLElement)
-      .getByText("Add a private note")
-      .closest("details");
-    expect(notes?.lastElementChild).toHaveClass("mt-2");
-    expect(notes?.parentElement).toHaveClass("border-t", "border-border");
+    const row = container.querySelector(`#booking-${blocked.booking.id}`) as HTMLElement;
+    const facts = row.querySelector("[data-guest-facts]") as HTMLElement;
+    const notes = within(facts).getByText("Private notes").closest("details") as HTMLElement;
+    expect(facts.lastElementChild).toBe(notes);
+    expect(within(notes).getByText("None")).toBeVisible();
+    // Nothing on file, so the row's one word is "Add"; it opens the form under it.
+    expect(notes.querySelector("summary")).toHaveTextContent(/Add$/);
   });
 });
 

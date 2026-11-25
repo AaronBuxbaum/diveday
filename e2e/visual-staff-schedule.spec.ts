@@ -13,9 +13,11 @@ import {
   createTrip,
   daysFromNow,
   e2eNow,
+  guestFact,
   manifestRow,
   openCounterFor,
   openDeckDetails,
+  openIfClosed,
   openMoreSettings,
   openRosterDetails,
   openSeriesPage,
@@ -617,11 +619,11 @@ for (const scheme of ["light", "dark"] as const) {
 
         await page.goto(`/shop/blue-mantis/trips/${mixedBoat.tripId}`);
         const rider = await rosterRow(page, mixedBoat.rider);
-        await expect(rider.getByText("Rider", { exact: true })).toBeVisible();
+        await expect(rider.getByText("Rider", { exact: true }).first()).toBeVisible();
         await capture(page, "trip-roster-participant-types", scheme);
 
         await openRosterDetails(rider);
-        await page.getByText("Coming as: Rider", { exact: true }).click();
+        await openIfClosed(guestFact(rider, "Coming as"));
         await page.locator('select[name="participantType"]:visible').waitFor();
         await capture(page, "trip-coming-as-editor", scheme);
 

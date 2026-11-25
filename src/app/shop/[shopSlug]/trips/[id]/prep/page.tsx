@@ -84,7 +84,7 @@ export default async function TripPrepPage({
     if (!bookingId) notFound();
     return <RentalTicketSheet shopSlug={shopSlug} tripId={tripId} bookingId={bookingId} />;
   }
-  const { db, shop } = await requireShopSurface(shopSlug);
+  const { session, db, shop } = await requireShopSurface(shopSlug);
   // Staff read dates in the language their own device asks for, same
   // negotiation as the public pages (docs ADR 20260729-diver-copy-localization).
   const locale = await requestLocale(shop.defaultLocale);
@@ -92,7 +92,7 @@ export default async function TripPrepPage({
   // The reader this tab shares with the packet's packing-list sheet: the
   // packing list, the crew's word for the header chip, whether the boat has
   // left the dock, and (once home) every unit still out on this boat.
-  const view = await getTripPrepPage(db, shop, tripId, nowDate());
+  const view = await getTripPrepPage(db, shop, tripId, nowDate(), session.user.personId);
   if (!view) notFound();
   const { prep, sailed, finished, backFromBoat, stageReading, meetingWindows, boat } = view;
   const { trip } = prep;
@@ -156,6 +156,7 @@ export default async function TripPrepPage({
           tripId={tripId}
           rollCall="more"
           addGuest={false}
+          reportIncident={view.mayReportIncident}
           locale={locale}
           timeZone={shop.timezone}
           t={t}

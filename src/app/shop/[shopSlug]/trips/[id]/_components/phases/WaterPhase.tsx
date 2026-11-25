@@ -50,7 +50,7 @@ export async function WaterPhase({
     readManifestView({ ...context, shopSlug: shop.slug, tripId, locale, t }),
     listTripIncidentReports(context.db, shop.id, tripId, context.session.user.personId),
   ]);
-  // The same single row Wrapped up says (Incidents, None, Report one).
+  // The same single row Wrapped up says, when a report exists.
   const reports = (
     <IncidentsLine incidents={incidents} shopSlug={shop.slug} tripId={tripId} t={t} />
   );

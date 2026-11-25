@@ -1,32 +1,34 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, screen } from "@testing-library/react";
+import { cleanup, fireEvent, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { rendersFlush } from "@/test/button-flush";
-import { fixtures, ready, renderRoster } from "./roster-test-fixtures";
+import {
+  chooseGuestAction,
+  fixtures,
+  openGuestMenu,
+  ready,
+  renderRoster,
+} from "./roster-test-fixtures";
 
 afterEach(cleanup);
 
 /**
- * The seat's foot row put its controls on the panel's text column with a hand
- * `-mx-3`, which left whichever came first 4px from the card's
- * `overflow-hidden` on a phone, so both drew an inset ring
- * (`trip-guests-identity-open` at 390). Now the first control is `flush`: a
- * link's box is its label, a ghost's box reaches 8px past it, and either way
- * the app's own ring fits inside the clip (K-06). jsdom has no layout, so
- * this asks which control is flush; `button.test.ts` refuses the row bleed.
+ * **The opened guest's rare acts are one menu** (owner, 2026-11-25): the
+ * profile, Create order, the move, and last Cancel booking in danger ink. No
+ * row of it posts anything; a row that asks a question opens its sheet.
  */
-describe("the seat's foot row sits on the text column through flush", () => {
-  it("flushes Create order, the first control, and leaves Cancel booking its padding", () => {
+describe("the opened guest's More menu", () => {
+  const names = () =>
+    [...openGuestMenu().querySelectorAll("a, button")].map((row) => row.textContent);
+
+  it("lists the profile, Create order and Cancel booking, in that order", () => {
     renderRoster({ ...fixtures, roster: [ready], paymentsConnected: true });
 
-    const remove = screen.getByRole("button", { name: "Cancel booking" });
-    const order = screen.getByRole("link", { name: "Create order" });
-    expect(rendersFlush(order, "link", "sm")).toBe(true);
-    expect(rendersFlush(remove, "danger-ghost", "sm")).toBe(false);
-    for (const control of [order, remove]) {
-      expect(control).not.toHaveClass("focus-visible:focus-ring-inset");
-    }
+    expect(names()).toEqual(["Open guest profile", "Create order", "Cancel booking"]);
+    expect(within(openGuestMenu()).getByRole("button", { name: "Cancel booking" })).toHaveClass(
+      "text-danger",
+    );
+    expect(openGuestMenu().querySelector("form")).toBeNull();
   });
 
   it("withholds Create order from a reader who may not raise an invoice (issue #1925)", () => {
@@ -34,18 +36,19 @@ describe("the seat's foot row sits on the text column through flush", () => {
     // `orders?add=1` would bounce this reader to the Orders index.
     renderRoster({ ...fixtures, roster: [ready], paymentsConnected: true, canManageOrders: false });
 
-    expect(screen.queryByRole("link", { name: "Create order" })).toBeNull();
-    const remove = screen.getByRole("button", { name: "Cancel booking" });
-    expect(rendersFlush(remove, "danger-ghost", "sm")).toBe(true);
+    expect(names()).toEqual(["Open guest profile", "Cancel booking"]);
   });
 
-  it("flushes Cancel booking when it is the only control on the row", () => {
+  it("asks before cancelling, and Never mind puts the question away", () => {
     renderRoster({ ...fixtures, roster: [ready], paymentsConnected: false });
 
-    const remove = screen.getByRole("button", { name: "Cancel booking" });
-    expect(screen.queryByRole("link", { name: "Create order" })).toBeNull();
-    expect(rendersFlush(remove, "danger-ghost", "sm")).toBe(true);
-    expect(remove).not.toHaveClass("focus-visible:focus-ring-inset");
+    const sheet = document.querySelector('[data-guest-sheet="cancel"]') as HTMLElement;
+    expect(sheet).not.toBeVisible();
+    chooseGuestAction("Cancel booking");
+    expect(sheet).toBeVisible();
+    expect(within(sheet).getByRole("button", { name: "Yes, cancel booking" })).toBeVisible();
+    fireEvent.click(within(sheet).getByRole("button", { name: "Never mind" }));
+    expect(sheet).not.toBeVisible();
   });
 });
 
@@ -76,7 +79,7 @@ describe("the move to another departure", () => {
   it("offers the departures on a booked seat", () => {
     renderRoster({ ...fixtures, roster: [ready], moveSeat });
 
-    expect(screen.getByText("Move to another trip")).toBeInTheDocument();
+    chooseGuestAction("Move to another trip");
     const select = screen.getByLabelText("Departure");
     expect(select).toHaveAttribute("name", "toTripId");
     expect(screen.getByRole("option", { name: /8:00 AM EDT/ })).toHaveValue("t-2");
@@ -86,7 +89,9 @@ describe("the move to another departure", () => {
   it("is absent when the page found nowhere to go", () => {
     renderRoster({ ...fixtures, roster: [ready] });
 
-    expect(screen.queryByText("Move to another trip")).toBeNull();
+    expect(
+      within(openGuestMenu()).queryByRole("button", { name: "Move to another trip" }),
+    ).toBeNull();
   });
 
   /**
@@ -104,17 +109,25 @@ describe("the move to another departure", () => {
       },
     };
     renderRoster({ ...fixtures, roster: [turnedAway], moveSeat });
-    expect(screen.getByText("Move to another trip")).toBeInTheDocument();
+    expect(
+      within(openGuestMenu()).queryByRole("button", { name: "Move to another trip" }),
+    ).not.toBeNull();
     cleanup();
     renderRoster({ ...fixtures, roster: [turnedAway], moveSeat: { ...moveSeat, started: true } });
-    expect(screen.queryByText("Move to another trip")).toBeNull();
+    expect(
+      within(openGuestMenu()).queryByRole("button", { name: "Move to another trip" }),
+    ).toBeNull();
     cleanup();
     const departed = { ...moveSeat, started: true, departed: true };
     renderRoster({ ...fixtures, roster: [turnedAway], moveSeat: departed });
-    expect(screen.queryByText("Move to another trip")).toBeNull();
+    expect(
+      within(openGuestMenu()).queryByRole("button", { name: "Move to another trip" }),
+    ).toBeNull();
     cleanup();
     renderRoster({ ...fixtures, roster: [ready], moveSeat: departed });
-    expect(screen.queryByText("Move to another trip")).toBeNull();
+    expect(
+      within(openGuestMenu()).queryByRole("button", { name: "Move to another trip" }),
+    ).toBeNull();
   });
 
   it("is absent on a checked-in seat", () => {
@@ -122,7 +135,9 @@ describe("the move to another departure", () => {
     const checkedIn = { ...ready, checkedIn: true };
     renderRoster({ ...fixtures, roster: [checkedIn], moveSeat });
 
-    expect(screen.queryByText("Move to another trip")).toBeNull();
+    expect(
+      within(openGuestMenu()).queryByRole("button", { name: "Move to another trip" }),
+    ).toBeNull();
   });
 });
 
@@ -139,16 +154,16 @@ describe("Remove on a diver marked aboard at sea", () => {
       aboardAtSea: new Map([[ready.booking.id, "on_the_water"]]),
     });
 
-    const remove = screen.getByText("Cancel booking");
-    fireEvent.click(remove);
+    chooseGuestAction("Cancel booking");
+    const sheet = document.querySelector('[data-guest-sheet="cancel"]') as HTMLElement;
     expect(
       screen.getByText(
         "Rene Marsh sailed on this departure, so the booking stays. To give money back, refund their order.",
       ),
     ).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Yes, cancel booking" })).toBeNull();
-    // Not a form's control: nothing behind this Remove can post the removal.
-    expect(remove.closest("form")).toBeNull();
+    // Nothing behind this Cancel booking can post the removal.
+    expect(sheet.querySelector("form, button")).toBeNull();
   });
 
   it("tells a seat nobody counted at the dock how to let it go, never that it sailed", () => {
@@ -158,15 +173,15 @@ describe("Remove on a diver marked aboard at sea", () => {
       aboardAtSea: new Map([[ready.booking.id, "uncounted"]]),
     });
 
-    const remove = screen.getByText("Cancel booking");
-    fireEvent.click(remove);
+    chooseGuestAction("Cancel booking");
+    const sheet = document.querySelector('[data-guest-sheet="cancel"]') as HTMLElement;
     expect(
       screen.getByText(
         "Nobody counted Rene Marsh at the dock, so the boat may have carried them. If they didn’t come, mark them Not boarded on the manifest, then remove the booking.",
       ),
     ).toBeInTheDocument();
     expect(screen.queryByText(/sailed/)).toBeNull();
-    expect(remove.closest("form")).toBeNull();
+    expect(sheet.querySelector("form, button")).toBeNull();
   });
 
   it("leaves another diver's Remove as it was", () => {
@@ -176,7 +191,7 @@ describe("Remove on a diver marked aboard at sea", () => {
       aboardAtSea: new Map([["someone-else", "on_the_water"]]),
     });
 
-    fireEvent.click(screen.getByRole("button", { name: "Cancel booking" }));
+    chooseGuestAction("Cancel booking");
     expect(screen.getByRole("button", { name: "Yes, cancel booking" })).toBeInTheDocument();
   });
 });
@@ -210,17 +225,17 @@ describe("a course seat that carries a charter seat", () => {
   it("names the charter in the move, and in the armed Remove", () => {
     renderRoster({ ...fixtures, roster: [ready], moveSeat, dependentCharters });
 
-    const notes = screen.getAllByText(/is booked on Deep wall · .* because this course gets them/);
-    expect(notes).toHaveLength(1);
-    fireEvent.click(screen.getByRole("button", { name: "Cancel booking" }));
-    expect(
-      screen.getAllByText(/is booked on Deep wall · .* because this course gets them/),
-    ).toHaveLength(2);
+    const note = /is booked on Deep wall · .* because this course gets them/;
+    for (const action of ["Move to another trip", "Cancel booking"]) {
+      chooseGuestAction(action);
+      const sheet = document.querySelector("[data-guest-sheet]:not([hidden])") as HTMLElement;
+      expect(within(sheet).getByText(note)).toBeVisible();
+    }
   });
 
   it("says nothing on a seat that carries none", () => {
     renderRoster({ ...fixtures, roster: [ready], moveSeat });
-    fireEvent.click(screen.getByRole("button", { name: "Cancel booking" }));
+    chooseGuestAction("Cancel booking");
     expect(screen.queryByText(/because this course gets them/)).toBeNull();
   });
 });

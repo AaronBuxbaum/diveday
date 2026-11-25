@@ -44,7 +44,7 @@ import { loggableDives, waterStandingOf } from "./water-reading";
  *
  * A cancelled trip that never sailed has no dives: its close-out (people put
  * aboard at the dock come ashore through the dock count), what was collected,
- * one quiet "Report one", the guests and More.
+ * its incident reports, the guests and More.
  */
 export async function WrappedPhase({
   guests,

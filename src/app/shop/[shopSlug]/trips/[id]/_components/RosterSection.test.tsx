@@ -312,7 +312,7 @@ describe("the roster's row geometry", () => {
     fireEvent.click(screen.getByRole("button", { name: blocked.person.fullName }));
     expect(screen.getAllByText(blocked.person.fullName)).toHaveLength(1);
     const remedy = screen.getByRole("link", { name: /Review certifications/ });
-    const facts = screen.getByText("If needed");
+    const facts = screen.getByText("Emergency contact");
     expect(remedy).toBeVisible();
     expect(facts).toBeVisible();
     // Fixes first, then facts.
@@ -427,8 +427,8 @@ describe("the one-line row", () => {
     const guardian = screen.getByText(/Signed by a minor alone/);
     expect(guardian).toBeVisible();
     expect(guardian.closest("details")).toBeNull();
-    expect(screen.getByRole("heading", { name: "Waiver" })).toBeVisible();
-    expect(screen.getByRole("heading", { name: "Certification" })).toBeVisible();
+    expect(screen.getByRole("region", { name: "Waiver" })).toBeVisible();
+    expect(screen.getByRole("region", { name: "Certification" })).toBeVisible();
   });
 
   it("names the unsent waiver and the unpaid seat when no blocker does", () => {
@@ -588,7 +588,8 @@ describe("the guest folio workflow", () => {
       "href",
       `/shop/blue-mantis/divers/${blocked.person.id}#cards`,
     );
-    expect(within(folio).getByRole("link", { name: "Set sizes" })).toHaveAttribute(
+    const gear = within(folio).getByText("Gear").closest("[data-guest-fact]") as HTMLElement;
+    expect(within(gear).getByRole("link", { name: "Edit" })).toHaveAttribute(
       "href",
       `/shop/blue-mantis/divers/${blocked.person.id}#gear`,
     );

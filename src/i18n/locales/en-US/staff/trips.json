@@ -1161,6 +1161,7 @@
     "more": "More",
     "printPacket": "Print trip packet",
     "activity": "Activity",
+    "reportIncident": "Report an incident",
     "sentence": {
       "guestCount": "{count, plural, one {# guest} other {# guests}}",
       "seatsToFill": "{count, plural, one {# seat} other {# seats}} to fill.",
@@ -1318,7 +1319,6 @@
       "notLogged": "Not logged",
       "incidents": "Incidents",
       "none": "None",
-      "reportOne": "Report one",
       "reportDraft": "Draft · {name}",
       "reportFiled": "Filed · {name}",
       "noShows": "No-shows",
@@ -1355,6 +1355,13 @@
       "callOffMore": "Call it off…"
     },
     "cancelledOn": "{cause, select, weather {Called off for weather} run_ended {Canceled when its run stopped} other {Canceled}} on {date}."
+  },
+  "fact": {
+    "edit": "Edit",
+    "add": "Add",
+    "none": "None",
+    "notes": "Private notes",
+    "noteCount": "{count, plural, one {# note} other {# notes}}"
   },
   "fixList": {
     "groups": {
@@ -1460,14 +1467,12 @@
       "gear": "Gear",
       "lastDive": "Last dive",
       "asked": "Asked",
-      "ifNeeded": "If needed",
       "cardChecked": "{level} · checked",
       "cardUnchecked": "{level} · not checked",
       "noCard": "None on file",
       "age": "Age",
       "email": "Email",
-      "noEmail": "None on file",
-      "setFit": "Set sizes"
+      "noEmail": "None on file"
     }
   }
 }

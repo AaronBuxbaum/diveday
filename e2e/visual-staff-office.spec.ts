@@ -7,7 +7,14 @@
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { monthLabel } from "../src/lib/calendar";
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { e2eNow, openBookingActions, openRosterDetails, rosterRow, seededTripId } from "./helpers";
+import {
+  e2eNow,
+  guestAction,
+  openBookingActions,
+  openRosterDetails,
+  rosterRow,
+  seededTripId,
+} from "./helpers";
 import { PAYMENT_HISTORY_CSV } from "./payment-history-fixture";
 import { seedFacts } from "./shop-facts";
 import {
@@ -557,7 +564,7 @@ for (const scheme of ["light", "dark"] as const) {
         const row = await rosterRow(page, "Priya Sharma");
         await openRosterDetails(row);
         await openBookingActions(row);
-        await row.locator("summary", { hasText: "Move to another trip" }).click();
+        await guestAction(row, "Move to another trip");
         await row.getByLabel("Departure").waitFor();
         await row.getByRole("button", { name: "Move", exact: true }).scrollIntoViewIfNeeded();
         await expect(row.getByLabel("Departure")).toHaveValue("");

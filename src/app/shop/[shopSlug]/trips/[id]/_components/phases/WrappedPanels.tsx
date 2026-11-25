@@ -13,7 +13,6 @@ import { formatMoneyCents, formatTime, formatTimeRange, formatWeekdayTime } from
 import { cachedListFormat } from "@/lib/intl-cache";
 import { shopPath } from "@/lib/staff-notices";
 import { recordDiveNotMadeAction, undoDiveNotMadeAction } from "../../dive-not-made-actions";
-import { startIncidentReportAction } from "../../incidents/actions";
 import { diveLogHash } from "../TripDiveRecord";
 import type { WaterStanding } from "../water-standing";
 import type { CloseOutItem } from "../wrapped-close-out";
@@ -160,16 +159,13 @@ export function CloseOutCard({
 type IncidentLines = {
   /** The reports this viewer may read (`listTripIncidentReports`). */
   reports: readonly { id: string; status: string; createdByName: string }[];
-  /** Whether this viewer may start one: the crew aboard, owners and managers. */
-  mayStart: boolean;
 };
 
-/** The incident reports said once: each one's door, or None, and one quiet "Report one". */
+/** Each incident report's door. */
 function incidentValue(
   { reports }: IncidentLines,
   { shopSlug, tripId, t }: { shopSlug: string; tripId: string; t: StaffTranslator },
 ): ReactNode {
-  if (reports.length === 0) return t("trips.clock.wrapped.none");
   return (
     <span className="flex flex-col items-start gap-1">
       {reports.map((report) => (
@@ -192,30 +188,10 @@ function incidentValue(
   );
 }
 
-/** "Report one": the only door on the departure that starts an incident report. */
-function ReportOne({
-  shopSlug,
-  tripId,
-  t,
-}: {
-  shopSlug: string;
-  tripId: string;
-  t: StaffTranslator;
-}) {
-  return (
-    <form action={startIncidentReportAction.bind(null, shopSlug, tripId)}>
-      <SubmitButton pendingLabel={t("words.busy.opening")} className={LINK}>
-        {t("trips.clock.wrapped.reportOne")}
-      </SubmitButton>
-    </form>
-  );
-}
-
 /**
- * **The incidents row, said once** ("Incidents · None · Report one"): On the
- * water, and Wrapped up when the trip never sailed and has no dives to tell,
- * since one can still happen at the dock. Nothing for a viewer who may neither
- * read a report nor start one.
+ * **The incident reports this viewer may read, one row** ("Incidents · Draft ·
+ * Ana"), drawn only when there is one. A report is started from the header's
+ * More ("Report an incident"), in every phase.
  */
 export function IncidentsLine({
   incidents,
@@ -228,18 +204,15 @@ export function IncidentsLine({
   tripId: string;
   t: StaffTranslator;
 }) {
-  if (!incidents.mayStart && incidents.reports.length === 0) return null;
+  if (incidents.reports.length === 0) return null;
   return (
     <div
       id="incidents"
-      className="grid scroll-mt-24 grid-cols-[5.5rem_minmax(0,1fr)_auto] gap-x-4 sm:grid-cols-[9rem_minmax(0,1fr)_auto]"
+      className="grid scroll-mt-24 grid-cols-[5.5rem_minmax(0,1fr)] gap-x-4 sm:grid-cols-[9rem_minmax(0,1fr)]"
     >
       <span className="text-muted">{t("trips.clock.wrapped.incidents")}</span>
       <span className="min-w-0 font-semibold [overflow-wrap:anywhere]">
         {incidentValue(incidents, { shopSlug, tripId, t })}
-      </span>
-      <span>
-        {incidents.mayStart ? <ReportOne shopSlug={shopSlug} tripId={tripId} t={t} /> : null}
       </span>
     </div>
   );
@@ -354,13 +327,12 @@ export function WhatHappenedCard({
       },
     });
   }
-  if (incidents.mayStart || incidents.reports.length > 0) {
+  if (incidents.reports.length > 0) {
     rows.push({
       key: "incidents",
       id: "incidents",
       label: t("trips.clock.wrapped.incidents"),
       value: incidentValue(incidents, { shopSlug, tripId, t }),
-      action: incidents.mayStart ? <ReportOne shopSlug={shopSlug} tripId={tripId} t={t} /> : null,
     });
   }
   rows.push({

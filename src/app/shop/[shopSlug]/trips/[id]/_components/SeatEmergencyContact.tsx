@@ -4,6 +4,7 @@ import { CompactDisclosureRow } from "@/components/ui/disclosure";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { GroupLabel } from "@/components/ui/group-label";
 import type { StaffTranslator } from "@/i18n/staff-messages";
+import { GuestFact } from "./GuestFact";
 
 /**
  * The seat's emergency contact: on file or not, with its form under it. Staff
@@ -20,7 +21,7 @@ export function SeatEmergencyContact({
   bookingId,
   contact,
   held = false,
-  bare = false,
+  row = false,
   holdOpen,
   t,
   saveEmergencyContactAction,
@@ -28,8 +29,8 @@ export function SeatEmergencyContact({
   bookingId: string;
   contact: { name: string | null; phone: string | null };
   held?: boolean;
-  /** Its label is drawn beside it (the opened guest's facts list). */
-  bare?: boolean;
+  /** One row of the opened guest's facts list (`GuestFact`), its form under it. */
+  row?: boolean;
   holdOpen: boolean;
   t: StaffTranslator;
   saveEmergencyContactAction: (formData: FormData) => void;
@@ -41,7 +42,11 @@ export function SeatEmergencyContact({
   const contactForm = (
     <form
       action={saveEmergencyContactAction}
-      className="mt-2 flex max-w-md flex-col gap-3 rounded-lg border border-border bg-surface-sunken/50 p-3"
+      className={
+        row
+          ? "flex max-w-md flex-col gap-3"
+          : "mt-2 flex max-w-md flex-col gap-3 rounded-lg border border-border bg-surface-sunken/50 p-3"
+      }
     >
       <input type="hidden" name="bookingId" value={bookingId} />
       <FieldGrid columns={2}>
@@ -96,28 +101,56 @@ export function SeatEmergencyContact({
       {contactForm}
     </CompactDisclosureRow>
   );
+  if (row) {
+    return (
+      <GuestFact
+        id={`guest-contact-${bookingId}`}
+        label={t(
+          held
+            ? "trips.roster.heldEmergencyContactHeading"
+            : "trips.roster.emergencyContactHeading",
+        )}
+        value={
+          hasEmergencyContact ? (
+            t("trips.roster.emergencyContactOnFile", {
+              name: contact.name ?? "",
+              phone: contact.phone ?? "",
+            })
+          ) : (
+            <span className="font-medium text-warning-strong">
+              {t("trips.roster.emergencyContactMissing")}
+            </span>
+          )
+        }
+        edit={{
+          label: t(hasEmergencyContact ? "trips.fact.edit" : "trips.fact.add"),
+          form: contactForm,
+          // A refused save comes back to the form, not to its closed row.
+          open: holdOpen && !hasEmergencyContact,
+        }}
+      />
+    );
+  }
   // One fact, on file or not, with its form under it: a missing contact is
   // also a reason line under the name, so the fact says only "Not on file".
   return (
     <div>
-      {bare ? null : (
-        <GroupLabel as="p">
-          {t(
-            held
-              ? "trips.roster.heldEmergencyContactHeading"
-              : "trips.roster.emergencyContactHeading",
-          )}
-        </GroupLabel>
-      )}
+      <GroupLabel as="p">
+        {t(
+          held
+            ? "trips.roster.heldEmergencyContactHeading"
+            : "trips.roster.emergencyContactHeading",
+        )}
+      </GroupLabel>
       {hasEmergencyContact ? (
-        <p className={bare ? "text-sm" : "mt-1 text-sm text-muted"}>
+        <p className="mt-1 text-sm text-muted">
           {t("trips.roster.emergencyContactOnFile", {
             name: contact.name ?? "",
             phone: contact.phone ?? "",
           })}
         </p>
       ) : (
-        <p className={`${bare ? "" : "mt-1 "}text-sm font-medium text-warning-strong`}>
+        <p className="mt-1 text-sm font-medium text-warning-strong">
           {t("trips.roster.emergencyContactMissing")}
         </p>
       )}

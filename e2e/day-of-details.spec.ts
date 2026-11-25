@@ -1,11 +1,11 @@
 import { diverTranslator } from "../src/i18n/messages";
-import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import {
   bookASeatAndOpenThread,
   createTrip,
   daysFromNow,
   findTripOnBoard,
+  guestProfileHref,
   openRosterDetails,
   openThreadStep,
   rosterRow,
@@ -60,12 +60,7 @@ for (const width of [1280, 390]) {
       await page.goto(tripPath);
       const guest = await rosterRow(page, name);
       await openRosterDetails(guest);
-      const personPath = await guest
-        .getByRole("link", {
-          name: staffTranslator("en-US")("trips.folio.openProfile"),
-          exact: true,
-        })
-        .getAttribute("href");
+      const personPath = await guestProfileHref(guest);
       if (!personPath) throw new Error("booked diver has no staff record link");
       await page.goto(`${personPath}#gear`);
       await expect(page.getByText(note, { exact: true })).toBeVisible();

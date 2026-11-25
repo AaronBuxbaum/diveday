@@ -4,6 +4,7 @@ import {
   createTrip,
   daysFromNow,
   e2eNow,
+  guestAction,
   openBookingActions,
   openRosterDetails,
   openTripAbout,
@@ -137,7 +138,7 @@ test.describe("refunds", () => {
     // Two-tap InlineConfirm, not a native dialog: the first tap only arms it.
     await openRosterDetails(noraRow);
     await openBookingActions(noraRow);
-    await noraRow.getByRole("button", { name: "Cancel booking" }).click();
+    await guestAction(noraRow, "Cancel booking");
     await noraRow.getByRole("button", { name: "Yes, cancel booking" }).click();
     await expect(
       page.getByRole("alert").filter({ hasText: "a refund is owed but must be issued by hand" }),
@@ -171,7 +172,7 @@ test.describe("refunds", () => {
     // Two-tap InlineConfirm, not a native dialog: the first tap only arms it.
     await openRosterDetails(noraRow);
     await openBookingActions(noraRow);
-    await noraRow.getByRole("button", { name: "Cancel booking" }).click();
+    await guestAction(noraRow, "Cancel booking");
     await noraRow.getByRole("button", { name: "Yes, cancel booking" }).click();
     // The cancellation itself still succeeded (the seat is freed either way),
     // so this notice is informational (status), unlike the manual-refund case
