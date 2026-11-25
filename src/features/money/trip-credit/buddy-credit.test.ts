@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { eq, sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import type { AppDb } from "@/db/client";
 import { createPerson } from "@/db/people";
 import {
   bookingReferrals,
@@ -20,6 +21,21 @@ import { grantTripCredit, readTripCredit } from "./store";
 
 const ctx = fileScopedShopContext();
 const DAY = 86_400_000;
+
+/** Insert a real database change between the candidate read and its transaction. */
+function beforeGrantTransaction(db: AppDb, before: () => Promise<unknown>): AppDb {
+  return new Proxy(db, {
+    get(target, property, receiver) {
+      if (property === "transaction") {
+        return async (...args: Parameters<AppDb["transaction"]>) => {
+          await before();
+          return target.transaction(...args);
+        };
+      }
+      return Reflect.get(target, property, receiver);
+    },
+  });
+}
 
 /**
  * A referrer (the fixture's diver, on its own upcoming seat), a friend who
@@ -122,6 +138,32 @@ describe("buddy credit", () => {
     const { db, shop } = await referral();
     await db.update(shops).set({ currency: "USD" }).where(eq(shops.id, shop.id));
     expect(await grantBuddyCredits(db, { now: nowDate() })).toEqual({
+      granted: 0,
+      busy: 0,
+      skipped: 1,
+    });
+    expect(await referralEntries(shop.id)).toHaveLength(0);
+  });
+
+  it("rechecks a credit amount changed after the candidate read", async () => {
+    const { db, shop } = await referral();
+    const interleaved = beforeGrantTransaction(db, () =>
+      db.update(shops).set({ buddyCreditCents: 0 }).where(eq(shops.id, shop.id)),
+    );
+    expect(await grantBuddyCredits(interleaved, { now: nowDate() })).toEqual({
+      granted: 0,
+      busy: 0,
+      skipped: 1,
+    });
+    expect(await referralEntries(shop.id)).toHaveLength(0);
+  });
+
+  it("rechecks that the referrer is live after the candidate read", async () => {
+    const { db, shop, referrerId } = await referral();
+    const interleaved = beforeGrantTransaction(db, () =>
+      db.update(people).set({ deletedAt: nowDate() }).where(eq(people.id, referrerId)),
+    );
+    expect(await grantBuddyCredits(interleaved, { now: nowDate() })).toEqual({
       granted: 0,
       busy: 0,
       skipped: 1,
