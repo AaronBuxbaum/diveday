@@ -191,6 +191,36 @@ describe("buddy credit", () => {
     expect(await referralEntries(shop.id)).toHaveLength(0);
   });
 
+  it("refuses a grant that would make a large ledger balance unsafe", async () => {
+    const { db, shop, actor, referrerId } = await referral();
+    const entryId = randomUUID();
+    await db.insert(tripCreditEntries).values({
+      id: entryId,
+      shopId: shop.id,
+      personId: referrerId,
+      actorPersonId: actor.id,
+      currency: "usd",
+      kind: "grant",
+      amountCents: 1,
+      reason: "goodwill",
+    });
+    // Represent the sum of millions of valid grants without materializing them.
+    // The read-only view keeps every other ledger column and query unchanged.
+    await db.execute(
+      sql.raw(`CREATE TEMP VIEW trip_credit_entries AS
+      SELECT id, shop_id, person_id, currency, kind,
+        CASE WHEN id = '${entryId}' THEN 9007199254740991::bigint ELSE amount_cents END AS amount_cents,
+        reason, booking_id, restores_entry_id, actor_person_id, occurred_at, seq
+      FROM public.trip_credit_entries`),
+    );
+    expect(await grantBuddyCredits(db, { now: nowDate() })).toEqual({
+      granted: 0,
+      busy: 0,
+      skipped: 1,
+    });
+    expect(await referralEntries(shop.id)).toHaveLength(0);
+  });
+
   it("reports an entry ID conflict as skipped rather than granted", async () => {
     const { db, shop, seat, actor, referrerId } = await referral();
     await db.insert(tripCreditEntries).values({
