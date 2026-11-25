@@ -149,6 +149,7 @@ import { MINTED_DEMO_BRAND_COLOR } from "./identifiers";
 import { seedListedShops } from "./listed-shops";
 import { seedPackages } from "./packages";
 import { seedPreDepartureChecklist } from "./pre-departure-checklist";
+import { dressPreviewShop, undressPreviewBoats } from "./preview-day";
 import { type SeedShape, seedDemoSchedule, shapeHas } from "./schedule";
 import { DEMO_SHOP_BRAND, DEMO_SHOP_DESK } from "./shop-brand";
 import { seedStaffPortraits } from "./staff-portraits";
@@ -910,8 +911,13 @@ export async function resetDemoSchedule(
   if (!isTransactionExecutor(db)) {
     return db.transaction((tx) => resetDemoSchedule(tx, shopId, shape));
   }
+  // A preview shop's hulls wear its prospect's names and its day boats its
+  // prospect's times; the sample day is re-seeded under the sample names and
+  // dressed again after (src/db/seed/preview-day.ts).
+  await undressPreviewBoats(db, shopId);
   const cleared = await clearDemoSchedule(db, shopId);
   await reseedClearedDemoSchedule(db, shopId, cleared, shape);
+  await dressPreviewShop(db, shopId);
 }
 
 /** What {@link clearDemoSchedule} read before it deleted, for the re-seed to put back. */
@@ -1584,6 +1590,7 @@ export {
   reapExpiredDemoShops,
 } from "./demo-lifecycle";
 export { DEMO_RECAP_BOOKING_ID } from "./identifiers";
+export { dressPreviewShop, PREVIEW_SAMPLE_BOATS } from "./preview-day";
 export { seedRecentRecaps } from "./recent-recaps";
 export { SEED_SHAPES, type SeedShape, seedDemoSchedule, shapeHas } from "./schedule";
 export { syncDemoShopBrand, syncDemoShopPackingCopy, syncDemoShopWelcome } from "./shop-brand";

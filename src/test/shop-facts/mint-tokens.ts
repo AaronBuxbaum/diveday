@@ -193,6 +193,8 @@ export async function buildADemoPreview(
       locality: null,
       region: null,
       position: null,
+      departureTimes: [],
+      boatNames: [],
     },
     builtAt,
   );
