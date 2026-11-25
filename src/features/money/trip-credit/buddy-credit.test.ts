@@ -239,6 +239,26 @@ describe("buddy credit", () => {
     expect(await referralEntries(shop.id)).toHaveLength(0);
   });
 
+  it("bounds lock waits inside the credit transaction", async () => {
+    const { db, shop } = await referral();
+    await db.execute(sql.raw(`CREATE OR REPLACE FUNCTION test_buddy_credit_lock_timeout() RETURNS trigger AS $$
+      BEGIN
+        IF current_setting('lock_timeout') <> '5s' THEN
+          RAISE EXCEPTION 'buddy credit lock timeout is not bounded';
+        END IF;
+        RETURN NEW;
+      END;
+    $$ LANGUAGE plpgsql`));
+    await db.execute(sql.raw(`CREATE TRIGGER test_buddy_credit_lock_timeout BEFORE INSERT ON trip_credit_entries
+      FOR EACH ROW EXECUTE FUNCTION test_buddy_credit_lock_timeout()`));
+    expect(await grantBuddyCredits(db, { now: nowDate() })).toEqual({
+      granted: 1,
+      busy: 0,
+      skipped: 0,
+    });
+    expect(await referralEntries(shop.id)).toHaveLength(1);
+  });
+
   it("credits a friend once, not each seat they book on the same link", async () => {
     const { db, shop, booking, friend, past, referrerId } = await referral();
     const [again] = await db
