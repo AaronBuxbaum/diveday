@@ -27,6 +27,7 @@
       "rentalFit": "tallas de alquiler tomadas a las {time}"
     },
     "turnedAway": "No embarcó: {name}{reason, select, medical {, visto bueno médico} waiver {, exención} card {, tarjeta} age {, edad} identity {, identidad} payment {, pago} other {}}",
+    "turnedAwayThenBoarded": "Se le negó el embarque y luego embarcó: {name}{reason, select, medical {, visto bueno médico} waiver {, exención} card {, tarjeta} age {, edad} identity {, identidad} payment {, pago} other {}}",
     "boardedBlocked": "Embarcó con un bloqueo {dive, select, 0 {en el muelle} other {tras la inmersión {dive}}}: {name} ({blockers})"
   },
   "waivers": {

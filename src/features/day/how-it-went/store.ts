@@ -1,9 +1,12 @@
+import { and, eq, isNotNull } from "drizzle-orm";
 import { canPersonExportIncidentRecord } from "@/db/authz";
 import type { AppDb } from "@/db/client";
 import { getTripManifests, listCountedAboardBlockedByTrip } from "@/db/manifests";
 import { rentalFitByBooking } from "@/db/rental-fit";
+import { activityEvents } from "@/db/schema/index";
 import { getIncidentExport } from "@/features/safety/incident-export";
 import { nowDate } from "@/lib/clock";
+import { isTurnAwayReason, type TurnAwayReason } from "@/lib/turn-away";
 import type { TripManifest } from "@/lib/manifests";
 import { shopDayBounds } from "@/lib/zoned";
 import { type HowItWent, howItWent, seatsTurnedAway } from "./rules";
@@ -31,6 +34,36 @@ function unsettledMarks(manifests: readonly TripManifest[]): Map<string, Set<str
     byCheckpoint.set(manifest.checkpoint, keys);
   }
   return byCheckpoint;
+}
+
+/**
+ * The refusals the activity trail kept, by booking: a seat the crew later boarded is `booked`
+ * again and its row no longer says the desk turned it away.
+ */
+async function refusalsKept(
+  db: AppDb,
+  shopId: string,
+  tripId: string,
+): Promise<Map<string, TurnAwayReason | null>> {
+  const rows = await db
+    .select({ bookingId: activityEvents.bookingId, params: activityEvents.params })
+    .from(activityEvents)
+    // diveday:allow-staff-events: the owner's own account of the departure reads the desk's refusals.
+    .where(
+      and(
+        eq(activityEvents.shopId, shopId),
+        eq(activityEvents.tripId, tripId),
+        eq(activityEvents.code, "booking_turned_away"),
+        isNotNull(activityEvents.bookingId),
+      ),
+    );
+  const kept = new Map<string, TurnAwayReason | null>();
+  for (const row of rows) {
+    if (!row.bookingId) continue;
+    const reason = (row.params as { reason?: unknown } | null)?.reason;
+    kept.set(row.bookingId, typeof reason === "string" && isTurnAwayReason(reason) ? reason : null);
+  }
+  return kept;
 }
 
 export type HowItWentMeta = {
@@ -68,6 +101,7 @@ export async function getHowItWentPage(
     getTripManifests(db, shopId, tripId),
   ]);
   if (!doc) return { allowed: true, page: null };
+  const refused = await refusalsKept(db, shopId, tripId);
   const recap = howItWent({
     checkpoints: doc.meta.checkpoints,
     roster: doc.roster,
@@ -76,6 +110,7 @@ export async function getHowItWentPage(
       doc.turnedAway,
       doc.roster,
       (manifests ?? []).flatMap((manifest) => manifest.divers),
+      refused,
     ),
     executedDives: doc.executedDives,
     timeline: doc.timeline,

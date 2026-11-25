@@ -71,7 +71,7 @@ export type HowItWent = {
   counts: HowItWentCount[];
   /** Null when no dock count was taken: what was sorted before boarding is not known. */
   sorted: { name: string; fixes: HowItWentFix[] }[] | null;
-  turnedAway: { name: string; reason: TurnAwayReason | null }[];
+  turnedAway: { name: string; reason: TurnAwayReason | null; thenBoarded?: true }[];
   boardedBlocked: { name: string; dive: number; blockers: ReadinessBlocker[] }[];
   waivers: {
     ahead: number;
@@ -89,7 +89,7 @@ export type HowItWentInput = {
   checkpoints: readonly RollCallCheckpoint[];
   roster: readonly IncidentRosterEntry[];
   crew: readonly IncidentCrewEntry[];
-  turnedAway: readonly IncidentTurnedAwayEntry[];
+  turnedAway: readonly (IncidentTurnedAwayEntry & { thenBoarded?: true })[];
   executedDives: readonly Pick<IncidentExecutedDive, "diveNumber" | "actualSiteName">[];
   timeline: readonly IncidentTimelineEntry[];
   /** Seats the dock or a later count recorded aboard while readiness said blocked. */
@@ -314,7 +314,11 @@ export function howItWent(input: HowItWentInput): HowItWent {
   return {
     counts,
     sorted: sortedBeforeBoarding(input, dockTaken),
-    turnedAway: input.turnedAway.map((seat) => ({ name: seat.fullName, reason: seat.reason })),
+    turnedAway: input.turnedAway.map((seat) => ({
+      name: seat.fullName,
+      reason: seat.reason,
+      ...(seat.thenBoarded ? { thenBoarded: true as const } : {}),
+    })),
     boardedBlocked,
     waivers: waiversOf(input),
   };
@@ -323,7 +327,9 @@ export function howItWent(input: HowItWentInput): HowItWent {
 /**
  * Everyone the desk turned away, whatever the boat recorded first. The departure log lets a seat
  * the boat recorded at any count stay on its roster, so it leaves `turnedAway`; the desk's refusal
- * (and its reason) still stands on the seat's row, and this page names it from there.
+ * (and its reason) still stands on the seat's row, and this page names it from there. A seat the
+ * crew later boarded is back to `booked` and its row has forgotten the refusal, so `refused`
+ * (the refusals the activity trail kept) names it as turned away, then boarded.
  */
 export function seatsTurnedAway(
   logged: readonly IncidentTurnedAwayEntry[],
@@ -333,22 +339,35 @@ export function seatsTurnedAway(
     turnedAway?: boolean;
     turnedAwayReason?: TurnAwayReason | null;
   }[],
-): IncidentTurnedAwayEntry[] {
+  refused: ReadonlyMap<string, TurnAwayReason | null> = new Map(),
+): (IncidentTurnedAwayEntry & { thenBoarded?: true })[] {
   const named = new Set(logged.map((seat) => seat.bookingId));
-  const refused = new Map<string, TurnAwayReason | null>();
+  const now = new Map<string, TurnAwayReason | null>();
   for (const seat of seats) {
     if (seat.turnedAway && !named.has(seat.bookingId)) {
-      refused.set(seat.bookingId, seat.turnedAwayReason ?? refused.get(seat.bookingId) ?? null);
+      now.set(seat.bookingId, seat.turnedAwayReason ?? now.get(seat.bookingId) ?? null);
     }
   }
-  return [
-    ...logged,
-    ...roster
-      .filter((diver) => refused.has(diver.bookingId))
-      .map((diver) => ({
+  const out: (IncidentTurnedAwayEntry & { thenBoarded?: true })[] = [...logged];
+  for (const diver of roster) {
+    if (now.has(diver.bookingId)) {
+      out.push({
+        bookingId: diver.bookingId,
+        fullName: diver.fullName,
+        reason: now.get(diver.bookingId) ?? null,
+      });
+    } else if (
+      !named.has(diver.bookingId) &&
+      refused.has(diver.bookingId) &&
+      diver.rollCall.some((result) => result.label === "boarded")
+    ) {
+      out.push({
         bookingId: diver.bookingId,
         fullName: diver.fullName,
         reason: refused.get(diver.bookingId) ?? null,
-      })),
-  ];
+        thenBoarded: true,
+      });
+    }
+  }
+  return out;
 }

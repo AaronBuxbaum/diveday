@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { recordRollCall } from "@/db/manifests";
+import { activityEvents } from "@/db/schema/index";
 import { getTripRoster, listStaff } from "@/db/trips";
 import { upcomingTripsWithCounts } from "@/db/trips-queries.test-support";
 import { fileScopedShopContext } from "@/test/db";
@@ -66,5 +67,39 @@ describe("getHowItWentPage (in-memory PGlite)", () => {
     expect(dock?.notRecorded.length).toBeGreaterThan(0);
     // The dives after it were not counted.
     expect(after.page.recap.counts.slice(1).every((count) => !count.taken)).toBe(true);
+  });
+
+  it("names a seat the desk turned away and the crew then boarded, from the trail", async () => {
+    const { db, shop, reef, owner } = await context();
+    // The first seat readiness lets the crew board.
+    let boarded: Awaited<ReturnType<typeof getTripRoster>>[number] | null = null;
+    for (const entry of await getTripRoster(db, shop.id, reef.id)) {
+      const marked = await recordRollCall(db, {
+        shopId: shop.id,
+        tripId: reef.id,
+        bookingId: entry.booking.id,
+        recordedByPersonId: owner.id,
+        status: "boarded",
+      });
+      if (marked.ok) {
+        boarded = entry;
+        break;
+      }
+    }
+    if (!boarded) throw new Error("demo trip needs a seat the crew can board");
+    await db.insert(activityEvents).values({
+      shopId: shop.id,
+      tripId: reef.id,
+      bookingId: boarded.booking.id,
+      subjectPersonId: boarded.person.id,
+      actorPersonId: owner.id,
+      code: "booking_turned_away",
+      params: { actor: owner.fullName, diver: boarded.person.fullName, reason: "card" },
+    });
+    const page = await getHowItWentPage(db, shop.id, reef.id, owner.id);
+    if (!page.allowed || !page.page) throw new Error("expected the owner's page");
+    expect(page.page.recap.turnedAway).toEqual([
+      { name: boarded.person.fullName, reason: "card", thenBoarded: true },
+    ]);
   });
 });

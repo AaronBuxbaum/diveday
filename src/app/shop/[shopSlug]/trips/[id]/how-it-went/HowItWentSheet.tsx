@@ -220,7 +220,15 @@ function SortedLines({ recap, time, names, t }: Words & { recap: HowItWent }) {
       ))}
       {recap.turnedAway.map((row) => (
         <li key={`away-${row.name}`}>
-          {t("howItWent.sorted.turnedAway", { name: row.name, reason: row.reason ?? "other" })}
+          {t(
+            row.thenBoarded
+              ? "howItWent.sorted.turnedAwayThenBoarded"
+              : "howItWent.sorted.turnedAway",
+            {
+              name: row.name,
+              reason: row.reason ?? "other",
+            },
+          )}
         </li>
       ))}
       {recap.boardedBlocked.map((row) => (
