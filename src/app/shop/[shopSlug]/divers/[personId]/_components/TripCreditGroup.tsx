@@ -6,6 +6,7 @@ import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatDateTimeTz, formatMoneyCents } from "@/lib/format";
 import { DiverFileGroupDisclosure } from "./DiverFileGroupDisclosure";
 import { TripCreditForms, type TripCreditWords } from "./TripCreditForms";
+import { TripCreditHistory, tripCreditEntryKey } from "./TripCreditHistory";
 
 export async function TripCreditGroup({
   shopId,
@@ -89,25 +90,13 @@ export async function TripCreditGroup({
           forgiving={forgivingCopy(t)}
         />
       ) : null}
-      {credit.entries.length ? (
-        <div className="mt-5">
-          <p className="text-sm font-medium">{t("divers.tripCredit.history")}</p>
-          <ul className="mt-2 divide-y divide-border">
-            {credit.entries.map((entry) => (
-              <li key={entry.id} className="flex flex-wrap justify-between gap-3 py-2 text-sm">
-                <span>
-                  {t(`divers.tripCredit.kinds.${entry.kind}`)} ·{" "}
-                  {formatDateTimeTz(entry.occurredAt, locale, timezone)}
-                </span>
-                <span>
-                  {entry.kind === "redeem" ? "−" : "+"}
-                  {formatMoneyCents(entry.amountCents, entry.currency, locale)}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
+      <TripCreditHistory
+        entries={credit.entries}
+        locale={locale}
+        timezone={timezone}
+        title={t("divers.tripCredit.history")}
+        kindLabel={(entry) => t(tripCreditEntryKey(entry))}
+      />
     </DiverFileGroupDisclosure>
   );
 }

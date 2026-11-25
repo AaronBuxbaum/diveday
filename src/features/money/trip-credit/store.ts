@@ -11,9 +11,9 @@ import { isStaff } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import { seatCheckoutCharge } from "@/lib/deposits";
 import {
+  STAFF_TRIP_CREDIT_REASONS,
+  type StaffTripCreditReason,
   safeTripCreditBalance,
-  TRIP_CREDIT_REASONS,
-  type TripCreditReason,
   validTripCreditAmount,
 } from "@/lib/trip-credit";
 import { isUuid } from "@/lib/uuid";
@@ -53,12 +53,12 @@ function validScope(input: Scope) {
 
 export async function grantTripCredit(
   db: AppDb,
-  input: Scope & { amountCents: number; reason: TripCreditReason },
+  input: Scope & { amountCents: number; reason: StaffTripCreditReason },
 ): Promise<TripCreditResult> {
   if (
     !validScope(input) ||
     !validTripCreditAmount(input.amountCents) ||
-    !TRIP_CREDIT_REASONS.includes(input.reason)
+    !STAFF_TRIP_CREDIT_REASONS.includes(input.reason)
   )
     return refused("invalid");
   try {

@@ -2246,3 +2246,28 @@ test("each page's closing band offers the founder's 20-minute call once, and the
     await expect(call).toHaveAttribute("href", /^https:\/\/calendar\.app\.google\//);
   }
 });
+
+// The page the cold email links to asks in the email's order: reply to the
+// email, then the call, then (at the close) the demo, each tagged `hello` or
+// `hello-close`. It is kept out of search, so its tap count is the email's.
+test("the email-link page asks for a reply first and tags its doors", async ({ page }) => {
+  const t = diverTranslator("en-US");
+  await page.goto("/hello");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(t("marketing.hello.heroTitle"));
+  await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
+
+  const replies = page.getByRole("link", { name: t("marketing.hello.reply") });
+  await expect(replies).toHaveCount(2);
+  await expect(replies.first()).toHaveAttribute("href", /^mailto:aaron@dive\.day\?subject=/);
+
+  const calls = page.getByRole("link", { name: t("marketing.common.bookCall") });
+  await expect(calls.first()).toHaveAttribute("href", /utm_content=hello$/);
+  await expect(calls.last()).toHaveAttribute("href", /utm_content=hello-close$/);
+
+  // One demo door in the page itself (the nav keeps its own), at the close, posting its tag.
+  const main = page.getByRole("main");
+  await expect(main.getByRole("button", { name: t("marketing.common.tryDemo") })).toHaveCount(1);
+  await expect(main.locator('input[name="source"]')).toHaveValue("hello-close");
+
+  await expect(page.getByText(t("marketing.hello.price", offerParams))).toBeVisible();
+});

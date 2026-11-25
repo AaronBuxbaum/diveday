@@ -1,8 +1,8 @@
 # Public marketing surfaces — what they are and how to write them
 
 DiveDay's public pages are the homepage (`/`), product page (`/product`), the fourteen feature pages
-under it (`/product/<feature>`), pricing page (`/pricing`), the about page (`/about`), and the
-onboarding entry (`/onboard`); switching guides (`/switching/*`) join them as they ship. They are a truthful sales surface for the product that
+under it (`/product/<feature>`), pricing page (`/pricing`), the about page (`/about`), the
+email-link page (`/hello`), and the onboarding entry (`/onboard`); switching guides (`/switching/*`) join them as they ship. They are a truthful sales surface for the product that
 exists today.
 
 This document is the living rulebook for those pages: the positioning they argue, the claims they
@@ -243,6 +243,18 @@ the demo, `/pricing` swapped the weights under the same two labels, and `/pricin
 dropped the demo entirely — offering only the door that asks for an account at the moment a reader
 who has just read the whole price page is warmest (issue #785). Each page was written as a page and
 reviewed as a page, which is the right unit for copy and the wrong one for hierarchy.
+
+## The email-link page (2026-11-25)
+
+`/hello` is the page the cold email links to, in place of the homepage. It continues the email: the
+offer of one Saturday trip set up from the shop's passenger list, the two screens no booking tool
+draws (who is cleared to board and why not, and the head count after each dive), how that trip
+goes, and the price line from the pricing configuration. It speaks as Aaron in the first person
+and is signed, because the email is his; the rest of the site still says "we"
+(H-20261022-the-site-says-we). Its doors are reply, call, then demo, tagged `hello` and
+`hello-close`; it is the one page that offers the call at its hero as well as its close, since the
+call is its second ask. It is `noindex` and left out of the sitemap, the nav and the footer, so its page
+views in Vercel Analytics count the email's taps and nothing else.
 
 ## Claims policy (hard rules)
 

@@ -1,14 +1,15 @@
 import { eq, sql } from "drizzle-orm";
 import type { AppDb, DbExecutor } from "../../../db/client";
 import { type DemoPreview, demoPreviews, shops } from "../../../db/schema/index";
-import { createDemoShop } from "../../../db/seed";
+import { createDemoShop, dressPreviewShop } from "../../../db/seed";
 import { nowDate } from "../../../lib/clock";
 import { PREVIEW_TTL_MS, type PreviewInput } from "./rules";
 
 /**
  * Build one prospect's preview: a minted demo shop with the usual seeded
- * divers and boats, wearing the prospect's own name, colour and town, and the
- * row whose id is the link (ADR 20261116-demo-previews).
+ * divers and boats, wearing the prospect's own name, colour and town, its
+ * day boats sailing at the prospect's times on hulls with the prospect's boat
+ * names, and the row whose id is the link (ADR 20261116-demo-previews).
  *
  * The demo's logo comes off, because a stock photograph beside somebody
  * else's name reads as a mistake, and the prospect's own logo is theirs to
@@ -42,10 +43,14 @@ export async function issuePreview(
         shopSlug: slug,
         prospectName: input.name,
         prospectSite: input.site,
+        departureTimes: input.departureTimes,
+        boatNames: input.boatNames,
         createdAt: now,
         expiresAt: new Date(now.getTime() + PREVIEW_TTL_MS),
       })
       .returning();
+    // The row first: the dress is read from it, here and after every reset.
+    await dressPreviewShop(tx, shop.id, now);
     return preview;
   });
 }

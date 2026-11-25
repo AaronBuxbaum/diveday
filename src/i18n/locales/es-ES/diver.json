@@ -4859,6 +4859,12 @@
       "shoreWhy": "Recibes este aviso porque {shopName} te tiene como su contacto en tierra para los avisos del pase de lista.",
       "shoreStop": "Dejar de recibir estos avisos"
     },
+    "howItWent": {
+      "subject": "{shopName}: cómo fue la salida del {weekday} a las {time}",
+      "body": "{tripTitle}, el {weekday} a las {time}: los recuentos después de cada inmersión, lo que se resolvió antes de embarcar y las exenciones, en una sola página.",
+      "open": "Ver cómo fue",
+      "turnOff": "Desactívalos en tu configuración de correo"
+    },
     "incidentMissingDiver": {
       "subject": "{shopName}: buceador desaparecido en {tripTitle}",
       "body": "Buceador desaparecido en {tripTitle}. Reportado {when}. Llama primero al barco.",

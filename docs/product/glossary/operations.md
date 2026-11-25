@@ -1042,9 +1042,9 @@
   by each seat's rung on the **Seat ladder**,
   `src/app/shop/[shopSlug]/trips/[id]/_components/roster-model.ts`), built from the crew's
   roll-call results and the desk's no-show marks. It says who the crew counted aboard. It does
-  **not** say whether those divers were ready to board at the time: `roll_call_events` stores no
-  readiness snapshot, so a diver under "Sailed" may have boarded with a blocker the crew overrode
-  or never saw, and any readiness shown beside the record is today's, not the day's.
+  **not** say on its own whether those divers were ready to board at the time; that is the
+  readiness snapshot each `boarded` event keeps (`roll_call_events.readiness_status`, read by
+  `listCountedAboardBlockedByTrip`), never today's readiness.
 - **Didn't sail** — a finished departure's record band for the seats somebody *said* did not go:
   the crew's `not_boarded` at the `departure` roll-call checkpoint, or a released seat (`no_show`)
   nobody counted aboard at any checkpoint. Only a statement files a seat here (`seatSailed`,
@@ -2344,7 +2344,7 @@
   Nothing gates on **billing standing**; once billing is turned on, the owner adds a card on
   Settings > Billing (see **Subscription** under Money; ADR
   [20261007-subscription-billing](../../architecture/decisions/20261007-subscription-billing.md)).
-- **Demo preview** — a minted demo shop built ahead of time for one prospect, wearing that shop's own name, main colour and town over the usual seeded divers and boats, and the week-long link that opens it signed in as its owner (`/preview/<id>`, `demo_previews`). The founder builds one with `pnpm preview build <site>` and reads them with `pnpm preview list`. Each preview keeps three counts apart: **requested** (any fetch of the link's page, which a mail scanner does), **opened** (a browser ran the page and entered the shop) and **used** (real input inside the shop, the same touch that keeps a staff session alive). Only the first real use mails the founder. The first open replays the seeded day so the boats are this morning's. A preview whose week is up, or whose shop the demo reaper has taken, says it has ended; the record of who looked outlives the shop. A browser the founder marked as his own is never counted. ADR [20261116-demo-previews](../../architecture/decisions/20261116-demo-previews.md).
+- **Demo preview** — a minted demo shop built ahead of time for one prospect, wearing that shop's own name, main colour and town, its boats' names and the times its boats leave, over the usual seeded divers and bookings, and the week-long link that opens it signed in as its owner (`/preview/<id>`, `demo_previews`). The founder builds one with `pnpm preview build <site>`, or several from a file with `pnpm preview batch <file>`, and reads them with `pnpm preview list`. Each preview keeps three counts apart: **requested** (any fetch of the link's page, which a mail scanner does), **opened** (a browser ran the page and entered the shop) and **used** (real input inside the shop, the same touch that keeps a staff session alive). Only the first real use mails the founder. The first open replays the seeded day so the boats are this morning's. A preview whose week is up, or whose shop the demo reaper has taken, says it has ended; the record of who looked outlives the shop. A browser the founder marked as his own is never counted. ADR [20261116-demo-previews](../../architecture/decisions/20261116-demo-previews.md).
 - **Owner reporting / monthly report** — the owner's "how's my month" view (`/shop/[slug]/reports`):
   net revenue, bookings, **fill rate**, and **waiver completion** for the trips that departed in a
   chosen month, plus a per-trip breakdown. Trip metrics remain anchored to trip-departure month in

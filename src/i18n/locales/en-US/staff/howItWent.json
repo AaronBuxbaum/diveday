@@ -1,0 +1,44 @@
+{
+  "title": "How {weekday}’s {time} went",
+  "door": "How it went",
+  "sheetName": "How it went",
+  "counts": {
+    "heading": "Head counts",
+    "dock": "At the dock",
+    "afterDive": "After dive {dive}",
+    "afterDiveAt": "After dive {dive}, {site}",
+    "aboard": "{divers, plural, one {# diver} other {# divers}} and {crew} crew aboard",
+    "lastMark": "last mark {time}, by {name}",
+    "notTaken": "Not taken",
+    "notBack": "Not back aboard: {names}",
+    "notRecorded": "No result: {names}",
+    "unsettled": "Marks disagree, not counted: {names}",
+    "ashore": "Didn’t sail: {names}",
+    "recovered": "{name}: recorded not back at {notBack}, back aboard at {back}"
+  },
+  "sorted": {
+    "heading": "Sorted before boarding",
+    "empty": "Nothing was sorted before boarding.",
+    "unknown": "No dock count was taken, so this isn’t known.",
+    "line": "{name}: {fixes}",
+    "fix": {
+      "waiver": "waiver signed {time}",
+      "card": "card checked {time}",
+      "rentalFit": "rental sizes taken {time}"
+    },
+    "turnedAway": "Turned away: {name}{reason, select, medical {, medical sign-off} waiver {, waiver} card {, card} age {, age} identity {, identity} payment {, payment} other {}}",
+    "boardedBlocked": "Boarded while blocked {dive, select, 0 {at the dock} other {after dive {dive}}}: {name} ({blockers})"
+  },
+  "waivers": {
+    "heading": "Waivers",
+    "ahead": "{count, plural, =0 {Nobody signed ahead.} one {# diver signed ahead.} other {# divers signed ahead.}}",
+    "onTheDay": "{count, plural, one {# signed on the day:} other {# signed on the day:}}",
+    "line": "{name}, {time}",
+    "linePaper": "{name}, {time}, on paper",
+    "after": "Signed after the departure: {list}",
+    "doctorPending": "Waiting on a doctor’s sign-off: {names}",
+    "doctorDeclined": "A doctor did not clear: {names}",
+    "notSigned": "No signed waiver: {names}",
+    "held": "{count, plural, one {# seat is} other {# seats are}} held for an identity check, so {count, plural, one {its waiver isn’t} other {their waivers aren’t}} shown."
+  }
+}

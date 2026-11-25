@@ -331,7 +331,7 @@ screen, with short notes from the person who built it pointing at specific thing
   count").
 - The first person is "we", and a fact only the builders would know is the kind of note worth
   writing ("We tried a spinner here and the captain read it as the phone thinking"). The site says
-  "we" (H-20261022-the-site-says-we); the one person named is the founder, who signs `/about`.
+  "we" (H-20261022-the-site-says-we); the one person named is the founder, who signs `/about` and speaks as "I" on `/hello`, the page his cold email links to.
 - Every screen a visitor could open leads to **one door into the demo as that role**, and the
   page's one primary stays the shared pair. On a feature page that door is the hero's; under a
   screen on a page that argues something else it is the screen's own (`ScreenDoor`, link-weight,

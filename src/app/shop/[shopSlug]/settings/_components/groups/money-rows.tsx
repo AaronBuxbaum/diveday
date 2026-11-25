@@ -6,7 +6,7 @@ import { controlClass, Field, FieldGrid, PriceField } from "@/components/ui/form
 import { formatMoneyScanned } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
 import { parsePassThroughFee } from "@/lib/pass-through-fee";
-import { savePassThroughFeeAction } from "../../money-actions";
+import { saveBuddyCreditAction, savePassThroughFeeAction } from "../../money-actions";
 import { SettingsRow } from "../SettingsRows";
 import { SectionNotice, type SettingsView } from "./kit";
 
@@ -75,6 +75,54 @@ export function passThroughRow(view: SettingsView) {
           className={buttonClass({ variant: "secondary", className: "mt-3" })}
         >
           {t("settings.main.passThrough.submit")}
+        </SubmitButton>
+      </form>
+    </SettingsRow>
+  );
+}
+
+/**
+ * **Buddy credit**, a Money row: the trip credit a diver earns once a friend
+ * who booked on their Bring a buddy link has dived (issue #4260). Zero, the
+ * default, gives none. The Features page's Bring a buddy row links here.
+ */
+export function buddyCreditRow(view: SettingsView) {
+  const { shop, t, locale, banner, activeSection, notSet } = view;
+  const shopCurrency = toShopCurrency(shop.currency);
+  const cents = shop.buddyCreditCents;
+  return (
+    <SettingsRow
+      heading={t("settings.main.buddyCredit.heading")}
+      value={
+        cents > 0
+          ? t("settings.main.buddyCredit.value", {
+              price: formatMoneyScanned(cents, shopCurrency, locale),
+            })
+          : notSet
+      }
+      description={t("settings.main.buddyCredit.description")}
+      detail={t("settings.main.buddyCredit.detail")}
+      sectionId="buddyCredit"
+      activeSection={activeSection}
+    >
+      <SectionNotice banner={banner} section="buddyCredit" active={activeSection} />
+      <form action={saveBuddyCreditAction} className="mt-4">
+        <FieldGrid columns={2}>
+          <PriceField
+            name="buddyCreditAmount"
+            label={t("settings.main.buddyCredit.amountLabel")}
+            hint={t("settings.main.buddyCredit.amountHint")}
+            cents={cents > 0 ? cents : null}
+            currency={shopCurrency}
+            locale={locale}
+            copy={forgivingCopy(t)}
+          />
+        </FieldGrid>
+        <SubmitButton
+          pendingLabel={t("words.busy.saving")}
+          className={buttonClass({ variant: "secondary", className: "mt-3" })}
+        >
+          {t("settings.main.buddyCredit.submit")}
         </SubmitButton>
       </form>
     </SettingsRow>

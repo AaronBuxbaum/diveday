@@ -158,6 +158,14 @@ const FIXED_SOURCES = [
   "story-first-booking",
   "story-returning-diver",
   "story-weather-day",
+  // `/hello`, the page the cold email links to (2026-11-25). Its hero offers
+  // the reply and the call; its close adds the demo. Split by position for the
+  // reason above. A visit to the page is the email's tap: the Vercel
+  // `<Analytics />` page view of `/hello` counts it, and these tags say what
+  // the reader did next (a demo entry in the Monday digest, a call booking's
+  // `utm_content`).
+  "hello",
+  "hello-close",
 ] as const;
 
 /**

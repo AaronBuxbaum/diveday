@@ -79,6 +79,8 @@ const PROSPECT: PreviewInput = {
   locality: "Islamorada",
   region: "FL",
   position: null,
+  departureTimes: [],
+  boatNames: [],
 };
 
 async function enter(id: unknown): Promise<string> {
