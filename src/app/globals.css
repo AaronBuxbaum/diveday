@@ -103,6 +103,20 @@ html[data-device-text-size] :is(a, button, summary) {
 html[data-device-text-size] :is(dl, div).grid-cols-2 {
   grid-template-columns: minmax(0, 1fr);
 }
+/* A Trip page fact row is a label column beside its value. At several times
+   the ordinary size the label column alone is wider than a phone, so the
+   label, the value and the row's action stack. */
+html[data-device-text-size] .trip-fact-row {
+  grid-template-columns: minmax(0, 1fr);
+}
+/* The names line's action beside it leaves the names one letter of width,
+   so the action drops under them. */
+html[data-device-text-size] .trip-names-line {
+  flex-wrap: wrap;
+}
+html[data-device-text-size] .trip-names-line > :first-child {
+  flex-basis: 100%;
+}
 html[data-device-text-size] [data-guest-row] > div {
   flex-wrap: wrap;
 }

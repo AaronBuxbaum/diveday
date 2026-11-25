@@ -50,7 +50,7 @@ export const TONE_INK: Readonly<Record<Tone, string>> = {
 
 /** The fact row's columns: the label, the value, the quiet action. */
 export const FACT_GRID =
-  "grid grid-cols-[6.5rem_minmax(0,1fr)_auto] items-baseline gap-x-4 text-sm sm:grid-cols-[10rem_minmax(0,1fr)_auto]";
+  "trip-fact-row grid grid-cols-[6.5rem_minmax(0,1fr)_auto] items-baseline gap-x-4 text-sm sm:grid-cols-[10rem_minmax(0,1fr)_auto]";
 /** One fact row: the columns and the row's height. */
 export const FACT_ROW = `${FACT_GRID} min-h-11 py-2.5`;
 /** What opens under a fact row sits on the value's column. */
@@ -199,7 +199,10 @@ export function NamesLine({
     </>
   );
   return (
-    <div className={`flex min-h-11 items-center gap-3 py-3 ${CARD_INSET}`} {...data}>
+    <div
+      className={`trip-names-line flex min-h-11 items-center gap-3 py-3 ${CARD_INSET}`}
+      {...data}
+    >
       {toggle ? (
         <button
           type="button"
