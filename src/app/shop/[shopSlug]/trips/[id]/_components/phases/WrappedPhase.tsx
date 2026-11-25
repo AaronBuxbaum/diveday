@@ -1,6 +1,5 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { buttonClass } from "@/components/ui/button";
 import { activeCrewOn, diveNotMadeStanding } from "@/db/dive-not-made";
 import { listFlySafeFollowUps } from "@/db/fly-safe-correction";
 import { listTripUnitsToCheckIn } from "@/db/gear";
@@ -20,6 +19,7 @@ import { recordTripPrintPdfAction } from "../../print-actions";
 import { PrintTripBundleButton } from "../PrintTripBundleButton";
 import { diveLogRows } from "../TripDiveRecord";
 import { TripSentenceLine } from "../TripSentenceLine";
+import { QUIET_ACTION } from "../trip-ink";
 import type { TripSentence } from "../trip-sentence";
 import { closeOutItems, notMadeOfferFor, wrappedSentence } from "../wrapped-close-out";
 import { wrappedRecords } from "../wrapped-records";
@@ -86,10 +86,7 @@ export async function WrappedPhase({
   const incidentsLine = <IncidentsLine incidents={incidents} {...ids} t={t} />;
   const more = <WrappedMore record={record} roster={roster} />;
   const runAgain = (
-    <Link
-      href={shopPath(shop.slug, "schedule")}
-      className={buttonClass({ variant: "link", flush: true })}
-    >
+    <Link href={shopPath(shop.slug, "schedule")} className={QUIET_ACTION}>
       {t("trips.clock.wrapped.runAgain")}
     </Link>
   );

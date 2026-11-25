@@ -8,7 +8,7 @@ import type { ReactNode } from "react";
  */
 export function FillingPhase({ guests }: { guests: ReactNode }) {
   return (
-    <div data-phase-panel="filling" className="space-y-10">
+    <div data-phase-panel="filling" className="space-y-6 sm:space-y-10">
       {guests}
     </div>
   );

@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { AgencyCheckRow } from "@/app/shop/[shopSlug]/_components/agency-check/AgencyCheckRow";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
+import { SummaryCaret } from "@/components/ui/disclosure";
 import { menuRowClass } from "@/components/ui/menu";
 import { STAFF_RE_ENTRY_KEYS } from "@/features/trips/dive-intent";
 import { guardianCoSignedText } from "@/i18n/guardian-labels";
@@ -32,8 +32,9 @@ import { SeatEmergencyContact } from "./SeatEmergencyContact";
 import { SeatLunchNote } from "./SeatLunchNote";
 import { SeatNotes } from "./SeatNotes";
 import { SeatPickup } from "./SeatPickup";
+import { INLINE_SUMMARY, QUIET_ACTION } from "./trip-ink";
 
-const LINK = buttonClass({ variant: "link", size: "sm", flush: true });
+const LINK = QUIET_ACTION;
 
 type Seat = RosterSeat & Pick<RowOutstanding, "paymentRemedy" | "referenceFacts">;
 
@@ -391,9 +392,9 @@ export function OpenedGuest({
         {/* A flagged medical answer, and a held seat's matched record, stay one tap further in. */}
         {seat.flaggedPrompts.length > 0 || (arrival && identityContact) ? (
           <details className="group/private">
-            <summary className="flex min-h-11 cursor-pointer items-center gap-2 text-sm font-semibold">
+            <summary className={`${INLINE_SUMMARY} text-sm font-semibold`}>
+              <SummaryCaret className="group-open/private:rotate-90" />
               {t("trips.fixList.private")}
-              <DisclosureCaret direction="down" className="size-4 group-open/private:rotate-180" />
             </summary>
             {seat.referenceFacts}
           </details>

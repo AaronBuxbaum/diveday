@@ -90,11 +90,11 @@ export async function EditTrip({
               open={moreOpen || undefined}
               className={sectionCardClass({ padding: "none", className: "group/settings" })}
             >
-              <summary className={cardSummaryClass({ className: "min-h-14 px-4 py-4 sm:px-5" })}>
+              <summary className={cardSummaryClass({ className: "min-h-14 px-4 py-4 sm:px-6" })}>
                 <SummaryCaret className="group-open/settings:rotate-90" />
                 <span className="font-semibold">{t("trips.about.moreSettings")}</span>
               </summary>
-              <div className="px-4 pb-4 sm:px-5">
+              <div className="px-4 pb-4 sm:px-6">
                 <TripAboutSection
                   id="more-settings"
                   rows={more}

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { buttonClass } from "@/components/ui/button";
 import { shopPath } from "@/lib/staff-notices";
+import { QUIET_ACTION } from "../trip-ink";
 import type { PhaseRecordContext } from "./WaterPhase";
 
 /**
@@ -29,12 +29,12 @@ export function ReadyPhase({
     t,
   } = record;
   return (
-    <div data-phase-panel="ready" className="space-y-6">
+    <div data-phase-panel="ready" className="space-y-6 sm:space-y-10">
       {guests}
       <p>
         {deskOpen ? (
           <Link
-            className={buttonClass({ variant: "link", flush: true })}
+            className={QUIET_ACTION}
             href={`${shopPath(shop.slug, "trips", tripId)}?phase=checkin`}
           >
             {t("trips.clock.ready.paperPasses")}

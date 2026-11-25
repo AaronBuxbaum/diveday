@@ -1,6 +1,6 @@
 import { AutoOpenDetails } from "@/components/AutoOpenDetails";
 import { sendHoldCopy } from "@/components/send-hold-copy";
-import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
+import { SummaryCaret } from "@/components/ui/disclosure";
 import { getDb } from "@/db/client";
 import { lastDayStartsAt, listDepartureNotes } from "@/db/departure-notes";
 import { fill } from "@/i18n/fill";
@@ -43,11 +43,13 @@ export async function DepartureNoteSection({
   return (
     <AutoOpenDetails openOnHash="departure-note" className="group/note scroll-mt-6">
       <summary className={FOOT_ROW_SUMMARY}>
+        <SummaryCaret className="group-open/note:rotate-90" />
         <span>{t("desk.departureNote.heading")}</span>
-        <span className="flex items-center gap-2">
-          {notes.length > 0 ? t("desk.departureNote.sentCount", { count: notes.length }) : null}
-          <DisclosureCaret direction="down" className="size-4 group-open/note:rotate-180" />
-        </span>
+        {notes.length > 0 ? (
+          <span className="ms-auto text-muted">
+            {t("desk.departureNote.sentCount", { count: notes.length })}
+          </span>
+        ) : null}
       </summary>
       <div className={`space-y-4 ${FOOT_ROW_BODY}`}>
         {block ? null : <p className="text-sm text-muted">{t("desk.departureNote.description")}</p>}

@@ -5,7 +5,7 @@ import { RemovablePhoto } from "@/components/RemovablePhoto";
 import { SubmitButton } from "@/components/SubmitButton";
 import { TripDiveFields } from "@/components/TripDiveFields";
 import { buttonClass } from "@/components/ui/button";
-import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
+import { SummaryCaret } from "@/components/ui/disclosure";
 import {
   ChoiceRow,
   controlClass,
@@ -36,6 +36,7 @@ import { maxPlannedDives } from "@/lib/trip-dive-limits";
 import { toDateInputValue, toTimeInputValue, type WallTime } from "@/lib/zoned";
 import type { DepartureDetailsSection } from "../departure-detail-sections";
 import { BoatCapacityField } from "./BoatCapacityField";
+import { INLINE_SUMMARY } from "./trip-ink";
 import type { DiveSiteList, Trip, TripDiveList } from "./types";
 
 /**
@@ -155,9 +156,9 @@ function MeetingPointFields({ trip, t }: { trip: Trip; t: StaffTranslator }) {
         </Field>
       </FieldGrid>
       <details className="group/arrival">
-        <summary className={buttonClass({ variant: "link", size: "sm", flush: true })}>
+        <summary className={`${INLINE_SUMMARY} text-sm font-medium text-primary`}>
+          <SummaryCaret className="group-open/arrival:rotate-90" />
           {t("trips.details.arrivalGuidanceLegend")}
-          <DisclosureCaret direction="down" className="group-open/arrival:rotate-180" />
         </summary>
         <p className="text-sm text-muted">{t("trips.details.arrivalGuidanceDescription")}</p>
         <FieldGrid columns={2} className="mt-4">
