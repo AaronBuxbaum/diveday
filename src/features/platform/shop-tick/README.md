@@ -24,7 +24,7 @@ Module shape: [20260730-feature-module-contracts](../../../../docs/architecture/
 
 - The scans' reads and sends, which stay in `src/db/`: `src/features/messages/reminders.ts`, `src/features/after-the-dive/recap/store.ts`,
   `src/db/crew-notices.ts`, `src/features/boarding/roll-call-alerts/store.ts`, `src/db/missing-diver-alerts.ts`,
-  `src/features/messages/desk-pings.ts`, `src/features/bookings/seat-sold-alerts.ts`, `src/db/held-sends.ts`,
+  `src/features/messages/desk-pings.ts`, `src/features/bookings/seat-sold-alerts.ts`, `src/features/day/how-it-went/email.ts`, `src/db/held-sends.ts`,
   `src/features/gear/work-order-follow-up/store.ts`, `src/db/boarding-observations.ts`, `src/db/package-gifts.ts`, `src/db/trips-minimum.ts` and `src/db/seed/boat-at-sea.ts`.
 - The cron frame (the bearer gate, the Sentry monitor, the 503), which is `cronRoute`
   (`src/features/platform/cron-route.ts`), and the schedule, `SHOP_TICK_CRONTAB` (`src/lib/cron-schedule.ts`).

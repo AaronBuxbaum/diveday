@@ -9,5 +9,9 @@
     "heading": "After-hours messages",
     "description": "An email when divers write in outside desk hours, {opens} to {closes} {zone}. One every half hour at most. A missed one can arrive within the hour."
   },
+  "howItWent": {
+    "heading": "How each departure went",
+    "description": "An email a few hours after each boat is due back, with a link to its head counts, what was sorted before boarding, and the waivers."
+  },
   "saveFailed": "Not saved. Try again."
 }

@@ -322,6 +322,8 @@ const SENDERS: Record<string, string> = {
   "src/db/departure-notes.ts": "its departure read carries `notRehearsal()`, so no note goes",
   "src/features/bookings/move-ask-alerts.ts":
     "its ask read carries `notRehearsal()`, so a practice run's ask emails nobody",
+  "src/features/day/how-it-went/email.ts":
+    "its departure read carries `notRehearsal()`, so a practice run emails nobody",
   "src/features/bookings/seat-sold-alerts.ts":
     "its sales read carries `notRehearsal()`, so a practice run's seats email nobody",
   "src/features/day/lost-items/store.ts":
