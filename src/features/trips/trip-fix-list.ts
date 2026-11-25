@@ -63,12 +63,13 @@ const DESK_ADVISORIES: ReadonlySet<FixReason> = new Set<FixReason>([
 ]);
 
 /**
- * **What Filling says quietly** (dock-operator review, 2026-11-24): days
- * ahead, the advisories that are the crew's or the desk's routine on the day
- * (a depth to talk through, a long gap, a fit, a balance, a contact). A
- * physician's earlier word, a second held seat, an unsigned waiver, a re-entry
- * ask and a call for help keep the warning color on every phase, as every
- * readiness blocker does.
+ * **What Filling may say once for everyone** (dock-operator review,
+ * 2026-11-24): days ahead, the advisories that are the crew's or the desk's
+ * routine on the day (a depth to talk through, a long gap, a fit, a balance, a
+ * contact). When every booked guest shares one, the Booked card says it once
+ * on its heading row. A physician's earlier word, a second held seat, an
+ * unsigned waiver, a re-entry ask and a call for help are never folded. The
+ * ink is `reasonTone`'s, the same in every phase.
  */
 const QUIET_ON_FILLING: ReadonlySet<FixReason> = new Set<FixReason>([
   "depth",
@@ -79,13 +80,24 @@ const QUIET_ON_FILLING: ReadonlySet<FixReason> = new Set<FixReason>([
   "payment_unpaid",
 ]);
 
-/** A guest's line may be said quietly while the trip fills only when every reason on it may. */
+/** A guest's line may be folded into Filling's note only when every reason on it may. */
 export function quietOnFilling(reasons: readonly FixReason[]): boolean {
   return reasons.length > 0 && reasons.every((reason) => QUIET_ON_FILLING.has(reason));
 }
 
 export function isBlockerReason(reason: FixReason): reason is ReadinessBlockerCode {
   return reason in BLOCKER_CATEGORY;
+}
+
+/**
+ * **One meaning per ink, in every phase** (owner, 2026-11-25): what stops a
+ * guest boarding (a readiness blocker) is danger, an advisory is warning, and
+ * a line with no reason (what they come as, whom with) is a plain, muted fact.
+ * Only the ink: which reasons block is readiness's, never this.
+ */
+export function reasonTone(reasons: readonly FixReason[]): "danger" | "warning" | "muted" {
+  if (reasons.some(isBlockerReason)) return "danger";
+  return reasons.length > 0 ? "warning" : "muted";
 }
 
 export function remedyFor(reason: FixReason): FixRemedy {

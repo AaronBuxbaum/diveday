@@ -5,6 +5,15 @@ import { PersonAvatar } from "@/components/PersonAvatar";
 import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
 import { StatusMark } from "@/components/ui/StatusMark";
+import {
+  CARD_HEADING,
+  CARD_INSET,
+  NamesLine,
+  QUIET_ACTION,
+  REMEDY_ACTION,
+  TONE_INK,
+  type Tone,
+} from "./trip-ink";
 
 /** One guest the list can open in place. */
 export type FixListGuest = {
@@ -22,7 +31,7 @@ export type FixListRow = {
   title?: string;
   /** Every reason that stands for the guest, in one line. */
   phrase: string | null;
-  tone: "danger" | "warning" | "muted";
+  tone: Tone;
   /** The row's one button, drawn by the server: Check in, Send waiver, a link. */
   control: ReactNode | null;
   /** With no control, the remedy that opens the guest in place, worded. */
@@ -32,8 +41,6 @@ export type FixListRow = {
   /** Undo arrival alongside a separate remedy, when this guest is already here. */
   arrivalControl?: ReactNode;
   panelHoldsArrival?: boolean;
-  /** The list's first fix: the one primary button on it. */
-  primary: boolean;
 };
 
 export type FixListSection = {
@@ -57,12 +64,6 @@ export type FixListSection = {
   action?: ReactNode;
   rows: FixListRow[];
 };
-
-const PHRASE_TONE = {
-  danger: "text-danger",
-  warning: "text-warning-strong",
-  muted: "text-muted",
-} as const;
 
 /**
  * **The guest list as a fix list** (ADR 20261117-trip-page-clock): who can't
@@ -175,36 +176,32 @@ export function GuestFixList({
             className={sectionCardClass({ padding: "none", className: "overflow-hidden" })}
           >
             {section.folded ? (
-              <div className="flex items-center gap-3 px-4 py-3 sm:px-6">
-                <button
-                  type="button"
-                  data-fix-fold={section.key}
-                  aria-expanded={expanded}
-                  onClick={() => unfold(section.key)}
-                  className="flex min-h-11 min-w-0 flex-1 items-center gap-3 text-start focus-visible:focus-ring-inset"
-                >
-                  {section.folded.mark === "success" ? (
+              <NamesLine
+                label={section.label}
+                names={section.folded.names}
+                lead={
+                  section.folded.mark === "success" ? (
                     <StatusMark variant="success" size="md" className="shrink-0" />
-                  ) : null}
-                  <span className="min-w-0">
-                    <span className="font-semibold">{section.label}</span>
-                    <span className="text-muted"> · {section.folded.names}</span>
-                  </span>
-                </button>
-                {addGuest && section.key === lastFolded ? (
-                  <a
-                    href={addGuest.href}
-                    className={buttonClass({ variant: "link", size: "sm", flush: true })}
-                  >
-                    {addGuest.label}
-                  </a>
-                ) : null}
-              </div>
+                  ) : null
+                }
+                toggle={{
+                  expanded,
+                  onToggle: () => unfold(section.key),
+                  data: { "data-fix-fold": section.key },
+                }}
+                action={
+                  addGuest && section.key === lastFolded ? (
+                    <a href={addGuest.href} className={QUIET_ACTION}>
+                      {addGuest.label}
+                    </a>
+                  ) : null
+                }
+              />
             ) : section.headless ? null : (
-              <div className="flex items-baseline justify-between gap-4 px-4 pt-4 pb-1 sm:px-6">
+              <div className={`flex items-baseline justify-between gap-4 pt-4 pb-1 ${CARD_INSET}`}>
                 <div className="min-w-0">
                   <h3
-                    className={`font-semibold ${section.tone === "danger" ? "text-danger" : "text-foreground"}`}
+                    className={`${CARD_HEADING} ${section.tone === "danger" ? "text-danger" : "text-foreground"}`}
                   >
                     {section.label}
                   </h3>
@@ -221,24 +218,22 @@ export function GuestFixList({
             )}
             {section.summary && summaryRows.length > 0 ? (
               <div className="border-b border-border last:border-b-0">
-                <div className="flex items-center gap-3 px-4 py-3 sm:px-6">
-                  <StatusMark variant="success" size="md" className="shrink-0" />
-                  <p className="min-w-0 flex-1">
-                    <span className="font-semibold">{section.summary.label}</span>
-                    {section.summary.phrase ? (
-                      <span className="text-muted"> · {section.summary.phrase}</span>
-                    ) : null}
-                  </p>
-                  <button
-                    type="button"
-                    data-fix-fold={`${section.key}:summary`}
-                    aria-expanded={summaryOpen}
-                    onClick={() => unfold(`${section.key}:summary`)}
-                    className={buttonClass({ variant: "link", size: "sm", flush: true })}
-                  >
-                    {section.summary.toggle}
-                  </button>
-                </div>
+                <NamesLine
+                  label={section.summary.label}
+                  names={section.summary.phrase}
+                  lead={<StatusMark variant="success" size="md" className="shrink-0" />}
+                  action={
+                    <button
+                      type="button"
+                      data-fix-fold={`${section.key}:summary`}
+                      aria-expanded={summaryOpen}
+                      onClick={() => unfold(`${section.key}:summary`)}
+                      className={QUIET_ACTION}
+                    >
+                      {section.summary.toggle}
+                    </button>
+                  }
+                />
                 {summaryOpen ? rowList(summaryRows, "border-t border-border") : null}
               </div>
             ) : null}
@@ -254,7 +249,7 @@ export function GuestFixList({
         );
       })}
       {addGuest && !lastFolded ? (
-        <a href={addGuest.href} className={buttonClass({ variant: "link", flush: true })}>
+        <a href={addGuest.href} className={QUIET_ACTION}>
           {addGuest.label}
         </a>
       ) : null}
@@ -276,11 +271,11 @@ function FixRow({
   closeLabel: string;
 }) {
   const phrase = row.phrase ? (
-    <span className={`block text-sm ${PHRASE_TONE[row.tone]}`}>{row.phrase}</span>
+    <span className={`block text-sm ${TONE_INK[row.tone]}`}>{row.phrase}</span>
   ) : null;
   if (row.title) {
     return (
-      <li data-trip-fix={row.key} className="flex items-center gap-3 px-4 py-3 sm:px-6">
+      <li data-trip-fix={row.key} className={`flex items-center gap-3 py-3 ${CARD_INSET}`}>
         <StatusMark
           variant={row.tone === "danger" ? "danger" : "warning"}
           size="md"
@@ -305,7 +300,7 @@ function FixRow({
       className={`scroll-mt-24 ${open ? "bg-primary-tint" : ""}`}
     >
       <div
-        className={`flex items-center gap-3 px-4 py-2 sm:px-6 ${row.arrivalControl && !open ? "flex-wrap sm:flex-nowrap" : ""}`}
+        className={`flex items-center gap-3 py-2 ${CARD_INSET} ${row.arrivalControl && !open ? "flex-wrap sm:flex-nowrap" : ""}`}
       >
         <button
           type="button"
@@ -323,7 +318,7 @@ function FixRow({
               {guest.name}
             </span>
             {row.phrase ? (
-              <span id={`guest-phrase-${id}`} className={`block text-sm ${PHRASE_TONE[row.tone]}`}>
+              <span id={`guest-phrase-${id}`} className={`block text-sm ${TONE_INK[row.tone]}`}>
                 {row.phrase}
               </span>
             ) : null}
@@ -348,14 +343,7 @@ function FixRow({
           ) : (
             (row.control ??
             (row.openLabel ? (
-              <button
-                type="button"
-                onClick={() => toggle(id)}
-                className={buttonClass({
-                  variant: row.primary ? "primary" : "secondary",
-                  size: "sm",
-                })}
-              >
+              <button type="button" onClick={() => toggle(id)} className={REMEDY_ACTION}>
                 {row.openLabel}
               </button>
             ) : null))
@@ -363,7 +351,7 @@ function FixRow({
         </div>
       </div>
       {open ? (
-        <div id={`guest-panel-${id}`} className="border-t border-border px-4 pt-4 pb-5 sm:px-6">
+        <div id={`guest-panel-${id}`} className={`border-t border-border pt-4 pb-5 ${CARD_INSET}`}>
           {row.control && !row.panelHoldsControl ? <div className="mb-4">{row.control}</div> : null}
           {row.arrivalControl && !row.panelHoldsArrival ? (
             <div className="mb-4">{row.arrivalControl}</div>
