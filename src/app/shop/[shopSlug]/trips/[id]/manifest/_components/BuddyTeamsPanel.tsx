@@ -10,7 +10,6 @@ import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { TripBuddyTeam } from "@/db/buddy-teams";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { scopedId } from "@/lib/element-id";
-import { CARD_INSET } from "../../_components/trip-ink";
 import { BuddyDragGroups } from "./BuddyDragGroups";
 
 /**
@@ -227,8 +226,8 @@ export function BuddyTeamsPanel({
             asks for. A panel opened on an empty roster instead goes straight to
             the builder, which is the only thing there is to do here. */}
         {buddyTeamsList.length > 0 ? (
-          // Rows of the Trip page card the panel sits in, hairline to hairline.
-          <ul className="-mx-4 mt-3 divide-y divide-border border-y border-border sm:-mx-6">
+          // Rows on the card's text column, a hairline between teams.
+          <ul className="mt-3 divide-y divide-border border-y border-border">
             {buddyTeamsList.map((team, index) => {
               // Members of *this* team can't join another, and neither can a
               // diver already on one — so the "add" picker offers whoever is
@@ -243,7 +242,7 @@ export function BuddyTeamsPanel({
               const addableDivers = free(diverOptions);
               const addableCrew = free(crewOptions);
               return (
-                <li key={team.teamId} className="px-4 py-3">
+                <li key={team.teamId} className="py-3">
                   <p className={groupLabelClass()}>
                     {t("manifest.buddyTeamLabel", { number: index + 1 })}
                   </p>
@@ -522,13 +521,10 @@ function BuddyWarnings({
   );
   return (
     <div className="mb-3 space-y-2">
-      {/* Rows of the card it sits in, hairline to hairline: not a card in a card. */}
-      <ul
-        className="-mx-4 divide-y divide-border border-y border-border sm:-mx-6"
-        aria-label={label}
-      >
+      {/* Rows on the card's text column: not a card in a card. */}
+      <ul className="divide-y divide-border border-y border-border" aria-label={label}>
         {warnedTeams.map((team) => (
-          <li key={team.id} className={`py-3 ${CARD_INSET}`}>
+          <li key={team.id} className="py-3">
             <p className="font-semibold [overflow-wrap:anywhere]">
               {team.label}
               <span className="font-normal text-muted"> · {team.names}</span>
