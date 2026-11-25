@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 import type { AppDb } from "@/db/client";
-import { getShopById, setShopPassThroughFee } from "@/db/shops";
+import { getShopById, setShopBuddyCredit, setShopPassThroughFee } from "@/db/shops";
 import {
   disconnectShopStripeAccount,
   getShopStripeAccount,
@@ -13,6 +13,7 @@ import { defineAction, land } from "@/features/platform/server-action";
 import { majorToMinor } from "@/lib/money";
 import { parsePassThroughFee } from "@/lib/pass-through-fee";
 import { connectProviderFromEnvironment } from "@/lib/payments/connect";
+import { validBuddyCreditCents } from "@/lib/trip-credit";
 import { PAYMENT_SETTINGS_GATE, SETTINGS_AND_PAYMENT_GATES } from "./action-gates";
 
 const passThroughForm = z.object({
@@ -38,6 +39,26 @@ export const savePassThroughFeeAction = defineAction({
     if (!fee) return land(settings, "pass-through-invalid", { extra });
     await setShopPassThroughFee(db, shopId, fee);
     return land(settings, "pass-through-saved", { extra });
+  },
+});
+
+/**
+ * Saves the trip credit a diver earns once a friend who booked on their
+ * Bring a buddy link has dived (issue #4260). Blank is zero, which gives none.
+ */
+export const saveBuddyCreditAction = defineAction({
+  gate: [PAYMENT_SETTINGS_GATE],
+  input: z.object({ buddyCreditAmount: trimmedText() }),
+  async run({ db, shopId, path }, { buddyCreditAmount: amount }) {
+    const settings = path("settings");
+    const extra = { saved: "buddyCredit" };
+    const shop = await getShopById(db, shopId);
+    const major = amount ? Number(amount) : 0;
+    const cents = shop && Number.isFinite(major) ? majorToMinor(major, shop.currency) : Number.NaN;
+    if (!shop || !validBuddyCreditCents(cents))
+      return land(settings, "buddy-credit-invalid", { extra });
+    await setShopBuddyCredit(db, shopId, cents);
+    return land(settings, "buddy-credit-saved", { extra });
   },
 });
 

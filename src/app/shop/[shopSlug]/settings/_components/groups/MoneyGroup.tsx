@@ -8,7 +8,7 @@ import { SUPPORT_EMAIL } from "@/lib/platform-mail";
 import { disconnectAction, refreshAction } from "../../money-actions";
 import { SettingsDoorRow, SettingsRow } from "../SettingsRows";
 import { MONEY_GROUP, SectionNotice, SettingsGroup, type SettingsView } from "./kit";
-import { passThroughRow } from "./money-rows";
+import { buddyCreditRow, passThroughRow } from "./money-rows";
 
 function StatusRow({
   label,
@@ -36,7 +36,7 @@ function StatusRow({
   );
 }
 
-/** The Money group: tax, a pass-through fee, tips and the Stripe connection. */
+/** The Money group: tax, a pass-through fee, buddy credit, tips and the Stripe connection. */
 export function MoneyGroup({
   view,
   canPayments,
@@ -70,6 +70,7 @@ export function MoneyGroup({
         {canPayments ? (
           <>
             {passThroughRow(view)}
+            {buddyCreditRow(view)}
 
             {/* The one row that opens itself: an unconnected or half-onboarded
               Stripe account is the difference between taking bookings online

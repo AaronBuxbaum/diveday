@@ -249,6 +249,13 @@ const RAIL_ROWS = [
     gate: "payments",
   },
   {
+    id: "buddyCredit",
+    labelKey: "settings.main.buddyCredit.heading",
+    group: "money",
+    target: { kind: "section", id: "buddyCredit", fragment: "buddy-credit" },
+    gate: "payments",
+  },
+  {
     id: "stripe",
     labelKey: "settings.main.stripe.rowHeading",
     group: "money",

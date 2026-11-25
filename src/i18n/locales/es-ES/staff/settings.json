@@ -23,6 +23,8 @@
       "unitsInvalid": "Elige una unidad de profundidad, una unidad de temperatura del agua y una moneda de las listas.",
       "passThroughSaved": "Cuota repercutida guardada",
       "passThroughInvalid": "Introduce el nombre y un importe positivo, o deja ambos vacíos para desactivarla.",
+      "buddyCreditSaved": "Crédito por amigo guardado",
+      "buddyCreditInvalid": "Introduce 0 o un importe positivo.",
       "rentalsSaved": "Alquiler guardado",
       "rentalPricesInvalid": "Introduce cada precio como una cantidad en dólares (o deja el campo vacío), entre $0 y $100.000.",
       "rentalTermsInvalid": "Las condiciones de alquiler no pueden pasar de 1500 caracteres.",
@@ -160,7 +162,12 @@
       "displayFont": "Tipografía de títulos",
       "displayFontDefault": "La de DiveDay",
       "looks": "Empieza con un estilo",
-      "lookNames": { "harbor": "Puerto", "reef": "Arrecife", "deep": "Profundo", "kelp": "Algas" },
+      "lookNames": {
+        "harbor": "Puerto",
+        "reef": "Arrecife",
+        "deep": "Profundo",
+        "kelp": "Algas"
+      },
       "heroPhoto": "Foto de portada",
       "heroHint": "PNG, JPG o WebP. Apaisada, de 1600 px de ancho o más.",
       "heroAlt": "Describe la foto de portada",
@@ -316,6 +323,15 @@
       "amountHint": "Deja ambos campos vacíos para desactivarla.",
       "clearHint": "Es un cargo repercutido, no un recargo sobre el precio de la inmersión.",
       "submit": "Guardar cuota repercutida"
+    },
+    "buddyCredit": {
+      "heading": "Crédito por traer a alguien",
+      "value": "{price} por amigo",
+      "description": "Crédito para salidas que gana un buceador cuando un amigo reserva con su enlace “Trae a alguien” y bucea.",
+      "detail": "Se gana una vez por amigo, una hora después de que vuelva su barco. Pon 0 para no dar ninguno.",
+      "amountLabel": "Crédito por amigo",
+      "amountHint": "Vacío o 0 no da ninguno.",
+      "submit": "Guardar crédito por amigo"
     },
     "paymentsGate": {
       "notice": "El catálogo de alquiler, sus precios y la conexión con Stripe están limitados a propietarios y gerentes. Los ajustes de arriba están abiertos a todo el equipo."
@@ -1531,6 +1547,7 @@
     "title": "Funciones",
     "crewTarget": "Fijar el objetivo por divemaster",
     "boats": "Tus barcos",
+    "buddyCredit": "Fijar el crédito por amigo",
     "groups": {
       "diving": "Buceo",
       "bookings": "Reservas y dinero",
