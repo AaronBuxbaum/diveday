@@ -15,7 +15,7 @@ import { nowDate } from "@/lib/clock";
 import { buddyCreditEntryId } from "@/lib/trip-credit";
 import { fileScopedShopContext } from "@/test/db";
 import { tripCreditTestFixture } from "@/test/trip-credit-fixture";
-import { grantBuddyCredits } from "./buddy-credit";
+import { BUDDY_CREDIT_SWEEP_LIMIT, grantBuddyCredits } from "./buddy-credit";
 import { grantTripCredit, readTripCredit } from "./store";
 
 const ctx = fileScopedShopContext();
@@ -71,6 +71,10 @@ async function referralEntries(shopId: string) {
 }
 
 describe("buddy credit", () => {
+  it("bounds each hourly sweep to 200 referrals", () => {
+    expect(BUDDY_CREDIT_SWEEP_LIMIT).toBe(200);
+  });
+
   it("credits the referrer once, however often the referral is read", async () => {
     const { db, shop, seat, referrerId } = await referral();
     expect(await grantBuddyCredits(db, { now: nowDate() })).toMatchObject({ granted: 1 });
@@ -89,6 +93,17 @@ describe("buddy credit", () => {
       }),
     ]);
     expect((await readTripCredit(db, shop.id, referrerId, "usd")).balanceCents).toBe(2_500);
+  });
+
+  it("credits even the smallest enabled amount and reports the whole sweep", async () => {
+    const { db, shop, referrerId } = await referral();
+    await db.update(shops).set({ buddyCreditCents: 1 }).where(eq(shops.id, shop.id));
+    expect(await grantBuddyCredits(db, { now: nowDate() })).toEqual({
+      granted: 1,
+      busy: 0,
+      skipped: 0,
+    });
+    expect((await readTripCredit(db, shop.id, referrerId, "usd")).balanceCents).toBe(1);
   });
 
   it("credits a friend once, not each seat they book on the same link", async () => {
@@ -113,7 +128,11 @@ describe("buddy credit", () => {
       origin: "counter",
     });
     await bookFriend(shop.id, past.id, second.id, booking.id);
-    await grantBuddyCredits(db, { now: nowDate() });
+    expect(await grantBuddyCredits(db, { now: nowDate() })).toEqual({
+      granted: 2,
+      busy: 0,
+      skipped: 1,
+    });
     await grantBuddyCredits(db, { now: nowDate() });
     expect(await referralEntries(shop.id)).toHaveLength(2);
     expect((await readTripCredit(db, shop.id, referrerId, "usd")).balanceCents).toBe(5_000);
