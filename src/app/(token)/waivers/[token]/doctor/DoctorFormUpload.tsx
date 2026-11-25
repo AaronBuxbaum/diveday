@@ -66,7 +66,6 @@ export function DoctorFormUpload({
     <>
       <form
         action={formAction}
-        encType="multipart/form-data"
         className="mt-4 flex flex-wrap items-end gap-3"
       >
         <Field label={copy.label} error={refusal} htmlFor="doctorForm" className="min-w-56">

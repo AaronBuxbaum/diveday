@@ -108,7 +108,6 @@ export function MedicalClearanceControl({
   return (
     <form
       action={action}
-      encType="multipart/form-data"
       className={`${className} w-full max-w-md rounded-xl border border-border bg-surface-sunken p-4`}
     >
       <FieldGrid columns={1}>
