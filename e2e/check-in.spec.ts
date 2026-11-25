@@ -8,11 +8,13 @@ import {
   createTrip,
   daysFromNow,
   e2eNow,
+  guestAction,
   HELD_SEND_TIMEOUT_MS,
   openAddAGuest,
   openCounterFor,
   openedGuestName,
   openGuestFolio,
+  openGuestMenu,
   openNewGuestForm,
   openPaperWaiverForm,
   openRosterDetails,
@@ -714,7 +716,7 @@ test("the counter releases a no-show's seat, offers it to the wait list, and the
   // **The door, and one tap inside it.** Closed it is two words under the
   // check-in tap; open it says what the tap does before it does it.
   await openRosterDetails(odile);
-  await odile.getByText("Not here", { exact: true }).click();
+  await guestAction(odile, "Not here");
   await expect(
     odile.getByText("Records that they did not arrive and frees the seat.", { exact: false }),
   ).toBeVisible();
@@ -820,11 +822,11 @@ test("the desk turns a blocked diver away before the boat leaves, says why, and 
   await page.goto(counter);
   const odile = await deskRow(page, "Odile Marchand");
   await expect(odile).toHaveCount(1);
-  await expect(odile.getByText("Not here", { exact: true })).toHaveCount(0);
 
   // The door, its one reason already chosen, and one confirm.
   await openRosterDetails(odile);
-  await odile.getByRole("button", { name: "Turn away", exact: true }).click();
+  await expect((await openGuestMenu(odile)).getByText("Not here", { exact: true })).toHaveCount(0);
+  await guestAction(odile, "Turn away");
   await expect(odile.getByRole("radio", { name: "Waiver" })).toBeChecked();
   await expect(odile.getByRole("radio", { name: "Medical" })).toHaveCount(0);
 
@@ -847,10 +849,7 @@ test("the desk turns a blocked diver away before the boat leaves, says why, and 
   await expect(odile.getByRole("alert")).toHaveText(staff("checkIn.sendFailedButton"));
   expect(interruptedAction).toBe(true);
   await expect(odile.getByRole("radio", { name: "Waiver" })).toBeChecked();
-  await expect(odile.getByRole("button", { name: "Turn away", exact: true })).toHaveAttribute(
-    "aria-expanded",
-    "true",
-  );
+  await expect(odile.locator('[data-guest-sheet="turn-away"]')).toBeVisible();
   await page.unroute("**/*", failServerAction);
   await odile.getByRole("button", { name: "Turn Odile Marchand away" }).click();
 
@@ -911,7 +910,7 @@ test("a diver turned away before the boat leaves is told the seat was released, 
   await page.goto(counterPath("blue-mantis", tripId));
   const row = await deskRow(page, name);
   await openRosterDetails(row);
-  await row.getByRole("button", { name: "Turn away", exact: true }).click();
+  await guestAction(row, "Turn away");
   await row.getByRole("radio").first().check();
   await row.getByRole("button", { name: `Turn ${name} away` }).click();
   await expect(

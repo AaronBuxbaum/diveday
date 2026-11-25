@@ -3,9 +3,9 @@ import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import {
   counterPath,
+  guestAction,
   HELD_SEND_TIMEOUT_MS,
   manifestRow,
-  openBookingActions,
   openDeckDetails,
   openRosterDetails,
   openTripFromBoard,
@@ -137,14 +137,9 @@ test("Remove on a diver marked aboard a boat that has left says why and changes 
   const tripId = await seededTripId(page, "blue-mantis", SAILED);
   await page.goto(counterPath("blue-mantis", tripId));
   await page.getByRole("heading", { name: /^Sailed · \d+$/ }).waitFor();
-  const remove = new RegExp(`^\\s*${staff("trips.roster.removeBooking")}\\s*$`);
-  const row = page
-    .locator('#roster li[id^="booking-"]')
-    .filter({ has: page.locator("summary", { hasText: remove }) })
-    .first();
+  const row = page.locator('#roster li[id^="booking-"]').first();
   await openRosterDetails(row);
-  await openBookingActions(row);
-  await row.locator("summary", { hasText: remove }).click();
+  await guestAction(row, staff("trips.roster.removeBooking"));
   // The sentence after the diver's name, from the bundle.
   const why = staff("trips.roster.removeAboard", { name: "" }).trim();
   await expect(row.getByRole("status").filter({ hasText: why })).toBeVisible();

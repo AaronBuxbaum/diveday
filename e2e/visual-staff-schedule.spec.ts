@@ -13,9 +13,11 @@ import {
   createTrip,
   daysFromNow,
   e2eNow,
+  guestFact,
   manifestRow,
   openCounterFor,
   openDeckDetails,
+  openIfClosed,
   openMoreSettings,
   openRosterDetails,
   openSeriesPage,
@@ -621,7 +623,7 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "trip-roster-participant-types", scheme);
 
         await openRosterDetails(rider);
-        await page.getByText("Coming as: Rider", { exact: true }).click();
+        await openIfClosed(guestFact(rider, "Coming as"));
         await page.locator('select[name="participantType"]:visible').waitFor();
         await capture(page, "trip-coming-as-editor", scheme);
 

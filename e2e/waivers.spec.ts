@@ -3,6 +3,7 @@ import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, makeActivitySafe, signedInAs, signedInAsOwner, test } from "./fixtures";
 import {
   expectSignedOnThread,
+  guestProfileHref,
   HELD_SEND_TIMEOUT_MS,
   manifestRow,
   openCopiedWaiverLink,
@@ -1454,8 +1455,7 @@ test("a shop question is published, answered by the diver and shown on the signe
   await openTripTab(page, "Trip");
   const row = await openFirstRosterRowWith(page, "Send waiver");
   const diverName = await openedGuestName(page);
-  const diverLink = row.getByRole("link", { name: "Open guest profile", exact: true });
-  const diverHref = await diverLink.getAttribute("href");
+  const diverHref = await guestProfileHref(row);
   await row.getByRole("button", { name: "Send waiver", exact: true }).click();
   const waiverHref = await waiverRequestLinkAfterSend(page, row);
 
@@ -1522,8 +1522,7 @@ test("a diver's medical alert for the crew is signed, flagged on the manifest an
   await openTripTab(page, "Trip");
   const row = await openFirstRosterRowWith(page, "Send waiver");
   const diverName = await openedGuestName(page);
-  const diverLink = row.getByRole("link", { name: "Open guest profile", exact: true });
-  const diverHref = await diverLink.getAttribute("href");
+  const diverHref = await guestProfileHref(row);
   await row.getByRole("button", { name: "Send waiver", exact: true }).click();
   const waiverHref = await waiverRequestLinkAfterSend(page, row);
 

@@ -4,7 +4,14 @@ import { DEMO_RECAP_BOOKING_ID } from "../src/db/seed/identifiers";
 import { diverTranslator } from "../src/i18n/messages";
 import { signRecapToken } from "../src/lib/recap-links";
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
-import { openBookingActions, openRecapDoor, openSettingsRow, rosterRow, signOut } from "./helpers";
+import {
+  guestAction,
+  openBookingActions,
+  openRecapDoor,
+  openSettingsRow,
+  rosterRow,
+  signOut,
+} from "./helpers";
 import { seedFacts } from "./shop-facts";
 
 // The recap page (`/recap/[token]`) is a public, signed-token diver surface, the
@@ -212,7 +219,7 @@ test("a booking canceled after the recap page loaded gets an honest notice, not 
   // sits behind the card's own "Details" disclosure.
   // Two-tap InlineConfirm, not a native dialog: the first tap only arms it.
   await openBookingActions(diverRow);
-  await diverRow.getByRole("button", { name: "Cancel booking" }).click();
+  await guestAction(diverRow, "Cancel booking");
   await diverRow.getByRole("button", { name: "Yes, cancel booking" }).click();
   await expect(staffPage).toHaveURL(
     (url) =>

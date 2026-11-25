@@ -12,6 +12,7 @@ import {
   counterPath,
   createTrip,
   daysFromNow,
+  guestAction,
   manifestRow,
   offlineCopySaved,
   openBoatCheck,
@@ -832,7 +833,7 @@ for (const scheme of ["light", "dark"] as const) {
 
         const odile = await rosterRow(page, "Odile Marchand");
         await openRosterDetails(odile);
-        await odile.getByText("Not here", { exact: true }).click();
+        await guestAction(odile, "Not here");
         await expect(odile.getByText(staffCopy("checkIn.noShow.consequence"))).toBeVisible();
         await odile.getByRole("button", { name: "Mark Odile Marchand as not here" }).click();
         await expect(

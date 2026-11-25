@@ -9,6 +9,7 @@ import {
   createTrip,
   daysFromNow,
   e2eNow,
+  guestAction,
   openBookingActions,
   openTripAbout,
   requireCourseForm,
@@ -136,7 +137,7 @@ test("a minor scans their own waiver on a signed-out phone and a guardian signs"
     await expect(page).toHaveURL(counterPath("blue-mantis", tripId));
     const thirdRow = await rosterRow(page, "Chris Lagoon");
     await openBookingActions(thirdRow);
-    await thirdRow.getByRole("button", { name: "Cancel booking" }).click();
+    await guestAction(thirdRow, "Cancel booking");
     await thirdRow.getByRole("button", { name: "Yes, cancel booking" }).click();
     await expect(page.getByRole("status")).toContainText("Booking canceled");
     await phone.reload().catch(() => {

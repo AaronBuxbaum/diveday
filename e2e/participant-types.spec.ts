@@ -4,7 +4,9 @@ import {
   createTrip,
   daysFromNow,
   e2eNow,
+  guestFact,
   manifestRow,
+  openIfClosed,
   openRosterDetails,
   openTripAboutRow,
   openTripFromBoard,
@@ -103,7 +105,7 @@ test("a snorkeler books from the public page and is on the manifest and the roll
   await openTripTab(page, "Trip");
   const seat = await seatRow(page, guest);
   await openRosterDetails(seat);
-  await seat.getByText("Coming as: Snorkeler").click();
+  await openIfClosed(guestFact(seat, "Coming as"));
   await seat.getByLabel("Coming as").selectOption("rider");
   await seat.getByRole("button", { name: "Save" }).click();
   await page.waitForURL(/notice=participant-type-set/);

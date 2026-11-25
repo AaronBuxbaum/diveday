@@ -406,13 +406,6 @@ export async function rosterRow(page: Page, diverName: string): Promise<Locator>
     name && (await name.count()) ? await name.getAttribute("data-guest-open") : null;
   if (bookingId) {
     const row = page.locator(`#roster li[id="booking-${bookingId}"]`);
-    // A caller of `rosterRow` acts on the guest: open the rare actions' More too.
-    const more = row.locator(`summary[data-guest-more="${bookingId}"]`);
-    if (
-      (await more.count()) &&
-      !(await more.evaluate((el) => (el.parentElement as HTMLDetailsElement).open))
-    )
-      await more.click();
     return row;
   }
   return page.locator('#roster li[id^="booking-"]').filter({ hasText: diverName });
@@ -1024,7 +1017,7 @@ export async function openSettingsRow(page: Page, heading: string) {
  * not touch — so this checks before clicking rather than toggling blindly,
  * exactly like `openPrivateNotes` in add-diver.spec.ts.
  */
-/** The booking operations are plain links in the opened guest: opening the guest shows them. */
+/** The booking operations are the opened guest's More menu (`guestAction`); this opens the guest. */
 export async function openBookingActions(row: Locator): Promise<void> {
   await openRosterDetails(row);
 }
@@ -1040,14 +1033,54 @@ export async function openRosterDetails(row: Locator): Promise<void> {
   // seat's matched record.
   const privateDetails = row.locator("[data-opened-guest] details.group\\/private");
   if (await privateDetails.count()) await openIfClosed(privateDetails.first());
-  // The rare actions (open profile, move, cancel) wait behind the guest's More.
-  const more = row.locator("[data-opened-guest] details:has(> summary[data-guest-more])");
-  if (await more.count()) {
-    const first = more.first();
-    if (!(await first.evaluate((el) => (el as HTMLDetailsElement).open)))
-      await first.locator("> summary").click();
-    await expect(first).toHaveJSProperty("open", true);
+}
+
+/**
+ * Open the opened guest's More menu, beside Close: the profile, Create order,
+ * Move to another trip, Not here, Turn away, Cancel booking. Returns its panel.
+ */
+export async function openGuestMenu(row: Locator): Promise<Locator> {
+  const menu = row.locator("[data-guest-more]");
+  const trigger = menu.locator("button[aria-expanded]").first();
+  if ((await trigger.getAttribute("aria-expanded")) !== "true") await trigger.click();
+  const panel = menu.locator("[data-more-menu-panel]");
+  await expect(panel).toBeVisible();
+  return panel;
+}
+
+/** Where the opened guest's "Open guest profile" row goes; the menu is closed again after. */
+export async function guestProfileHref(row: Locator): Promise<string | null> {
+  const panel = await openGuestMenu(row);
+  const href = await panel
+    .getByRole("link", { name: staffTranslator("en-US")("trips.folio.openProfile"), exact: true })
+    .getAttribute("href");
+  await row.page().keyboard.press("Escape");
+  await expect(panel).toBeHidden();
+  return href;
+}
+
+/** One row of the opened guest's facts list, by its label; its word opens the form under it. */
+export function guestFact(row: Locator, label: string | RegExp): Locator {
+  return row.locator("details").filter({
+    has: row.page().locator(":scope > summary[data-guest-fact]", { hasText: label }),
+  });
+}
+
+/**
+ * Choose one of the guest's More rows by its name. A link follows; a row that
+ * asks a question ("Cancel booking", "Not here") opens its sheet in the panel.
+ * On a row with no menu (a finished departure's record) it is the control itself.
+ */
+export async function guestAction(row: Locator, name: string): Promise<void> {
+  if ((await row.locator("[data-guest-more]").count()) === 0) {
+    await row.getByText(name, { exact: true }).first().click();
+    return;
   }
+  const panel = await openGuestMenu(row);
+  await panel
+    .locator("a, button")
+    .filter({ hasText: new RegExp(`^\\s*${name}\\s*$`) })
+    .click();
 }
 
 /**
@@ -1065,7 +1098,7 @@ export async function openRosterNotes(row: Locator): Promise<void> {
   await openIfClosed(
     row.locator("details").filter({
       has: row.page().locator(":scope > summary", {
-        hasText: /Private staff notes|Add a private note/,
+        hasText: /Private notes/,
       }),
     }),
   );

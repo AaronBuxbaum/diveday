@@ -6,6 +6,7 @@ import {
   daysFromNow,
   e2eNow,
   findTripOnBoard,
+  guestAction,
   openBookingActions,
   openDeckDetails,
   openGuestFolio,
@@ -408,7 +409,7 @@ test.describe("undoing a removal after the trip is canceled", () => {
     // check `open` before clicking, so the arm-tap needs no retry (#3299).
     await expect(row).toBeVisible();
     await openBookingActions(row);
-    await row.getByRole("button", { name: "Cancel booking" }).click();
+    await guestAction(row, "Cancel booking");
     await expect(row.getByRole("button", { name: "Yes, cancel booking" })).toBeVisible();
     await row.getByRole("button", { name: "Yes, cancel booking" }).click();
     const removedNotice = page.getByRole("status").filter({ hasText: "Booking canceled" });
