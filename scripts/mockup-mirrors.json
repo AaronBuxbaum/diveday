@@ -1,6 +1,6 @@
 {
   "src/app/s/[shopSlug]/register/RegisterForm.tsx": "87fc309c9b840695",
-  "src/app/s/[shopSlug]/trips/[id]/_components/BookingSections.tsx": "c07ffe0045d84aee",
+  "src/app/s/[shopSlug]/trips/[id]/_components/BookingSections.tsx": "4da5d4501446437c",
   "src/app/s/[shopSlug]/trips/[id]/_components/BookingSubmit.tsx": "d4fd244135820c9f",
   "src/app/shop/[shopSlug]/_components/today/DaySpine.tsx": "a6be4dbebb654cd6",
   "src/app/shop/[shopSlug]/_components/today/DayStation.tsx": "a5dad7932057af13",

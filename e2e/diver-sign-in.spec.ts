@@ -36,10 +36,11 @@ test("a diver signs in with an emailed link and keeps a profile", async ({ page,
   await expect(page.getByRole("heading", { name: "Marisol Vega" })).toBeVisible();
   await expect(page.getByRole("link", { name: diver("shopChrome.myProfile") })).toBeVisible();
 
-  await page.getByLabel(diver("profile.phone")).fill("+1 305 555 0142");
+  const phone = page.locator('input[name="phone"]');
+  await phone.fill("+1 305 555 0142");
   await page.getByRole("button", { name: diver("profile.save") }).click();
   await expect(page).toHaveURL(/saved=1/);
-  await expect(page.getByLabel(diver("profile.phone"))).not.toHaveValue("");
+  await expect(phone).not.toHaveValue("");
 
   await page.getByRole("button", { name: diver("profile.signOut") }).click();
   await expect(page).toHaveURL(/\/s\/blue-mantis$/);

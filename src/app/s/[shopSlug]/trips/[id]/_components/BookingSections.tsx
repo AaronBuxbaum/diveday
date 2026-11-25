@@ -797,7 +797,8 @@ export function BookSpotSection({ context }: { context: BookSpotSectionContext }
             {groupHold ? <p className="mt-1 text-base text-muted">{t("holdGroupNote")}</p> : null}
           </div>
         ) : null}
-        {perDiverPriceCents === null || groupHold ? null : (
+        {/* On credit, the note above already states the fare and what covers it. */}
+        {perDiverPriceCents === null || groupHold || usesCredit ? null : (
           <MoneyBlock
             summary={
               balanceDueAt
