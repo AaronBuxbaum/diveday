@@ -8,7 +8,7 @@ import type {
 import type { RollCallCheckpoint } from "@/lib/roll-call";
 import { type HowItWentInput, howItWent } from "./rules";
 
-// A Saturday in Key Largo: the shop's date runs 04:00Z to 04:00Z the next day.
+// A Saturday in Key Largo in November (EST): the shop's date runs 05:00Z to 05:00Z.
 const DAY = { from: new Date("2026-11-28T05:00:00Z"), to: new Date("2026-11-29T05:00:00Z") };
 const CHECKPOINTS: RollCallCheckpoint[] = ["departure", "after_dive_1", "after_dive_2"];
 
@@ -68,15 +68,36 @@ function input(overrides: Partial<HowItWentInput> = {}): HowItWentInput {
     crew: [],
     turnedAway: [],
     executedDives: [],
+    timeline: [],
     countedAboardBlocked: new Map(),
+    unsettled: new Map(),
     fitStatedAt: new Map(),
-    day: DAY,
+    span: DAY,
     ...overrides,
   };
 }
 
+const BOARDED_AT = "2026-11-28T13:00:00Z";
+const boardedAtDock = CHECKPOINTS.map((checkpoint) =>
+  checkpoint === "departure"
+    ? result(checkpoint, "boarded", BOARDED_AT)
+    : result(checkpoint, "awaiting"),
+);
+const card = (status: string, reviewedAt: string) => ({
+  kind: "level" as const,
+  agency: "padi",
+  level: "open_water",
+  specialty: null,
+  identifier: null,
+  status,
+  reviewedAt,
+  reviewedByName: "Sam",
+  imported: false,
+  selfDeclared: false,
+});
+
 describe("howItWent: waivers", () => {
-  it("splits signed ahead from signed on the day, and names paper releases", () => {
+  it("splits ahead, on the day, after, and names paper releases", () => {
     const recap = howItWent(
       input({
         roster: [
@@ -86,62 +107,64 @@ describe("howItWent: waivers", () => {
             waiver: waiver("2026-11-28T12:10:00Z", { signatureMethod: "in_person_attested" }),
           }),
           diver("Dev", { waiver: waiver(null) }),
+          diver("Eve", { waiver: waiver("2026-11-30T12:00:00Z") }),
         ],
       }),
     );
     expect(recap.waivers.ahead).toBe(1);
-    expect(recap.waivers.onTheDay).toEqual([
+    expect(recap.waivers.during).toEqual([
       { name: "Cat", at: "2026-11-28T12:10:00Z", paper: true },
       { name: "Ben", at: "2026-11-28T12:40:00Z", paper: false },
     ]);
+    // A waiver signed after the departure is a fact of its own, never "not signed".
+    expect(recap.waivers.after).toEqual([{ name: "Eve", at: "2026-11-30T12:00:00Z" }]);
     expect(recap.waivers.notSigned).toEqual(["Dev"]);
   });
 
-  it("never states a held seat's waiver, which would be the matched person's", () => {
+  it("counts a second day's signature as during a two-day departure", () => {
+    const recap = howItWent(
+      input({
+        span: { from: DAY.from, to: new Date("2026-11-30T05:00:00Z") },
+        roster: [diver("Ana", { waiver: waiver("2026-11-29T12:10:00Z") })],
+      }),
+    );
+    expect(recap.waivers.during.map((row) => row.name)).toEqual(["Ana"]);
+    expect(recap.waivers.notSigned).toEqual([]);
+  });
+
+  it("says a doctor's hold in its own words, never as no waiver", () => {
+    const recap = howItWent(
+      input({
+        roster: [
+          diver("Ben", {
+            waiver: waiver("2026-11-20T15:00:00Z", { state: "medical_not_cleared" }),
+          }),
+          diver("Cy", { waiver: waiver("2026-11-20T15:00:00Z", { state: "medical_review" }) }),
+        ],
+      }),
+    );
+    expect(recap.waivers.doctorDeclined).toEqual(["Ben"]);
+    expect(recap.waivers.doctorPending).toEqual(["Cy"]);
+    expect(recap.waivers.notSigned).toEqual([]);
+  });
+
+  it("never states a held seat's waiver, and counts it as held", () => {
     const recap = howItWent(
       input({ roster: [diver("Held", { identityWithheld: true, waiver: null })] }),
     );
-    expect(recap.waivers).toEqual({ ahead: 0, onTheDay: [], notSigned: [] });
-  });
-
-  it("does not call a waiver signed after the departure's date ahead", () => {
-    const recap = howItWent(
-      input({ roster: [diver("Late", { waiver: waiver("2026-11-30T12:00:00Z") })] }),
-    );
-    expect(recap.waivers.ahead).toBe(0);
-    expect(recap.waivers.notSigned).toEqual(["Late"]);
+    expect(recap.waivers).toMatchObject({ ahead: 0, during: [], notSigned: [], held: 1 });
   });
 });
 
 describe("howItWent: sorted before boarding", () => {
-  const boardedAt = "2026-11-28T13:00:00Z";
-  const boarded = CHECKPOINTS.map((checkpoint) =>
-    checkpoint === "departure"
-      ? result(checkpoint, "boarded", boardedAt)
-      : result(checkpoint, "awaiting"),
-  );
-
   it("lists what was done that morning, no later than the dock mark", () => {
     const recap = howItWent(
       input({
         roster: [
           diver("Eli", {
-            rollCall: boarded,
+            rollCall: boardedAtDock,
             waiver: waiver("2026-11-28T12:30:00Z"),
-            certifications: [
-              {
-                kind: "level",
-                agency: "padi",
-                level: "open_water",
-                specialty: null,
-                identifier: null,
-                status: "verified",
-                reviewedAt: "2026-11-28T12:45:00Z",
-                reviewedByName: "Sam",
-                imported: false,
-                selfDeclared: false,
-              },
-            ],
+            certifications: [card("verified", "2026-11-28T12:45:00Z")],
           }),
         ],
         fitStatedAt: new Map([["b-Eli", new Date("2026-11-28T12:50:00Z")]]),
@@ -159,21 +182,38 @@ describe("howItWent: sorted before boarding", () => {
     ]);
   });
 
+  it("reads the cards as captured at boarding, not as they stand now", () => {
+    const recap = howItWent(
+      input({
+        roster: [
+          diver("Ike", {
+            rollCall: boardedAtDock,
+            certifications: [card("verified", "2026-12-02T09:00:00Z")],
+            certificationsAtCapture: [card("verified", "2026-11-28T12:45:00Z")],
+          }),
+        ],
+      }),
+    );
+    expect(recap.sorted).toEqual([
+      { name: "Ike", fixes: [{ kind: "card", at: "2026-11-28T12:45:00Z" }] },
+    ]);
+  });
+
   it("leaves out anything done after the diver was counted aboard", () => {
     const recap = howItWent(
       input({
-        roster: [diver("Fay", { rollCall: boarded, waiver: waiver("2026-11-28T13:05:00Z") })],
+        roster: [diver("Fay", { rollCall: boardedAtDock, waiver: waiver("2026-11-28T13:05:00Z") })],
         fitStatedAt: new Map([["b-Fay", new Date("2026-11-28T13:30:00Z")]]),
       }),
     );
     expect(recap.sorted).toEqual([]);
   });
 
-  it("says nothing was sorted before boarding for a diver no dock count put aboard", () => {
+  it("says it is not known when no dock count was taken", () => {
     const recap = howItWent(
       input({ roster: [diver("Gus", { waiver: waiver("2026-11-28T12:30:00Z") })] }),
     );
-    expect(recap.sorted).toEqual([]);
+    expect(recap.sorted).toBeNull();
   });
 
   it("does not count an unverified card as checked", () => {
@@ -181,21 +221,8 @@ describe("howItWent: sorted before boarding", () => {
       input({
         roster: [
           diver("Hal", {
-            rollCall: boarded,
-            certifications: [
-              {
-                kind: "level",
-                agency: "padi",
-                level: "open_water",
-                specialty: null,
-                identifier: null,
-                status: "pending",
-                reviewedAt: "2026-11-28T12:45:00Z",
-                reviewedByName: null,
-                imported: false,
-                selfDeclared: true,
-              },
-            ],
+            rollCall: boardedAtDock,
+            certifications: [card("pending", "2026-11-28T12:45:00Z")],
           }),
         ],
       }),
@@ -203,10 +230,10 @@ describe("howItWent: sorted before boarding", () => {
     expect(recap.sorted).toEqual([]);
   });
 
-  it("names turned-away seats and seats counted aboard while blocked", () => {
+  it("names turned-away seats and seats boarded while blocked, with where", () => {
     const recap = howItWent(
       input({
-        roster: [diver("Ivy", { rollCall: boarded })],
+        roster: [diver("Ivy", { rollCall: boardedAtDock })],
         turnedAway: [{ bookingId: "b-Jo", fullName: "Jo", reason: "medical" }],
         countedAboardBlocked: new Map([
           ["b-Ivy", { checkpoint: "departure", blockers: [{ code: "waiver_not_sent" }] }],
@@ -214,14 +241,14 @@ describe("howItWent: sorted before boarding", () => {
       }),
     );
     expect(recap.turnedAway).toEqual([{ name: "Jo", reason: "medical" }]);
-    expect(recap.aboardWithOpenItems).toEqual([
-      { name: "Ivy", checkpoint: "departure", blockers: [{ code: "waiver_not_sent" }] },
+    expect(recap.boardedBlocked).toEqual([
+      { name: "Ivy", dive: 0, blockers: [{ code: "waiver_not_sent" }] },
     ]);
   });
 });
 
 describe("howItWent: head counts", () => {
-  it("reads each count off its own results, crew included", () => {
+  it("reads each count off its own results, divers and crew apart", () => {
     const recap = howItWent(
       input({
         roster: [
@@ -253,8 +280,9 @@ describe("howItWent: head counts", () => {
     expect(recap.counts[0]).toMatchObject({
       dive: 0,
       taken: true,
-      aboard: 2,
-      crewAboard: 1,
+      divers: 1,
+      crew: 1,
+      ashore: ["Lee"],
       notRecorded: [],
       at: "2026-11-28T13:02:00Z",
       by: "Rae",
@@ -263,11 +291,17 @@ describe("howItWent: head counts", () => {
       dive: 1,
       site: "Molasses Reef",
       taken: true,
-      aboard: 2,
-      at: "2026-11-28T14:41:00Z",
+      divers: 1,
     });
-    // Nobody counted after dive 2: never read as everyone back.
-    expect(recap.counts[2]).toMatchObject({ dive: 2, taken: false, aboard: 0, at: null });
+    // Nobody counted after dive 2: never read as everyone back. Everyone
+    // aboard before it is named as having no result there.
+    expect(recap.counts[2]).toMatchObject({
+      dive: 2,
+      taken: false,
+      divers: 0,
+      at: null,
+      notRecorded: ["Kim", "Cap"],
+    });
   });
 
   it("names who a count left unrecorded and who it recorded not back", () => {
@@ -298,6 +332,59 @@ describe("howItWent: head counts", () => {
         ],
       }),
     );
-    expect(recap.counts[1]).toMatchObject({ aboard: 1, notBack: ["Ned"], notRecorded: ["Oz"] });
+    expect(recap.counts[1]).toMatchObject({ divers: 1, notBack: ["Ned"], notRecorded: ["Oz"] });
+  });
+
+  it("never counts a dock mark two devices disagree on as aboard", () => {
+    const recap = howItWent(
+      input({
+        roster: [
+          diver("Pat", { rollCall: boardedAtDock }),
+          diver("Quin", { rollCall: boardedAtDock }),
+        ],
+        unsettled: new Map([["departure", new Set(["b-Quin"])]]),
+      }),
+    );
+    expect(recap.counts[0]).toMatchObject({ divers: 1, unsettled: ["Quin"] });
+    expect(recap.sorted?.map((row) => row.name) ?? []).not.toContain("Quin");
+  });
+
+  it("keeps a diver recorded not back and later found, with both times", () => {
+    const recap = howItWent(
+      input({
+        roster: [
+          diver("Ned", {
+            rollCall: [
+              result("departure", "boarded", "2026-11-28T13:00:00Z"),
+              result("after_dive_1", "boarded", "2026-11-28T16:09:00Z"),
+              result("after_dive_2", "awaiting"),
+            ],
+          }),
+        ],
+        timeline: [
+          {
+            kind: "diver",
+            occurredAt: "2026-11-28T16:02:00Z",
+            checkpoint: "after_dive_1",
+            subjectName: "Ned",
+            action: "not_boarded",
+            source: "live",
+            recordedByName: "Sam",
+          },
+          {
+            kind: "diver",
+            occurredAt: "2026-11-28T16:09:00Z",
+            checkpoint: "after_dive_1",
+            subjectName: "Ned",
+            action: "boarded",
+            source: "live",
+            recordedByName: "Sam",
+          },
+        ],
+      }),
+    );
+    expect(recap.counts[1]?.recovered).toEqual([
+      { name: "Ned", notBackAt: "2026-11-28T16:02:00Z", backAt: "2026-11-28T16:09:00Z" },
+    ]);
   });
 });

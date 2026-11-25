@@ -3,7 +3,7 @@ import type { HowItWent, HowItWentCount, HowItWentMeta } from "@/features/day/ho
 import { readinessBlockerText } from "@/i18n/readiness-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { BrandDisplayFontCode } from "@/lib/brand";
-import { formatTime, formatWeekday } from "@/lib/format";
+import { formatDateWithYear, formatTime, formatTimeZoneName, formatWeekday } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { PACKET_PAPER } from "@/lib/print-sheets";
 import { shopPath } from "@/lib/staff-notices";
@@ -49,7 +49,18 @@ export function HowItWentSheet({
   printedBy,
 }: Props) {
   const { meta, recap } = page;
-  const time = (iso: string) => formatTime(new Date(iso), locale, meta.timezone);
+  const startsAt = new Date(meta.tripStartsAt);
+  const sameDay = (at: Date) =>
+    formatDateWithYear(at, locale, meta.timezone) ===
+    formatDateWithYear(startsAt, locale, meta.timezone);
+  // A time off the departure's first day carries its date, so paper filed
+  // later never reads a next-day correction as the same morning.
+  const time = (iso: string) => {
+    const at = new Date(iso);
+    return sameDay(at)
+      ? formatTime(at, locale, meta.timezone)
+      : formatPaperDateTime(at, locale, meta.timezone);
+  };
   const names = (list: readonly string[]) =>
     cachedListFormat(locale, { type: "conjunction" }).format(list);
   const printed = sheetAttribution(
@@ -77,7 +88,14 @@ export function HowItWentSheet({
           <header>
             <h1 className={SHELL_TITLE_CLASS}>{howItWentTitle(meta, locale, t)}</h1>
             <p className="mt-1 text-sm text-muted">
-              {[meta.tripTitle, meta.boatName].filter(Boolean).join(" · ")}
+              {[
+                meta.tripTitle,
+                meta.boatName,
+                formatDateWithYear(startsAt, locale, meta.timezone),
+                formatTimeZoneName(locale, meta.timezone, startsAt),
+              ]
+                .filter(Boolean)
+                .join(" · ")}
             </p>
           </header>
 
@@ -103,29 +121,7 @@ export function HowItWentSheet({
             <h2 id="how-it-went-waivers" className={SECTION_TITLE_CLASS}>
               {t("howItWent.waivers.heading")}
             </h2>
-            <div className="mt-2 space-y-1 text-sm">
-              <p>{t("howItWent.waivers.ahead", { count: recap.waivers.ahead })}</p>
-              {recap.waivers.onTheDay.length > 0 ? (
-                <>
-                  <p>{t("howItWent.waivers.onTheDay", { count: recap.waivers.onTheDay.length })}</p>
-                  <ul className="ms-4 list-disc">
-                    {recap.waivers.onTheDay.map((row) => (
-                      <li key={`${row.name}-${row.at}`}>
-                        {t(row.paper ? "howItWent.waivers.linePaper" : "howItWent.waivers.line", {
-                          name: row.name,
-                          time: time(row.at),
-                        })}
-                      </li>
-                    ))}
-                  </ul>
-                </>
-              ) : null}
-              {recap.waivers.notSigned.length > 0 ? (
-                <p className="font-semibold">
-                  {t("howItWent.waivers.notSigned", { names: names(recap.waivers.notSigned) })}
-                </p>
-              ) : null}
-            </div>
+            <WaiverLines waivers={recap.waivers} time={time} names={names} t={t} />
           </section>
         </div>
       </PacketSheet>
@@ -133,74 +129,86 @@ export function HowItWentSheet({
   );
 }
 
-function CountRow({
-  count,
-  time,
-  names,
-  t,
-}: {
-  count: HowItWentCount;
+type Words = {
   time: (iso: string) => string;
   names: (list: readonly string[]) => string;
   t: StaffTranslator;
-}) {
+};
+
+function CountRow({ count, time, names, t }: Words & { count: HowItWentCount }) {
   const label =
     count.dive === 0
       ? t("howItWent.counts.dock")
       : count.site
         ? t("howItWent.counts.afterDiveAt", { dive: count.dive, site: count.site })
         : t("howItWent.counts.afterDive", { dive: count.dive });
+  // After a dive, anybody with no result can be somebody still in the water.
+  const missing = count.dive > 0 && count.notRecorded.length > 0;
   return (
-    <li className="py-2 text-sm" data-count={count.checkpoint}>
+    <li className="space-y-1 py-2 text-sm" data-count={count.checkpoint}>
       <div className="flex flex-wrap items-baseline justify-between gap-x-4">
         <span className="font-semibold">{label}</span>
         {count.taken ? (
           <span>
-            {t("howItWent.counts.aboard", { count: count.aboard, crew: count.crewAboard })}
+            {t("howItWent.counts.aboard", { divers: count.divers, crew: count.crew })}
             {count.at ? (
               <span className="text-muted">
                 {" · "}
-                {t("howItWent.counts.taken", { time: time(count.at), name: count.by ?? "" })}
+                {t("howItWent.counts.lastMark", { time: time(count.at), name: count.by ?? "" })}
               </span>
             ) : null}
           </span>
         ) : (
-          <span className="text-muted">{t("howItWent.counts.notTaken")}</span>
+          <span className={missing ? "font-semibold" : "text-muted"}>
+            {t("howItWent.counts.notTaken")}
+          </span>
         )}
       </div>
       {count.notBack.length > 0 ? (
-        <p data-print-critical className="mt-1 font-semibold">
+        <p data-print-critical className="font-semibold">
           {t("howItWent.counts.notBack", { names: names(count.notBack) })}
         </p>
       ) : null}
       {count.notRecorded.length > 0 ? (
-        <p className="mt-1">
+        <p
+          data-print-critical={missing ? "" : undefined}
+          className={missing ? "font-semibold" : undefined}
+        >
           {t("howItWent.counts.notRecorded", { names: names(count.notRecorded) })}
         </p>
+      ) : null}
+      {count.unsettled.length > 0 ? (
+        <p className="font-semibold">
+          {t("howItWent.counts.unsettled", { names: names(count.unsettled) })}
+        </p>
+      ) : null}
+      {count.recovered.map((row) => (
+        <p key={`${row.name}-${row.notBackAt}`}>
+          {t("howItWent.counts.recovered", {
+            name: row.name,
+            notBack: time(row.notBackAt),
+            back: time(row.backAt),
+          })}
+        </p>
+      ))}
+      {count.ashore.length > 0 ? (
+        <p>{t("howItWent.counts.ashore", { names: names(count.ashore) })}</p>
       ) : null}
     </li>
   );
 }
 
-function SortedLines({
-  recap,
-  time,
-  names,
-  t,
-}: {
-  recap: HowItWent;
-  time: (iso: string) => string;
-  names: (list: readonly string[]) => string;
-  t: StaffTranslator;
-}) {
-  const empty =
-    recap.sorted.length === 0 &&
-    recap.turnedAway.length === 0 &&
-    recap.aboardWithOpenItems.length === 0;
-  if (empty) return <p className="mt-2 text-sm">{t("howItWent.sorted.empty")}</p>;
+function SortedLines({ recap, time, names, t }: Words & { recap: HowItWent }) {
+  const sorted = recap.sorted ?? [];
+  const lines = sorted.length + recap.turnedAway.length + recap.boardedBlocked.length;
   return (
     <ul className="mt-2 space-y-1 text-sm">
-      {recap.sorted.map((row) => (
+      {recap.sorted === null ? (
+        <li>{t("howItWent.sorted.unknown")}</li>
+      ) : lines === 0 ? (
+        <li>{t("howItWent.sorted.empty")}</li>
+      ) : null}
+      {sorted.map((row) => (
         <li key={row.name}>
           {t("howItWent.sorted.line", {
             name: row.name,
@@ -215,14 +223,65 @@ function SortedLines({
           {t("howItWent.sorted.turnedAway", { name: row.name, reason: row.reason ?? "other" })}
         </li>
       ))}
-      {recap.aboardWithOpenItems.map((row) => (
-        <li key={`open-${row.name}`} data-print-critical className="font-semibold">
-          {t("howItWent.sorted.aboardOpen", {
+      {recap.boardedBlocked.map((row) => (
+        <li key={`blocked-${row.name}`} data-print-critical className="font-semibold">
+          {t("howItWent.sorted.boardedBlocked", {
             name: row.name,
+            dive: row.dive,
             blockers: names(row.blockers.map((blocker) => readinessBlockerText(t, blocker))),
           })}
         </li>
       ))}
     </ul>
+  );
+}
+
+function WaiverLines({ waivers, time, names, t }: Words & { waivers: HowItWent["waivers"] }) {
+  return (
+    <div className="mt-2 space-y-1 text-sm">
+      <p>{t("howItWent.waivers.ahead", { count: waivers.ahead })}</p>
+      {waivers.during.length > 0 ? (
+        <>
+          <p>{t("howItWent.waivers.onTheDay", { count: waivers.during.length })}</p>
+          <ul className="ms-4 list-disc">
+            {waivers.during.map((row) => (
+              <li key={`${row.name}-${row.at}`}>
+                {t(row.paper ? "howItWent.waivers.linePaper" : "howItWent.waivers.line", {
+                  name: row.name,
+                  time: time(row.at),
+                })}
+              </li>
+            ))}
+          </ul>
+        </>
+      ) : null}
+      {waivers.after.length > 0 ? (
+        <p>
+          {t("howItWent.waivers.after", {
+            list: names(
+              waivers.after.map((row) =>
+                t("howItWent.waivers.line", { name: row.name, time: time(row.at) }),
+              ),
+            ),
+          })}
+        </p>
+      ) : null}
+      {waivers.doctorDeclined.length > 0 ? (
+        <p data-print-critical className="font-semibold">
+          {t("howItWent.waivers.doctorDeclined", { names: names(waivers.doctorDeclined) })}
+        </p>
+      ) : null}
+      {waivers.doctorPending.length > 0 ? (
+        <p className="font-semibold">
+          {t("howItWent.waivers.doctorPending", { names: names(waivers.doctorPending) })}
+        </p>
+      ) : null}
+      {waivers.notSigned.length > 0 ? (
+        <p className="font-semibold">
+          {t("howItWent.waivers.notSigned", { names: names(waivers.notSigned) })}
+        </p>
+      ) : null}
+      {waivers.held > 0 ? <p>{t("howItWent.waivers.held", { count: waivers.held })}</p> : null}
+    </div>
   );
 }

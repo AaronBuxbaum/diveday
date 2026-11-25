@@ -1042,9 +1042,9 @@
   by each seat's rung on the **Seat ladder**,
   `src/app/shop/[shopSlug]/trips/[id]/_components/roster-model.ts`), built from the crew's
   roll-call results and the desk's no-show marks. It says who the crew counted aboard. It does
-  **not** say whether those divers were ready to board at the time: `roll_call_events` stores no
-  readiness snapshot, so a diver under "Sailed" may have boarded with a blocker the crew overrode
-  or never saw, and any readiness shown beside the record is today's, not the day's.
+  **not** say on its own whether those divers were ready to board at the time; that is the
+  readiness snapshot each `boarded` event keeps (`roll_call_events.readiness_status`, read by
+  `listCountedAboardBlockedByTrip`), never today's readiness.
 - **Didn't sail** — a finished departure's record band for the seats somebody *said* did not go:
   the crew's `not_boarded` at the `departure` roll-call checkpoint, or a released seat (`no_show`)
   nobody counted aboard at any checkpoint. Only a statement files a seat here (`seatSailed`,

@@ -2,7 +2,7 @@
  * Properties of How it went (src/features/day/how-it-went/rules.ts): a head count says only
  * what its results say, and nothing is "sorted before boarding" that happened
  * off the departure's date or after the diver was counted aboard. Example
- * tests: how-it-went.test.ts.
+ * tests: rules.test.ts.
  */
 import fc from "fast-check";
 import { describe, expect } from "vitest";
@@ -31,8 +31,9 @@ const arbResults = fc
     rows.map(([label, at], index) => ({
       checkpoint: CHECKPOINTS[index] as RollCallCheckpoint,
       label,
-      occurredAt: label === "awaiting" ? null : at,
-      recordedByName: label === "awaiting" ? null : "Sam",
+      // A carried row has no time of its own, as the departure log prints it.
+      occurredAt: label === "awaiting" || label === "not_boarded_carried" ? null : at,
+      recordedByName: label === "awaiting" || label === "not_boarded_carried" ? null : "Sam",
     })),
   );
 const arbDiver = fc.record({
@@ -69,11 +70,13 @@ function recapOf(roster: { entry: IncidentRosterEntry; fitAt: string | null }[])
     crew: [],
     turnedAway: [],
     executedDives: [],
+    timeline: [],
     countedAboardBlocked: new Map(),
+    unsettled: new Map(),
     fitStatedAt: new Map(
       roster.map(({ entry, fitAt }) => [entry.bookingId, fitAt ? new Date(fitAt) : null]),
     ),
-    day: DAY,
+    span: DAY,
   });
 }
 
@@ -82,38 +85,49 @@ describe("How it went", () => {
     const recap = recapOf(roster);
     recap.counts.forEach((count, index) => {
       const labels = roster.map(({ entry }) => entry.rollCall[index]?.label);
-      expect(count.aboard).toBe(labels.filter((label) => label === "boarded").length);
+      expect(count.divers).toBe(labels.filter((label) => label === "boarded").length);
       expect(count.notBack.length).toBe(labels.filter((l) => l === "not_back_aboard").length);
-      expect(count.taken).toBe(labels.some((label) => label !== "awaiting"));
+      expect(count.taken).toBe(
+        labels.some((label) => label !== "awaiting" && label !== "not_boarded_carried"),
+      );
     });
   });
 
   property(
-    "a count nobody took reports nobody aboard and nobody missing",
+    "a count nobody took has nobody aboard, and after a dive names who boarded before it",
     [arbRoster],
     (roster) => {
-      for (const count of recapOf(roster).counts) {
-        if (count.taken) continue;
-        expect(count.aboard).toBe(0);
-        expect(count.notRecorded).toEqual([]);
+      recapOf(roster).counts.forEach((count, index) => {
+        if (count.taken) return;
+        expect(count.divers + count.crew).toBe(0);
         expect(count.at).toBeNull();
-      }
+        const owed = roster
+          .filter(
+            ({ entry }) =>
+              count.dive > 0 &&
+              entry.rollCall[index]?.label === "awaiting" &&
+              entry.rollCall
+                .slice(0, index)
+                .some((result) => result.label === "boarded" || result.label === "not_back_aboard"),
+          )
+          .map(({ entry }) => entry.fullName);
+        expect(count.notRecorded).toEqual(owed);
+      });
     },
   );
 
   property(
-    "every fix is on the departure's date and no later than the dock mark",
+    "every fix is during the departure and no later than the dock mark",
     [arbRoster],
     (roster) => {
       const recap = recapOf(roster);
-      for (const row of recap.sorted) {
+      for (const row of recap.sorted ?? []) {
         const diver = roster.find(({ entry }) => entry.fullName === row.name)?.entry;
         const dock = diver?.rollCall.find((result) => result.checkpoint === "departure");
         expect(dock?.label).toBe("boarded");
         for (const fix of row.fixes) {
           const at = new Date(fix.at).getTime();
           expect(at).toBeGreaterThanOrEqual(DAY.from.getTime());
-          expect(at).toBeLessThan(DAY.to.getTime());
           expect(at).toBeLessThanOrEqual(new Date(dock?.occurredAt ?? 0).getTime());
         }
       }
@@ -122,6 +136,14 @@ describe("How it went", () => {
 
   property("every named diver's waiver is counted exactly once", [arbRoster], (roster) => {
     const { waivers } = recapOf(roster);
-    expect(waivers.ahead + waivers.onTheDay.length + waivers.notSigned.length).toBe(roster.length);
+    const counted =
+      waivers.ahead +
+      waivers.during.length +
+      waivers.after.length +
+      waivers.doctorPending.length +
+      waivers.doctorDeclined.length +
+      waivers.notSigned.length +
+      waivers.held;
+    expect(counted).toBe(roster.length);
   });
 });

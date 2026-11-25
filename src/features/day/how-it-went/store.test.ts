@@ -41,7 +41,7 @@ describe("getHowItWentPage (in-memory PGlite)", () => {
     const before = await getHowItWentPage(db, shop.id, reef.id, owner.id);
     if (!before.allowed || !before.page) throw new Error("expected the owner's page");
     for (const count of before.page.recap.counts) {
-      expect(count).toMatchObject({ taken: false, aboard: 0, notRecorded: [], at: null });
+      expect(count).toMatchObject({ taken: false, divers: 0, crew: 0, notRecorded: [], at: null });
     }
 
     const [first] = await getTripRoster(db, shop.id, reef.id);
@@ -59,7 +59,8 @@ describe("getHowItWentPage (in-memory PGlite)", () => {
     const after = await getHowItWentPage(db, shop.id, reef.id, owner.id);
     if (!after.allowed || !after.page) throw new Error("expected the owner's page");
     const dock = after.page.recap.counts[0];
-    expect(dock).toMatchObject({ dive: 0, taken: true, aboard: 0, by: owner.fullName });
+    expect(dock).toMatchObject({ dive: 0, taken: true, divers: 0, by: owner.fullName });
+    expect(dock?.ashore).toEqual([first.person.fullName]);
     // Everyone else at the dock count is named as not recorded, never as aboard or ashore.
     expect(dock?.notRecorded).not.toContain(first.person.fullName);
     expect(dock?.notRecorded.length).toBeGreaterThan(0);
