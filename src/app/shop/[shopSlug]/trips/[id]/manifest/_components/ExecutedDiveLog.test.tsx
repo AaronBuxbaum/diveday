@@ -43,9 +43,8 @@ const labels: ExecutedDiveLabels = {
   observedSpecies: "Seen on this dive",
   observedSpeciesHint: "Divers read this on their recap.",
   observedSpeciesNone: "Nothing to note",
-  speciesAdd: "Add",
-  speciesRemove: "Remove",
-  speciesPlaceholder: "Search or enter a species",
+  speciesAddTyped: "Add “{name}”",
+  speciesPlaceholder: "Something else? Search species",
   planChangeReason: "Why the plan changed",
   planChangeReasonOptions: {
     current: "Current",
@@ -332,13 +331,35 @@ describe("the executed-dive record is collapsed", () => {
  * is still first — because the two are one `filter` apart and a refactor that
  * dropped the ordering would be invisible in a diff.
  */
+const entries = () =>
+  [...document.querySelectorAll<HTMLInputElement>('input[name="observedSpeciesEntries"]')].map(
+    (element) => JSON.parse(element.value),
+  );
+
 describe("the species picker", () => {
-  it("offers site species first and the rest of the catalog", () => {
+  it("offers the site's species as chips, and the rest of the catalog by search", async () => {
     renderLog("Dive 1 — not recorded yet");
-    const options = [...document.querySelectorAll("datalist[id^=species-] option")].map((option) =>
-      option.getAttribute("value"),
-    );
-    expect(options).toEqual(["Blue tang", "Spotted eagle ray"]);
+    const chip = screen.getByRole("button", { name: "Blue tang" });
+    expect(chip.getAttribute("aria-pressed")).toBe("false");
+    expect(screen.queryByRole("button", { name: "Spotted eagle ray" })).toBeNull();
+
+    await userEvent.click(chip);
+    expect(chip.getAttribute("aria-pressed")).toBe("true");
+    await userEvent.type(screen.getByPlaceholderText("Something else? Search species"), "eagle");
+    await userEvent.click(screen.getByRole("button", { name: "Spotted eagle ray" }));
+    expect(entries()).toEqual([
+      { slug: "blue-tang", name: null },
+      { slug: "spotted-eagle-ray", name: null },
+    ]);
+
+    // A second tap takes a sighting back.
+    await userEvent.click(chip);
+    expect(entries()).toEqual([{ slug: "spotted-eagle-ray", name: null }]);
+  });
+
+  it("has no Add button: a pick is added on the tap", () => {
+    renderLog("Dive 1 — not recorded yet");
+    expect(screen.queryByRole("button", { name: "Add" })).toBeNull();
   });
 
   it("only asks why when the actual site differs from the plan", async () => {
@@ -358,16 +379,12 @@ describe("the species picker", () => {
 
   it("keeps catalog and free-text species when the site changes", async () => {
     renderLog("Dive 1 — not recorded yet");
-    const picker = screen.getByPlaceholderText("Search or enter a species");
-    await userEvent.type(picker, "Spotted eagle ray");
-    await userEvent.click(screen.getByRole("button", { name: "Add" }));
+    const picker = screen.getByPlaceholderText("Something else? Search species");
+    await userEvent.type(picker, "Spotted eagle ray{Enter}");
     await userEvent.type(picker, "Tiny shrimp");
-    await userEvent.click(screen.getByRole("button", { name: "Add" }));
+    await userEvent.click(screen.getByRole("button", { name: "Add “Tiny shrimp”" }));
     await userEvent.clear(screen.getByLabelText("Actual site (optional)"));
-    const values = [
-      ...document.querySelectorAll<HTMLInputElement>('input[name="observedSpeciesEntries"]'),
-    ].map((element) => JSON.parse(element.value));
-    expect(values).toEqual([
+    expect(entries()).toEqual([
       { slug: "spotted-eagle-ray", name: null },
       { slug: null, name: "Tiny shrimp" },
     ]);

@@ -80,8 +80,8 @@ export function executedDiveLabels(t: StaffTranslator, depthUnit: DepthUnit): Ex
     observedSpecies: t("manifest.executedDive.observedSpecies"),
     observedSpeciesHint: t("manifest.executedDive.observedSpeciesHint"),
     observedSpeciesNone: t("manifest.executedDive.observedSpeciesNone"),
-    speciesAdd: t("manifest.executedDive.speciesAdd"),
-    speciesRemove: t("manifest.executedDive.speciesRemove"),
+    // The client fills the name in as it is typed.
+    speciesAddTyped: t("manifest.executedDive.speciesAddTyped", { name: "{name}" }),
     speciesPlaceholder: t("manifest.executedDive.speciesPlaceholder"),
     planChangeReason: t("manifest.planChange.reasonLabel"),
     planChangeReasonOptions: {
