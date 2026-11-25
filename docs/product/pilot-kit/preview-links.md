@@ -20,7 +20,7 @@ Open the link yourself before sending it, in a browser marked as yours (`/api/de
 
 ## Send it
 
-The link goes in the cold email in place of `https://www.dive.day`. Say what it is in one sentence, for example: "I built a preview of DiveDay with your shop's name on it, and it stays open for a week." Nothing is emailed by the command.
+The link goes in the cold email in place of `https://www.dive.day`, and in the day-10 Facebook or Instagram message ([the rhythm](cold-email-template.md#the-rhythm-four-touches-then-stop)). Say what it is in one sentence, for example: "I built a preview of DiveDay with your shop's name on it, and it stays open for a week." Nothing is emailed by the command.
 
 ## Read what happened
 

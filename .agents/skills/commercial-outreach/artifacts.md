@@ -10,7 +10,7 @@ Part of the **commercial-outreach** skill ([SKILL.md](SKILL.md)). Read it before
 | Case-study interview questions | `docs/product/stakeholders/case-study-interview-template.md` | Phase 1 exit criterion, Phase 2 founding-shop references |
 | Per-stakeholder prep (DEMA, dive media, Capterra) | `docs/product/stakeholders/commercial-and-industry.md` | Phase 2–3 conversations |
 | Pilot-recruiting kit index (what the founder carries into Phase 1) | `docs/product/pilot-kit/README.md` | Phase 1 recruiting |
-| Ten-shop Florida call list — **template only**, rows researched by hand | `docs/product/pilot-kit/florida-call-list.md` | Phase 1 recruiting |
+| Florida call list — **template only**, rows researched by hand | `docs/product/pilot-kit/florida-call-list.md` | Phase 1 recruiting |
 | First-call script (discovery written to disconfirm, not to sell) | `docs/product/pilot-kit/first-call-script.md` | Phase 1 recruiting; persona reality-check |
 | Cold email to a shop with no warm route in (+ follow-up and general-inbox variants) | `docs/product/pilot-kit/cold-email-template.md` | Phase 1 recruiting; the V-02 boat day it asks for |
 
