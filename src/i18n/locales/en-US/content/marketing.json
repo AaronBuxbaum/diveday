@@ -1706,5 +1706,28 @@
     "harborAlt": "Illustration of divers and a crew member meeting beside a moored dive boat.",
     "classroomAlt": "Illustration of an instructor and two adults talking over dive equipment in a coastal shop.",
     "gear-handoverAlt": "Illustration of a dive-shop team member handing a pair of fins to a guest at the rental counter."
+  },
+  "hello": {
+    "eyebrow": "A note from Aaron at DiveDay",
+    "heroTitle": "Try one Saturday boat on DiveDay",
+    "heroLede": "Keep the tool you book with. Send me that trip’s passenger list and I’ll set it up, so each diver signs, adds a cert card, and gives rental sizes before they arrive.",
+    "reply": "Reply to my email",
+    "replySubject": "One Saturday trip",
+    "screensTitle": "What your crew sees that morning",
+    "readyTitle": "Who’s cleared to board, and why not",
+    "readyNote": "Seven of nine are ready. The other two each show the one thing they still need.",
+    "readyLabel": "A sample morning: 7 of 9 divers ready for the boat, then a missing waiver and a card still to check under Needs you.",
+    "countTitle": "The head count after each dive",
+    "countNote": "The crew taps each diver back on board by name, and the count says when all nine are back.",
+    "countLabel": "The boat’s list after dive 1: 9 of 9 divers back on board, each tapped by name.",
+    "stepsTitle": "How the one trip goes",
+    "steps": {
+      "list": "You send me the passenger list for one Saturday trip.",
+      "setUp": "I set the trip up in DiveDay and add your divers.",
+      "link": "Each diver gets an email with a link to sign the waiver, add a cert card, and give rental sizes.",
+      "morning": "On the morning your crew checks the list at the dock and counts heads after each dive. Your paper can run alongside."
+    },
+    "price": "{hasBase, select, yes {It’s {base} a month{hasPercent, select, yes {, plus {percent} of payments you take in DiveDay} other {}}.} other {It’s free{hasPercent, select, yes {, and DiveDay keeps {percent} only of payments you take in DiveDay, so a trip your divers paid for somewhere else costs you nothing} other {}}.}}",
+    "letter": "I’m a diver and an ex-Google software engineer, and I built DiveDay for the hour before the boat leaves. I’ve never run a shop, so your first trip is where I learn what I got wrong. Reply to my email or book a call, and we’ll pick the Saturday."
   }
 }
