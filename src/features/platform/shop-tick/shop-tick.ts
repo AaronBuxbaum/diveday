@@ -13,6 +13,7 @@ import { sendDueServiceReminders } from "@/features/gear/work-order-follow-up";
 import { sendTrailingDeskPings } from "@/features/messages/desk-pings";
 import { sendDueReminders } from "@/features/messages/reminders";
 import { sendDueCheckoutRecoveries } from "@/features/money/checkout-recovery";
+import { grantBuddyCredits } from "@/features/money/trip-credit";
 import { sentry } from "@/features/platform/sentry-server";
 import { marineLifeNamesIn } from "@/i18n/marine-life-labels";
 import { errorClassToken, errorCodeToken } from "@/lib/error-token";
@@ -55,6 +56,7 @@ export const SHOP_TICK_SCANS = [
   "seat-sold-alerts",
   "dock-observations",
   "package-gifts",
+  "buddy-credits",
 ] as const;
 
 export type ShopTickScan = (typeof SHOP_TICK_SCANS)[number];
@@ -104,6 +106,8 @@ const RUNS = {
   // A dive package bought as a gift: its email on the chosen date, in the
   // shop's zone and send window (issue #4629).
   "package-gifts": (db, now) => sendDuePackageGifts(db, { now }),
+  // A diver's trip credit for a friend who booked on their link and has dived (issue #4260).
+  "buddy-credits": (db, now) => grantBuddyCredits(db, { now }),
 } satisfies Record<ShopTickScan, (db: AppDb, now: Date) => Promise<unknown>>;
 
 export type ShopTickSummary = {

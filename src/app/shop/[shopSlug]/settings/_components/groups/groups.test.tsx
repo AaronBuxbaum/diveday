@@ -97,7 +97,7 @@ describe("each settings group renders as its own component", () => {
     expect(rendered[1]?.rows).toEqual(["crewSchedule"]);
     // No on/off switch is a row any more: they are all on the Features page.
     expect(rendered[2]?.rows).toEqual(["certCheck", "packing"]);
-    expect(rendered[3]?.rows).toEqual(["passThrough", "stripe"]);
+    expect(rendered[3]?.rows).toEqual(["passThrough", "buddyCredit", "stripe"]);
     expect(rendered[4]?.rows).toEqual(["contact", "deskHours", "reviewLink"]);
     expect(rendered[5]?.rows).toEqual(["shopPhotos"]);
     expect(rendered[6]?.rows).toEqual([]);

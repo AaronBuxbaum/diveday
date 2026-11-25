@@ -82,6 +82,7 @@ describe("the map covers the whole hub", () => {
       "certCheck",
       "packing",
       "passThrough",
+      "buddyCredit",
       "stripe",
       "contact",
       "deskHours",
@@ -101,6 +102,7 @@ describe("the map covers the whole hub", () => {
       searchListing: "search-listing",
       crewSchedule: "crew-schedule",
       passThrough: "pass-through",
+      buddyCredit: "buddy-credit",
       counterCard: "counter-card",
       certCheck: "cert-check",
     });

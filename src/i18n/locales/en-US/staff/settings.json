@@ -23,6 +23,8 @@
       "unitsInvalid": "Choose a depth unit, a water temperature unit, and a currency from the lists.",
       "passThroughSaved": "Pass-through fee saved",
       "passThroughInvalid": "Enter both a fee name and a positive amount, or leave both blank to disable it.",
+      "buddyCreditSaved": "Buddy credit saved",
+      "buddyCreditInvalid": "Enter 0 or a positive amount.",
       "rentalsSaved": "Rentals saved",
       "rentalPricesInvalid": "Enter each price as a dollar amount (or leave it blank), between $0 and $100,000.",
       "rentalTermsInvalid": "Keep rental terms under 1,500 characters.",
@@ -160,7 +162,12 @@
       "displayFont": "Headline face",
       "displayFontDefault": "DiveDay’s own",
       "looks": "Start from a look",
-      "lookNames": { "harbor": "Harbor", "reef": "Reef", "deep": "Deep", "kelp": "Kelp" },
+      "lookNames": {
+        "harbor": "Harbor",
+        "reef": "Reef",
+        "deep": "Deep",
+        "kelp": "Kelp"
+      },
       "heroPhoto": "Cover photo",
       "heroHint": "PNG, JPG, or WebP. Landscape, 1600 px wide or more.",
       "heroAlt": "Describe the cover photo",
@@ -317,6 +324,15 @@
       "amountHint": "Leave both fields blank to disable this fee.",
       "clearHint": "This is a pass-through charge, not a markup on the dive price.",
       "submit": "Save pass-through fee"
+    },
+    "buddyCredit": {
+      "heading": "Buddy credit",
+      "value": "{price} per friend",
+      "description": "Trip credit a diver earns when a friend books through their Bring a buddy link and dives.",
+      "detail": "Earned once per friend, an hour after the friend’s boat is back. Set 0 to give none.",
+      "amountLabel": "Credit per friend",
+      "amountHint": "Blank or 0 gives none.",
+      "submit": "Save buddy credit"
     },
     "paymentsGate": {
       "notice": "The rental catalog, rental prices, and Stripe connection are limited to owners and managers. The settings above are open to all staff."
@@ -1532,6 +1548,7 @@
     "title": "Features",
     "crewTarget": "Set the divemaster target",
     "boats": "Your boats",
+    "buddyCredit": "Set the buddy credit",
     "groups": {
       "diving": "Diving",
       "bookings": "Bookings and money",

@@ -725,7 +725,8 @@
     "kinds": {
       "grant": "Granted",
       "redeem": "Applied to fare",
-      "restore": "Returned"
+      "restore": "Returned",
+      "referral": "Brought a buddy"
     },
     "errors": {
       "invalid": "Check the credit amount and reason.",

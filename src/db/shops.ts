@@ -270,6 +270,16 @@ export async function setShopPassThroughFee(
   return shop ?? null;
 }
 
+/** The trip credit a diver earns for a friend who booked on their link and dived; 0 is none. */
+export async function setShopBuddyCredit(db: AppDb, shopId: string, buddyCreditCents: number) {
+  const [shop] = await db
+    .update(shops)
+    .set({ buddyCreditCents })
+    .where(eq(shops.id, shopId))
+    .returning();
+  return shop ?? null;
+}
+
 /**
  * The shop's own emergency reference — the numbers a crew dials during, carried
  * into the offline manifest snapshot (issue #688). Replaced wholesale: it is one

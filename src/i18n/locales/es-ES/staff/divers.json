@@ -725,7 +725,8 @@
     "kinds": {
       "grant": "Otorgado",
       "redeem": "Aplicado a la tarifa",
-      "restore": "Devuelto"
+      "restore": "Devuelto",
+      "referral": "Trajo a alguien"
     },
     "errors": {
       "invalid": "Revisa el importe y el motivo del crédito.",

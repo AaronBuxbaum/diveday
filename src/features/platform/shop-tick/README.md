@@ -3,7 +3,7 @@
 Every shop cadence, once an hour: the scans `/api/cron/shop-tick` runs (issue #2715). Each is a
 promise a fixed UTC hour cannot keep across zones, decided per shop in the shop's own day: the
 minimum-head-count decision, pre-trip reminders, held sends, gear service reminders, recaps, crew
-notices, the stale roll-call alert, the missing-diver alert's retry, the desk's trailing ping, the seat-sold email and a gifted package's email.
+notices, the stale roll-call alert, the missing-diver alert's retry, the desk's trailing ping, the seat-sold email, a gifted package's email and a diver's credit for a buddy who dived.
 The demo shops' boats at sea come home first, so no alert reads a demo boat as overdue. The minimum-head-count decision runs next, so no reminder goes out for a departure the same tick cancels. The other scans then run side by side.
 
 A `?scan=<name>` rerun runs only those scans and never checks in to the hourly monitor. An unknown name is a 400 before anything runs.
@@ -25,7 +25,7 @@ Module shape: [20260730-feature-module-contracts](../../../../docs/architecture/
 - The scans' reads and sends, which stay in `src/db/`: `src/features/messages/reminders.ts`, `src/features/after-the-dive/recap/store.ts`,
   `src/db/crew-notices.ts`, `src/features/boarding/roll-call-alerts/store.ts`, `src/db/missing-diver-alerts.ts`,
   `src/features/messages/desk-pings.ts`, `src/features/bookings/seat-sold-alerts.ts`, `src/db/held-sends.ts`,
-  `src/features/gear/work-order-follow-up/store.ts`, `src/db/boarding-observations.ts`, `src/db/package-gifts.ts`, `src/db/trips-minimum.ts` and `src/db/seed/boat-at-sea.ts`.
+  `src/features/gear/work-order-follow-up/store.ts`, `src/db/boarding-observations.ts`, `src/db/package-gifts.ts`, `src/features/money/trip-credit/buddy-credit.ts`, `src/db/trips-minimum.ts` and `src/db/seed/boat-at-sea.ts`.
 - The cron frame (the bearer gate, the Sentry monitor, the 503), which is `cronRoute`
   (`src/features/platform/cron-route.ts`), and the schedule, `SHOP_TICK_CRONTAB` (`src/lib/cron-schedule.ts`).
 - Platform cadences that are not about a shop's day: retention, backups, integrations, the daily

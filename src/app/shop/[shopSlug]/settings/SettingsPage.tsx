@@ -81,6 +81,8 @@ function noticeMessages(
     "units-invalid": { tone: "danger", text: t("settings.main.notice.unitsInvalid") },
     "pass-through-saved": { tone: "success", text: t("settings.main.notice.passThroughSaved") },
     "pass-through-invalid": { tone: "danger", text: t("settings.main.notice.passThroughInvalid") },
+    "buddy-credit-saved": { tone: "success", text: t("settings.main.notice.buddyCreditSaved") },
+    "buddy-credit-invalid": { tone: "danger", text: t("settings.main.notice.buddyCreditInvalid") },
     "contact-saved": { tone: "success", text: t("settings.main.notice.contactSaved") },
     "contact-confirmation-sent": {
       tone: "success",
