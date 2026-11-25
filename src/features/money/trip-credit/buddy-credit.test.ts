@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { createPerson } from "@/db/people";
 import {
@@ -166,6 +166,34 @@ describe("buddy credit", () => {
       busy: 0,
       skipped: 1,
     });
+    expect(await referralEntries(shop.id)).toHaveLength(0);
+  });
+
+  it.each([
+    ["55P03", true],
+    ["23514", false],
+  ] as const)("handles database error %s during a grant", async (code, busy) => {
+    const { db, shop } = await referral();
+    // Exercise the real transaction and error wrapping, with a database trigger
+    // standing in for a lock refusal or an unrelated constraint failure.
+    await db.execute(
+      sql.raw(`CREATE OR REPLACE FUNCTION test_buddy_credit_failure() RETURNS trigger AS $$
+      BEGIN RAISE EXCEPTION 'injected grant failure' USING ERRCODE = '${code}'; END;
+    $$ LANGUAGE plpgsql`),
+    );
+    await db.execute(
+      sql.raw(`CREATE TRIGGER test_buddy_credit_failure BEFORE INSERT ON trip_credit_entries
+      FOR EACH ROW EXECUTE FUNCTION test_buddy_credit_failure()`),
+    );
+    if (busy) {
+      expect(await grantBuddyCredits(db, { now: nowDate() })).toEqual({
+        granted: 0,
+        busy: 1,
+        skipped: 0,
+      });
+    } else {
+      await expect(grantBuddyCredits(db, { now: nowDate() })).rejects.toThrow();
+    }
     expect(await referralEntries(shop.id)).toHaveLength(0);
   });
 
