@@ -159,6 +159,8 @@
       "brandColorDarkened": "Tu color era demasiado claro para leerse como texto, así que tu página pública usa este tono más oscuro.",
       "displayFont": "Tipografía de títulos",
       "displayFontDefault": "La de DiveDay",
+      "looks": "Empieza con un estilo",
+      "lookNames": { "harbor": "Puerto", "reef": "Arrecife", "deep": "Profundo", "kelp": "Algas" },
       "heroPhoto": "Foto de portada",
       "heroHint": "PNG, JPG o WebP. Apaisada, de 1600 px de ancho o más.",
       "heroAlt": "Describe la foto de portada",
