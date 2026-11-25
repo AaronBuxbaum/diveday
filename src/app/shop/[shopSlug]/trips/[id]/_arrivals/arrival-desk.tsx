@@ -32,6 +32,7 @@ import { turnAwayOffer } from "@/lib/turn-away";
 import { welcomeCueFor } from "@/lib/welcome-cue";
 import { isNoShowAtCounter } from "../../../../../../lib/check-in";
 import type { RosterArrival } from "../_components/RosterSection";
+import type { ArrivalAct } from "../_components/roster-model";
 import { ArrivalTap } from "./ArrivalTap";
 import {
   checkInAction,
@@ -42,10 +43,10 @@ import {
   undoNoShowAction,
 } from "./actions";
 import { CounterInstrument } from "./CounterInstrument";
-import { NoShowSalvage, NoShowScript } from "./NoShowScript";
+import { NoShowConfirm, NoShowSalvage, NoShowScript } from "./NoShowScript";
 import { RowActionForm } from "./RowActionForm";
 import { noShowSalvageCopy } from "./salvage-copy";
-import { TurnAwayDoor, TurnAwayScript } from "./TurnAwayScript";
+import { TurnAwayDoor, TurnAwayForm, TurnAwayScript } from "./TurnAwayScript";
 
 /** What the Trip page adds while a departure's arrivals are open. */
 export type ArrivalDesk = {
@@ -197,6 +198,9 @@ export async function buildArrivalDesk({
   const controls = new Map<string, ReactNode>();
   const below = new Map<string, ReactNode>();
   const details = new Map<string, ReactNode>();
+  const acts = new Map<string, ArrivalAct[]>();
+  const act = (bookingId: string, entry: ArrivalAct) =>
+    acts.set(bookingId, [...(acts.get(bookingId) ?? []), entry]);
   for (const row of rows) {
     const ready = row.readiness.status === "ready";
     if (row.bookingStatus === "no_show") {
@@ -287,7 +291,7 @@ export async function buildArrivalDesk({
       } else {
         // A diver who arrived and has since gone blocked can still be sent
         // home, until the boat leaves with them.
-        placeTurnAway(turnAwayFor(row), row.bookingId, { details });
+        placeTurnAway(turnAwayFor(row), row.bookingId, { details, act });
       }
       continue;
     }
@@ -317,32 +321,29 @@ export async function buildArrivalDesk({
       // **Two scripts, because the tap is two different claims**: while the
       // boat is still there it is about a seat; once it has gone, the same tap
       // says this person did not dive.
+      const copy = {
+        door: t("checkIn.noShow.door"),
+        consequence:
+          claim === "did_not_dive"
+            ? t("checkIn.noShow.sailedConsequence")
+            : t("checkIn.noShow.consequence"),
+        confirm: t("checkIn.noShow.confirm"),
+        confirming: t("checkIn.noShow.confirming"),
+        confirmAriaLabel: t("checkIn.noShow.confirmAriaLabel", { name: row.personName }),
+        sendFailed: t("checkIn.sendFailedButton"),
+      };
       details.set(
         row.bookingId,
-        <NoShowScript
-          key="no-show"
-          action={markNoShow}
-          bookingId={row.bookingId}
-          // One door and one confirm either side of the departure ("Not
-          // here"): "did not dive" also describes a diver who sat a dive out
-          // aboard, whom this tap refuses (dive-domain review 2026-10-06).
-          // What differs is the sentence saying what the tap records.
-          copy={{
-            door: t("checkIn.noShow.door"),
-            consequence:
-              claim === "did_not_dive"
-                ? t("checkIn.noShow.sailedConsequence")
-                : t("checkIn.noShow.consequence"),
-            confirm: t("checkIn.noShow.confirm"),
-            confirming: t("checkIn.noShow.confirming"),
-            confirmAriaLabel: t("checkIn.noShow.confirmAriaLabel", { name: row.personName }),
-            sendFailed: t("checkIn.sendFailedButton"),
-          }}
-        />,
+        <NoShowScript key="no-show" action={markNoShow} bookingId={row.bookingId} copy={copy} />,
       );
+      act(row.bookingId, {
+        key: "not-here",
+        label: copy.door,
+        sheet: <NoShowConfirm action={markNoShow} bookingId={row.bookingId} copy={copy} />,
+      });
     }
     // A blocked guest may be turned away, after "Not here" on the opened guest.
-    placeTurnAway(ready ? null : turnAwayFor(row), row.bookingId, { details });
+    placeTurnAway(ready ? null : turnAwayFor(row), row.bookingId, { details, act });
   }
 
   // **"Running late, said 7:42"** (J3): the diver's own word, on a seat still
@@ -484,7 +485,7 @@ export async function buildArrivalDesk({
 
   const boarded = new Set(rows.filter((row) => row.boarded).map((row) => row.bookingId));
 
-  return { arrival: { instrument, controls, below, details, boarded } };
+  return { arrival: { instrument, controls, below, details, acts, boarded } };
 }
 
 /**
@@ -505,7 +506,7 @@ function turnAwayDoor({
   now: Date;
   t: StaffTranslator;
   action: (formData: FormData) => Promise<void>;
-}): { door: ReactNode; panel: ReactNode } | null {
+}): { door: ReactNode; panel: ReactNode; act: ArrivalAct } | null {
   const reasons = turnAwayOffer({
     bookingStatus: row.bookingStatus,
     checkedIn: row.checkedIn,
@@ -523,26 +524,33 @@ function turnAwayDoor({
       label={t("checkIn.turnAway.door")}
     />
   );
+  const words = reasons.map((reason) => ({
+    value: reason,
+    label: t(`checkIn.turnAway.reason.${reason}`),
+  }));
+  const copy = {
+    legend: t("checkIn.turnAway.legend"),
+    consequence: t("checkIn.turnAway.consequence"),
+    confirm: t("checkIn.turnAway.confirm"),
+    confirming: t("words.busy.recording"),
+    confirmAriaLabel: t("checkIn.turnAway.confirmAriaLabel", { name: row.personName }),
+    sendFailed: t("checkIn.sendFailedButton"),
+  };
   const panel = (
     <TurnAwayScript
       key="turn-away"
       action={action}
       bookingId={row.bookingId}
-      reasons={reasons.map((reason) => ({
-        value: reason,
-        label: t(`checkIn.turnAway.reason.${reason}`),
-      }))}
-      copy={{
-        legend: t("checkIn.turnAway.legend"),
-        consequence: t("checkIn.turnAway.consequence"),
-        confirm: t("checkIn.turnAway.confirm"),
-        confirming: t("words.busy.recording"),
-        confirmAriaLabel: t("checkIn.turnAway.confirmAriaLabel", { name: row.personName }),
-        sendFailed: t("checkIn.sendFailedButton"),
-      }}
+      reasons={words}
+      copy={copy}
     />
   );
-  return { door, panel };
+  const act = {
+    key: "turn-away",
+    label: t("checkIn.turnAway.door"),
+    sheet: <TurnAwayForm action={action} bookingId={row.bookingId} reasons={words} copy={copy} />,
+  };
+  return { door, panel, act };
 }
 
 /**
@@ -550,11 +558,12 @@ function turnAwayDoor({
  * (ADR 20261117-trip-page-clock): the door and its confirm, together.
  */
 function placeTurnAway(
-  turnAway: { door: ReactNode; panel: ReactNode } | null,
+  turnAway: { door: ReactNode; panel: ReactNode; act: ArrivalAct } | null,
   bookingId: string,
-  slots: { details: Map<string, ReactNode> },
+  slots: { details: Map<string, ReactNode>; act: (bookingId: string, entry: ArrivalAct) => void },
 ) {
   if (!turnAway) return;
+  slots.act(bookingId, turnAway.act);
   const held = slots.details.get(bookingId);
   slots.details.set(
     bookingId,

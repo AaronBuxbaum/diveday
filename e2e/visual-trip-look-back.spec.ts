@@ -35,9 +35,6 @@ for (const scheme of ["light", "dark"] as const) {
             name: staffCopy("trips.clock.wrapped.lookBackOpen", { count: 2 }),
           }),
         ).toBeVisible();
-        await expect(
-          page.getByRole("button", { name: staffCopy("trips.clock.wrapped.reportOne") }),
-        ).toBeVisible();
         await page.setViewportSize({ width: 390, height: 844 });
         const link = page.getByRole("link", {
           name: staffCopy("trips.clock.wrapped.lookBackOpen", { count: 2 }),

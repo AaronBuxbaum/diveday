@@ -6,6 +6,8 @@ import {
   createTrip,
   daysFromNow,
   e2eNow,
+  guestAction,
+  guestFact,
   manifestRow,
   openDiverFileGroup,
   openIfClosed,
@@ -247,7 +249,7 @@ test("staff record and correct a diver's emergency contact from the roster and t
   // Failure path: a name with no phone is not a reachable contact — the
   // save must say so, not silently claim success or a generic error.
   await openRosterDetails(card);
-  await openIfClosed(card.locator("details").filter({ hasText: "Add emergency contact" }).last());
+  await openIfClosed(guestFact(card, "Emergency contact"));
   await card.getByLabel("Contact name").fill("Robin Diver");
   await card.getByRole("button", { name: "Save contact" }).click();
   await expect(
@@ -272,7 +274,7 @@ test("staff record and correct a diver's emergency contact from the roster and t
   // The diver's own record reads the same value straight through
   // `editDiver`/`recordBookingEmergencyContact` sharing the same columns —
   // one write path regardless of who fills it in.
-  await card.getByRole("link", { name: staffCopy("trips.folio.openProfile"), exact: true }).click();
+  await guestAction(card, staffCopy("trips.folio.openProfile"));
   await page.getByText("Contact details", { exact: true }).click();
   await expect(page.getByLabel("Emergency contact name")).toHaveValue("Robin Diver");
   await expect(page.getByLabel("Emergency contact phone")).toHaveValue("+1 305 555 0166");
@@ -321,9 +323,7 @@ test("a Guests card shows an emergency contact only when it is missing", async (
     missing.getByText("Emergency contact · Not on file").filter({ visible: true }),
   ).toBeVisible();
   await openRosterDetails(missing);
-  await expect(
-    missing.locator("summary").filter({ hasText: /^Add emergency contact$/ }),
-  ).toBeVisible();
+  await expect(guestFact(missing, "Emergency contact").locator("> summary")).toContainText("Add");
 
   // Tom Okafor has one on file. It is not on the list's face — but it is
   // one tap away, on him opened, not dropped.

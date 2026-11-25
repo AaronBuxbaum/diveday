@@ -1,12 +1,14 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { MoreMenu } from "@/components/MoreMenu";
+import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { menuRowClass } from "@/components/ui/menu";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatShortDate, formatTimeTz } from "@/lib/format";
 import { tripPacketPath } from "@/lib/print-sheets";
 import { shopPath } from "@/lib/staff-notices";
+import { startIncidentReportAction } from "../incidents/actions";
 import { TripPageHeader } from "./TripPageHeader";
 
 /**
@@ -41,8 +43,10 @@ export function tripFacts({
  * **The Trip page's header** (ADR 20261117-trip-page-clock): the title, one
  * facts line, then **Edit trip** and **More**, with **Roll call** as a quiet
  * link where it is not the phase's hero. More holds what has no other home
- * yet: adding a guest, Gear, the printed packet, Activity, and Roll call
- * before Check-in. On a phone Edit trip moves into More.
+ * yet: adding a guest, Gear, the printed packet, Activity, Roll call before
+ * Check-in, and last **Report an incident**, the one door on the departure
+ * that starts a report, reachable in every phase. On a phone Edit trip moves
+ * into More.
  */
 export function TripHeader({
   trip,
@@ -51,6 +55,7 @@ export function TripHeader({
   tripId,
   rollCall,
   addGuest,
+  reportIncident,
   locale,
   timeZone,
   t,
@@ -66,6 +71,8 @@ export function TripHeader({
   rollCall: "more" | "header" | "hero";
   /** The trip still sells a seat: More offers the add band (`?add=1`). */
   addGuest: boolean;
+  /** This viewer may start an incident report here (`mayStartTripIncidentReport`); the write re-checks. */
+  reportIncident: boolean;
   locale: string;
   timeZone: string;
   t: StaffTranslator;
@@ -131,6 +138,13 @@ export function TripHeader({
             <MenuLink href={`${root}?phase=wrapped#trip-activity`} className={row}>
               {t("trips.clock.activity")}
             </MenuLink>
+            {reportIncident ? (
+              <form action={startIncidentReportAction.bind(null, shopSlug, tripId)}>
+                <SubmitButton pendingLabel={t("words.busy.opening")} className={row}>
+                  {t("trips.clock.reportIncident")}
+                </SubmitButton>
+              </form>
+            ) : null}
           </MoreMenu>
         </>
       }

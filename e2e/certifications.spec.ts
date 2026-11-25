@@ -170,7 +170,6 @@ test("an instructor certifies a diver from the course roster, and they can book 
   await page.waitForURL(/\/trips\/[^/?#]+(?:[?#]|$)/);
   const row = await rosterRow(page, diverName);
   await openRosterDetails(row);
-  await expect(row.getByRole("link", { name: "Open guest profile", exact: true })).toBeVisible();
   await row.getByText("Certify", { exact: true }).click();
   await row.getByLabel("Level").selectOption({ label: "Open Water" });
   await row.getByRole("button", { name: "Confirm certification" }).click();

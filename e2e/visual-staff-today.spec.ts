@@ -13,7 +13,7 @@ import {
   counterPath,
   createTrip,
   daysFromNow,
-  disclosureSettled,
+  guestAction,
   manifestRow,
   offlineCopySaved,
   openBookingActions,
@@ -566,7 +566,7 @@ for (const scheme of ["light", "dark"] as const) {
         const row = await rosterRow(page, uncountedSeat.personName);
         await openRosterDetails(row);
         await openBookingActions(row);
-        await row.locator("summary", { hasText: /^\s*Cancel booking\s*$/ }).click();
+        await guestAction(row, "Cancel booking");
         await row.getByRole("status").filter({ hasText: "at the dock, so the boat may" }).waitFor();
         await expect(row.getByRole("button", { name: "Yes, cancel booking" })).toHaveCount(0);
         await capture(page, "trip-remove-uncounted-refused", scheme);
@@ -586,7 +586,7 @@ for (const scheme of ["light", "dark"] as const) {
         const row = await rosterRow(page, name);
         await openRosterDetails(row);
         await openBookingActions(row);
-        await row.locator("summary", { hasText: /^\s*Cancel booking\s*$/ }).click();
+        await guestAction(row, "Cancel booking");
         await row.getByRole("status").filter({ hasText: "sailed on this departure" }).waitFor();
         await expect(row.getByRole("button", { name: "Yes, cancel booking" })).toHaveCount(0);
         await capture(page, "trip-remove-aboard-refused", scheme);
@@ -787,11 +787,8 @@ for (const scheme of ["light", "dark"] as const) {
         await expect(row.getByRole("button", { name: "Check in Odile Marchand" })).toBeVisible();
 
         await openRosterDetails(row);
-        const door = row.getByText("Not here", { exact: true }).locator("..");
-        await door.locator("> summary").click();
-        // The body animates in, so `open` flipping is not the frame it is laid
-        // out in — waited on the arrival's end state, never a duration.
-        await disclosureSettled(door);
+        await guestAction(row, "Not here");
+        await expect(row.locator('[data-guest-sheet="not-here"]')).toBeVisible();
         await capture(page, "trip-desk-no-show", scheme);
 
         // **The same row once the boat is really gone.** Ninety minutes past
@@ -803,7 +800,6 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto(counterPath("blue-mantis", tripId));
         const sailedRow = await deskRow();
         await openRosterDetails(sailedRow);
-        const sailedDoor = sailedRow.getByText("Not here", { exact: true }).locator("..");
         // Hydrated before the tap, not after: this frame opens the door
         // straight off a page load, and a summary tapped while the page is
         // still the server's markup did not stay open on CI or locally. The
@@ -813,8 +809,8 @@ for (const scheme of ["light", "dark"] as const) {
           "data-hydrated",
           "true",
         );
-        await sailedDoor.locator("> summary").click();
-        await disclosureSettled(sailedDoor);
+        await guestAction(sailedRow, "Not here");
+        await expect(sailedRow.locator('[data-guest-sheet="not-here"]')).toBeVisible();
         await capture(page, "trip-desk-no-show-sailed", scheme);
       });
 
@@ -847,7 +843,7 @@ for (const scheme of ["light", "dark"] as const) {
         );
         const row = await rosterRow(page, "Odile Marchand");
         await openRosterDetails(row);
-        await row.getByRole("button", { name: "Turn away", exact: true }).click();
+        await guestAction(row, "Turn away");
         await expect(row.getByRole("button", { name: "Turn Odile Marchand away" })).toBeVisible();
         await capture(page, "trip-desk-turn-away", scheme);
 

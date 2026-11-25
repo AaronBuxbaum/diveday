@@ -391,12 +391,17 @@ export function seatMoveForRow(
  * *finished* is this list's question: "Everyone's checked in" must never show
  * over a row still in "Still to clear" (dive-domain review 2026-10-05).
  */
+/** A rare desk act on one guest ("Not here", "Turn away"): its menu row and its confirm. */
+export type ArrivalAct = { key: string; label: string; sheet: ReactNode };
+
 export type RosterArrival = {
   instrument?: (deskWorkOpen: boolean) => ReactNode;
   controls: ReadonlyMap<string, ReactNode>;
   below: ReadonlyMap<string, ReactNode>;
   /** Routine exception actions behind the existing person disclosure. */
   details?: ReadonlyMap<string, ReactNode>;
+  /** The same acts for the opened guest: a More menu row each, and the sheet it opens. */
+  acts?: ReadonlyMap<string, readonly ArrivalAct[]>;
   boarded: ReadonlySet<string>;
 };
 

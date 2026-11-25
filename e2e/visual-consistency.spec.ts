@@ -34,7 +34,7 @@ for (const width of [390, 1280]) {
     test("the coming-as editor keeps its select and save action level", async ({ page }) => {
       await openCounterFor(page, "blue-mantis", "Priya Sharma");
       await openRosterRow(page, "Priya Sharma");
-      await page.getByText("Coming as: Diver", { exact: true }).click();
+      await page.locator("summary[data-guest-fact]:visible", { hasText: "Coming as" }).click();
       const select = page.locator('select[name="participantType"]:visible');
       // Measure in one frame: the containing sheet can still be entering,
       // so separate boundingBox calls would compare two animation frames.

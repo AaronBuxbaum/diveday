@@ -3,6 +3,7 @@ import { expect, signedInAsOwner, test } from "./fixtures";
 import {
   addReturningGuest,
   findTripOnBoard,
+  guestAction,
   openDiverFileGroup,
   openNewGuestForm,
   openRosterDetails,
@@ -91,7 +92,7 @@ async function seatNewcomerWithPendingCard(page: Page, departure: RegExp, prefix
 
   const guest = await rosterRow(page, newcomer);
   await openRosterDetails(guest);
-  await guest.getByRole("link", { name: "Open guest profile", exact: true }).click();
+  await guestAction(guest, "Open guest profile");
   await page.waitForURL(new RegExp(`/shop/${SHOP}/divers/[0-9a-f-]{36}`));
   const group = await openDiverFileGroup(page, "Certification records");
   await group.getByText("Add certification", { exact: true }).click();

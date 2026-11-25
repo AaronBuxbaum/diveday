@@ -5,6 +5,7 @@ import { INSET_NOTE_BOX } from "@/components/ui/card";
 import { CompactDisclosureRow } from "@/components/ui/disclosure";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatDateTimeTz } from "@/lib/format";
+import { GuestFact } from "./GuestFact";
 import type { RosterPrivateNote } from "./roster-model";
 
 export function SeatNotes({
@@ -15,6 +16,7 @@ export function SeatNotes({
   shopTimezone,
   addNoteAction,
   deleteNoteAction,
+  row = false,
 }: {
   bookingId: string;
   notes: RosterPrivateNote[];
@@ -23,7 +25,73 @@ export function SeatNotes({
   shopTimezone: string;
   addNoteAction: (formData: FormData) => void;
   deleteNoteAction: (formData: FormData) => void;
+  /** One row of the opened guest's facts list (`GuestFact`). */
+  row?: boolean;
 }) {
+  const list = (
+    <div className="grid gap-3">
+      {notes.map((entry) => {
+        const { note, authorName } = entry;
+        return (
+          <div
+            key={note.id}
+            className={`flex items-start justify-between gap-2 ${INSET_NOTE_BOX} bg-surface-sunken`}
+          >
+            <div className="min-w-0">
+              <p className="break-words whitespace-pre-wrap">{note.body}</p>
+              <p className="mt-1 text-xs text-muted">
+                {authorName} · {formatDateTimeTz(note.createdAt, locale, shopTimezone)}
+              </p>
+            </div>
+            {entry.deletable === false ? null : (
+              <form action={deleteNoteAction} className="shrink-0">
+                <input type="hidden" name="noteId" value={note.id} />
+                {/* No confirm dialog: the delete lands and a toast
+                    offers a one-tap undo — a purely reversible edit,
+                    not a real send (principle 7). */}
+                <SubmitButton
+                  pendingLabel={t("trips.roster.deletingEllipsis")}
+                  className={buttonClass({
+                    variant: "danger-ghost",
+                    size: "sm",
+                    busy: true,
+                  })}
+                >
+                  {t("trips.roster.delete")}
+                </SubmitButton>
+              </form>
+            )}
+          </div>
+        );
+      })}
+      {/* Keyed on the note count so a landed note empties the box. */}
+      <PrivateNoteForm
+        action={addNoteAction}
+        hiddenFields={{ bookingId }}
+        resetKey={notes.length}
+        rows={2}
+        copy={{
+          label: t("trips.roster.addNoteLabel"),
+          add: t("trips.roster.addPrivateNote"),
+          adding: t("words.busy.adding"),
+        }}
+      />
+    </div>
+  );
+  if (row) {
+    return (
+      <GuestFact
+        label={t("trips.fact.notes")}
+        value={
+          notes.length === 0
+            ? t("trips.fact.none")
+            : t("trips.fact.noteCount", { count: notes.length })
+        }
+        empty={notes.length === 0}
+        edit={{ label: t(notes.length === 0 ? "trips.fact.add" : "trips.fact.edit"), form: list }}
+      />
+    );
+  }
   return (
     <div className="mt-5 border-t border-border pt-3">
       <CompactDisclosureRow
@@ -37,54 +105,7 @@ export function SeatNotes({
             : t("trips.roster.privateStaffNotes", { count: notes.length })
         }
       >
-        <div className="grid gap-3">
-          {notes.map((entry) => {
-            const { note, authorName } = entry;
-            return (
-              <div
-                key={note.id}
-                className={`flex items-start justify-between gap-2 ${INSET_NOTE_BOX} bg-surface-sunken`}
-              >
-                <div className="min-w-0">
-                  <p className="break-words whitespace-pre-wrap">{note.body}</p>
-                  <p className="mt-1 text-xs text-muted">
-                    {authorName} · {formatDateTimeTz(note.createdAt, locale, shopTimezone)}
-                  </p>
-                </div>
-                {entry.deletable === false ? null : (
-                  <form action={deleteNoteAction} className="shrink-0">
-                    <input type="hidden" name="noteId" value={note.id} />
-                    {/* No confirm dialog: the delete lands and a toast
-                        offers a one-tap undo — a purely reversible edit,
-                        not a real send (principle 7). */}
-                    <SubmitButton
-                      pendingLabel={t("trips.roster.deletingEllipsis")}
-                      className={buttonClass({
-                        variant: "danger-ghost",
-                        size: "sm",
-                        busy: true,
-                      })}
-                    >
-                      {t("trips.roster.delete")}
-                    </SubmitButton>
-                  </form>
-                )}
-              </div>
-            );
-          })}
-          {/* Keyed on the note count so a landed note empties the box. */}
-          <PrivateNoteForm
-            action={addNoteAction}
-            hiddenFields={{ bookingId }}
-            resetKey={notes.length}
-            rows={2}
-            copy={{
-              label: t("trips.roster.addNoteLabel"),
-              add: t("trips.roster.addPrivateNote"),
-              adding: t("words.busy.adding"),
-            }}
-          />
-        </div>
+        {list}
       </CompactDisclosureRow>
     </div>
   );

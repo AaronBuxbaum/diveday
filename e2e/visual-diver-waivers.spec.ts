@@ -8,6 +8,7 @@ import { RSTC_QUESTIONNAIRE } from "../src/lib/medical";
 import { expect, makeActivitySafe, test } from "./fixtures";
 import {
   daysFromNow,
+  guestProfileHref,
   openCopiedWaiverLink,
   openDiverFileGroup,
   openFirstRosterRowWith,
@@ -22,7 +23,6 @@ import {
   installVisualBuildGuard,
   REEF_TRIP,
   SURFACE_TIMEOUT_MS,
-  staffCopy,
   VISUAL_STEP_BOUNDS,
 } from "./visual-harness";
 
@@ -142,9 +142,7 @@ for (const scheme of ["light", "dark"] as const) {
           .click();
         await staffPage.waitForURL(/\/trips\/[a-f0-9-]+$/);
         const unsent = await openFirstRosterRowWith(staffPage, "Send waiver");
-        const profileHref = await unsent
-          .getByRole("link", { name: staffCopy("trips.folio.openProfile"), exact: true })
-          .getAttribute("href");
+        const profileHref = await guestProfileHref(unsent);
         if (!profileHref)
           throw new Error("The waiver roster row did not link to its diver profile");
         await unsent.getByRole("button", { name: "Send waiver", exact: true }).click();

@@ -61,40 +61,69 @@ export function TurnAwayScript({
   reasons: readonly { value: string; label: string }[];
   copy: TurnAwayScriptCopy;
 }) {
-  const only = reasons.length === 1;
   const { open } = useContext(TurnAwayContext);
   return (
     <div id={`turn-away-${bookingId}`} hidden={!open} className="pb-2">
-      <RowActionForm action={action} sendFailedLabel={copy.sendFailed}>
-        <input type="hidden" name="bookingId" value={bookingId} />
-        <div className="mt-1 flex flex-col gap-3 rounded-lg bg-surface-sunken p-3">
-          <ChoiceFieldset legend={copy.legend} required bodyClassName="flex flex-wrap gap-2">
-            {reasons.map((reason) => (
-              <ChoicePill
-                key={reason.value}
-                type="radio"
-                name="reason"
-                value={reason.value}
-                required
-                defaultChecked={only}
-              >
-                {reason.label}
-              </ChoicePill>
-            ))}
-          </ChoiceFieldset>
-          <div className="flex flex-wrap items-center justify-end gap-3">
-            <p className="min-w-0 grow text-sm text-muted">{copy.consequence}</p>
-            <SubmitButton
-              pendingLabel={copy.confirming}
-              ariaLabel={copy.confirmAriaLabel}
-              observabilityAction="turn_away"
-              className={buttonClass({ variant: "secondary", size: "sm" })}
-            >
-              {copy.confirm}
-            </SubmitButton>
-          </div>
-        </div>
-      </RowActionForm>
+      <TurnAwayForm action={action} bookingId={bookingId} reasons={reasons} copy={copy} boxed />
     </div>
+  );
+}
+
+/**
+ * The confirm itself: this row's reasons and the one button. Under the desk
+ * row's door, and as the opened guest's sheet (its More menu).
+ */
+export function TurnAwayForm({
+  action,
+  bookingId,
+  reasons,
+  copy,
+  boxed = false,
+}: {
+  action: (formData: FormData) => Promise<void>;
+  bookingId: string;
+  reasons: readonly { value: string; label: string }[];
+  copy: TurnAwayScriptCopy;
+  /** Drawn in its own sunken box; a sheet already is one. */
+  boxed?: boolean;
+}) {
+  const only = reasons.length === 1;
+  return (
+    <RowActionForm action={action} sendFailedLabel={copy.sendFailed}>
+      <input type="hidden" name="bookingId" value={bookingId} />
+      <div
+        className={
+          boxed
+            ? "mt-1 flex flex-col gap-3 rounded-lg bg-surface-sunken p-3"
+            : "flex flex-col gap-3"
+        }
+      >
+        <ChoiceFieldset legend={copy.legend} required bodyClassName="flex flex-wrap gap-2">
+          {reasons.map((reason) => (
+            <ChoicePill
+              key={reason.value}
+              type="radio"
+              name="reason"
+              value={reason.value}
+              required
+              defaultChecked={only}
+            >
+              {reason.label}
+            </ChoicePill>
+          ))}
+        </ChoiceFieldset>
+        <div className="flex flex-wrap items-center justify-end gap-3">
+          <p className="min-w-0 grow text-sm text-muted">{copy.consequence}</p>
+          <SubmitButton
+            pendingLabel={copy.confirming}
+            ariaLabel={copy.confirmAriaLabel}
+            observabilityAction="turn_away"
+            className={buttonClass({ variant: "secondary", size: "sm" })}
+          >
+            {copy.confirm}
+          </SubmitButton>
+        </div>
+      </div>
+    </RowActionForm>
   );
 }

@@ -9,6 +9,7 @@ import {
   daysFromNow,
   e2eNow,
   findTripOnBoard,
+  guestAction,
   openBookingActions,
   openFirstBookableScheduleTrip,
   openNamedScheduleTrip,
@@ -171,14 +172,14 @@ test.describe("staff", () => {
     const noraRow = (await rosterRow(page, "Nora Quinn")).filter({ visible: true });
     await openRosterDetails(noraRow);
     await openBookingActions(noraRow);
-    await noraRow.getByRole("button", { name: "Cancel booking" }).click();
+    await guestAction(noraRow, "Cancel booking");
     await expect(noraRow).toContainText("Remove Nora Quinn from this trip?");
     await noraRow.getByRole("button", { name: "Never mind" }).click();
     await expect(page.getByText("Nora Quinn").first()).toBeVisible();
 
     await openRosterDetails(noraRow);
     await openBookingActions(noraRow);
-    await noraRow.getByRole("button", { name: "Cancel booking" }).click();
+    await guestAction(noraRow, "Cancel booking");
     await noraRow.getByRole("button", { name: "Yes, cancel booking" }).click();
     await expect(page.getByRole("status")).toContainText("Booking canceled");
     // Scoped to the roster: removals now also write the trip activity trail

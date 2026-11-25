@@ -28,9 +28,13 @@ test("every phase of a departure opens from the strip, and Edit trip beside them
     "page",
   );
   await expect(page.locator('[data-phase-panel="checkin"]')).toBeVisible();
+  // An incident is reported from the header's More, in every phase.
+  const more = page.locator("[data-more-menu]").filter({ visible: true }).first();
+  await more.getByRole("button", { name: t("trips.clock.more"), exact: true }).click();
   await expect(
-    page.getByRole("button", { name: t("trips.clock.wrapped.reportOne") }),
+    more.getByRole("button", { name: t("trips.clock.reportIncident"), exact: true }),
   ).toBeVisible();
+  await page.keyboard.press("Escape");
   for (const phase of PHASES) {
     await openTripPhase(page, phase);
     await expect(page.locator(`[data-phase-panel="${phase}"]`)).toBeVisible();

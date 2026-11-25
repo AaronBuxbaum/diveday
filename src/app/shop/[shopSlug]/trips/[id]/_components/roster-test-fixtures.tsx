@@ -304,3 +304,20 @@ export const fixtures = {
     ["b", signedWaiver],
   ]) as WaiverByBooking,
 };
+
+/** Open the opened guest's More menu (`GuestMoreMenu`), beside Close. */
+export function openGuestMenu(): HTMLElement {
+  const trigger = document.querySelector<HTMLElement>("[data-guest-more] button[aria-expanded]");
+  if (!trigger) throw new Error("No guest is open, so there is no More menu");
+  if (trigger.getAttribute("aria-expanded") !== "true") fireEvent.click(trigger);
+  return document.querySelector("[data-guest-more] [data-more-menu-panel]") as HTMLElement;
+}
+
+/** Choose one of the menu's rows by its name: a row that asks a question opens its sheet. */
+export function chooseGuestAction(name: string): void {
+  const row = [...openGuestMenu().querySelectorAll<HTMLElement>("button, a")].find(
+    (entry) => entry.textContent === name,
+  );
+  if (!row) throw new Error(`The guest's More menu has no "${name}"`);
+  fireEvent.click(row);
+}

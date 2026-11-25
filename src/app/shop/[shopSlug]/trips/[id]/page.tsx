@@ -298,6 +298,7 @@ export default async function ManageTripPage({
           {...{ trip, shopSlug, tripId, locale, t, facts: frame.facts, timeZone: shop.timezone }}
           rollCall={rollCall}
           addGuest={acceptsDivers && frame.capacity > trip.booked}
+          reportIncident={manifest.can.reportIncident}
         />
         <PhaseHeading
           {...{ frame, showDetails, cancelled, guests, tripPath, meta: slots.facts }}

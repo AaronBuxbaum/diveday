@@ -9,6 +9,7 @@ import { rowIdentity } from "./roster-row-identity";
 import {
   deepRow,
   entry,
+  openGuestMenu,
   readinessRow,
   renderRoster,
   seatFacts,
@@ -229,7 +230,9 @@ describe("an unconfirmed identity withholds the matched person's record", () => 
       "true",
     );
     expect(
-      screen.getByRole("link", { name: staffTranslator("en-US")("trips.folio.openProfile") }),
+      within(openGuestMenu()).getByRole("link", {
+        name: staffTranslator("en-US")("trips.folio.openProfile"),
+      }),
     ).toHaveAttribute("href", `/shop/blue-mantis/divers/${matched.person.id}`);
     // Both answers stand in the open, outside the row's fold (Aaron,
     // 2026-10-05: the old row offered one answer, behind the mark).

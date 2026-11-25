@@ -334,13 +334,17 @@ function FixRow({
         >
           {!open ? row.arrivalControl : null}
           {open ? (
-            <button
-              type="button"
-              onClick={() => toggle(id)}
-              className={buttonClass({ variant: "link", size: "sm" })}
-            >
-              {closeLabel}
-            </button>
+            <>
+              {/* The opened guest's More menu draws itself here (`GuestMoreMenu`). */}
+              <span data-guest-menu-slot={id} />
+              <button
+                type="button"
+                onClick={() => toggle(id)}
+                className={buttonClass({ variant: "ghost", size: "sm" })}
+              >
+                {closeLabel}
+              </button>
+            </>
           ) : (
             (row.control ??
             (row.openLabel ? (

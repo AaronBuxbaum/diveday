@@ -60,21 +60,46 @@ export function NoShowScript({
           sentence, or under it once the two do not share a line. `grow`, not
           `flex-1`, whose zero basis never wraps and squeezed the sentence into
           a narrow column beside the button on a phone. */}
-      <div className="mt-1 flex flex-wrap items-center justify-end gap-3 rounded-lg bg-surface-sunken p-3">
-        <p className="min-w-0 grow text-sm text-muted">{copy.consequence}</p>
-        <RowActionForm action={action} sendFailedLabel={copy.sendFailed}>
-          <input type="hidden" name="bookingId" value={bookingId} />
-          <SubmitButton
-            pendingLabel={copy.confirming}
-            ariaLabel={copy.confirmAriaLabel}
-            observabilityAction="mark_no_show"
-            className={buttonClass({ variant: "secondary", size: "sm" })}
-          >
-            {copy.confirm}
-          </SubmitButton>
-        </RowActionForm>
-      </div>
+      <NoShowConfirm
+        action={action}
+        bookingId={bookingId}
+        copy={copy}
+        className="mt-1 rounded-lg bg-surface-sunken p-3"
+      />
     </details>
+  );
+}
+
+/**
+ * The confirm itself: what the tap records, and the one button. Under "Not
+ * here" on the desk's row, and as the opened guest's sheet (its More menu).
+ */
+export function NoShowConfirm({
+  action,
+  bookingId,
+  copy,
+  className = "",
+}: {
+  action: (formData: FormData) => Promise<void>;
+  bookingId: string;
+  copy: Omit<NoShowScriptCopy, "door">;
+  className?: string;
+}) {
+  return (
+    <div className={`flex flex-wrap items-center justify-end gap-3 ${className}`}>
+      <p className="min-w-0 grow text-sm text-muted">{copy.consequence}</p>
+      <RowActionForm action={action} sendFailedLabel={copy.sendFailed}>
+        <input type="hidden" name="bookingId" value={bookingId} />
+        <SubmitButton
+          pendingLabel={copy.confirming}
+          ariaLabel={copy.confirmAriaLabel}
+          observabilityAction="mark_no_show"
+          className={buttonClass({ variant: "secondary", size: "sm" })}
+        >
+          {copy.confirm}
+        </SubmitButton>
+      </RowActionForm>
+    </div>
   );
 }
 

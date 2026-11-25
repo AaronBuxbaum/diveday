@@ -32,7 +32,7 @@ async function openPrivateNotes(page: Page) {
   const row = await rosterRow(page, "Walk-in Wanda");
   await openRosterNotes(row);
   const details = row.locator("details").filter({
-    has: page.locator(":scope > summary", { hasText: /Private staff notes|Add a private note/ }),
+    has: page.locator(":scope > summary", { hasText: /Private notes/ }),
   });
   // The body animates in, and the frame where `open` flips is not the frame
   // where it is laid out — see `disclosureSettled`. This spec measures a scroll
@@ -118,7 +118,9 @@ test("staff adds a walk-in diver, and keeps a private note about them", async ({
   // a one-tap undo instead.
   await page.getByRole("button", { name: "Delete" }).click();
   await expect(page.getByRole("status").filter({ hasText: "Private note deleted" })).toBeVisible();
-  await expect(page.getByText("Add a private note").first()).toBeVisible();
+  await expect(
+    page.locator("summary[data-guest-fact]", { hasText: "Private notes" }),
+  ).toContainText("None");
   await expect(page.getByText("Needs a small wetsuit staged.")).toHaveCount(0);
 
   // Undo recreates a fresh note carrying the same text, staff-attributed.
@@ -130,7 +132,9 @@ test("staff adds a walk-in diver, and keeps a private note about them", async ({
   // Delete again: the seat ends with no note, as a staffer tidying up would
   // leave it.
   await page.getByRole("button", { name: "Delete" }).click();
-  await expect(page.getByText("Add a private note").first()).toBeVisible();
+  await expect(
+    page.locator("summary[data-guest-fact]", { hasText: "Private notes" }),
+  ).toContainText("None");
 
   // The trip's activity trail, on its Details tab, carries the note's life.
   await openTripActivity(page);

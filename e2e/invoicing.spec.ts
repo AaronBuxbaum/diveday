@@ -1,7 +1,7 @@
 import type { Page, Request as PlaywrightRequest } from "@playwright/test";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
-import { counterPath, openBookingActions, rosterRow, seededTripId } from "./helpers";
+import { counterPath, openBookingActions, openGuestMenu, rosterRow, seededTripId } from "./helpers";
 import { chooseOrderCustomer, chosenOrderCustomer } from "./order-customer";
 import { seedFacts } from "./shop-facts";
 
@@ -225,7 +225,8 @@ test.describe("as owner", () => {
     );
 
     const seat = await openFirstSeat(page);
-    await expect(seat.getByRole("link", { name: "Create order" })).toHaveAttribute(
+    const menu = await openGuestMenu(seat);
+    await expect(menu.getByRole("link", { name: "Create order" })).toHaveAttribute(
       "href",
       /\/shop\/blue-mantis\/orders\?add=1&personId=[0-9a-f-]+&bookingId=[0-9a-f-]+$/,
     );
@@ -346,7 +347,7 @@ test.describe("as owner", () => {
     for (const guest of ["Tom Okafor", "Lena Fischer"]) {
       const seat = await rosterRow(page, guest);
       await openBookingActions(seat);
-      const href = await seat
+      const href = await (await openGuestMenu(seat))
         .getByRole("link", { name: "Create order", exact: true })
         .getAttribute("href");
       if (!href) throw new Error("seeded seat has no invoice target");
@@ -535,7 +536,8 @@ test.describe("as captain", () => {
     // The seat's foot row is open — its other control is there — so the
     // missing link is the permission, not a closed disclosure.
     await openBookingActions(seat);
-    await expect(seat.getByRole("button", { name: "Cancel booking" })).toBeVisible();
-    await expect(seat.getByRole("link", { name: "Create order" })).toHaveCount(0);
+    const menu = await openGuestMenu(seat);
+    await expect(menu.getByRole("button", { name: "Cancel booking" })).toBeVisible();
+    await expect(menu.getByRole("link", { name: "Create order" })).toHaveCount(0);
   });
 });

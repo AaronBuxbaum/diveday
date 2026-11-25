@@ -1,5 +1,5 @@
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { daysFromNow, openTripFromBoard, openTripPhase } from "./helpers";
+import { daysFromNow, openTripFromBoard, openTripPhase, reportTripIncident } from "./helpers";
 
 signedInAsOwner();
 
@@ -18,8 +18,7 @@ test("a report is written, filed, amended and found on the Safety tab", async ({
   await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
   await openTripPhase(page, "water");
 
-  await page.locator("#incidents").getByRole("button", { name: "Report one" }).click();
-  await page.waitForURL(/\/incidents\/[0-9a-f-]+$/);
+  await reportTripIncident(page);
   await expect(page.getByRole("heading", { level: 1, name: "Incident report" })).toBeVisible();
 
   // A blank draft cannot be filed, and says what it still needs.
@@ -102,10 +101,9 @@ test("a report is written, filed, amended and found on the Safety tab", async ({
   // and the log still says it existed, and who deleted it.
   const tripPath = reportPath.replace(/\/incidents\/[0-9a-f-]+$/, "");
   await page.goto(`${tripPath}?phase=wrapped`);
-  // Wrapped up says incidents in one row, with "Report one" beside it.
+  // Wrapped up lists the filed report in one row; a new one starts from More.
   const incidents = page.locator("#incidents");
-  await incidents.getByRole("button", { name: "Report one" }).click();
-  await page.waitForURL(/\/incidents\/[0-9a-f-]+$/);
+  await reportTripIncident(page);
   await page.getByRole("button", { name: "Delete draft" }).click();
   await page.getByRole("button", { name: "Yes, delete the draft" }).click();
   await page.waitForURL((url) => url.pathname === tripPath);
