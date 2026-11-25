@@ -1,3 +1,4 @@
+/** No form here names an `encType`: each posts through a function action, and React warns on the pair. */
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
