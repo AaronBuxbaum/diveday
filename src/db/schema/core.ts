@@ -1590,6 +1590,14 @@ export const userAccounts = pgTable(
      */
     afterHoursPing: boolean("after_hours_ping"),
     /**
+     * This person's own answer to the "How it went" email after each
+     * departure (`src/features/day/how-it-went/email.ts`). Null until they give
+     * one, and null means their role's default: on for an owner, off for
+     * everyone else (`howItWentEmailWanted`), stored as the answer for the
+     * reason `weekly_digest` is.
+     */
+    howItWentEmail: boolean("how_it_went_email"),
+    /**
      * When the last after-hours ping went to this person: the batching clock.
      * A ping is claimed by moving this forward only when it is older than
      * `AFTER_HOURS_PING_INTERVAL_MS`, so two messages landing together send

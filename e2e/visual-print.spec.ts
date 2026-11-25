@@ -30,6 +30,7 @@ import {
   installVisualBuildGuard,
   openDisputeSheet,
   openReefTrip,
+  openSailedTrip,
   SURFACE_TIMEOUT_MS,
   VISUAL_STEP_BOUNDS,
 } from "./visual-harness";
@@ -336,6 +337,20 @@ test.describe("print", () => {
     await expect(sheet.locator("button, select, textarea, input")).toHaveCount(0);
     await expect(sheet.getByText("Integrity code (SHA-256)", { exact: false })).toBeVisible();
     await capturePrint(page, "departure-log");
+  });
+
+  // **How it went** (glossary): the owner's short account of a departure is a
+  // sheet on screen and on paper alike, so it prints ink on white with no
+  // control on it. The first-light boat, because it is the one that sailed.
+  test("how it went prints as a sheet", async ({ page }) => {
+    await openSailedTrip(page);
+    const tripPath = new URL(page.url()).pathname;
+    await page.goto(`${tripPath}/how-it-went`);
+    await page.getByRole("heading", { name: staff("howItWent.counts.heading") }).waitFor();
+    const sheet = page.locator(".paper-sheet");
+    await expect(sheet).toHaveCount(1);
+    await expect(sheet.locator("button, select, textarea, input")).toHaveCount(0);
+    await capturePrint(page, "how-it-went");
   });
 
   // **A signed waiver prints as its own sheet** (issue #4142): whose release

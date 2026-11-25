@@ -1953,6 +1953,39 @@ const rollCallStaleSchema = z.object({
 });
 
 /**
+ * **How it went** (glossary; `sendDueHowItWentEmails`,
+ * src/features/day/how-it-went/email.ts): one email to each owner who wants
+ * it, once per departure, a few hours after the boat was due back. Staff
+ * operational mail on the desk-ping footing: no unsubscribe, and `settingsUrl`
+ * is the way out.
+ *
+ * **A link, never names or counts.** The page behind the sign-in says who
+ * signed, who was sorted and every head count; the mail lands in a personal
+ * inbox that may sit on a shared phone.
+ *
+ * `sentAt` is the claim on `trips.how_it_went_sent_at`. Not queued
+ * (`notificationIsQueueable`): a failed send releases the claim, and the next
+ * hourly pass tries again.
+ */
+const howItWentSchema = z.object({
+  kind: z.literal("how_it_went"),
+  shopId: z.uuid(),
+  personId: z.uuid(),
+  tripId: z.uuid(),
+  to: emailAddressSchema,
+  locale: localeSchema,
+  recipientName: z.string().trim().min(1).max(120),
+  shopName: z.string().trim().min(1).max(120),
+  tripTitle: tripTitleSchema,
+  /** When the departure left, said in the shop's zone. */
+  startsAt: z.date(),
+  timezone: z.string().trim().min(1).max(100),
+  pageUrl: z.url().max(2_000),
+  settingsUrl: z.url().max(2_000),
+  sentAt: z.date(),
+});
+
+/**
  * **A filed incident report of kind "missing diver"** (H-20261016-missing-diver-report-alerts, decided
  * 2026-10-16; `sendMissingDiverAlerts`, src/db/missing-diver-alerts.ts). Staff
  * safety mail to each of the shop's owners at once, once per report: whoever
@@ -2238,6 +2271,7 @@ export const notificationSchema = z
     moveAskSoonSchema,
     rollCallStaleSchema,
     rollCallStaleShoreSchema,
+    howItWentSchema,
     incidentMissingDiverSchema,
     incidentMissingDiverFoundSchema,
     shoreAlertStoppedSchema,
@@ -2385,6 +2419,7 @@ export function notificationIsQueueable(notification: Notification): boolean {
     case "move_ask_soon":
     case "roll_call_stale":
     case "roll_call_stale_shore":
+    case "how_it_went":
     case "incident_missing_diver":
     case "incident_missing_diver_found":
     case "departure_note":
@@ -2611,6 +2646,9 @@ export function notificationIdempotencyKey(notification: Notification): string {
     // One alert per departure per owner; the departure's claim comes first.
     case "roll_call_stale":
       return `roll-call-stale/${notification.tripId}/${notification.personId}`;
+    // One account per departure per owner; the departure's claim comes first.
+    case "how_it_went":
+      return `how-it-went/${notification.tripId}/${notification.personId}`;
     // One alert per report per owner; the report's claim comes first.
     case "incident_missing_diver":
       return `incident-missing-diver/${notification.incidentReportId}/${notification.personId}`;

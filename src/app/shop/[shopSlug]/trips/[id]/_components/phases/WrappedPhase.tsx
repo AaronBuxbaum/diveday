@@ -8,7 +8,7 @@ import { listTripIncidentReports } from "@/db/incident-reports";
 import { listTripLostItems } from "@/features/day/lost-items";
 import { getTripMoney } from "@/features/money/trip-money";
 import type { TripGuests } from "@/features/trips/trip-guests";
-import { canViewShopReports } from "@/lib/authz";
+import { canExportIncidentRecord, canViewShopReports } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import { depthInUnit } from "@/lib/depth-units";
 import { tripPacketPath } from "@/lib/print-sheets";
@@ -151,6 +151,15 @@ export async function WrappedPhase({
   return (
     <div data-phase-panel="wrapped" className="space-y-6 sm:space-y-10">
       <TripSentenceLine sentence={said} rollCall={null} />
+      {/* The owner's short account of the morning (How it went); the page re-checks the gate. */}
+      {canExportIncidentRecord(session.user.roles) ? (
+        <Link
+          href={shopPath(shop.slug, "trips", tripId, "how-it-went")}
+          className={buttonClass({ variant: "secondary" })}
+        >
+          {t("howItWent.door")}
+        </Link>
+      ) : null}
       {closeOut}
       <UnplacedLine standing={standing} locale={locale} t={t} />
       {/* What happened and Money side by side once there is room. */}

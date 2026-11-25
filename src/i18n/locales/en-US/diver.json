@@ -4859,6 +4859,12 @@
       "shoreWhy": "You’re getting this because {shopName} lists you as its shore contact for roll-call alerts.",
       "shoreStop": "Stop these alerts"
     },
+    "howItWent": {
+      "subject": "{shopName}: how {weekday}’s {time} went",
+      "body": "{tripTitle} on {weekday} at {time}: the head counts after each dive, what was sorted before boarding, and the waivers, on one page.",
+      "open": "See how it went",
+      "turnOff": "Turn these off in your email settings"
+    },
     "incidentMissingDiver": {
       "subject": "{shopName}: missing diver reported on {tripTitle}",
       "body": "Missing diver on {tripTitle}. Reported {when}. Call the boat first.",

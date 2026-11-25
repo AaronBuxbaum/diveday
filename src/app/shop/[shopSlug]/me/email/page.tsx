@@ -12,7 +12,7 @@ import { deskTimeOn } from "@/lib/desk-hours";
 import { formatTime, formatTimeZoneName } from "@/lib/format";
 import { shopPath } from "@/lib/staff-notices";
 import { staffPageClass } from "../../_components/staff-page";
-import { setAfterHoursPingAction, setWeeklyDigestAction } from "./actions";
+import { setAfterHoursPingAction, setHowItWentEmailAction, setWeeklyDigestAction } from "./actions";
 import { EmailPreferenceSwitch } from "./EmailPreferenceSwitch";
 
 // `instant = true`: every request-scoped read below sits inside this segment's
@@ -25,7 +25,8 @@ export const metadata: Metadata = { title: "Email — DiveDay" };
 /**
  * **The staffer's own email settings** — the Monday email
  * (`src/lib/weekly-digest.ts`) and the after-hours desk ping
- * (`src/lib/desk-hours.ts`). No `allow` gate, like the calendar feeds: what
+ * (`src/lib/desk-hours.ts`), and for an owner the How it went email
+ * (`src/features/day/how-it-went/email.ts`). No `allow` gate, like the calendar feeds: what
  * lands in a person's own inbox is theirs to decide, not shop policy, and the
  * email itself holds counts and links into pages that gate themselves.
  */
@@ -38,7 +39,11 @@ export default async function EmailSettingsPage({
   const { db, shop, session } = await requireShopSurface(shopSlug);
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
-  const { weeklyDigest: choice, afterHours } = await getStaffEmailPage(db, {
+  const {
+    weeklyDigest: choice,
+    afterHours,
+    howItWent,
+  } = await getStaffEmailPage(db, {
     shopId: shop.id,
     personId: session.user.personId,
   });
@@ -96,6 +101,21 @@ export default async function EmailSettingsPage({
             })}
           </p>
         </SectionCard>
+        {howItWent ? (
+          <SectionCard aria-label={t("emailSettings.howItWent.heading")}>
+            <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2">
+              <h2 className={SECTION_TITLE_CLASS}>{t("emailSettings.howItWent.heading")}</h2>
+              <EmailPreferenceSwitch
+                wanted={howItWent.wanted}
+                label={t("emailSettings.howItWent.heading")}
+                saving={t("words.busy.saving")}
+                failed={t("emailSettings.saveFailed")}
+                save={setHowItWentEmailAction.bind(null, shop.slug)}
+              />
+            </div>
+            <p className="mt-2 text-sm text-muted">{t("emailSettings.howItWent.description")}</p>
+          </SectionCard>
+        ) : null}
       </div>
     </main>
   );

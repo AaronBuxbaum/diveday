@@ -95,6 +95,7 @@ export {
   notificationSchema,
   notificationSubjectEmail,
   notificationSubjectPhone,
+  notificationTripTitle,
   recipientLocale,
   type WeeklyDigestEmailSection,
 } from "./kinds";

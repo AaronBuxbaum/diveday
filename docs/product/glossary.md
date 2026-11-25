@@ -469,6 +469,7 @@ word in a message bundle fails `pnpm check:repo`. The Spanish reasoning is
 - Earliest flight
 - Executed dive
 - Field guide
+- How it went
 - Log entry file
 - Marine-life catalog
 - Material generation
