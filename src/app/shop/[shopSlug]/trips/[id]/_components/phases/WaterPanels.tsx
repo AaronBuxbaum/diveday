@@ -1,16 +1,13 @@
 import Link from "next/link";
-import { buttonClass } from "@/components/ui/button";
-import { sectionCardClass } from "@/components/ui/card";
 import { StatusMark } from "@/components/ui/StatusMark";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatTime } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { STAGE_WORD_KEYS } from "@/lib/trip-stages";
 import { diveLogHash } from "../TripDiveRecord";
+import { CARD_INSET, FactList, QUIET_ACTION as LINK, TripCard } from "../trip-ink";
 import { waterPersonStatus } from "../water-copy";
 import type { StopState, WaterStanding, WaterStop } from "../water-standing";
-
-const LINK = buttonClass({ variant: "link", size: "sm", flush: true });
 
 type Words = { locale: string; timeZone: string; t: StaffTranslator };
 
@@ -31,27 +28,25 @@ export function NotYetBackCard({
   const names = (items: string[]) =>
     cachedListFormat(locale, { style: "long", type: "conjunction" }).format(items);
   return (
-    <section
-      aria-labelledby="not-yet-back-heading"
-      data-not-yet-back=""
-      className={sectionCardClass({ padding: "none" })}
-    >
-      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-4 pt-4 sm:px-6">
-        <h2 id="not-yet-back-heading" className="font-semibold text-danger">
-          {t("trips.clock.water.listHeading")}
-        </h2>
-        {latest?.by && latest.at ? (
-          <p className="text-sm text-muted">
+    <TripCard
+      heading={t("trips.clock.water.listHeading")}
+      headingId="not-yet-back-heading"
+      headingClass="text-danger"
+      data={{ "data-not-yet-back": "" }}
+      aside={
+        latest?.by && latest.at ? (
+          <span className="text-sm text-muted">
             {t("trips.clock.water.countedBy", {
               name: latest.by,
               time: formatTime(latest.at, locale, timeZone),
             })}
-          </p>
-        ) : null}
-      </div>
-      <ul className="mt-2 divide-y divide-border">
+          </span>
+        ) : null
+      }
+    >
+      <ul className="divide-y divide-border">
         {notYetBack.map((person) => (
-          <li key={person.key} className="flex gap-3 px-4 py-3 sm:px-6">
+          <li key={person.key} className={`flex gap-3 py-3 ${CARD_INSET}`}>
             <StatusMark
               variant={person.status === "unrecorded" ? "warning" : "danger"}
               size="md"
@@ -78,12 +73,12 @@ export function NotYetBackCard({
           </li>
         ))}
       </ul>
-      <div className="px-4 pt-1 pb-4 sm:px-6">
+      <div className={`pt-1 pb-4 ${CARD_INSET}`}>
         <Link href={rollCallHref} className={LINK}>
           {t("trips.clock.water.openRollCall")}
         </Link>
       </div>
-    </section>
+    </TripCard>
   );
 }
 
@@ -109,22 +104,19 @@ export function DaySoFarCard({
   // would hold the schedule alone, so it goes, and the return says its time.
   const timed = rows.some(({ stop, time: at }) => at && !(stop.kind === "home" && !stop.saidAt));
   return (
-    <section
-      aria-labelledby="day-so-far-heading"
-      data-day-so-far=""
-      className={sectionCardClass({ padding: "none" })}
+    <TripCard
+      heading={t("trips.clock.water.daySoFar")}
+      headingId="day-so-far-heading"
+      data={{ "data-day-so-far": "" }}
     >
-      <h2 id="day-so-far-heading" className="px-4 pt-4 font-semibold sm:px-6">
-        {t("trips.clock.water.daySoFar")}
-      </h2>
-      <ol className="mt-2 divide-y divide-border">
+      <ol className="divide-y divide-border">
         {rows.map(({ stop, ...row }) => {
           const detail = row.detail || (timed ? null : row.time);
           return (
             <li
               key={stop.kind === "dive" ? `dive-${stop.dive}` : stop.kind}
               data-stop-state={stop.state}
-              className={`grid gap-x-3 px-4 py-3 sm:px-6 ${
+              className={`grid gap-x-3 py-3 ${CARD_INSET} ${
                 timed ? "grid-cols-[3.75rem_auto_minmax(0,1fr)]" : "grid-cols-[auto_minmax(0,1fr)]"
               } ${stop.state === "now" ? "bg-primary/5" : ""}`}
             >
@@ -150,7 +142,7 @@ export function DaySoFarCard({
           );
         })}
       </ol>
-    </section>
+    </TripCard>
   );
 }
 
@@ -237,8 +229,8 @@ function stopWords(
 }
 
 /**
- * **Guests the dock count never placed**, once the boat has left: one quiet
- * line each for "could not board" (readiness blocked, no record) and "no
+ * **Guests the dock count never placed**, once the boat has left: one fact
+ * row each for "could not board" (readiness blocked, no record) and "no
  * roll-call record". Names only, no button: Check-in's chores stay behind.
  */
 export function UnplacedLine({
@@ -251,13 +243,30 @@ export function UnplacedLine({
   const list = (names: string[]) =>
     cachedListFormat(locale, { style: "long", type: "conjunction" }).format(names);
   return (
-    <div data-unplaced className="space-y-1 text-sm text-muted">
-      {blocked.length > 0 ? (
-        <p>{t("trips.clock.water.unplacedBlocked", { names: list(blocked) })}</p>
-      ) : null}
-      {noRecord.length > 0 ? (
-        <p>{t("trips.clock.water.unplacedNoRecord", { names: list(noRecord) })}</p>
-      ) : null}
-    </div>
+    <TripCard data={{ "data-unplaced": "" }}>
+      <FactList
+        inset
+        facts={[
+          ...(blocked.length > 0
+            ? [
+                {
+                  key: "blocked",
+                  label: t("trips.clock.water.unplacedBlocked"),
+                  value: list(blocked),
+                },
+              ]
+            : []),
+          ...(noRecord.length > 0
+            ? [
+                {
+                  key: "no-record",
+                  label: t("trips.clock.water.unplacedNoRecord"),
+                  value: list(noRecord),
+                },
+              ]
+            : []),
+        ]}
+      />
+    </TripCard>
   );
 }

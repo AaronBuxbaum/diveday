@@ -31,6 +31,7 @@ import { paperPassPath } from "@/lib/print-sheets";
 import { turnAwayOffer } from "@/lib/turn-away";
 import { welcomeCueFor } from "@/lib/welcome-cue";
 import { isNoShowAtCounter } from "../../../../../../lib/check-in";
+import { GuestActionDismiss } from "../_components/guest-actions";
 import type { RosterArrival } from "../_components/RosterSection";
 import type { ArrivalAct } from "../_components/roster-model";
 import { ArrivalTap } from "./ArrivalTap";
@@ -43,10 +44,10 @@ import {
   undoNoShowAction,
 } from "./actions";
 import { CounterInstrument } from "./CounterInstrument";
-import { NoShowConfirm, NoShowSalvage, NoShowScript } from "./NoShowScript";
+import { NoShowConfirm, NoShowSalvage } from "./NoShowScript";
 import { RowActionForm } from "./RowActionForm";
 import { noShowSalvageCopy } from "./salvage-copy";
-import { TurnAwayDoor, TurnAwayForm, TurnAwayScript } from "./TurnAwayScript";
+import { TurnAwayForm } from "./TurnAwayForm";
 
 /** What the Trip page adds while a departure's arrivals are open. */
 export type ArrivalDesk = {
@@ -161,7 +162,7 @@ export async function buildArrivalDesk({
   const offerAnotherDay = offerAnotherDayAction.bind(null, shopSlug, tripId);
   const turnAway = turnAwayAction.bind(null, shopSlug, tripId);
 
-  const turnAwayFor = (row: CheckInQueueRow) => turnAwayDoor({ row, now, t, action: turnAway });
+  const turnAwayFor = (row: CheckInQueueRow) => turnAwayAct({ row, now, t, action: turnAway });
 
   // **"Not here" opens when the boat leaves without them**, and says something
   // different once it is gone. `markBookingNoShow` runs the same gate again
@@ -197,7 +198,6 @@ export async function buildArrivalDesk({
 
   const controls = new Map<string, ReactNode>();
   const below = new Map<string, ReactNode>();
-  const details = new Map<string, ReactNode>();
   const acts = new Map<string, ArrivalAct[]>();
   const act = (bookingId: string, entry: ArrivalAct) =>
     acts.set(bookingId, [...(acts.get(bookingId) ?? []), entry]);
@@ -291,7 +291,7 @@ export async function buildArrivalDesk({
       } else {
         // A diver who arrived and has since gone blocked can still be sent
         // home, until the boat leaves with them.
-        placeTurnAway(turnAwayFor(row), row.bookingId, { details, act });
+        placeTurnAway(turnAwayFor(row), row.bookingId, act);
       }
       continue;
     }
@@ -332,18 +332,21 @@ export async function buildArrivalDesk({
         confirmAriaLabel: t("checkIn.noShow.confirmAriaLabel", { name: row.personName }),
         sendFailed: t("checkIn.sendFailedButton"),
       };
-      details.set(
-        row.bookingId,
-        <NoShowScript key="no-show" action={markNoShow} bookingId={row.bookingId} copy={copy} />,
-      );
       act(row.bookingId, {
         key: "not-here",
         label: copy.door,
-        sheet: <NoShowConfirm action={markNoShow} bookingId={row.bookingId} copy={copy} />,
+        sheet: (
+          <NoShowConfirm
+            action={markNoShow}
+            bookingId={row.bookingId}
+            copy={copy}
+            dismiss={<GuestActionDismiss>{t("words.dismiss.neverMind")}</GuestActionDismiss>}
+          />
+        ),
       });
     }
     // A blocked guest may be turned away, after "Not here" on the opened guest.
-    placeTurnAway(ready ? null : turnAwayFor(row), row.bookingId, { details, act });
+    placeTurnAway(ready ? null : turnAwayFor(row), row.bookingId, act);
   }
 
   // **"Running late, said 7:42"** (J3): the diver's own word, on a seat still
@@ -485,7 +488,7 @@ export async function buildArrivalDesk({
 
   const boarded = new Set(rows.filter((row) => row.boarded).map((row) => row.bookingId));
 
-  return { arrival: { instrument, controls, below, details, acts, boarded } };
+  return { arrival: { instrument, controls, below, acts, boarded } };
 }
 
 /**
@@ -496,7 +499,7 @@ export async function buildArrivalDesk({
  * water, none on an arrived diver once the boat has sailed, and on a held seat
  * only the seat's own reasons (layer 3 review, 2026-10-16).
  */
-function turnAwayDoor({
+function turnAwayAct({
   row,
   now,
   t,
@@ -506,7 +509,7 @@ function turnAwayDoor({
   now: Date;
   t: StaffTranslator;
   action: (formData: FormData) => Promise<void>;
-}): { door: ReactNode; panel: ReactNode; act: ArrivalAct } | null {
+}): ArrivalAct | null {
   const reasons = turnAwayOffer({
     bookingStatus: row.bookingStatus,
     checkedIn: row.checkedIn,
@@ -517,13 +520,6 @@ function turnAwayDoor({
     readiness: row.readiness,
   });
   if (reasons.length === 0) return null;
-  const door = (
-    <TurnAwayDoor
-      key="turn-away-door"
-      bookingId={row.bookingId}
-      label={t("checkIn.turnAway.door")}
-    />
-  );
   const words = reasons.map((reason) => ({
     value: reason,
     label: t(`checkIn.turnAway.reason.${reason}`),
@@ -536,41 +532,29 @@ function turnAwayDoor({
     confirmAriaLabel: t("checkIn.turnAway.confirmAriaLabel", { name: row.personName }),
     sendFailed: t("checkIn.sendFailedButton"),
   };
-  const panel = (
-    <TurnAwayScript
-      key="turn-away"
-      action={action}
-      bookingId={row.bookingId}
-      reasons={words}
-      copy={copy}
-    />
-  );
-  const act = {
+  return {
     key: "turn-away",
     label: t("checkIn.turnAway.door"),
-    sheet: <TurnAwayForm action={action} bookingId={row.bookingId} reasons={words} copy={copy} />,
+    sheet: (
+      <TurnAwayForm
+        action={action}
+        bookingId={row.bookingId}
+        reasons={words}
+        copy={copy}
+        dismiss={<GuestActionDismiss>{t("words.dismiss.neverMind")}</GuestActionDismiss>}
+      />
+    ),
   };
-  return { door, panel, act };
 }
 
 /**
- * Turn away is a rare act, so it waits on the opened guest beside "Not here"
- * (ADR 20261117-trip-page-clock): the door and its confirm, together.
+ * Turn away is a rare act, so it waits on the opened guest's More menu beside
+ * "Not here" (ADR 20261117-trip-page-clock).
  */
 function placeTurnAway(
-  turnAway: { door: ReactNode; panel: ReactNode; act: ArrivalAct } | null,
+  turnAway: ArrivalAct | null,
   bookingId: string,
-  slots: { details: Map<string, ReactNode>; act: (bookingId: string, entry: ArrivalAct) => void },
+  act: (bookingId: string, entry: ArrivalAct) => void,
 ) {
-  if (!turnAway) return;
-  slots.act(bookingId, turnAway.act);
-  const held = slots.details.get(bookingId);
-  slots.details.set(
-    bookingId,
-    <>
-      {held}
-      {turnAway.door}
-      {turnAway.panel}
-    </>,
-  );
+  if (turnAway) act(bookingId, turnAway);
 }

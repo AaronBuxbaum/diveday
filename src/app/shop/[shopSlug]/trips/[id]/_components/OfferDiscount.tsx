@@ -2,7 +2,7 @@
 "use client";
 
 import { createContext, type ReactNode, useContext, useId, useState } from "react";
-import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
+import { SummaryCaret } from "@/components/ui/disclosure";
 import { controlClass } from "@/components/ui/form";
 
 /** Every word the discount disclosure renders, resolved on the server. */
@@ -59,8 +59,8 @@ export function OfferDiscountDisclosure({ copy }: { copy: OfferDiscountCopy }) {
       className="group/discount"
     >
       <summary className="inline-flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-sm font-medium text-primary [&::-webkit-details-marker]:hidden">
+        <SummaryCaret className="group-open/discount:rotate-90" />
         {copy.toggle}
-        <DisclosureCaret direction="down" className="size-4 group-open/discount:rotate-180" />
       </summary>
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 pb-2">
         <div className="flex items-center gap-1.5">

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { AutoOpenDetails } from "@/components/AutoOpenDetails";
 import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
-import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
+import { SummaryCaret } from "@/components/ui/disclosure";
 import { FormStatus } from "@/components/ui/form";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import type { StaffTranslator } from "@/i18n/staff-messages";
@@ -12,10 +12,11 @@ import { cancelTripAction } from "../../details-actions";
 import { recordTripPrintPdfAction } from "../../print-actions";
 import { BlowoutDoors } from "../BlowoutDoors";
 import { PrintTripBundleButton } from "../PrintTripBundleButton";
+import { QUIET_ACTION } from "../trip-ink";
 
 const CARD = sectionCardClass({ padding: "none" });
-const HEADING = "px-4 pt-4 font-semibold sm:px-5 sm:pt-5";
-const LINK = buttonClass({ variant: "link", flush: true });
+const HEADING = "px-4 pt-4 font-semibold sm:px-6";
+const LINK = QUIET_ACTION;
 
 /**
  * **Repeats**, one line (ADR 20261117-trip-page-clock): the run's cadence and
@@ -37,7 +38,7 @@ export function RepeatsCard({
       <h3 id="edit-repeats" className={HEADING}>
         {t("trips.about.repeats")}
       </h3>
-      <div className="flex items-baseline justify-between gap-4 px-4 pt-2 pb-4 sm:px-5 sm:pb-5">
+      <div className="flex items-baseline justify-between gap-4 px-4 pt-2 pb-4 sm:px-6">
         <p className="min-w-0">{line}</p>
         {href ? (
           <Link href={href} className={`${LINK} shrink-0`}>
@@ -68,7 +69,7 @@ export function PrintCard({
       <h3 id="edit-print" className={HEADING}>
         {t("trips.clock.edit.print")}
       </h3>
-      <div className="flex flex-wrap gap-x-8 gap-y-2 px-4 pt-2 pb-4 sm:px-5 sm:pb-5">
+      <div className="flex flex-wrap gap-x-8 gap-y-2 px-4 pt-2 pb-4 sm:px-6">
         <PrintTripBundleButton
           href={tripPacketPath(shopSlug, tripId)}
           label={t("trips.clock.edit.tripPacket")}
@@ -127,12 +128,12 @@ export function CallOffCard({
       >
         <summary
           data-call-off-open=""
-          className="flex min-h-11 cursor-pointer list-none items-center gap-2 px-4 py-3 font-semibold sm:px-5 [&::-webkit-details-marker]:hidden"
+          className="flex min-h-11 cursor-pointer list-none items-center gap-2 px-4 py-3 font-semibold sm:px-6 [&::-webkit-details-marker]:hidden"
         >
+          <SummaryCaret className="group-open/calloff:rotate-90" />
           {t("trips.clock.edit.callOffMore")}
-          <DisclosureCaret direction="down" className="size-4 group-open/calloff:rotate-180" />
         </summary>
-        <div className="flex flex-col items-start gap-2 px-4 pb-4 sm:px-5">
+        <div className="flex flex-col items-start gap-2 px-4 pb-4 sm:px-6">
           <FormStatus tone={lifecycleStatus?.tone} className="mb-2">
             {lifecycleStatus?.text}
           </FormStatus>

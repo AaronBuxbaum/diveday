@@ -47,7 +47,7 @@ export function PrintTripBundleButton({
         pendingLabel={label}
         className={
           link
-            ? buttonClass({ variant: "link", flush })
+            ? buttonClass({ variant: "link", size: "sm", flush })
             : buttonClass({ variant: "ghost", size: "sm", flush })
         }
       >

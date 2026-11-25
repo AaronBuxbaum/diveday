@@ -222,7 +222,9 @@ export function DisclosureRow({
         )}
         <DisclosureCaret
           direction="down"
-          className={`size-4 text-muted group-open/row:rotate-180${value != null ? " mt-1 self-start" : ""}`}
+          // A space ends the rotate class: glued to the `${`, the stylesheet
+          // scanner does not see it and an open row keeps a closed caret.
+          className={`size-4 text-muted group-open/row:rotate-180 ${value != null ? "mt-1 self-start" : ""}`}
         />
       </summary>
       <div className={BODY_CLASS}>{children}</div>

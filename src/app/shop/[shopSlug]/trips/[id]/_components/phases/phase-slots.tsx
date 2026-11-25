@@ -5,6 +5,7 @@ import { compassText } from "@/i18n/compass-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { DepthUnit } from "@/lib/depth-units";
 import { formatMoneyScanned } from "@/lib/format";
+import { cachedListFormat } from "@/lib/intl-cache";
 import type { AutomatedMarineForecast } from "@/lib/marine-forecast";
 import { shopPath } from "@/lib/staff-notices";
 import { type TemperatureUnit, temperatureUnitFor } from "@/lib/temperature-units";
@@ -13,6 +14,7 @@ import { admissionDisplay } from "../admission-display";
 import { blowoutPath } from "../blowout/blowout-path";
 import type { FixListPhase } from "../guest-fix-rows";
 import { tripFixes } from "../trip-fixes";
+import { NamesLine } from "../trip-ink";
 import { CheckInQuietLine, GearToPackCard, TomorrowsWaterCard, TripFactsLine } from "./phase-cards";
 
 type Overview = NonNullable<TripOverview>;
@@ -20,6 +22,10 @@ type Water = {
   automatedForecast: Promise<AutomatedMarineForecast | null>;
   tideLines: Promise<{ site: string; text: string; station?: string | null }[]>;
 };
+
+function listOf(locale: string, items: readonly string[]): string {
+  return cachedListFormat(locale, { style: "long", type: "conjunction" }).format(items);
+}
 
 /** Who crews it, by name, in the order they were added. */
 export function crewNamesOf(overview: Pick<Overview, "staff" | "crew">): string[] {
@@ -123,13 +129,11 @@ export function phaseSlots({
   // "Crew and plan are set": said once, folded, when neither is a fix.
   const afterReady =
     phase === "ready" && crew.length > 0 && plan.length > 0 ? (
-      <p data-crew-plan-set className="px-4 py-3 text-sm text-muted sm:px-6">
-        <span className="font-medium text-foreground">{t("trips.fixList.crewPlanSet")}</span>
-        {" · "}
-        {crew.join(", ")}
-        {" · "}
-        {plan.join(", ")}
-      </p>
+      <NamesLine
+        data={{ "data-crew-plan-set": "" }}
+        label={t("trips.fixList.crewPlanSet")}
+        names={`${listOf(locale, crew)} · ${listOf(locale, plan)}`}
+      />
     ) : null;
   const units = {
     locale,

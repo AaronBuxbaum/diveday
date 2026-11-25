@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
 import { sectionCardClass } from "@/components/ui/card";
-import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { LIST_ROW_SUMMARY_RING } from "@/components/ui/disclosure";
 import { groupLabelClass } from "@/components/ui/group-label";
 import { AboutRowDetails } from "./AboutRowDetails";
@@ -53,9 +52,10 @@ function AboutRow({ row, editLabel }: { row: TripAboutRow; editLabel: string }) 
       <summary className="flex cursor-pointer list-none transition-colors [&::-webkit-details-marker]:hidden hover:bg-surface-sunken focus-visible:focus-ring-inset">
         <div className={ROW_GRID}>
           {beat}
-          <span className="inline-flex min-h-11 w-fit items-center gap-1 text-base font-semibold text-primary sm:justify-self-end">
+          {/* The edit word, as an opened guest's fact says it (`GuestFact`): a
+              word, not a disclosure arrow. */}
+          <span className="inline-flex min-h-11 w-fit items-center text-base font-semibold text-primary sm:justify-self-end">
             {row.editLabel ?? editLabel}
-            <DisclosureCaret direction="down" className="size-4 group-open/row:rotate-180" />
           </span>
         </div>
       </summary>
@@ -128,8 +128,8 @@ export function TripAboutSection({
       aria-label={heading}
       className={sectionCardClass({ padding: "none", className: "scroll-mt-24 overflow-hidden" })}
     >
-      <div className="px-4 pb-4 sm:px-5 sm:pb-5">
-        {heading ? <h3 className="pt-4 font-semibold sm:pt-5">{heading}</h3> : null}
+      <div className="px-4 pb-4 sm:px-6">
+        {heading ? <h3 className="pt-4 font-semibold">{heading}</h3> : null}
         {actions ? <div className="flex flex-wrap gap-x-8 gap-y-2 py-3">{actions}</div> : null}
         <div className={ROWS_CLASS}>
           {rows.map((row) => (
@@ -145,11 +145,13 @@ export function TripAboutSection({
  * **Edit trip's foot rows, one bordered group** (visual review
  * 2026-10-24, A13): "Note to everyone", "More for this departure", "Activity"
  * and, when a deal went out, "Last-minute deal" are rows of one
- * `DisclosureRowList`, each with its words in the text's ink and the shared
- * caret at its end. They were three bare labels on hairlines that read as
- * orphaned captions rather than things that open.
+ * `DisclosureRowList`, each with its words in the text's ink, led by the
+ * shared caret (`SummaryCaret`, turning on open) as every disclosure on the
+ * Trip page is; a count sits at the row's end (`ms-auto`). They were three
+ * bare labels on hairlines that read as orphaned captions rather than things
+ * that open.
  */
-export const FOOT_ROW_SUMMARY = `flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-medium transition-colors [&::-webkit-details-marker]:hidden hover:bg-surface-sunken sm:px-5 ${LIST_ROW_SUMMARY_RING}`;
+export const FOOT_ROW_SUMMARY = `flex min-h-14 cursor-pointer list-none items-center gap-3 px-4 py-3 text-sm font-medium transition-colors [&::-webkit-details-marker]:hidden hover:bg-surface-sunken sm:px-6 ${LIST_ROW_SUMMARY_RING}`;
 
 /** A foot row's body, on its summary's inset. */
-export const FOOT_ROW_BODY = "px-4 pb-5 sm:px-5";
+export const FOOT_ROW_BODY = "px-4 pb-5 sm:px-6";

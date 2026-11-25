@@ -598,7 +598,7 @@ describe("blockers and information", () => {
 });
 
 describe("compact arrivals (issue 3141)", () => {
-  it("keeps the no-show action inside details and an actual late-arrival line outside", () => {
+  it("keeps an actual late-arrival line and the desk's tap outside the details", () => {
     const context = contextFor("ready");
     context.arrival = {
       controls: new Map([
@@ -610,18 +610,9 @@ describe("compact arrivals (issue 3141)", () => {
         ],
       ]),
       below: new Map([["b-1", <p key="late">Running late since 7:10</p>]]),
-      details: new Map([
-        [
-          "b-1",
-          <button type="button" key="no-show">
-            Not here
-          </button>,
-        ],
-      ]),
       boarded: new Set(),
     };
     render(<RosterRow entry={seat} settled context={context} />);
-    expect(screen.getByRole("button", { name: "Not here" }).closest("details")).not.toBeNull();
     expect(screen.getByText("Running late since 7:10").closest("details")).toBeNull();
     expect(screen.getByRole("button", { name: "Check in" }).closest("details")).toBeNull();
   });
