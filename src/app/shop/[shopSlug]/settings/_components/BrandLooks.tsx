@@ -1,5 +1,6 @@
 "use client";
 
+import { ChoiceFieldset } from "@/components/ui/form";
 import { BRAND_DISPLAY_FONTS, BRAND_LOOKS, brandDisplayFontFamily } from "@/lib/brand";
 
 /**
@@ -26,31 +27,32 @@ export function BrandLooks({
     if (fontField instanceof HTMLSelectElement) fontField.value = font;
   }
   return (
-    <fieldset className="device-text-profile-grid">
-      <legend className="text-sm font-medium text-muted">{legend}</legend>
-      <div className="mt-2 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-        {BRAND_LOOKS.map((look) => (
-          <button
-            key={look.code}
-            type="button"
-            onClick={(event) => apply(look.color, look.font, event.currentTarget.form)}
-            className="flex min-h-11 items-center gap-2.5 rounded-inset border border-border-strong bg-surface px-3 py-2 text-start"
+    <ChoiceFieldset
+      legend={legend}
+      className="device-text-profile-grid"
+      bodyClassName="grid grid-cols-2 gap-2.5 sm:grid-cols-4"
+    >
+      {BRAND_LOOKS.map((look) => (
+        <button
+          key={look.code}
+          type="button"
+          onClick={(event) => apply(look.color, look.font, event.currentTarget.form)}
+          className="flex min-h-11 items-center gap-2.5 rounded-inset border border-border-strong bg-surface px-3 py-2 text-start"
+        >
+          <span
+            aria-hidden="true"
+            className="size-5 shrink-0 rounded-full border border-border-strong"
+            style={{ backgroundColor: look.color }}
+          />
+          <span
+            className="text-base"
+            style={{ fontFamily: brandDisplayFontFamily(look.font) }}
+            title={BRAND_DISPLAY_FONTS[look.font].family}
           >
-            <span
-              aria-hidden="true"
-              className="size-5 shrink-0 rounded-full border border-border-strong"
-              style={{ backgroundColor: look.color }}
-            />
-            <span
-              className="text-base"
-              style={{ fontFamily: brandDisplayFontFamily(look.font) }}
-              title={BRAND_DISPLAY_FONTS[look.font].family}
-            >
-              {names[look.code]}
-            </span>
-          </button>
-        ))}
-      </div>
-    </fieldset>
+            {names[look.code]}
+          </span>
+        </button>
+      ))}
+    </ChoiceFieldset>
   );
 }
