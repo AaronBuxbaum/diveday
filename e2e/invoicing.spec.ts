@@ -225,7 +225,8 @@ test.describe("as owner", () => {
     );
 
     const seat = await openFirstSeat(page);
-    await expect(seat.getByRole("link", { name: "Create order" })).toHaveAttribute(
+    const menu = await openGuestMenu(seat);
+    await expect(menu.getByRole("link", { name: "Create order" })).toHaveAttribute(
       "href",
       /\/shop\/blue-mantis\/orders\?add=1&personId=[0-9a-f-]+&bookingId=[0-9a-f-]+$/,
     );
@@ -346,7 +347,7 @@ test.describe("as owner", () => {
     for (const guest of ["Tom Okafor", "Lena Fischer"]) {
       const seat = await rosterRow(page, guest);
       await openBookingActions(seat);
-      const href = await seat
+      const href = await (await openGuestMenu(seat))
         .getByRole("link", { name: "Create order", exact: true })
         .getAttribute("href");
       if (!href) throw new Error("seeded seat has no invoice target");

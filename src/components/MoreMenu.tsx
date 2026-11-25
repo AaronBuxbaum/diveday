@@ -77,15 +77,22 @@ export function MoreMenu({
 
   // A row that stays on this path (a `?phase=` or `?add=`) is not a
   // pathname change, so following any of its links closes the menu too.
+  // Heard on the document, after React: a listener on the panel runs before
+  // React's, and closing there unmounts the row before its own `onClick` is
+  // delivered (the guest's "Cancel booking" closed the menu and opened nothing).
   useEffect(() => {
     const panel = panelRef.current;
     if (!open || !panel) return;
     const onClick = (event: MouseEvent) => {
-      if (event.target instanceof Element && event.target.closest("a[href], [data-menu-close]"))
+      if (
+        event.composedPath().includes(panel) &&
+        event.target instanceof Element &&
+        event.target.closest("a[href], [data-menu-close]")
+      )
         close();
     };
-    panel.addEventListener("click", onClick);
-    return () => panel.removeEventListener("click", onClick);
+    document.addEventListener("click", onClick);
+    return () => document.removeEventListener("click", onClick);
   }, [open, close]);
 
   useEffect(() => {
