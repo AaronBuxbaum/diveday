@@ -152,6 +152,7 @@ import { seedPreDepartureChecklist } from "./pre-departure-checklist";
 import { type SeedShape, seedDemoSchedule, shapeHas } from "./schedule";
 import { DEMO_SHOP_BRAND, DEMO_SHOP_DESK } from "./shop-brand";
 import { seedStaffPortraits } from "./staff-portraits";
+import { seedStaffProfiles } from "./staff-profiles";
 
 const DEMO_BOAT_CAPACITIES = {
   "Mantis I": 17,
@@ -551,6 +552,11 @@ export async function seedDemo(db: DbExecutor, shape: SeedShape): Promise<void> 
     shop.id,
     staff.map((person, index) => ({ id: person.id, local: staffDefs[index].local })),
   );
+  await seedStaffProfiles(
+    db,
+    shop.id,
+    staff.map((person, index) => ({ id: person.id, local: staffDefs[index].local })),
+  );
   // The shop's own checklist items are settings, not schedule (ADR
   // 20260824-pre-departure-safety-check): seeded once here, never re-seeded by
   // a reset, which is why it is not inside seedDemoSchedule. Before it, so the
@@ -833,6 +839,11 @@ export async function createDemoShop(
   // working — and an e2e spec could not take a shop of its own to write a
   // shift into (ADR 20260815-per-test-private-shops).
   await seedStaffPortraits(
+    db,
+    shop.id,
+    staff.map((person, index) => ({ id: person.id, local: staffDefs[index].local })),
+  );
+  await seedStaffProfiles(
     db,
     shop.id,
     staff.map((person, index) => ({ id: person.id, local: staffDefs[index].local })),
@@ -1575,4 +1586,4 @@ export {
 export { DEMO_RECAP_BOOKING_ID } from "./identifiers";
 export { seedRecentRecaps } from "./recent-recaps";
 export { SEED_SHAPES, type SeedShape, seedDemoSchedule, shapeHas } from "./schedule";
-export { syncDemoShopBrand, syncDemoShopPackingCopy } from "./shop-brand";
+export { syncDemoShopBrand, syncDemoShopPackingCopy, syncDemoShopWelcome } from "./shop-brand";

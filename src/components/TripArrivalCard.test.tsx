@@ -8,7 +8,9 @@ import { arrivalCardFacts, arrivalDockCallLine } from "./arrival-card-facts";
 import { TripArrivalCard } from "./TripArrivalCard";
 
 vi.mock("./map/ArrivalMapCanvas", () => ({
-  ArrivalMapCanvas: ({ title }: { title: string }) => <section aria-label={title} />,
+  ArrivalMapCanvas: ({ title, center }: { title: string; center: readonly number[] }) => (
+    <section aria-label={title} data-center={center.join(",")} />
+  ),
 }));
 
 afterEach(cleanup);
@@ -26,6 +28,7 @@ const shop = {
     postalCode: "33037",
     country: "US",
   },
+  coordinates: [25.0865, -80.4473] as const,
 };
 
 const trip = {
@@ -53,6 +56,17 @@ describe("arrivalCardFacts", () => {
       transitNote: "Bus 4",
       firstInteraction: "Ask the dock host",
     });
+  });
+
+  it("centers the map on the shop's recorded position, and on nothing for a typed address", () => {
+    expect(arrivalCardFacts(shop, trip).mapCenter).toEqual([25.0865, -80.4473]);
+    expect(arrivalCardFacts(shop, { ...trip, meetingPointLabel: "North Jetty" }).mapCenter).toEqual(
+      [25.0865, -80.4473],
+    );
+    expect(
+      arrivalCardFacts(shop, { ...trip, meetingPointAddress: "12 Dock Road" }).mapCenter,
+    ).toBeNull();
+    expect(arrivalCardFacts({ ...shop, coordinates: null }, trip).mapCenter).toBeNull();
   });
 
   it("uses the trip's custom meeting point without changing the shop fallback", () => {
@@ -279,6 +293,8 @@ describe("the map", () => {
     const frame = mapFrame();
     expect(frame).not.toBeNull();
     expect(frame?.getAttribute("aria-label")).toBe("Map of Blue Mantis Divers");
+    // The map opens on the shop, never on the (0, 0) world view a text address gave.
+    expect(frame?.getAttribute("data-center")).toBe("25.0865,-80.4473");
     expect(screen.getByRole("link", { name: "Open in maps" })).toHaveAttribute(
       "href",
       expect.stringContaining("100%20Ocean%20Drive"),
@@ -289,13 +305,30 @@ describe("the map", () => {
     render(
       <TripArrivalCard
         shop={shop}
-        trip={{ ...trip, meetingPointLabel: "North Jetty", meetingPointAddress: "12 Dock Road" }}
+        trip={{ ...trip, meetingPointLabel: "North Jetty" }}
         locale="en-US"
         showMap
       />,
     );
     hostAnswers();
     expect(mapFrame()?.getAttribute("aria-label")).toBe("Map of North Jetty");
+  });
+
+  it("draws no map for a typed meeting address it cannot place, and keeps the maps link", () => {
+    render(
+      <TripArrivalCard
+        shop={shop}
+        trip={{ ...trip, meetingPointLabel: "North Jetty", meetingPointAddress: "12 Dock Road" }}
+        locale="en-US"
+        showMap
+      />,
+    );
+    hostAnswers();
+    expect(mapFrame()).toBeNull();
+    expect(screen.getByRole("link", { name: "Open in maps" })).toHaveAttribute(
+      "href",
+      expect.stringContaining("12%20Dock%20Road"),
+    );
   });
 
   it("yields to the shop's own arrival photo", () => {

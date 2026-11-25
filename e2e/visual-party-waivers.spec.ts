@@ -44,7 +44,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByLabel("Full name").first().fill(leadName);
         await expect(page.getByLabel("Full name").first()).toHaveValue(leadName);
         await page.getByRole("button", { name: "Add to trip" }).click();
-        await expect(page).toHaveURL(/\/party\/[0-9a-f-]{36}\/waivers$/);
+        await expect(page).toHaveURL(/\/party\/[0-9a-f-]{36}\/waivers\?reached=/);
         await expect(page.getByText(childName, { exact: true })).toBeVisible();
         // No QR is opened: the screenshot never contains a live bearer credential.
         await capture(page, "party-waiver-queue", scheme);
@@ -82,7 +82,7 @@ for (const scheme of ["light", "dark"] as const) {
         ).toHaveValue("Zoe Bennet");
         await expect(page.getByRole("radio", { name: /Use the record on file/ })).toBeChecked();
         await page.getByRole("button", { name: "Add to trip" }).click();
-        await expect(page).toHaveURL(/\/party\/[0-9a-f-]{36}\/waivers$/);
+        await expect(page).toHaveURL(/\/party\/[0-9a-f-]{36}\/waivers\?reached=/);
         await expect(page.getByText("Identity needs confirmation")).toBeVisible();
         await page.getByRole("button", { name: `Show waiver QR code for ${leadName}` }).click();
         const dialog = page.getByRole("dialog", { name: "Party waivers" });

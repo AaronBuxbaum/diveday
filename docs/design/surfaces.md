@@ -577,7 +577,7 @@ under it, which is kept as the record.
   existing demo note, leaving the demo as the one action.
 - **Remove first:** any repeated price story above the capability proof; the source-backed hero
   sentence answers the comparison question without competing with the page's argument.
-- **Composition:** claim, price, proof, then door — not a sales dashboard. The page earns a trial
+- **Composition:** claim, price, proof, then door — not a sales dashboard. The page earns a first trip
   by showing a shop's day, then gives the interested visitor one place to continue. The reference
   index that follows the argument is closed at rest (2026-09-17): a hairline row per group, each a
   `<details>` naming its group and counting its lines, so the page ends where its argument does
@@ -633,8 +633,8 @@ against each redraw.
 - **Controls that dissolved:** none; the budget holds. The ledger is a `<dl>`, not a row of
   cards.
 - **Remove first:** any sentence about how the price should feel; the ledger states it.
-- **Composition:** the price as an invoice — eight labelled lines (setup, logins, tiers, cut,
-  cards, contract, trial, leaving) beside four notes from the person who set them — then the fee
+- **Composition:** the price as an invoice — seven labelled lines (setup, logins, tiers, cut,
+  cards, contract, leaving) beside four notes from the person who set them — then the fee
   comparison, the exit terms and the FAQ. The notes are the builder's-note register: each names one
   line of the invoice and says why it is what it is.
 

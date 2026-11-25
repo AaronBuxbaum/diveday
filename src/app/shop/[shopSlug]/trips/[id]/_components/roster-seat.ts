@@ -87,6 +87,40 @@ function courseSeatActions(actions: RosterRowContext["actions"]) {
  * held seat withholds, and the actions it can take. Every part of
  * `RosterRow` draws from this one object.
  */
+/**
+ * A row's blockers, each in its own sentence. A waiver opened for signing that
+ * no email or text could carry says so, never "sent" (`reachable`).
+ */
+function rowBlockerTexts(
+  readiness:
+    | { status: string; blockers: Parameters<typeof heldSeatBlockers>[0] }
+    | undefined
+    | null,
+  seat: {
+    t: RosterRowContext["t"];
+    bookedAs: string | null;
+    fullName: string;
+    reachable: boolean;
+  },
+) {
+  const { t } = seat;
+  if (!readiness || readiness.status === "ready") return [];
+  return heldSeatBlockers(readiness.blockers).map((blocker) => ({
+    blocker,
+    text:
+      blocker.code === "identity_unconfirmed"
+        ? identityReasonText(
+            t,
+            { bookedAs: seat.bookedAs },
+            seat.fullName,
+            readinessBlockerText(t, blocker),
+          )
+        : blocker.code === "waiver_pending" && !seat.reachable
+          ? t("trips.roster.waiverNothingSent")
+          : readinessBlockerText(t, blocker),
+  }));
+}
+
 export function rosterSeat(entry: RosterEntry, settled: boolean, context: RosterRowContext) {
   const settledRow = settled;
   const { booking, person } = entry;
@@ -244,7 +278,17 @@ export function rosterSeat(entry: RosterEntry, settled: boolean, context: Roster
   const seatWaiver = rosterSeatWaiver(seatRow, currentWaiver);
   const waiverStatus = seatWaiver.standing;
   const { refusalRetired } = seatWaiver;
-  const waiverControl = WAIVER_CONTROLS[seatWaiver.control];
+  // An email or a text can reach the seat. Its email is the seat's address
+  // (`bookingAddress`): a guest on a shared inbox holds none of their own, and
+  // their mail goes to the inbox (`bookings.delivery_email`). With neither, a
+  // release opened for signing was sent nowhere: its control says Send (which
+  // hands over the link to copy), never "Waiver sent".
+  const reachable =
+    Boolean(booking.deliveryEmail ?? person.email) || rows.textableBookings.has(booking.id);
+  const waiverControl =
+    !reachable && seatWaiver.control === "awaiting_signature"
+      ? WAIVER_CONTROLS.none
+      : WAIVER_CONTROLS[seatWaiver.control];
   const nitrox = nitroxByBooking.get(booking.id);
   // Either signal holds the seat, so a readiness read that failed closed
   // (and so raised no identity blocker) still withholds (security review
@@ -309,21 +353,12 @@ export function rosterSeat(entry: RosterEntry, settled: boolean, context: Roster
   // two answers under the reason lines need no words of their own. A held
   // seat says nothing measured against the matched person
   // (`heldSeatBlockers`), the same rule as its particulars above.
-  const blockerTexts =
-    readiness && readiness.status !== "ready"
-      ? heldSeatBlockers(readiness.blockers).map((blocker) => ({
-          blocker,
-          text:
-            blocker.code === "identity_unconfirmed"
-              ? identityReasonText(
-                  t,
-                  { bookedAs: booking.identityBookedAs },
-                  person.fullName,
-                  readinessBlockerText(t, blocker),
-                )
-              : readinessBlockerText(t, blocker),
-        }))
-      : [];
+  const blockerTexts = rowBlockerTexts(readiness, {
+    t,
+    bookedAs: booking.identityBookedAs,
+    fullName: person.fullName,
+    reachable,
+  });
   const depthText = depthWarningOrNull(t, depth);
   const depthShared = depthText !== null && sharedAdvisoryTexts.has(depthText);
   // A diver in a drysuit, theirs or ours, with no drysuit card on file
@@ -435,6 +470,8 @@ export function rosterSeat(entry: RosterEntry, settled: boolean, context: Roster
     currentWaiver,
     waiverStatus,
     refusalRetired,
+    /** An email or a text can reach the seat: its own word for "sent" or "nothing could be sent". */
+    reachable,
     waiverControl,
     nitrox,
     identityUnconfirmed,

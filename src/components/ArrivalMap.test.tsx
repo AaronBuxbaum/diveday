@@ -46,7 +46,7 @@ const answerAll = () => {
 };
 
 const mount = () =>
-  render(<ArrivalMap title="Map" query="25,-80" zoomHint="Use ⌘ or Ctrl + scroll to zoom" />)
+  render(<ArrivalMap title="Map" center={[25, -80]} zoomHint="Use ⌘ or Ctrl + scroll to zoom" />)
     .container;
 
 describe("ArrivalMap", () => {
@@ -137,7 +137,7 @@ describe("ArrivalMap", () => {
 
   it("stops listening once the map is gone", () => {
     const { unmount } = render(
-      <ArrivalMap title="Map" query="25,-80" zoomHint="Use ⌘ or Ctrl + scroll to zoom" />,
+      <ArrivalMap title="Map" center={[25, -80]} zoomHint="Use ⌘ or Ctrl + scroll to zoom" />,
     );
     act(() => probes[0]?.onerror?.());
     unmount();

@@ -816,8 +816,6 @@ export const HOUSE_PHRASE_ALLOWLIST = new Set([
   "the night before",
   "the first day",
   "first day of",
-  "of a trial",
-  "start a trial",
   "the boat leaves",
   "before the boat",
   "the demo is",

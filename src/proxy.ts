@@ -781,6 +781,6 @@ export async function proxy(req: NextRequest, _ctx: unknown): Promise<Response |
  */
 export const config = {
   matcher: [
-    "/((?!api|_next/static|_next/image|favicon\\.ico$|icon\\.png$|apple-icon\\.png$|icon-192\\.png$|icon-512\\.png$|dive-sites/|marine-life/|demo-shop/).*)",
+    "/((?!api|_next/static|_next/image|favicon\\.ico$|icon\\.png$|apple-icon\\.png$|icon-192\\.png$|icon-512\\.png$|dive-sites/|marine-life/|demo-shop/|badges/).*)",
   ],
 };

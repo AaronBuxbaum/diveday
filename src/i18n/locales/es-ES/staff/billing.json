@@ -20,12 +20,10 @@
     "pendingEvidence": "Algunos cobros necesitan importes o impuestos confirmados antes de finalizar su tarifa."
   },
   "status": {
-    "trialing": "Prueba gratuita, {count, plural, one {queda # día} other {quedan # días}}",
     "freeTerm": "Gratis hasta el {date}",
     "active": "Activo",
     "pastDue": "Pago rechazado",
-    "canceled": "Cancelado",
-    "trialEnded": "Prueba terminada"
+    "canceled": "Cancelado"
   },
   "notConfigured": "La facturación todavía no está activada, así que no se cobra nada.",
   "demo": "Un centro de demostración nunca se factura.",

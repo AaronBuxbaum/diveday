@@ -95,6 +95,10 @@ test("staff can view or copy a trip's public booking page from its overview", as
   await expect(publicPage).toHaveURL(/\/shop\/blue-mantis\/trips\/[a-f0-9-]+$/);
   await publicPage.close();
 
+  // The booking link sits in the fill card's Share, with the past guests to
+  // invite, when the departure has any; a plain row when it has none.
+  const share = page.locator("#who-wants-in details").filter({ hasText: "Share" });
+  if ((await share.count()) > 0) await share.locator("summary").first().click();
   await page.getByRole("button", { name: "Copy link" }).click();
   await expect(page.getByRole("button", { name: "Copied" })).toBeVisible();
   const clipboardText = await page.evaluate(() => navigator.clipboard.readText());

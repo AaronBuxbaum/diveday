@@ -62,28 +62,33 @@ export function annotationTestTitle(annotation) {
 const escapeRegex = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 /**
- * What the flake hunt reruns: the ranked specs plus one `--grep` pattern naming the tests that
- * failed in them, so five repeats cost the flaky tests and not every neighbour in the file. A
- * failure whose title cannot be read leaves the pattern out: the whole files rerun, which is
- * the old behaviour and the safe one.
+ * What the flake hunt reruns: the tests that failed, by title, in the ranked specs, as one
+ * `--grep` pattern, so five repeats cost the flaky tests and not every neighbour in the file.
+ *
+ * A failure whose title cannot be read is **not** rerun by file. That fallback ran every test of
+ * a visual capture spec five times (485 tests on 2026-11-24) and the step timed out at 50
+ * minutes, which is a red night with no flake in it (#4959). Those specs come back in `unhunted`
+ * for the summary to name, so the gap is visible and the hunt stays inside its budget.
  */
 export function rankFailedTests(annotationsPerJob, options = {}) {
-  const specs = rankFailedSpecs(annotationsPerJob, options);
+  const ranked = rankFailedSpecs(annotationsPerJob, options);
   const titles = new Set();
-  let unreadable = false;
+  const titled = new Set();
   for (const annotations of annotationsPerJob) {
     for (const a of annotations) {
       if (a.annotation_level !== "failure") continue;
       const spec = annotationSpec(a);
-      if (!spec || !specs.includes(spec)) continue;
+      if (!spec || !ranked.includes(spec)) continue;
       const title = annotationTestTitle(a);
-      if (title) titles.add(title);
-      else unreadable = true;
+      if (!title) continue;
+      titles.add(title);
+      titled.add(spec);
     }
   }
   return {
-    specs,
-    grep: !unreadable && titles.size > 0 ? `(?:${[...titles].map(escapeRegex).join("|")})$` : null,
+    specs: ranked.filter((spec) => titled.has(spec)),
+    unhunted: ranked.filter((spec) => !titled.has(spec)),
+    grep: titles.size > 0 ? `(?:${[...titles].map(escapeRegex).join("|")})$` : null,
     tests: titles.size,
   };
 }

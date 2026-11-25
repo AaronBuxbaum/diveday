@@ -225,6 +225,10 @@ const HEADER_ALIASES: Record<ImportField, string[]> = {
     "member_name",
     "contact_name",
     "participant_name",
+    // A booking tool's manifest download names its people as guests or
+    // passengers ("Try it Saturday": a trip's list pasted onto one departure).
+    "guest_name",
+    "passenger_name",
   ],
   email: ["email", "email_address", "e_mail", "mail"],
   phone: ["phone", "phone_number", "mobile", "mobile_phone", "cell", "telephone", "phone_1"],
@@ -492,6 +496,16 @@ const HEADER_ALIASES: Record<ImportField, string[]> = {
 };
 
 /**
+ * The field a header names by alias, or null: the column mapping a pasted
+ * trip list reads its name, email and phone columns with (`src/features/bookings/paste-list/read.ts`),
+ * so the two readers never disagree about what "Mobile" or "Customer Name" is.
+ */
+export function importFieldForHeader(header: string): ImportField | null {
+  const key = normalizeImportKey(header);
+  return IMPORT_FIELDS.find((field) => HEADER_ALIASES[field].includes(key)) ?? null;
+}
+
+/**
  * Columns whose presence means "there is medical/liability content here we are
  * deliberately not importing". Matched loosely so a shop is told, once, that
  * their health data stays behind rather than silently dropped.
@@ -587,8 +601,11 @@ export const IMPORT_HONESTY_TABLE: {
  * one cell; text after a closing quote keeps that quote and reads on to the
  * next quote that does close a cell; a quote that does not open a cell is a
  * literal character.
+ *
+ * `delimiter` is a comma for every file import; a list pasted from a
+ * spreadsheet arrives tab-separated (`src/features/bookings/paste-list/read.ts` picks it).
  */
-export function parseCsv(text: string): string[][] {
+export function parseCsv(text: string, delimiter: "," | "\t" | ";" = ","): string[][] {
   // Strip a UTF-8 BOM so the first header does not carry an invisible prefix.
   const unmarked = text.charCodeAt(0) === 0xfeff ? text.slice(1) : text;
   // One line ending for the whole file: Papa reads only one, and a file saved
@@ -596,7 +613,7 @@ export function parseCsv(text: string): string[][] {
   // become LF too.
   const input = unmarked.replace(/\r\n?/g, "\n");
   const { data } = Papa.parse<string[]>(input, {
-    delimiter: ",",
+    delimiter,
     newline: "\n",
     quoteChar: '"',
     escapeChar: '"',

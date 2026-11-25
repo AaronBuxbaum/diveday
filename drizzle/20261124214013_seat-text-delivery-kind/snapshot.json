@@ -1,0 +1,47 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "d2e5ce50-7340-4710-9817-38f96cc6c76e",
+  "prevIds": [
+    "1b3e1534-011e-48bb-95be-ef978eb3cfde"
+  ],
+  "footprints": [
+    {
+      "statementType": "alter_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "notification_kind"
+      ],
+      "writes": [
+        "s|enum|public.notification_kind"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "alter",
+      "key": "enums\u0000[\"public\",\"notification_kind\"]",
+      "set": {
+        "values": [
+          "booking_confirmation",
+          "waiver_request",
+          "booking_handoff",
+          "readiness_link",
+          "trip_reminder_7d",
+          "trip_reminder_24h",
+          "trip_recap",
+          "trip_blowout",
+          "trip_minimum_not_met",
+          "booking_cancelled",
+          "trip_rescheduled",
+          "seat_text"
+        ]
+      }
+    }
+  ]
+}

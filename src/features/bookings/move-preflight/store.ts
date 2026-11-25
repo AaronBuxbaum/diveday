@@ -285,6 +285,8 @@ const TOLD_THE_DATE_KINDS: readonly DeliveryKind[] = [
   "trip_reminder_24h",
   // The reschedule notice states the new date as squarely as a reminder does.
   "trip_rescheduled",
+  // The seat text names the departure's day and time, like the confirmation it stands beside.
+  "seat_text",
 ];
 
 /**

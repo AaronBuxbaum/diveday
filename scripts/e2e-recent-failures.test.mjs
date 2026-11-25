@@ -207,14 +207,24 @@ describe("rankFailedTests", () => {
     expect(new RegExp(result.grep).test("booking pays (deposit) twice")).toBe(false);
   });
 
-  it("reruns whole files when any failure has no readable title", () => {
+  it("leaves a failure with no readable title out of the hunt and names it", () => {
     const result = rankFailedTests([
       [
         titled("[chromium] › e2e/booking.spec.ts:12:3 › booking › pays"),
         { annotation_level: "failure", path: "e2e/staffing.spec.ts" },
       ],
     ]);
-    expect(result.specs).toEqual(["e2e/booking.spec.ts", "e2e/staffing.spec.ts"]);
+    expect(result.specs).toEqual(["e2e/booking.spec.ts"]);
+    expect(result.unhunted).toEqual(["e2e/staffing.spec.ts"]);
+    expect(new RegExp(result.grep).test("booking pays")).toBe(true);
+  });
+
+  it("hunts nothing when no title is readable", () => {
+    const result = rankFailedTests([
+      [{ annotation_level: "failure", path: "e2e/staffing.spec.ts" }],
+    ]);
+    expect(result.specs).toEqual([]);
+    expect(result.unhunted).toEqual(["e2e/staffing.spec.ts"]);
     expect(result.grep).toBeNull();
   });
 });

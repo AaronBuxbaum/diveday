@@ -50,7 +50,7 @@ test("a minor scans their own waiver on a signed-out phone and a guardian signs"
   await page.getByLabel("Full name").first().fill("Alex Lagoon");
   await expect(page.getByLabel("Full name").first()).toHaveValue("Alex Lagoon");
   await page.getByRole("button", { name: "Add to trip" }).click();
-  await expect(page).toHaveURL(/\/party\/[0-9a-f-]{36}\/waivers$/);
+  await expect(page).toHaveURL(/\/party\/[0-9a-f-]{36}\/waivers\?reached=/);
   await expect(page.getByText("A parent or guardian must also sign.")).toBeVisible();
   await page.getByRole("button", { name: "Show waiver QR code for Sky Lagoon" }).click();
   const dialog = page.getByRole("dialog", { name: "Party waivers" });
@@ -200,7 +200,7 @@ test("a counter waiver receipt stays scoped when course forms are still outstand
   await page.getByLabel("Full name").first().fill("Alex Course");
   await expect(page.getByLabel("Full name").first()).toHaveValue("Alex Course");
   await page.getByRole("button", { name: "Add to trip" }).click();
-  await expect(page).toHaveURL(/\/party\/[0-9a-f-]{36}\/waivers$/);
+  await expect(page).toHaveURL(/\/party\/[0-9a-f-]{36}\/waivers\?reached=/);
   await page.getByRole("button", { name: "Show waiver QR code for Alex Course" }).click();
   const dialog = page.getByRole("dialog", { name: "Party waivers" });
   const src = await dialog.getByRole("img").getAttribute("src");

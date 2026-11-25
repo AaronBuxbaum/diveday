@@ -124,6 +124,8 @@ export type RosterFixtureOptions = {
   phase?: FixListPhase;
   /** Where "Add a guest" goes, when the trip takes one. */
   addGuestHref?: string | null;
+  /** When each booking's next pre-trip reminder goes out. */
+  reminders?: Map<string, Date>;
   tripFixes?: TripFix[];
   /** Getting ready's settled line under "everyone is ready". */
   afterReady?: import("react").ReactNode;
@@ -156,6 +158,7 @@ function rosterProps({
   rentalFit,
   phase,
   addGuestHref = null,
+  reminders,
   tripFixes,
   afterReady,
   paymentsConnected = false,
@@ -202,7 +205,7 @@ function rosterProps({
       textableBookings: new Set<string>(),
       helpRequestByBooking: new Map(),
       openOrderByBooking: new Map(),
-      nextReminderAtByBooking: new Map(),
+      nextReminderAtByBooking: reminders ?? new Map(),
       rentalFitByBooking: rentalFit ?? (new Map() as RentalFitByBooking),
       nitroxByBooking: new Map() as NitroxByBooking,
       notesByBooking: new Map(),

@@ -28,7 +28,7 @@ A departure has no stored hero: `dayCoverPhoto` picks the first linked site’s 
 | Wreck Trip — Spiegel Grove | Spiegel / FKNMS - Goliath Grouper With Remora (27094933605).jpg | retain vetted frame; no fabricated wreck photograph |
 | Night Dive — City of Washington | City / City Of Washington (38741160925).jpg | retain |
 | Two-Tank Reef — Christ of the Abyss | Christ / Christ of the Abyss, Key Largo, FL - panoramio.jpg | retain |
-| Two-Tank Reef — Benwood & Elbow | Benwood / Benwood-28.jpg | retain |
+| Two-Tank Reef — Benwood & Elbow | Benwood / Yellow Snapper on Benwood Wreck, Key Largo (15458961361).jpg | replaced 2026-11-23 (#4931): Benwood-28.jpg read as nearly black at 64px |
 | Afternoon Two-Tank — French Reef | French / Stingray on French Reef, Key Largo (15274940277).jpg | retain |
 | Discover Scuba — Pool & Reef | no linked site | no trip hero |
 | Open Water Diver — three-day course (all days) | Pickles / School of Gruntfish and Sergeant Majors on Pickles Reef, Key Largo (15275701928).jpg | retain |
@@ -84,10 +84,10 @@ The trailing-quarter history repeats the same eight seeded sites below; each his
 
 | First linked site | Current lead | Decision |
 | --- | --- | --- |
-| Molasses Reef | French Angelfish Molasses Reef 20080309.jpg | sharp Elkhorn coral 8 Molasses Reef 20080309.jpg |
+| Molasses Reef | Shoal of Yellow Snapper with Elkhorn Coral - Molasses Reef (2352449386).jpg | replaced 2026-11-23 (#4931): the elkhorn frame was a murky green blur at 64px |
 | Spiegel Grove | FKNMS - Goliath Grouper With Remora (27094933605).jpg | retain vetted photograph |
 | Christ of the Abyss | Christ of the Abyss, Key Largo, FL - panoramio.jpg | retain vetted photograph |
-| Benwood Wreck | Benwood-28.jpg | retain vetted photograph |
+| Benwood Wreck | Yellow Snapper on Benwood Wreck, Key Largo (15458961361).jpg | replaced 2026-11-23 (#4931), vetted through `pnpm content:photos` |
 | French Reef | Stingray on French Reef, Key Largo (15274940277).jpg | retain vetted photograph |
 | USCGC Duane | AtlanticGoliathGrouper.jpg | retain vetted photograph |
 | Pickles Reef | School of Gruntfish and Sergeant Majors on Pickles Reef, Key Largo (15275701928).jpg | retain vetted photograph |

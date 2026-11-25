@@ -27,7 +27,6 @@ described as a map, specimen, catch or aquarium, and one too dark or soft to rea
 - `AtlanticGoliathGrouper.jpg` — [AtlanticGoliathGrouper.jpg](https://commons.wikimedia.org/wiki/File:AtlanticGoliathGrouper.jpg) · Public domain · Brett Seymour
 - `Baby Beach.jpg` — [Baby Beach.jpg](https://commons.wikimedia.org/wiki/File:Baby_Beach.jpg) · CC BY-SA 3.0 · RickzwartRick Zwart
 - `Beach of Daaibooi, Curacao.jpg` — [Beach of Daaibooi, Curacao.jpeg](https://commons.wikimedia.org/wiki/File:Beach_of_Daaibooi,_Curacao.jpeg) · CC BY-SA 4.0 · Hobie Reacher
-- `Benwood-28.jpg` — [Benwood-28.JPG](https://commons.wikimedia.org/wiki/File:Benwood-28.JPG) · CC BY-SA 3.0 · Elkman
 - `Blue Bay - Curacao.jpg` — [Blue Bay - Curacao.jpg](https://commons.wikimedia.org/wiki/File:Blue_Bay_-_Curacao.jpg) · CC BY-SA 2.0 · Frank Jania
 - `Blue Parrotfish on Molasses Outer Reef, Key Largo (15274849398).jpg` — [Blue Parrotfish on Molasses Outer Reef, Key Largo (15274849398).jpg](https://commons.wikimedia.org/wiki/File:Blue_Parrotfish_on_Molasses_Outer_Reef,_Key_Largo_(15274849398).jpg) · CC BY-SA 2.0 · Matt Kieffer from London, United Kingdom
 - `Bonaire 1000 steps.jpg` — [Bonaire 1000 steps.jpg](https://commons.wikimedia.org/wiki/File:Bonaire_1000_steps.jpg) · Public domain · User:janderk
@@ -89,6 +88,7 @@ described as a map, specimen, catch or aquarium, and one too dark or soft to rea
 - `RMS Rhone 2003 10.jpg` — [RMS Rhone 2003 10.jpg](https://commons.wikimedia.org/wiki/File:RMS_Rhone_2003_10.jpg) · CC BY 3.0 · Gareth Richards
 - `Sand Key Light 2005.jpg` — [Sand Key Light 2005.jpg](https://commons.wikimedia.org/wiki/File:Sand_Key_Light_2005.jpg) · Public domain · United States Navy, James Brooks · cropped to 0.52,0.22,0.48,0.56 (left, top, width, height as fractions of the original)
 - `School of Gruntfish and Sergeant Majors on Pickles Reef, Key Largo (15275701928).jpg` — [School of Gruntfish and Sergeant Majors on Pickles Reef, Key Largo (15275701928).jpg](https://commons.wikimedia.org/wiki/File:School_of_Gruntfish_and_Sergeant_Majors_on_Pickles_Reef,_Key_Largo_(15275701928).jpg) · CC BY-SA 2.0 · Matt Kieffer from London, United Kingdom
+- `Shoal of Yellow Snapper with Elkhorn Coral - Molasses Reef (2352449386).jpg` — [Shoal of Yellow Snapper with Elkhorn Coral - Molasses Reef (2352449386).jpg](https://commons.wikimedia.org/wiki/File:Shoal_of_Yellow_Snapper_with_Elkhorn_Coral_-_Molasses_Reef_(2352449386).jpg) · CC BY-SA 2.0 · Matt Kieffer from London, United Kingdom
 - `Snorkeling Bachelor Beach, Bonaire (12998055594).jpg` — [Snorkeling Bachelor Beach, Bonaire (12998055594).jpg](https://commons.wikimedia.org/wiki/File:Snorkeling_Bachelor_Beach,_Bonaire_(12998055594).jpg) · CC BY 2.0 · SNORKELINGDIVES.COM
 - `Snorkeling Karpata Reef, Bonaire (12842383794).jpg` — [Snorkeling Karpata Reef, Bonaire (12842383794).jpg](https://commons.wikimedia.org/wiki/File:Snorkeling_Karpata_Reef,_Bonaire_(12842383794).jpg) · CC BY 2.0 · SNORKELINGDIVES.COM
 - `Sombrero Key 20191128.jpg` — [Sombrero Key 20191128.jpg](https://commons.wikimedia.org/wiki/File:Sombrero_Key_20191128.jpg) · Public domain · USGS
@@ -112,5 +112,6 @@ described as a map, specimen, catch or aquarium, and one too dark or soft to rea
 - `White slave home.jpg` — [White slave home.jpg](https://commons.wikimedia.org/wiki/File:White_slave_home.jpg) · CC BY-SA 4.0 · Leslie.Ket
 - `Willems Tower & light house watchers home.jpg` — [Willems Tower & light house watchers home.jpg](https://commons.wikimedia.org/wiki/File:Willems_Tower_&_light_house_watchers_home.jpg) · CC BY-SA 4.0 · Leslie.Ket
 - `Wreck Tugboat beach (35865296594).jpg` — [Wreck Tugboat beach (35865296594).jpg](https://commons.wikimedia.org/wiki/File:Wreck_Tugboat_beach_(35865296594).jpg) · CC BY 2.0 · dronepicr
+- `Yellow Snapper on Benwood Wreck, Key Largo (15458961361).jpg` — [Yellow Snapper on Benwood Wreck, Key Largo (15458961361).jpg](https://commons.wikimedia.org/wiki/File:Yellow_Snapper_on_Benwood_Wreck,_Key_Largo_(15458961361).jpg) · CC BY-SA 2.0 · Matt Kieffer from London, United Kingdom
 
 <!-- credits:end -->

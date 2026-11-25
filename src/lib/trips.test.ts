@@ -8,6 +8,7 @@ import {
   isFull,
   nextBookableDeparture,
   seatsOnSale,
+  soldElsewhere,
   spotsRemaining,
 } from "./trips";
 
@@ -18,6 +19,23 @@ describe("spotsRemaining", () => {
 
   it("never goes negative when overbooked", () => {
     expect(spotsRemaining({ capacity: 10, booked: 11 })).toBe(0);
+  });
+});
+
+describe("soldElsewhere", () => {
+  it("is a departure with no price and no course price", () => {
+    expect(soldElsewhere({ priceCents: null, course: null })).toBe(true);
+    expect(soldElsewhere({ priceCents: null, course: { priceCents: null } })).toBe(true);
+  });
+
+  it("is not a priced departure, nor a course session the course prices", () => {
+    expect(soldElsewhere({ priceCents: 9500, course: null })).toBe(false);
+    expect(soldElsewhere({ priceCents: null, course: { priceCents: 45000 } })).toBe(false);
+  });
+
+  it("takes a price of zero as a price: a free dive is still DiveDay's to give", () => {
+    expect(soldElsewhere({ priceCents: 0, course: null })).toBe(false);
+    expect(soldElsewhere({ priceCents: null, course: { priceCents: 0 } })).toBe(false);
   });
 });
 

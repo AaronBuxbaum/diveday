@@ -36,6 +36,8 @@ export type PlanCopyParams = {
   percent: string;
   /** `yes` when the percent plan carries a base fee, for `{hasBase, select, …}`. */
   hasBase: "yes" | "no";
+  /** `yes` when the plan keeps a share of money taken, for `{hasPercent, select, …}`. */
+  hasPercent: "yes" | "no";
 };
 
 export function planCopyParams(terms: PlanTerms, locale: string): PlanCopyParams {
@@ -45,5 +47,6 @@ export function planCopyParams(terms: PlanTerms, locale: string): PlanCopyParams
     base: money,
     percent: planPercent(terms.basisPoints, locale),
     hasBase: terms.monthlyCents > 0 ? "yes" : "no",
+    hasPercent: terms.basisPoints > 0 ? "yes" : "no",
   };
 }

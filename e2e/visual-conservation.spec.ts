@@ -5,7 +5,12 @@ import { signRecapToken } from "../src/lib/recap-links";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import { createTrip, daysFromNow, tripPathByTitle } from "./helpers";
 import { seedFacts } from "./shop-facts";
-import { capture, installVisualBuildGuard, SURFACE_TIMEOUT_MS } from "./visual-harness";
+import {
+  capture,
+  fitDiveSitePhotos,
+  installVisualBuildGuard,
+  SURFACE_TIMEOUT_MS,
+} from "./visual-harness";
 
 installVisualBuildGuard();
 signedInAsOwner();
@@ -54,6 +59,8 @@ test("recorded conservation action and its editor (light)", async ({ page }) => 
 });
 
 test("a diver recap names the recorded conservation facts (light)", async ({ page, request }) => {
+  // The strip draws a 1024px photo into 263px and 174px boxes; 224 sits inside both bands (#4963).
+  await fitDiveSitePhotos(page.context(), 224);
   await seedFacts(request, ["returnedConservationRecap"]);
   const d = diverTranslator("en-US");
   await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID, 0)}`);

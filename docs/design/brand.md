@@ -56,6 +56,9 @@ Use the mark as a simple, recognizable signal:
 - Give it breathing room. At minimum, keep one small-bubble diameter of clear space around it;
   use more space when the mark is next to a wordmark.
 - Do not use the mark to imply certification, safety approval, or an agency relationship.
+- DiveDay's own collateral carries no agency logo. A shop's public badge wall is the one place an
+  organization's official logo appears, beside the badge's words and never altered
+  (H-20261123-badge-logos-shipped, `src/features/public-site/badge-logos.ts`).
 
 **On a surface that belongs to a shop, the mark is a credit, not a headline.** A shop's public
 schedule and its departure pages are the shop's own work, and so are the link-preview cards they
@@ -537,7 +540,8 @@ Production defaults:
 - [ ] Artwork uses sea teal, paper/slate, ink, and a restrained amber accent.
 - [ ] Wordmark is Plex-like and readable at the finished size.
 - [ ] Contrast works on the actual garment or material in daylight.
-- [ ] No feedback colors, fake claims, agency logos, or unexplained symbols were added.
+- [ ] No feedback colors, fake claims, agency logos, or unexplained symbols were added (merch and
+      DiveDay's own collateral only; a shop's badge wall shows official logos, per the decision above).
 - [ ] A product owner has approved the final proof before purchase.
 
 ## Source map and maintenance

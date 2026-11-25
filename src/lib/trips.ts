@@ -119,6 +119,23 @@ export function seatsOnSale<T extends { capacity: number; sellableCapacity: numb
   return { ...trip, capacity: trip.sellableCapacity };
 }
 
+/**
+ * **Sold elsewhere** ("Try it Saturday", 2026-11-24): a departure with no price
+ * of its own and no course price behind it. DiveDay takes no money for it, so
+ * the shop sells its seats somewhere else (a booking tool, the phone, paper)
+ * and uses DiveDay to get the guests it has ready. Read off the price, with
+ * no setting to turn on: a shop trying DiveDay on one trip pastes the list
+ * and never names a price. Staff pages lead such a departure's Filling with
+ * readiness, not with seats to sell. It changes no gate: readiness, admission
+ * and capacity read the same either way.
+ */
+export function soldElsewhere(trip: {
+  priceCents: number | null;
+  course: { priceCents: number | null } | null;
+}): boolean {
+  return trip.priceCents === null && (trip.course?.priceCents ?? null) === null;
+}
+
 export function spotsRemaining({ capacity, booked }: TripCapacity): number {
   return Math.max(0, capacity - booked);
 }

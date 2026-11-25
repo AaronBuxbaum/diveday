@@ -88,7 +88,7 @@ overlay with a default, never a requirement.
   `brand_color` (one hex), `brand_display_font` (one of six curated Google faces, or none),
   `brand_hero_image_url` + alt, `established_year`, and a list of badges chosen from a fixed code
   list (`brand_badges`, a jsonb column rather than the `shop_badges` table first written here:
-  PADI 5★, PADI IDC, SSI, NAUI, TripAdvisor, Blue Star, Green Fins, DAN partner, Readers' Choice —
+  PADI 5★, PADI IDC, SSI, NAUI, TripAdvisor, Blue Star, Green Fins, DAN partner —
   codes, so they arrive in every language and no logo is drawn that DiveDay has no right to show).
   *Corrected 2026-09-02*: the wall renders in the catalogue's own order, not a shop-set one — the
   form is nine checkboxes and its copy no longer promises an order it cannot take. `logo_url` and

@@ -14,6 +14,7 @@ import {
   scheduleNextBoat,
   scheduleOffSeason,
   schedulePagerHrefs,
+  scheduleRollingWindow,
   scheduleSeatState,
   scheduleViewLinks,
   type UpcomingTrips,
@@ -49,6 +50,59 @@ describe("scheduleMonthBounds", () => {
     const { monthStart, monthEnd } = scheduleMonthBounds({ year: 2026, month: 8 }, TZ);
     expect(monthStart.toISOString()).toBe("2026-08-01T04:00:00.000Z");
     expect(monthEnd.toISOString()).toBe("2026-09-01T04:00:00.000Z");
+  });
+});
+
+describe("scheduleRollingWindow", () => {
+  it("is the month view without a month, and nothing for the list or a chosen month", () => {
+    const base = { now: NOW, tz: TZ, locale: "en-US" };
+    expect(scheduleRollingWindow({ ...base, monthView: false, explicitMonth: null })).toBeNull();
+    expect(
+      scheduleRollingWindow({ ...base, monthView: true, explicitMonth: { year: 2026, month: 8 } }),
+    ).toBeNull();
+    expect(scheduleRollingWindow({ ...base, monthView: true, explicitMonth: null })).not.toBeNull();
+  });
+
+  it("starts on the shop's own week and ends at the shop's own midnight", () => {
+    // Tuesday 21 July 2026, 9:30 AM in New York: the week opens Sunday the 19th.
+    const rolling = scheduleRollingWindow({
+      now: NOW,
+      tz: TZ,
+      locale: "en-US",
+      monthView: true,
+      explicitMonth: null,
+    });
+    expect(rolling?.window.start).toBe("2026-07-19");
+    expect(rolling?.bounds.monthEnd.toISOString()).toBe("2026-08-23T04:00:00.000Z");
+  });
+
+  it("reads today in the shop's zone, not UTC", () => {
+    // 2026-07-21 23:30 UTC is already Wednesday the 22nd in Auckland.
+    const rolling = scheduleRollingWindow({
+      now: new Date("2026-07-21T23:30:00Z"),
+      tz: "Pacific/Auckland",
+      locale: "en-US",
+      monthView: true,
+      explicitMonth: null,
+    });
+    expect(rolling?.window.start).toBe("2026-07-19");
+    const later = scheduleRollingWindow({
+      now: new Date("2026-07-25T13:00:00Z"),
+      tz: "Pacific/Auckland",
+      locale: "en-US",
+      monthView: true,
+      explicitMonth: null,
+    });
+    // Sunday the 26th in Auckland opens a new week.
+    expect(later?.window.start).toBe("2026-07-26");
+  });
+});
+
+describe("the month view's own links", () => {
+  it("opens the month view without a month, so it starts on this week", () => {
+    const { viewHref } = scheduleViewLinks(VIEW);
+    expect(viewHref(true, null)).toBe("/s/blue-mantis?view=month");
+    expect(viewHref(true, "2026-08")).toBe("/s/blue-mantis?view=month&month=2026-08");
   });
 });
 
@@ -164,6 +218,36 @@ describe("scheduleMonthRail", () => {
     expect(rail.prevMonthKey).toBeNull();
     expect(rail.nextMonthKey).toBe("2026-08");
     expect(rail.lastTripMonth).toEqual({ year: 2026, month: 8 });
+  });
+});
+
+describe("the month rail over the grid that starts on this week", () => {
+  const window = {
+    start: "2026-07-19",
+    weeks: 5,
+    first: { year: 2026, month: 7 },
+    last: { year: 2026, month: 8 },
+  };
+  it("steps on from the last month the grid draws and never back into the past", () => {
+    const rail = scheduleMonthRail({
+      range: { first: new Date("2026-07-25T12:00:00Z"), last: new Date("2026-10-20T12:00:00Z") },
+      explicitMonth: null,
+      window,
+      now: NOW,
+      tz: TZ,
+    });
+    expect(rail.prevMonthKey).toBeNull();
+    expect(rail.nextMonthKey).toBe("2026-09");
+  });
+  it("has no next month when the grid already reaches the last departure", () => {
+    const rail = scheduleMonthRail({
+      range: { first: new Date("2026-07-25T12:00:00Z"), last: new Date("2026-08-20T12:00:00Z") },
+      explicitMonth: null,
+      window,
+      now: NOW,
+      tz: TZ,
+    });
+    expect(rail.nextMonthKey).toBeNull();
   });
 });
 

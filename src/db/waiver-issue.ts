@@ -1,4 +1,4 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull } from "drizzle-orm";
 import {
   courseFormsLinkPath,
   readinessWaiverLinkPath,
@@ -34,7 +34,15 @@ import {
 import { recordDiverActivity } from "./operations";
 import { isTransactionExecutor } from "./query-helpers";
 import { getBookingReadiness } from "./readiness";
-import { bookings, capabilities, people, shops, trips, waiverRecords } from "./schema";
+import {
+  bookings,
+  capabilities,
+  notificationDeliveries,
+  people,
+  shops,
+  trips,
+  waiverRecords,
+} from "./schema";
 import { optedOutPhones, stopListedSmsProvider } from "./sms-opt-outs";
 import { seatNotCancelled } from "./trips-queries";
 import { personContactLeadTyped, seatMinorDeclared } from "./waiver-signing";
@@ -159,7 +167,44 @@ export async function textableSeats(
     db,
     numbered.map(({ to }) => to),
   );
-  return new Set(numbered.filter(({ to }) => !stopped.has(to)).map(({ bookingId }) => bookingId));
+  const failed = await seatsWhoseTextFailed(
+    db,
+    shopId,
+    numbered.map(({ bookingId }) => bookingId),
+  );
+  return new Set(
+    numbered
+      .filter(({ to, bookingId }) => !stopped.has(to) && !failed.has(bookingId))
+      .map(({ bookingId }) => bookingId),
+  );
+}
+
+/**
+ * The seats whose latest ready-link text the carrier reported failed (an SMS receipt, issue #4958).
+ * A later good text clears it, so only each seat's newest `seat_text` counts.
+ */
+async function seatsWhoseTextFailed(
+  db: DbExecutor,
+  shopId: string,
+  bookingIds: readonly string[],
+): Promise<Set<string>> {
+  const rows = await db
+    .select({
+      bookingId: notificationDeliveries.bookingId,
+      providerStatus: notificationDeliveries.providerStatus,
+    })
+    .from(notificationDeliveries)
+    .where(
+      and(
+        eq(notificationDeliveries.shopId, shopId),
+        eq(notificationDeliveries.kind, "seat_text"),
+        inArray(notificationDeliveries.bookingId, [...bookingIds]),
+      ),
+    )
+    .orderBy(asc(notificationDeliveries.attemptedAt));
+  const latest = new Map<string, string | null>();
+  for (const row of rows) latest.set(row.bookingId, row.providerStatus);
+  return new Set([...latest].filter(([, status]) => status === "failed").map(([id]) => id));
 }
 
 /**
@@ -1021,6 +1066,12 @@ export async function settleJoinWaiverDelivery(
     step: JoinSignStep;
     confirmationSent: boolean;
     /**
+     * Which way the confirmation that carried the step went: its email, or
+     * the text with the seat's readiness link (the Sign step is on it). Email
+     * when both went.
+     */
+    channel?: "email" | "sms";
+    /**
      * The provider's id for the confirmation that carried the link. Stored on
      * the waiver's delivery so a bounce on the confirmation flips the waiver
      * to bounced too (issue #2473), which `applyProviderEmailEvent` does for
@@ -1054,7 +1105,8 @@ export async function settleJoinWaiverDelivery(
     await recordWaiverDelivery(tx, {
       shopId: input.shopId,
       waiverRecordId: input.step.waiverRecordId,
-      channel: "email",
+      // mutation-ok: channel is "email", "sms" or undefined, never an empty string, so ?? and || agree
+      channel: input.channel ?? "email",
       delivery: { status: "sent", providerMessageId: input.confirmationProviderMessageId },
       now: input.now,
     });

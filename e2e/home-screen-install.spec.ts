@@ -157,8 +157,8 @@ test.describe("home-screen entry on the first morning", () => {
     await page
       .locator('input[name="ownerPassword"]')
       .filter({ visible: true })
-      .fill("trial-pass-123");
-    await page.getByRole("button", { name: "Create shop & start trial" }).click();
+      .fill("owner-pass-123");
+    await page.getByRole("button", { name: "Create your shop" }).click();
     await expect(page).toHaveURL(new RegExp(`/shop/${slug}$`));
     const primary = page.locator('[data-first-run-primary="true"]');
     await expect(primary).toBeVisible();

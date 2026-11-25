@@ -158,7 +158,7 @@
   },
   "export": {
     "claim": "Ajustes → Exportación de datos descarga un ZIP con CSV simples y documentados (buceadores, reservas, registros de exenciones, historial de pagos), encabezados por un archivo de contactos con la forma que espera el asistente de importación de otro sistema. Cada foto guardada (evidencia de certificación, fotos de sitios, recapitulaciones) va dentro como archivo.",
-    "terms": "Sin tarifa de exportación, sin ticket de soporte, sin permanencia mínima, y la misma descarga funciona el primer día de una prueba.",
+    "terms": "Sin tarifa de exportación, sin ticket de soporte, sin permanencia mínima, y la misma descarga funciona desde el primer día.",
     "continuity": "Si DiveDay cierra algún día, te avisamos con 90 días de antelación, tienes tu exportación y tus copias de seguridad siguen en marcha hasta el último día."
   },
   "capabilities": {
@@ -343,7 +343,7 @@
     },
     "records": {
       "title": "Tus registros, y con qué se conectan",
-      "item1": "Un ZIP de cada registro en CSV documentados, también en la prueba",
+      "item1": "Un ZIP de cada registro en CSV documentados, desde el primer día",
       "item2": "Fotos como archivos reales, no enlaces que caducan con la cuenta",
       "item3": "Un archivo de contactos con el formato del importador de otro sistema",
       "item4": "Un importador que marca qué dio por bueno y qué dejó atrás",
@@ -383,7 +383,7 @@
         },
         "step1": {
           "title": "Decide dónde se gestiona cada reserva",
-          "detail": "Sigue tomando reservas en tu sistema actual durante la prueba. Si preparas la misma salida en DiveDay, el personal crea la salida y agrega a los buceadores; importar el historial no reserva sus plazas."
+          "detail": "Sigue tomando reservas en tu sistema actual mientras pruebas DiveDay en una salida. Si preparas la misma salida en DiveDay, el personal crea la salida y agrega a los buceadores; importar el historial no reserva sus plazas."
         },
         "step2": {
           "title": "Revisa las reservas y los saldos",
@@ -394,7 +394,7 @@
           "detail": "Volver a importar contactos puede actualizar registros por correo electrónico. No transfiere automáticamente nuevas reservas, cancelaciones ni cambios de fecha. Asigna a alguien para revisar esos cambios en ambos sistemas."
         },
         "step4": {
-          "title": "Elige la fecha después de la prueba",
+          "title": "Elige la fecha después de tu primera salida",
           "detail": "Deja tiempo para corregir el archivo, reunir documentos pendientes y practicar con el equipo. El trabajo depende del tamaño y la calidad de tus registros; lo revisamos contigo antes del cambio."
         },
         "midSeason": "Puedes probar DiveDay en plena temporada mientras sigues usando tu sistema actual. Empieza con una muestra de la exportación y una salida, y revisa el trabajo pendiente antes de elegir la fecha del cambio."
@@ -585,7 +585,7 @@
       "metaDescription": "Compara FareHarbor y DiveDay para reservas y preparación de buceo. Revisa el traslado manual, los canales de venta y los registros antes del cambio.",
       "heroEyebrow": "Cambiar desde FareHarbor",
       "heroTitle": "Sigue recibiendo reservas y prepara a cada buceador para el barco",
-      "heroLede": "Si tu equipo revisa certificaciones, busca formularios y prepara la lista del barco fuera de FareHarbor, prueba ese trabajo en DiveDay. Decide si conservar el canal de reservas o recibirlas aquí después de una prueba.",
+      "heroLede": "Si tu equipo revisa certificaciones, busca formularios y prepara la lista del barco fuera de FareHarbor, prueba ese trabajo en DiveDay en una salida. Después decide si conservar el canal de reservas o recibirlas aquí.",
       "context": {
         "item1": "FareHarbor gestiona reservas y distribución. Si sus revendedores te traen clientes, tenlo en cuenta: DiveDay no ofrece una red de distribución equivalente.",
         "item2": "Compara una salida real. ¿Puede tu equipo encontrar el formulario pendiente, revisar la certificación requerida y pasar lista después de la inmersión? Prueba esas tareas en la demostración y compáralas con tu proceso actual.",
@@ -736,7 +736,7 @@
           "detail": "En cada ciclo de salidas, el personal reconcilia las nuevas reservas, los cambios y las cancelaciones en FareHarbor y DiveDay. Volver a importar contactos actualiza los registros de buceadores coincidentes; el personal sigue actualizando las reservas activas en cada sistema."
         },
         "timing": {
-          "title": "Fija la fecha del cambio después de una prueba",
+          "title": "Fija la fecha del cambio después de un ciclo de salidas",
           "detail": "Prueba primero con un archivo representativo y un ciclo de salidas. Reserva tiempo para corregir filas, reunir los registros que faltan y formar a la tripulación antes de cambiar el enlace de reservas."
         }
       }
@@ -747,7 +747,7 @@
       "metaDescription": "Compara Rezdy y DiveDay para reservas y preparación de buceo. Revisa el traslado manual, los canales de venta y los registros antes del cambio.",
       "heroEyebrow": "Cambiar desde Rezdy",
       "heroTitle": "Revisa quién está listo después de recibir la reserva",
-      "heroLede": "Si tu equipo revisa certificaciones, busca formularios y prepara la lista del barco fuera de Rezdy, prueba ese trabajo en DiveDay. Decide si conservar el canal de reservas o recibirlas aquí después de una prueba.",
+      "heroLede": "Si tu equipo revisa certificaciones, busca formularios y prepara la lista del barco fuera de Rezdy, prueba ese trabajo en DiveDay en una salida. Después decide si conservar el canal de reservas o recibirlas aquí.",
       "context": {
         "item1": "Rezdy gestiona reservas y distribución. Si sus revendedores te traen clientes, tenlo en cuenta: DiveDay no ofrece una red de distribución equivalente.",
         "item2": "Compara una salida real. ¿Puede tu equipo encontrar el formulario pendiente, revisar la certificación requerida y pasar lista después de la inmersión? Prueba esas tareas en la demostración y compáralas con tu proceso actual.",
@@ -972,7 +972,7 @@
   "pricing": {
     "heroTitle": "Precios",
     "lockNote": "El precio de hoy, congelado un año para los centros fundadores.",
-    "trialNote": "Prueba un centro propio gratis durante 2 semanas, sin tarjeta. Tu centro sigue funcionando después de la prueba mientras acuerdas el paso a un plan de pago con {email}.",
+    "priceNote": "Conserva tu sistema de reservas y prueba DiveDay en una salida. {hasBase, select, yes {Cuesta {base} al mes{hasPercent, select, yes {, y si recibes pagos en DiveDay, también nos quedamos con el {percent}} other {, sin ningún otro cargo}}.} other {Es gratis y sin tarjeta.{hasPercent, select, yes { Si recibes pagos en DiveDay, nos quedamos con el {percent}, y ese es todo el precio.} other {}}}}",
     "earlyAccessBadge": "Acceso anticipado",
     "notes": {
       "title": "Notas",

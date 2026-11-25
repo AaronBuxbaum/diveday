@@ -1,13 +1,11 @@
-# Ten-shop Florida call list — template and sourcing method
+# Florida call list — template and sourcing method
 
 **This file contains no shops.** It is the frame for building the list: why Florida, what makes a
 shop worth an hour, what makes one a bad first pilot, where to look them up, and the columns to
 fill. The rows are the founder's to research — a list of invented names and numbers would get
 dialed, and inventing one is worse than having none.
 
-Target: **ten qualified shops**, enough to open the five conversations
-[the 30-day list](../rollout.md#the-next-30-days-in-order) asks for and absorb the shops that say
-no. Phase 1 needs two or three to say yes.
+Target: **twenty to thirty qualified shops** for the four-touch rhythm in the [cold email template](cold-email-template.md#the-rhythm-four-touches-then-stop), enough to read the result and to absorb the shops that say no. Ten was too few to judge anything. Phase 1 needs two or three to say yes.
 
 ## Why Florida, and why one state
 
@@ -54,28 +52,25 @@ call on a true objection.
 
 ## Qualification criteria — what earns a call
 
-Score each candidate before dialing. A shop worth an hour has most of these:
+Sharpened 2026-11-25 from the outreach review, which found the first five sends went to shops that did not need us. A shop is worth a place in the rhythm only when it passes the three fit rules:
 
-1. **Runs its own boat, or books onto a partner boat on a fixed daily schedule.** The manifest and
-   roll call are the differentiators; a shop that never assembles a boarding list can't test them.
-2. **Enough volume that the morning is chaotic** — more than a handful of divers on a typical
-   departure, and more than one departure some days.
-3. **A named owner or manager reachable directly.** A shop where the decision needs a regional
-   office is not a design partner.
-4. **Currently on something identifiable** — a named incumbent system, a paper-and-spreadsheet
-   process, or a general-purpose booking channel. "We don't know what we use" is a research gap, not
-   a qualification.
-5. **Publicly visible pain, if you can find it.** A shop owner posting in a public forum about their
-   current software is a warm opening; per the etiquette rule in
-   [commercial-and-industry.md](../stakeholders/commercial-and-industry.md), you reply to their
-   named problem with specifics — you never broadcast.
-6. **Reachable in person.** Phase 1 is high-touch and the founder is present for the first boat day;
-   a shop you can drive to is worth more than a better one you can't.
+1. **Its own boat of about 12 or more divers, or several boats.** The cleared-to-board list and the count after each dive only matter when the morning is crowded. A small charter's paper is fine.
+2. **A named owner or manager.** Someone who can say yes without a regional office, with a published address or a page to message. A general inbox gets the forwarding variant and a lower score.
+3. **Paperwork that is manual or split across tools.** Waivers on paper or in one tool, bookings in another, a boat list in a spreadsheet. If one tool already covers waiver and list, there is little to win.
+
+Then, in rough order of value, these raise a shop's score:
+
+- A published two-tank schedule with departure times, so a preview can open on them.
+- A store, rentals, or courses feeding the boat, so rental sizes and certs arrive in a pile.
+- Publicly visible pain with the current process. Reply to their named problem with specifics; never broadcast ([commercial-and-industry.md](../stakeholders/commercial-and-industry.md)).
+- Reachable in person, because Phase 1 is high-touch.
 
 ## Disqualifiers — do not open a Phase 1 conversation with these
 
 These are not judgments about the shop; they are places where DiveDay would fail them, and finding
 that out in week two of a pilot is the expensive way.
+
+- **A small six-passenger charter booked on FareHarbor or Peek** (found 2026-11-24). Those tools already give it waivers and a boat list for no monthly fee, so DiveDay has little to add to a boat that small. Four of the first five emails went to shops like this and none replied. A good place to run a boat test, a weak partner.
 
 - **Retail POS is the center of the business.** DiveDay concedes retail POS, agency (PADI) sync, and
   gear inventory outright ([marketing.md](../marketing.md)). A shop whose day is the till will be
@@ -142,7 +137,8 @@ contact details the shop has published for business use.
 | Status | `to research` / `to call` / `called` / `meeting` / `pilot` / `parked` |
 | Disqualifier | Which one from the list above, if parked |
 | Last contact | Date and channel |
-| Next action + date | One action, one date. An empty next action means the row is dead |
+| Next action + date | One action, one date, naming the step of the four-touch rhythm (day 4 note, day 10 message, day 17 last email). An empty next action means the row is dead |
+| Fit | Which of the three fit rules the shop passes, with the evidence for each |
 
 ## Before you dial
 

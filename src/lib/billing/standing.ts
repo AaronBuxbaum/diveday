@@ -5,10 +5,9 @@ import { parseWallTime, wallTimeToUtc } from "@/lib/zoned";
  * Where a shop stands with DiveDay's own subscription — the one answer to "is
  * this shop paid up?" (ADR 20261007-subscription-billing).
  *
- * Pure on purpose. Every input is a fact somebody else recorded: the shop's
- * trial window (`src/features/shop-setup/trial.ts`), the free term DiveDay granted by hand
- * (`shop_subscriptions.free_term_ends_on`), and the last subscription state
- * Stripe's webhook told us. Nothing here reads a clock or a table, so the
+ * Pure on purpose. Every input is a fact somebody else recorded: the free term
+ * DiveDay granted by hand (`shop_subscriptions.free_term_ends_on`) and the last
+ * subscription state Stripe's webhook told us. Nothing here reads a clock or a table, so the
  * Billing page, a future digest, and a future gate all ask the same question
  * the same way.
  *
@@ -37,26 +36,21 @@ export const STRIPE_SUBSCRIPTION_STATUSES = [
 export type StripeSubscriptionStatus = (typeof STRIPE_SUBSCRIPTION_STATUSES)[number];
 
 /**
- * What the Billing page says, as a code (the page picks the words).
+ * What the Billing page says, as a code (the page picks the words). A shop is
+ * free with no card (ADR 20261124-free-shops-no-trial): having no card is an
+ * ordinary state, never a lapse.
  *
- * - `trialing` — inside the two-week trial, card or not.
+ * - `no_card` — no subscription Stripe will charge, and no free term running.
  * - `free_term` — inside a free term DiveDay granted by hand, card or not.
- * - `active` — paying, and the last charge went through.
+ * - `active` — a card is on file and the last charge, if any, went through.
  * - `past_due` — Stripe could not collect the last charge.
  * - `canceled` — the subscription ended.
- * - `trial_ended` — the free window is over and no card was ever added.
  */
-export type BillingStatus =
-  | "trialing"
-  | "free_term"
-  | "active"
-  | "past_due"
-  | "canceled"
-  | "trial_ended";
+export type BillingStatus = "no_card" | "free_term" | "active" | "past_due" | "canceled";
 
 export type SubscriptionSnapshot = {
   status: StripeSubscriptionStatus;
-  /** When the current period ends: the next charge, or the first one during a Stripe-side trial. */
+  /** When the current period ends: the next charge, or the first one after a free term. */
   currentPeriodEnd: Date | null;
   cancelAtPeriodEnd: boolean;
 };
@@ -65,8 +59,6 @@ export type BillingStandingInput = {
   now: Date;
   /** The shop's own zone: a free term ends at the end of its last day *there*. */
   timeZone: string;
-  /** When the shop's trial ends (`trialEndsAt(shop.createdAt)`). */
-  trialEndsAt: Date;
   /** The last day of a hand-granted free term, inclusive; null when none was granted. */
   freeTermEndsOn: CalendarDate | null;
   /** Null until the owner has added a card and Stripe has told us about it. */
@@ -81,7 +73,7 @@ export type BillingStanding = {
   nextChargeAt: Date | null;
   /** When a canceled-at-period-end subscription stops; null otherwise. */
   endsAt: Date | null;
-  /** When the free time (trial or free term) ends; null once it already has. */
+  /** When the free term ends; null when there is none or it already has. */
   freeUntil: Date | null;
 };
 
@@ -101,37 +93,50 @@ function inFreeTerm(input: BillingStandingInput): boolean {
 }
 
 /**
- * When the shop's free time ends — whichever of the trial and the free term
- * runs later — or null if both are behind it. This is also the first charge
- * date Checkout asks Stripe for, so a shop that adds a card on day three is
- * not charged on day three.
+ * When the shop's free term ends, or null if it has none or it is behind it.
+ * This is also the first charge date Checkout asks Stripe for, so a shop that
+ * adds a card during its free term is not charged until the term is over.
  */
 export function freeTimeEndsAt(
-  input: Pick<BillingStandingInput, "now" | "timeZone" | "trialEndsAt" | "freeTermEndsOn">,
+  input: Pick<BillingStandingInput, "now" | "timeZone" | "freeTermEndsOn">,
 ): Date | null {
-  const latest = freePeriodEndsAt(input);
-  return latest.getTime() > input.now.getTime() ? latest : null;
+  const end = freePeriodEndsAt(input);
+  return end && end.getTime() > input.now.getTime() ? end : null;
 }
 
-/** Historical billing cutoff, retained after free time expires. */
+/**
+ * The cutoff before which collected money is never billed: the end of a
+ * granted free term, retained after it passes; null (bill from the start)
+ * when none was granted.
+ */
 export function freePeriodEndsAt(
-  input: Pick<BillingStandingInput, "timeZone" | "trialEndsAt" | "freeTermEndsOn">,
-): Date {
-  const candidates = [input.trialEndsAt];
-  if (input.freeTermEndsOn) candidates.push(freeTermEndsAt(input.freeTermEndsOn, input.timeZone));
-  return candidates.reduce((a, b) => (a.getTime() >= b.getTime() ? a : b));
+  input: Pick<BillingStandingInput, "timeZone" | "freeTermEndsOn">,
+): Date | null {
+  return input.freeTermEndsOn ? freeTermEndsAt(input.freeTermEndsOn, input.timeZone) : null;
 }
 
-/** Which free window the shop is in when nothing Stripe says outranks it. */
-function freeStatus(input: BillingStandingInput): "free_term" | "trialing" | null {
-  if (inFreeTerm(input)) return "free_term";
-  if (input.now.getTime() < input.trialEndsAt.getTime()) return "trialing";
-  return null;
+/**
+ * The instant from which collected money is billed: the later of a granted
+ * free term's end and the card-added instant (`subscribedAt`). With no
+ * subscription yet it is `now`, so nothing collected card-less is ever billed,
+ * including the months before a card is added (ADR 20261124-free-shops-no-trial).
+ */
+export function billableFrom(
+  input: Pick<BillingStandingInput, "now" | "timeZone" | "freeTermEndsOn"> & {
+    subscribedAt: Date | null;
+  },
+): Date {
+  // mutation-ok: subscribedAt is a Date or null, so ?? and || pick the same side
+  const card = input.subscribedAt ?? input.now;
+  const free = freePeriodEndsAt(input);
+  // mutation-ok: at equal instants free and card are the same moment, so > and >= agree
+  return free && free.getTime() > card.getTime() ? free : card;
 }
 
 export function billingStanding(input: BillingStandingInput): BillingStanding {
   const freeUntil = freeTimeEndsAt(input);
   const subscription = input.subscription;
+  const free = inFreeTerm(input);
   const scheduled = (status: BillingStatus): BillingStanding => {
     const periodEnd = subscription?.currentPeriodEnd ?? null;
     const ending = subscription?.cancelAtPeriodEnd === true;
@@ -143,22 +148,15 @@ export function billingStanding(input: BillingStandingInput): BillingStanding {
       freeUntil,
     };
   };
-  const unsubscribed = (status: BillingStatus): BillingStanding => ({
-    status,
-    hasSubscription: false,
-    nextChargeAt: null,
-    endsAt: null,
-    freeUntil,
-  });
 
   if (subscription) {
     switch (subscription.status) {
       case "active":
         return scheduled("active");
-      // A Stripe-side trial is the free time Checkout deferred the first
-      // charge to: the shop is still on its trial or free term, card on file.
+      // A Stripe-side trial is the free term Checkout deferred the first
+      // charge to: card on file, first charge scheduled.
       case "trialing":
-        return scheduled(freeStatus(input) ?? "trialing");
+        return scheduled(free ? "free_term" : "active");
       case "past_due":
       case "unpaid":
       case "paused":
@@ -173,20 +171,26 @@ export function billingStanding(input: BillingStandingInput): BillingStanding {
           freeUntil,
         };
       // Checkout opened a subscription whose first payment has not settled.
-      // Nothing is promised yet, so the free windows still decide.
+      // Nothing is promised yet, so the shop reads as it did before.
       case "incomplete":
         break;
     }
   }
-  return unsubscribed(freeStatus(input) ?? "trial_ended");
+  return {
+    status: free ? "free_term" : "no_card",
+    hasSubscription: false,
+    nextChargeAt: null,
+    endsAt: null,
+    freeUntil,
+  };
 }
 
 /**
  * **The seam.** True while the shop owes DiveDay nothing it has not paid:
- * inside its trial or free term, or paying with the last charge collected.
+ * every state except a failed charge or an ended subscription.
  *
  * Read by nothing that gates today — see the module docblock.
  */
 export function isInGoodStanding(status: BillingStatus): boolean {
-  return status === "trialing" || status === "free_term" || status === "active";
+  return status === "no_card" || status === "free_term" || status === "active";
 }
