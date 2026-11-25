@@ -110,7 +110,9 @@ test("a snorkeler books from the public page and is on the manifest and the roll
   await seat.getByLabel("Coming as").selectOption("rider");
   await seat.getByRole("button", { name: "Save" }).click();
   await page.waitForURL(/notice=participant-type-set/);
-  await expect((await seatRow(page, guest)).getByText("Rider", { exact: true }).first()).toBeVisible();
+  await expect(
+    (await seatRow(page, guest)).getByText("Rider", { exact: true }).first(),
+  ).toBeVisible();
 
   await openTripTab(page, "Manifest");
   await expect((await manifestRow(page, guest)).getByText("Rider", { exact: true })).toBeVisible();
