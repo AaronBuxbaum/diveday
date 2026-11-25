@@ -1,5 +1,6 @@
 import { type SQL, sql } from "drizzle-orm";
 import type { AppDb } from "@/db/client";
+import { issueDiverSignIn, startDiverSession } from "@/db/diver-sign-in";
 import { startIncidentReport } from "@/db/incident-reports";
 import { createDemoShop } from "@/db/seed";
 import { getShopBySlug } from "@/db/shops";
@@ -381,6 +382,18 @@ async function addWhatTheSeedLacks(db: AppDb, a: Shop) {
     actorPersonId: owner.person_id,
   });
   if (!report.ok) throw new Error(`cross-shop fixture: no incident report (${report.reason})`);
+  // A diver signed in to shop A: the session token is the sweep's `token`, so
+  // every reader keyed by one is asked for shop A's session as shop B.
+  const email = await first(
+    db,
+    sql`select email as v from people where shop_id = ${a.id} and email is not null
+          and deleted_at is null and anonymized_at is null and merged_into_person_id is null
+        order by id limit 1`,
+  );
+  const issued = email ? await issueDiverSignIn(db, { shopId: a.id, email }) : null;
+  const session = issued ? await startDiverSession(db, { token: issued.token }) : null;
+  if (!session) throw new Error("cross-shop fixture: no diver session in shop A");
+  return { token: session.token };
 }
 
 export async function buildTwoShops(db: AppDb): Promise<TwoShops> {
@@ -389,7 +402,7 @@ export async function buildTwoShops(db: AppDb): Promise<TwoShops> {
   const { slug } = await createDemoShop(db, { shape: "lean", slug: "cross-shop-b" });
   const b = await getShopBySlug(db, slug);
   if (!b) throw new Error("cross-shop fixture: shop B was not minted");
-  await addWhatTheSeedLacks(db, a);
+  const signedIn = await addWhatTheSeedLacks(db, a);
 
   const { columns, primaryKeys, foreignKeys } = await readCatalog(db);
   const owned = ownershipPredicates(a.id, columns, foreignKeys);
@@ -414,7 +427,7 @@ export async function buildTwoShops(db: AppDb): Promise<TwoShops> {
     );
   const linkBaseline = await readLinks(db);
 
-  const targets = await targetsIn(db, a.id);
+  const targets = { ...(await targetsIn(db, a.id)), ...signedIn };
   return {
     a,
     b,
@@ -467,6 +480,7 @@ export const FILLABLE_NAMES: ReadonlySet<string> = new Set([
   "toTripId",
   "email",
   "phone",
+  "token",
   "knownTripId",
   "expectedTripId",
   "fromTripId",

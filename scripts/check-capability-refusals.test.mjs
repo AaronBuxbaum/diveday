@@ -23,9 +23,9 @@ describe("routeProblems", () => {
 });
 
 describe("the capability routes as they stand", () => {
-  it("cover all eleven known token routes and refuse in place", async () => {
+  it("cover all twelve known token routes and refuse in place", async () => {
     const { problems, routes } = await capabilityRefusalProblems();
     expect(problems).toEqual([]);
-    expect(routes).toBe(11);
+    expect(routes).toBe(12);
   });
 });

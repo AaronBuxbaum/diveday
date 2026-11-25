@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ChromeBar } from "@/components/chrome/ChromeBar";
+import { DiveDayIcon } from "@/components/DiveDayIcon";
 import type { LanguageChoice } from "@/components/LanguageChoices";
 import { LanguagePicker, type LanguagePickerCopy } from "@/components/LanguagePicker";
 import { LogoMark } from "@/components/Logo";
@@ -61,7 +62,7 @@ export function PublicShopHeader({
   recoveryHref?: string;
   /**
    * The diver's own door (ADR 20261125-diver-sign-in): Sign in, or My profile
-   * once signed in, beside the recovery link.
+   * once signed in, beside the language picker.
    */
   account?: { label: string; href: string };
   /** The language this page was written in — the one marked as in force. */
@@ -106,25 +107,13 @@ export function PublicShopHeader({
             ) : null}
             <span className="line-clamp-2 min-w-[2em] wrap-break-word">{shop.name}</span>
           </Link>
-          {recoveryLabel || account ? (
-            <span className="flex min-w-0 flex-wrap items-center gap-x-4">
-              {recoveryLabel ? (
-                <a
-                  href={recoveryHref}
-                  className="device-text-recovery inline-flex min-h-11 min-w-0 items-center text-base text-muted underline-offset-4 hover:underline"
-                >
-                  {recoveryLabel}
-                </a>
-              ) : null}
-              {account ? (
-                <Link
-                  href={account.href}
-                  className="device-text-recovery inline-flex min-h-11 min-w-0 items-center text-base font-medium text-primary underline-offset-4 hover:underline"
-                >
-                  {account.label}
-                </Link>
-              ) : null}
-            </span>
+          {recoveryLabel ? (
+            <a
+              href={recoveryHref}
+              className="device-text-recovery inline-flex min-h-11 min-w-0 items-center text-base text-muted underline-offset-4 hover:underline"
+            >
+              {recoveryLabel}
+            </a>
           ) : null}
         </div>
       }
@@ -140,13 +129,31 @@ export function PublicShopHeader({
             ariaLabel={navAriaLabel}
             items={navItems}
             action={
-              <LanguagePicker
-                current={locale}
-                currentLabel={localeLabel}
-                choices={languages}
-                setLocale={setLocale}
-                copy={languagePickerCopy}
-              />
+              <span className="flex items-center">
+                <LanguagePicker
+                  current={locale}
+                  currentLabel={localeLabel}
+                  choices={languages}
+                  setLocale={setLocale}
+                  copy={languagePickerCopy}
+                />
+                {/* The diver's own door sits with the language at the bar's
+                    edge. Below `sm` the person carries it alone, as the globe
+                    carries the picker, and the label stays in the
+                    accessibility tree. A bar narrower than 20 of its own rems
+                    (a phone at double text size) has no room left for it, and
+                    the bar may not grow past half the screen: the door then
+                    waits on the sign-in page's own address. */}
+                {account ? (
+                  <Link
+                    href={account.href}
+                    className="hidden @min-[20rem]:inline-flex min-h-11 min-w-11 items-center justify-center gap-1.5 rounded-lg px-1.5 text-sm font-medium text-primary transition-colors hover:bg-surface-sunken sm:px-2"
+                  >
+                    <DiveDayIcon name="person" className="size-4 shrink-0" strokeWidth={1.75} />
+                    <span className="sr-only sm:not-sr-only">{account.label}</span>
+                  </Link>
+                ) : null}
+              </span>
             }
           />
           <PublicShopHeaderHeight />

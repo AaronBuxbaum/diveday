@@ -248,19 +248,17 @@ async function redeemWithAuthority(
           return refused("not_authorized");
       } else if (authority.kind === "diver_session") {
         // Re-proved under the trip, booking and beneficiary locks: a sign-out
-        // or an erasure that committed meanwhile is seen here.
+        // or an erasure that committed meanwhile is seen here. The session's
+        // person is the beneficiary and the actor (`redeemSignedInTripCredit`),
+        // and the booking was already found as that person's own.
         const session = await lockDiverSession(tx, {
           shopId: input.shopId,
           token: authority.token,
         });
-        if (
-          !session ||
-          session.personId !== input.personId ||
-          input.actorPersonId !== input.personId ||
-          booking.identityUnconfirmedAt
-        )
+        if (session?.personId !== input.personId || booking.identityUnconfirmedAt)
           return refused("not_authorized");
       } else {
+        // mutation-ok: a lock that serializes a readiness spend against a revoke; contention cannot be provoked on PGlite's single connection
         await tx
           .select({ id: bookingCapabilities.id })
           .from(bookingCapabilities)

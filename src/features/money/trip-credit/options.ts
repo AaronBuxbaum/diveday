@@ -92,7 +92,7 @@ export function plainSeatCreditFare(
     shop.passThroughFee
   )
     return null;
+  // A charge is only ever positive (`checkoutCharge`): no fare is no charge.
   const charge = seatCheckoutCharge(trip, null, "diver");
-  const fare = charge ? charge.amountCents + charge.balanceDueCents : null;
-  return fare && fare > 0 ? fare : null;
+  return charge ? charge.amountCents + charge.balanceDueCents : null;
 }
