@@ -151,7 +151,7 @@ function sharedReminderOf(
  * words the rows would say them: Filling says such a line once on the card's
  * heading row ("Everyone: Check the depth"), and each row keeps only what is
  * its own. Empty unless every booked guest is listed and there are two or
- * more, so "Everyone" is true. A warning-colored reason is never folded.
+ * more, so "Everyone" is true. A folded line is said once in the heading's muted ink.
  */
 function sharedQuietOf(
   items: readonly FixItem[],
