@@ -49,6 +49,15 @@
   remain separate. Initials stand in without a photo. A held seat, printed sheet and offline copy
   show no photo. Removing or erasing the reference retires the stored object for cleanup; copies
   already downloaded cannot be recalled.
+- **How it went** — the owner's short account of one departure (`howItWent`,
+  `src/features/day/how-it-went/`; the page `/shop/<slug>/trips/<id>/how-it-went`, linked from Wrapped
+  up): how many divers signed their waiver ahead and who signed on the departure's own date (a
+  paper release says so); what was **sorted before boarding**, meaning a waiver signed, a card
+  checked or a rental fit stated on that date and no later than the diver's dock mark; who the desk
+  turned away and why; who was counted aboard while readiness said blocked (the boarding event's own
+  snapshot); and each head count with its time. Every line is a recorded fact: a count nobody took
+  says "Not taken", never everyone back (**Unaccounted for**). Owner-only, on the departure log's
+  gate, because it reads the same record. Not the diver's **recap**.
 - **Field guide** — the faces a **dive site** is known for: up to eight catalog species a shop picks
   for that site (`dive_site_creatures`, `MAX_SITE_CREATURES`), in the order it chose. A **briefing
   selection**, not an inventory — the point is to tell a diver what to *expect*, so it holds the

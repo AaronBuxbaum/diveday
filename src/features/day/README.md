@@ -8,6 +8,7 @@ and the clock every "what time is it here" question reads.
 - `today/`: the work queue, the departures board and the evening close-out (its own README).
 - Small pieces a substrate module or the queue needs: `today-job.ts`, `today-urgency.ts`,
   `today-catch-up.ts`, `today-catch-up-token.ts`, `today-catch-up-retention-fixture.ts`.
+- `how-it-went/`: the owner's short account of one departure (glossary, "How it went").
 - `staff-home.ts`, `shop-clock.ts` (one frozen value per request), `lost-items/`.
 - `world.ts`: the shop's day as the one-day simulation and route coverage walk it.
 

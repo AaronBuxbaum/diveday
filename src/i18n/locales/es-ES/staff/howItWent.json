@@ -1,0 +1,36 @@
+{
+  "title": "Cómo fue la salida del {weekday} a las {time}",
+  "door": "Cómo fue",
+  "sheetName": "Cómo fue",
+  "waivers": {
+    "heading": "Exenciones",
+    "ahead": "{count, plural, =0 {Nadie firmó por adelantado.} one {# buceador firmó por adelantado.} other {# buceadores firmaron por adelantado.}}",
+    "onTheDay": "{count, plural, one {# firmó el mismo día:} other {# firmaron el mismo día:}}",
+    "line": "{name}, {time}",
+    "linePaper": "{name}, {time}, en papel",
+    "notSigned": "Sin exención firmada: {names}"
+  },
+  "sorted": {
+    "heading": "Resuelto antes de embarcar",
+    "empty": "No se resolvió nada en el muelle.",
+    "line": "{name}: {fixes}",
+    "fix": {
+      "waiver": "exención firmada a las {time}",
+      "card": "tarjeta revisada a las {time}",
+      "rentalFit": "tallas de alquiler tomadas a las {time}"
+    },
+    "turnedAway": "No embarcó: {name}{reason, select, medical {, médico} waiver {, exención} card {, tarjeta} age {, edad} identity {, identidad} payment {, pago} other {}}",
+    "aboardOpen": "Contado a bordo con algo pendiente: {name} ({blockers})"
+  },
+  "counts": {
+    "heading": "Recuentos",
+    "dock": "En el muelle",
+    "afterDive": "Tras la inmersión {dive}",
+    "afterDiveAt": "Tras la inmersión {dive}, {site}",
+    "aboard": "{count} a bordo{crew, plural, =0 {} one {, # tripulante} other {, # tripulantes}}",
+    "taken": "{time}, por {name}",
+    "notTaken": "No se hizo",
+    "notBack": "No volvió a bordo: {names}",
+    "notRecorded": "Sin registrar: {names}"
+  }
+}

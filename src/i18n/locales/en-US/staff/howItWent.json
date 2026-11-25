@@ -1,0 +1,36 @@
+{
+  "title": "How {weekday}’s {time} went",
+  "door": "How it went",
+  "sheetName": "How it went",
+  "waivers": {
+    "heading": "Waivers",
+    "ahead": "{count, plural, =0 {Nobody signed ahead.} one {# diver signed ahead.} other {# divers signed ahead.}}",
+    "onTheDay": "{count, plural, one {# signed on the day:} other {# signed on the day:}}",
+    "line": "{name}, {time}",
+    "linePaper": "{name}, {time}, on paper",
+    "notSigned": "No signed waiver: {names}"
+  },
+  "sorted": {
+    "heading": "Sorted before boarding",
+    "empty": "Nothing was sorted at the dock.",
+    "line": "{name}: {fixes}",
+    "fix": {
+      "waiver": "waiver signed {time}",
+      "card": "card checked {time}",
+      "rentalFit": "rental sizes taken {time}"
+    },
+    "turnedAway": "Turned away: {name}{reason, select, medical {, medical} waiver {, waiver} card {, card} age {, age} identity {, identity} payment {, payment} other {}}",
+    "aboardOpen": "Counted aboard with something still open: {name} ({blockers})"
+  },
+  "counts": {
+    "heading": "Head counts",
+    "dock": "At the dock",
+    "afterDive": "After dive {dive}",
+    "afterDiveAt": "After dive {dive}, {site}",
+    "aboard": "{count} aboard{crew, plural, =0 {} one {, # crew} other {, # crew}}",
+    "taken": "{time}, by {name}",
+    "notTaken": "Not taken",
+    "notBack": "Not back aboard: {names}",
+    "notRecorded": "Not recorded: {names}"
+  }
+}
