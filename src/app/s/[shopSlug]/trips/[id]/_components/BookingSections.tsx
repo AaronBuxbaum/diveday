@@ -32,6 +32,7 @@ import { capacityLabel, initialBookingPartySize, MAX_PUBLIC_PARTY_SIZE } from "@
 import type { BookingFormTrip } from "../_lib/booking-form-trip";
 import { type BookingFormState, bookSpot, joinWaitlist, type TripRef } from "../actions";
 import { BookingGearFields } from "./BookingGearFields";
+import { BookingSubmit, TripCreditChoice } from "./BookingSubmit";
 import { KnownDiverPanel, type KnownDiverPanelProps } from "./KnownDiverPanel";
 import { MoneyBlock, type MoneyBlockSeatLine } from "./MoneyBlock";
 
@@ -465,6 +466,12 @@ export type BookSpotSectionContext = {
       })
     | null;
   /**
+   * A signed-in diver's trip credit, when it covers the full fare of a plain
+   * seat here (ADR 20261125-diver-sign-in). The attempt id makes a resubmit of
+   * this form the same spend. Null for everyone else.
+   */
+  tripCredit?: { balanceCents: number; fareCents: number; attemptId: string } | null;
+  /**
    * H-20260906-diveday-fill-already-knows b: offer one link to a cold-typed lead email that matches a diver on
    * file. Fire-and-forget — the form never hears back.
    */
@@ -524,6 +531,7 @@ export function BookSpotSection({ context }: { context: BookSpotSectionContext }
     offerHandoff,
     requirement = null,
     otherSeatOffers = [],
+    tripCredit = null,
   } = context;
   const t = useTranslations("booking");
   const tRoot = useTranslations();
@@ -535,6 +543,7 @@ export function BookSpotSection({ context }: { context: BookSpotSectionContext }
   const initialSize = initialBookingPartySize(context.requestedPartySize ?? 1, remaining);
   const [partySize, setPartySize] = useState(initialSize);
   const [holdChoice, setHoldChoice] = useState(false);
+  const [creditChoice, setCreditChoice] = useState(true);
   const groupHold = Boolean(payAtBooking && partySize > 1 && holdChoice);
   // What each person in the party is coming as, reported up by
   // `BookingPartyFields` the same way the size is. Only read when the
@@ -597,19 +606,11 @@ export function BookSpotSection({ context }: { context: BookSpotSectionContext }
         .filter(([index]) => activeGearIndexes.has(index))
         .reduce((sum, [, cents]) => sum + cents, 0)
     : 0;
-  // Sized by the party, not the boat's free seats: one diver booking reads
-  // "Book this seat", never "these spots" (fourth UX review item 7, H-20261014-seat-is-the-word).
-  const bookLabel = groupHold
-    ? t("holdSeats")
-    : trip.course
-      ? t(payAtBooking ? "enrollAndPay" : "enroll")
-      : payAtBooking
-        ? remaining === 1
-          ? t("bookAndPayLastSeat")
-          : t("bookAndPaySeats", { count: partySize })
-        : remaining === 1
-          ? t("bookLastSeat")
-          : t("bookSeats", { count: partySize });
+  // Credit covers one plain diver seat with nothing added (ADR
+  // 20261125-diver-sign-in); anything else books and pays as it always has.
+  const creditOffered =
+    tripCredit !== null && partySize === 1 && typeOf(0) === "diver" && gearTotalCents === 0;
+  const usesCredit = creditOffered && creditChoice;
   const capacityLabelValue = capacityLabel(trip);
   const capacityText =
     capacityLabelValue.kind === "full"
@@ -667,6 +668,7 @@ export function BookSpotSection({ context }: { context: BookSpotSectionContext }
             lines={knownDiver.lines}
             blankHref={knownDiver.blankHref}
             handoff={knownDiver.handoff}
+            signOut={knownDiver.signOut}
           />
         ) : null}
         <BookingPartyFields
@@ -746,7 +748,16 @@ export function BookSpotSection({ context }: { context: BookSpotSectionContext }
         ) : null}
         {/* After booking, each diver's `/ready/<token>` link can be used to
             provide dive intent. */}
-        {payAtBooking && !groupHold && offerCodeField ? (
+        {creditOffered && tripCredit ? (
+          <TripCreditChoice
+            attemptId={tripCredit.attemptId}
+            balance={money(tripCredit.balanceCents)}
+            fare={money(tripCredit.fareCents)}
+            checked={creditChoice}
+            onChange={setCreditChoice}
+          />
+        ) : null}
+        {payAtBooking && !groupHold && !usesCredit && offerCodeField ? (
           <FieldGrid columns={1} className="max-w-64 border-t border-border pt-4">
             {/* A shop-wide code and a trip-scoped last-minute deal are typed
                   into the same box — the diver has no idea which kind they were
@@ -786,7 +797,8 @@ export function BookSpotSection({ context }: { context: BookSpotSectionContext }
             {groupHold ? <p className="mt-1 text-base text-muted">{t("holdGroupNote")}</p> : null}
           </div>
         ) : null}
-        {perDiverPriceCents === null || groupHold ? null : (
+        {/* On credit, the note above already states the fare and what covers it. */}
+        {perDiverPriceCents === null || groupHold || usesCredit ? null : (
           <MoneyBlock
             summary={
               balanceDueAt
@@ -821,26 +833,17 @@ export function BookSpotSection({ context }: { context: BookSpotSectionContext }
             className="border-t border-border pt-4"
           />
         )}
-        <div className="mt-1">
-          <SubmitButton
-            pendingLabel={payAtBooking && !groupHold ? t("headingToPayment") : t("booking")}
-            className={buttonClass({ busy: true })}
-          >
-            {bookLabel}
-          </SubmitButton>
-          {/* Explain the external Stripe checkout before submission when
-              pay-at-booking is offered. */}
-          {payAtBooking && !groupHold ? (
-            <p className="mt-2 text-xs text-muted">
-              {t(payAtBooking === "test-mode" ? "stripeTestModeHint" : "stripeHint")}
-            </p>
-          ) : null}
-          {!payAtBooking ? <p className="mt-2 text-sm text-muted">{t("payLater")}</p> : null}
-          {/* The cancellation window stays directly beside the booking action. */}
-          {terms}
-          {/* Keep a booking refusal beside the action that produced it. */}
+        <BookingSubmit
+          payAtBooking={payAtBooking}
+          groupHold={groupHold}
+          usesCredit={usesCredit}
+          course={Boolean(trip.course)}
+          remaining={remaining}
+          partySize={partySize}
+          terms={terms}
+        >
           <ErrorNotice message={state.error ?? errorMessage} />
-        </div>
+        </BookingSubmit>
       </form>
     </SectionCard>
   );

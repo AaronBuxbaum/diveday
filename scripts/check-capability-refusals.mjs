@@ -27,6 +27,7 @@ export const APP = "src/app";
 export const KNOWN_ROUTES = [
   "(token)/claim/[token]",
   "(token)/confirm-contact/[token]",
+  "(token)/diver-sign-in/[token]",
   "(token)/invite/[token]",
   "(token)/preview/[token]",
   "(token)/ready/[token]",

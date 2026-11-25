@@ -314,6 +314,7 @@ export const DELIBERATELY_IDENTICAL = new Map([
     "the gas, and the word Spanish diving uses for it",
   ],
   ["diver.json trip.requirementMarkerNitrox", "the gas, and the word Spanish diving uses for it"],
+  ["diver.json profile.nitroxCard", "the gas, and the word Spanish diving uses for it"],
   ["staff/diveSites.json form.nitroxCheckbox", "the gas, and the word Spanish diving uses for it"],
   ["staff/diveSites.json list.nitroxBadge", "the gas, and the word Spanish diving uses for it"],
   [

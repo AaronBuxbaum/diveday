@@ -58,7 +58,7 @@ export function ChromeBar({
     <header
       className={
         naturalHeight
-          ? `${CHROME_BAR_SURFACE_CLASS} flex min-h-(--chrome-base-h)`
+          ? `${CHROME_BAR_SURFACE_CLASS} @container flex min-h-(--chrome-base-h)`
           : CHROME_BAR_CLASS
       }
       data-chrome-bar=""

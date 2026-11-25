@@ -18,9 +18,11 @@ import { WalkField, WalkSelect, WalkTyped } from "./WalkTyped";
  * **Picking a seat** — `BookSpotSection` on the public trip page
  * (`src/app/s/[shopSlug]/trips/[id]/_components/BookingSections.tsx`): the heading and the seats
  * left, the number of divers, and the money block over "Book and pay". Priya's is one diver on
- * the Two-Tank Reef. Left out: gear, nitrox, the contact fields and the promo code.
+ * the Two-Tank Reef. Left out: gear, nitrox, the contact fields, the promo code and a signed-in
+ * diver's trip credit.
  *
  * @mirrors src/app/s/[shopSlug]/trips/[id]/_components/BookingSections.tsx
+ * @mirrors src/app/s/[shopSlug]/trips/[id]/_components/BookingSubmit.tsx
  */
 export function SeatPickFallback({
   locale,

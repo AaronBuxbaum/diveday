@@ -66,6 +66,7 @@ import {
   emailArgs,
   mintAContactEmailConfirmation,
   mintACourtesyEmailUnsubscribe,
+  mintADiverSignIn,
   mintAnAccountToken,
   mintAnInterestUnsubscribe,
   mintASetupLink,
@@ -101,6 +102,7 @@ import {
   giveTheFirstBoatAPhoto,
   pinStaffSessionsSeenNow,
 } from "./settings-states";
+import { prepareSignedInDiver } from "./signed-in-diver";
 import { slideOneDepartureOntoAnother } from "./slide-one-departure-onto-another";
 import { seedDisconnectedSquareReceipt } from "./square-receipt";
 import { standingCrewShifts, standingCrewShiftsArgs } from "./standing-crew-shifts";
@@ -193,6 +195,7 @@ const FACTS = {
   operationsVisual: privateOnly(({ db, shop, actorId, now }) =>
     prepareOperationsVisual(db, shop, actorId, now),
   ),
+  signedInDiver: privateOnly(({ db, shop, now }) => prepareSignedInDiver(db, shop, now)),
   weatherAlternatives: ({ db, shop, now }) => prepareWeatherAlternatives(db, shop.id, now),
   noCardDeclared: ({ db, shop, now }) => declareNoCard(db, shop.id, now),
   stuckPayment: ({ db, shop, now }) => leavePaymentUnconfirmed(db, shop.id, now),
@@ -339,6 +342,7 @@ const FACTS = {
   accountToken: withArgs(accountTokenArgs, ({ db }, args) => mintAnAccountToken(db, args)),
   contactEmailConfirmation: ({ db, shop }) => mintAContactEmailConfirmation(db, shop.id),
   demoPreview: withArgs(demoPreviewArgs, ({ db, now }, args) => buildADemoPreview(db, args, now)),
+  diverSignIn: withArgs(emailArgs, ({ db, shop }, args) => mintADiverSignIn(db, shop.id, args)),
   courtesyEmailUnsubscribe: withArgs(emailArgs, ({ db, shop }, args) =>
     mintACourtesyEmailUnsubscribe(db, shop.id, args),
   ),

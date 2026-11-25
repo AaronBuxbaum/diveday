@@ -36,6 +36,30 @@ export function publicFindMyBookingPath(shopSlug: string): string {
   return `${publicSchedulePath(shopSlug)}#${FIND_MY_BOOKING_FRAGMENT}`;
 }
 
+/**
+ * Where a diver asks for a sign-in link to this shop's pages (ADR
+ * 20261125-diver-sign-in). Email only; the answer is the same whoever asks.
+ */
+export function publicSignInPath(shopSlug: string): string {
+  return `${publicSchedulePath(shopSlug)}/sign-in`;
+}
+
+/** The signed-in diver's own page at this shop: details, trips, credit, cards. */
+export function publicProfilePath(shopSlug: string): string {
+  return `${publicSchedulePath(shopSlug)}/me`;
+}
+
+/**
+ * The emailed link a diver taps to sign in. Outside `/s/` on purpose: the token
+ * is the credential, so it sits with the other bearer-link routes whose path
+ * telemetry redacts (`CAPABILITY_ROUTE_PREFIXES`).
+ */
+export const DIVER_SIGN_IN_LINK_PREFIX = "/diver-sign-in";
+
+export function diverSignInLinkPath(token: string): string {
+  return `${DIVER_SIGN_IN_LINK_PREFIX}/${token}`;
+}
+
 /** The shop's public review archive. */
 export function publicReviewsPath(shopSlug: string): string {
   return `${publicSchedulePath(shopSlug)}/reviews`;

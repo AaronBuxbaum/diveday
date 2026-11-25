@@ -6,6 +6,7 @@ export {
   type PreviewInput,
   parseDepartureTimes,
   parsePreviewInput,
+  previewDayIsStale,
   previewIdFrom,
   previewIsOpen,
   previewPath,

@@ -64,7 +64,9 @@
     "deskHours": "Mostrador abierto de {opens} a {closes}",
     "whatsApp": "Escríbenos por WhatsApp",
     "languageFallback": "DiveDay todavía no está en {requested}. Esta página está en {shown}, el idioma en el que trabaja {shop}.",
-    "credit": "Reservas con DiveDay"
+    "credit": "Reservas con DiveDay",
+    "signIn": "Iniciar sesión",
+    "myProfile": "Mi perfil"
   },
   "schedule": {
     "eyebrow": "Salidas",
@@ -388,7 +390,8 @@
       "ownGear": "Equipo propio, desde el {date}",
       "sizes": "Tallas guardadas el {date}",
       "contact": "Contacto de emergencia registrado: {name}",
-      "notYou": "¿No eres {name}? <a>Empieza con un formulario en blanco</a>"
+      "notYou": "¿No eres {name}? <a>Empieza con un formulario en blanco</a>",
+      "notYouSignedIn": "¿No eres {name}? <button>Cerrar sesión</button>"
     },
     "money": {
       "summaryLabel": "Resumen de la reserva",
@@ -525,7 +528,10 @@
     "holdGroup": "Reservar plazas mientras todos pagan",
     "holdGroupNote": "Cada persona paga desde su enlace en un plazo de 24 horas, o antes de la salida si es más pronto. Las plazas sin pagar vuelven a estar disponibles.",
     "partyExceedsSeats": "Tu grupo tiene {requested} personas; {remaining, plural, one {queda # plaza libre} other {quedan # plazas libres}}.",
-    "waitlistPartyExceedsLimit": "Tu grupo tiene {requested} personas; esta lista de espera acepta hasta {limit}."
+    "waitlistPartyExceedsLimit": "Tu grupo tiene {requested} personas; esta lista de espera acepta hasta {limit}.",
+    "useTripCredit": "Usar mi crédito para viajes",
+    "useTripCreditNote": "Tienes {balance}. Este lugar cuesta {fare}.",
+    "bookWithTripCredit": "Reservar con crédito"
   },
   "bookingGear": {
     "heading": "Equipo de alquiler",
@@ -5017,6 +5023,12 @@
       "body": "Solicitaste un enlace para entrar a DiveDay.",
       "choose": "Entrar",
       "expiry": "Este enlace vence el {expiresAt}. Si no lo solicitaste, ignora este correo."
+    },
+    "diverSignIn": {
+      "subject": "Inicia sesión en {shopName}",
+      "body": "Toca el botón para iniciar sesión en {shopName}. No necesitas contraseña.",
+      "choose": "Iniciar sesión",
+      "expiry": "Este enlace funciona hasta el {expiresAt}. Si no lo pediste, ignora este correo."
     }
   },
   "brand": {
@@ -5165,5 +5177,45 @@
     "endedTitle": "Esta vista previa terminó",
     "ended": "Las vistas previas quedan abiertas una semana. Responde al correo en el que llegó y la abrimos de nuevo.",
     "home": "Conoce DiveDay"
+  },
+  "diverSignIn": {
+    "metaTitle": "Iniciar sesión",
+    "title": "Iniciar sesión",
+    "description": "Te enviamos un enlace por correo. Lo tocas y entras, sin contraseña.",
+    "email": "Correo electrónico",
+    "submit": "Envíame un enlace",
+    "sentTitle": "Revisa tu correo",
+    "sent": "Si {shopName} te tiene registrado, va en camino un enlace para iniciar sesión. Funciona durante 15 minutos.",
+    "tryAnother": "Usar otro correo",
+    "linkUnavailable": "Ese enlace ya se usó o venció. Pide uno nuevo.",
+    "confirmTitle": "Iniciando sesión",
+    "confirm": "Continuar"
+  },
+  "profile": {
+    "metaTitle": "Mi perfil",
+    "description": "Lo que {shopName} tiene registrado de ti.",
+    "creditHeading": "Crédito para viajes",
+    "creditBalance": "{amount} para usar en una salida",
+    "creditGranted": "Agregado el {date}",
+    "creditSpent": "Usado el {date}",
+    "creditReturned": "Devuelto el {date}",
+    "upcomingHeading": "Próximas salidas",
+    "upcomingNone": "Todavía no tienes reservas.",
+    "seeSchedule": "Ver el calendario",
+    "pastHeading": "Buceaste con nosotros",
+    "cardsHeading": "Certificaciones",
+    "cardsNone": "Aún no hay certificaciones registradas. Agrega la tuya al reservar.",
+    "cardVerified": "Verificada",
+    "cardPending": "En revisión",
+    "nitroxCard": "Nitrox",
+    "detailsHeading": "Tus datos",
+    "emailHint": "Para cambiar tu correo, pídeselo al centro.",
+    "phone": "Teléfono",
+    "emergencyName": "Contacto de emergencia",
+    "emergencyPhone": "Su teléfono",
+    "save": "Guardar",
+    "saved": "Guardado.",
+    "emergencyPair": "Agrega el nombre y el teléfono de tu contacto de emergencia, o deja ambos vacíos.",
+    "signOut": "Cerrar sesión"
   }
 }

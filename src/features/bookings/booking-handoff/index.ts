@@ -16,4 +16,5 @@ export {
   lastGearFor,
   offerBookingHandoffByEmail,
   readKnownDiver,
+  readKnownPerson,
 } from "./store";

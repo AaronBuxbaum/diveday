@@ -68,6 +68,7 @@ import { checkoutGearLines, persistCheckoutGear } from "./_lib/checkout-gear";
 import { issueConfirmedBookingCapability } from "./_lib/issue-confirmed-booking-capability";
 import { issueReturningDiverReceiptForBooking } from "./_lib/issue-returning-diver-receipt";
 import { recordLeadBookerLocale } from "./_lib/record-lead-booker-locale";
+import { spendSignedInCredit } from "./_lib/signed-in-diver";
 import { sendJoinMail } from "./send-join-mail";
 
 /** Bound to each action so the public page can stay a pure renderer. */
@@ -488,6 +489,13 @@ export async function bookSpot(
     }),
   );
   await afterCommit("handoff", () => consumeHandoffFromForm(dbi, shopNow.id, fields.handoff));
+  // A signed-in diver's own credit settles the seat they just booked (ADR
+  // 20261125-diver-sign-in); any refusal books as the form always has.
+  const form = { fields, seats: validParty.length, promoCodeInput, groupHold, gearSelections };
+  const paidWithCredit =
+    (await afterCommit("trip_credit", () =>
+      spendSignedInCredit(dbi, { shop: shopNow, trip: tripNow, bookingId: primaryBookingId, form }),
+    )) ?? false;
   const ownLocale =
     (await afterCommit("locale", () => recordLeadBookerLocale(dbi, primaryBookingId))) ?? null;
   // The confirmation and every diver's waiver, after the seats are committed:
@@ -499,7 +507,7 @@ export async function bookSpot(
     primaryBookingId,
     bookings: outcome.bookings,
     ownLocale,
-    money: { chargesOnline: payAtBookingForGear, partyTypes },
+    money: { chargesOnline: payAtBookingForGear && !paidWithCredit, partyTypes },
   });
 
   if (offersGearAtCheckout) {
@@ -558,7 +566,7 @@ export async function bookSpot(
     : redirectCapability
       ? `${readinessLinkPath(redirectCapability.token)}?booked=1`
       : base;
-  if (groupHold) revalidateAndRedirect(base, landing);
+  if (groupHold || paidWithCredit) revalidateAndRedirect(base, landing);
   // `tripPromo`/`shopPromo` were already resolved above, before the party was
   // booked (task 20) — an invalid/expired/wrong-scope code now fails the
   // submit itself with a field error, rather than being silently dropped

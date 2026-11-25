@@ -323,8 +323,11 @@ const rows = [
   // grants nothing. A staff calendar feed (`calendar_assignments`,
   // `calendar_shop_trips`, `merge: "refuse"`) refuses the merge as
   // `staff_record` (`mergeDiverRecords`), and the erasure revokes it rather
-  // than deleting it (`scrubStandingCredentials`). Rows of other purposes
-  // leave `person_id` null.
+  // than deleting it (`scrubStandingCredentials`). A diver's own sign-in link
+  // and session (`diver_sign_in`, `diver_session`, `merge: "ends"`) stay on the
+  // merged-away record, which opens nothing after it, and an erasure deletes
+  // them (ADR 20261125-diver-sign-in). Rows of other purposes leave
+  // `person_id` null.
   {
     table: "capabilities",
     column: "person_id",

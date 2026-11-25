@@ -36,6 +36,7 @@ import { getDb } from "@/db/client";
 import { DEMO_SHOP_SLUG } from "@/db/demo-shop";
 import { listPackagesOnSale } from "@/db/dive-packages";
 import { shopPublicWhatsAppNumber } from "@/db/whatsapp-accounts";
+import { currentDiver } from "@/features/accounts/diver-sign-in";
 import { isLiveShopStaff } from "@/features/accounts/session";
 import { listShopRolesPresent } from "@/features/accounts/shop-roles";
 import { listShopSpokenLanguages } from "@/features/accounts/staff-accounts";
@@ -65,7 +66,9 @@ import {
   publicCoursesPath,
   publicFindMyBookingPath,
   publicPackagesPath,
+  publicProfilePath,
   publicSchedulePath,
+  publicSignInPath,
 } from "@/lib/public-routes";
 import { LazyPublicStaffPreviewBar } from "./LazyPublicStaffPreviewBar";
 import { everHadDepartureRead } from "./schedule-reads";
@@ -107,6 +110,7 @@ export async function PublicShopChrome({ params }: { params: Promise<{ shopSlug:
     present,
     [teaches, packagesOnSale, everHadDeparture],
     { session, showStaffBar },
+    signedInDiver,
   ] = await Promise.all([
     isEmbed ? null : requestLanguageFallback(locale),
     showBanner && shop ? listShopRolesPresent(db, shop.id) : null,
@@ -130,6 +134,9 @@ export async function PublicShopChrome({ params }: { params: Promise<{ shopSlug:
       session,
       showStaffBar: !isEmbed && shop !== null && (await isLiveShopStaff(db, shop.id, session)),
     })),
+    // A signed-in diver's door is their profile, which lists their bookings,
+    // so it stands in for find-my-booking (ADR 20261125-diver-sign-in).
+    !isEmbed && shop ? currentDiver(db, shop.id) : null,
   ]);
 
   // Owner and diver (public guest) are always offered; instructor/divemaster/
@@ -254,9 +261,14 @@ export async function PublicShopChrome({ params }: { params: Promise<{ shopSlug:
           shop={shop}
           navAriaLabel={t("shopChrome.navAriaLabel")}
           navItems={navItems}
-          recoveryLabel={t("findMyBooking.link")}
+          recoveryLabel={signedInDiver ? undefined : t("findMyBooking.link")}
           recoveryHref={
             everHadDeparture ? publicFindMyBookingPath(shop.slug) : FIND_YOUR_BOOKING_PATH
+          }
+          account={
+            signedInDiver
+              ? { label: t("shopChrome.myProfile"), href: publicProfilePath(shop.slug) }
+              : { label: t("shopChrome.signIn"), href: publicSignInPath(shop.slug) }
           }
           locale={locale}
           localeLabel={localeEndonym(locale)}

@@ -78,6 +78,9 @@ export const TOKEN_ROUTE_PREFIXES = [
   // A prospect's demo preview link (ADR 20261116-demo-previews): the id signs
   // its holder in as the preview shop's owner.
   "preview",
+  // A diver's own sign-in link (ADR 20261125-diver-sign-in): spending it opens
+  // a session as that diver, so the token must not leave in a referrer.
+  "diver-sign-in",
 ];
 
 export function securityHeaderRules(): ConfigHeaderRule[] {

@@ -10,6 +10,7 @@ export type DiveDaySharedIconName =
   | "info"
   | "empty"
   | "globe"
+  | "person"
   | "check"
   | "pending"
   | "arrow-right"
@@ -58,6 +59,13 @@ const SHARED_ICON_PATHS: Record<Exclude<DiveDaySharedIconName, "caret">, ReactNo
       <circle cx="12" cy="12" r="9" />
       <path d="M3 12h18" />
       <path d="M12 3a15 15 0 0 1 0 18a15 15 0 0 1 0-18" />
+    </>
+  ),
+  // A diver's own door (ADR 20261125-diver-sign-in): a head over shoulders.
+  person: (
+    <>
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4.5 20.5a7.5 7.5 0 0 1 15 0" />
     </>
   ),
   check: <path d="m5 12.5 4.5 4.5L19 7" />,

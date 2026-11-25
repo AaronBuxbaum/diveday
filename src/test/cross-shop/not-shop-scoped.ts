@@ -54,6 +54,8 @@ const GROUPS: { reason: string; functions: string[] }[] = [
   {
     reason: "A link's secret token is the key, and the row it opens names its own shop",
     functions: [
+      "diver-sign-in.ts:startDiverSession",
+      "diver-sign-in.ts:endDiverSession",
       "booking-capabilities.ts:verifyBookingCapability",
       "booking-capabilities.ts:verifyStrandedBookingCapability",
       "booking-capabilities.ts:resolveRevokedBookingCapability",

@@ -23,6 +23,7 @@ import {
   checkoutRecoveryEmail,
   contactEmailConfirmationEmail,
   demoStartedAlertEmail,
+  diverSignInEmail,
   type EmailShopBrand,
   founderDigestEmail,
   guardianReleaseCopyEmail,
@@ -246,6 +247,7 @@ function rawMessageFor(notification: Notification): NotificationEmail {
   if (notification.kind === "welcome") return welcomeEmail(notification);
   if (notification.kind === "address_confirmation") return addressConfirmationEmail(notification);
   if (notification.kind === "magic_sign_in_request") return magicSignInEmail(notification);
+  if (notification.kind === "diver_sign_in_request") return diverSignInEmail(notification);
   if (notification.kind === "password_reset_request") return passwordResetEmail(notification);
   if (notification.kind === "staff_invite") return staffInviteEmail(notification);
   if (notification.kind === "checkout_recovery") return checkoutRecoveryEmail(notification);

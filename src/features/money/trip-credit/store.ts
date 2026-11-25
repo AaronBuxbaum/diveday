@@ -2,6 +2,7 @@ import { and, desc, eq, sql } from "drizzle-orm";
 import { loadActiveStaffRoles } from "@/db/authz";
 import { verifyBookingCapability } from "@/db/booking-capabilities";
 import type { AppDb, DbExecutor } from "@/db/client";
+import { lockDiverSession, readDiverSession } from "@/db/diver-sign-in";
 import { boundLockWaits, isLockWaitRefusal } from "@/db/lock-bounds";
 import { getBookingPayment, setBookingPayment } from "@/db/payments";
 import { bookingCapabilities, bookings, shops, tripCreditEntries, trips } from "@/db/schema";
@@ -157,10 +158,48 @@ export async function redeemOwnTripCredit(
   );
 }
 
+/**
+ * A signed-in diver spends their own credit on a seat they just booked (ADR
+ * 20261125-diver-sign-in). The session is the proof of identity: it must name
+ * the booking's person and the credit's, in this shop, when the debit commits.
+ */
+export async function redeemSignedInTripCredit(
+  db: AppDb,
+  input: {
+    shopId: string;
+    sessionToken: string;
+    bookingId: string;
+    attemptId: string;
+    currency: string;
+    expectedFareCents: number;
+  },
+): Promise<TripCreditResult> {
+  const session = await readDiverSession(db, { shopId: input.shopId, token: input.sessionToken });
+  if (!session) return refused("not_authorized");
+  return redeemWithAuthority(
+    db,
+    {
+      shopId: input.shopId,
+      personId: session.personId,
+      actorPersonId: session.personId,
+      bookingId: input.bookingId,
+      attemptId: input.attemptId,
+      currency: input.currency,
+      expectedFareCents: input.expectedFareCents,
+    },
+    { kind: "diver_session", token: input.sessionToken },
+  );
+}
+
+type RedeemAuthority =
+  | { kind: "staff" }
+  | { kind: "readiness"; token: string }
+  | { kind: "diver_session"; token: string };
+
 async function redeemWithAuthority(
   db: AppDb,
   input: Scope & { bookingId: string; expectedFareCents: number },
-  authority: { kind: "staff" } | { kind: "readiness"; token: string },
+  authority: RedeemAuthority,
 ): Promise<TripCreditResult> {
   if (
     !validScope(input) ||
@@ -207,7 +246,19 @@ async function redeemWithAuthority(
           !isStaff((await loadActiveStaffRoles(tx, input.shopId, input.actorPersonId)) ?? undefined)
         )
           return refused("not_authorized");
+      } else if (authority.kind === "diver_session") {
+        // Re-proved under the trip, booking and beneficiary locks: a sign-out
+        // or an erasure that committed meanwhile is seen here. The session's
+        // person is the beneficiary and the actor (`redeemSignedInTripCredit`),
+        // and the booking was already found as that person's own.
+        const session = await lockDiverSession(tx, {
+          shopId: input.shopId,
+          token: authority.token,
+        });
+        if (session?.personId !== input.personId || booking.identityUnconfirmedAt)
+          return refused("not_authorized");
       } else {
+        // mutation-ok: a lock that serializes a readiness spend against a revoke; contention cannot be provoked on PGlite's single connection
         await tx
           .select({ id: bookingCapabilities.id })
           .from(bookingCapabilities)
