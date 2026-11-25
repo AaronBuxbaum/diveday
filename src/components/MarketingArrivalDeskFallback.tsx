@@ -32,7 +32,7 @@ export function RowCaret() {
  * asks whether the booking is the same person, and which has no Check in tap.
  * To come: a guest with the bordered Check in button (`ArrivalTap.tsx`). Here: one of the
  * seven, its tap turned to "Checked in". Left out: the opened guest's "Not
- * here" (`NoShowScript.tsx`), the other six who are here, and Add a guest.
+ * here" sheet (`NoShowConfirm`), the other six who are here, and Add a guest.
  *
  * `state="ready"` is Priya at the counter with her Check in tap. `state="checkedIn"`
  * is a moment later: her tap turned to "Checked in", her row in that band, the count

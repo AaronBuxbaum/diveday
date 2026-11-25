@@ -59,14 +59,17 @@ async function belowFor(seat: Awaited<ReturnType<typeof firstTimerAtTheCounter>>
   return deskSlot(seat, "below");
 }
 
-/** The opened guest's rare actions: "Not here" and "Turn away" (ADR 20261117-trip-page-clock). */
+/**
+ * The opened guest's rare actions, each its More row's label and the sheet it
+ * opens: "Not here" and "Turn away" (ADR 20261117-trip-page-clock).
+ */
 async function detailsFor(seat: Awaited<ReturnType<typeof firstTimerAtTheCounter>>) {
-  return deskSlot(seat, "details");
+  return deskSlot(seat, "acts");
 }
 
 async function deskSlot(
   seat: Awaited<ReturnType<typeof firstTimerAtTheCounter>>,
-  slot: "below" | "details",
+  slot: "below" | "acts",
 ) {
   const desk = await buildArrivalDesk({
     db: seat.db,
@@ -80,7 +83,18 @@ async function deskSlot(
     t: staffTranslator("en-US"),
   });
   if (!desk) throw new Error("the boat is outside its arrivals window");
-  return render(<div>{desk.arrival[slot]?.get(seat.bookingId)}</div>).container;
+  if (slot === "below")
+    return render(<div>{desk.arrival.below.get(seat.bookingId)}</div>).container;
+  return render(
+    <div>
+      {desk.arrival.acts?.get(seat.bookingId)?.map((act) => (
+        <div key={act.key}>
+          {act.label}
+          {act.sheet}
+        </div>
+      ))}
+    </div>,
+  ).container;
 }
 
 describe("the counter's welcome word (UX audit 2026-10-07, item 46)", () => {

@@ -398,8 +398,6 @@ export type RosterArrival = {
   instrument?: (deskWorkOpen: boolean) => ReactNode;
   controls: ReadonlyMap<string, ReactNode>;
   below: ReadonlyMap<string, ReactNode>;
-  /** Routine exception actions behind the existing person disclosure. */
-  details?: ReadonlyMap<string, ReactNode>;
   /** The same acts for the opened guest: a More menu row each, and the sheet it opens. */
   acts?: ReadonlyMap<string, readonly ArrivalAct[]>;
   boarded: ReadonlySet<string>;
