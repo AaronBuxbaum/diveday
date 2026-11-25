@@ -346,6 +346,21 @@ async function rendererWedged(page: Page): Promise<boolean> {
   return wedged;
 }
 
+/** A frame gap this long, with the page otherwise answering, is a stalled renderer, not a slow one. */
+const FRAME_STALL_MS = 10_000;
+
+/** The longest gap between animation frames this page has seen, or 0 when it cannot say. */
+async function longestFrameGap(page: Page): Promise<number> {
+  if (page.isClosed()) return 0;
+  return page
+    .evaluate(() => {
+      const beat = (window as unknown as { __frameBeat?: { last: number; longest: number } })
+        .__frameBeat;
+      return beat ? Math.max(beat.longest, performance.now() - beat.last) : 0;
+    })
+    .catch(() => 0);
+}
+
 /**
  * The clock as a fact of the test (issue #2761): `to` moves the worker server's
  * clock and the page's together, and `/api/test/reset` puts the server's back
@@ -620,8 +635,13 @@ export const test = base.extend<
       const wedged = (await rendererWedged(page))
         ? `renderer: no answer to evaluate(() => true) in ${RENDERER_PROBE_MS}ms — wedged, not slow\n`
         : "";
+      const frameGap = wedged ? 0 : await longestFrameGap(page);
+      const stalled =
+        frameGap >= FRAME_STALL_MS
+          ? `renderer: no animation frame for ${Math.round(frameGap)}ms while evaluate answered — wedged, not slow\n`
+          : "";
       await testInfo.attach("browser-activity", {
-        body: [wedged + verdict(), "", ...entries].join("\n"),
+        body: [wedged + stalled + verdict(), "", ...entries].join("\n"),
         contentType: "text/plain",
       });
     }
@@ -817,6 +837,22 @@ export const test = base.extend<
   // (the offline reconcile, debounced search) behaves exactly as in production.
   context: async ({ context, workerBaseURL }, use) => {
     await pinBrowserClock(context, E2E_FROZEN_CLOCK);
+
+    // Frame heartbeat (#4517): the renderer can stop producing frames while its
+    // main thread stays alive, so Playwright's rAF-based "stable" check waits
+    // forever and a trivial `evaluate` still answers. The longest gap between
+    // frames is what a failed test's transcript reports.
+    await context.addInitScript(() => {
+      const beat = { last: performance.now(), longest: 0 };
+      (window as unknown as { __frameBeat: typeof beat }).__frameBeat = beat;
+      const tick = () => {
+        const now = performance.now();
+        beat.longest = Math.max(beat.longest, now - beat.last);
+        beat.last = now;
+        requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    });
 
     await context.addInitScript(() => {
       const isOfflineCookie = document.cookie
