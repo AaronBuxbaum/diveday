@@ -159,6 +159,8 @@
       "brandColorDarkened": "Your color was too light to read as text, so your storefront uses this darker shade.",
       "displayFont": "Headline face",
       "displayFontDefault": "DiveDay’s own",
+      "looks": "Start from a look",
+      "lookNames": { "harbor": "Harbor", "reef": "Reef", "deep": "Deep", "kelp": "Kelp" },
       "heroPhoto": "Cover photo",
       "heroHint": "PNG, JPG, or WebP. Landscape, 1600 px wide or more.",
       "heroAlt": "Describe the cover photo",

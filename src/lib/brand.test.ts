@@ -8,6 +8,7 @@ import {
   BRAND_DEFAULT_SURFACE,
   BRAND_DISPLAY_FONT_CODES,
   BRAND_INK,
+  BRAND_LOOKS,
   brandDisplayFontFamily,
   brandDisplayFontStylesheet,
   brandThemeProperties,
@@ -271,5 +272,12 @@ describe("deriveDarkBrandTheme", () => {
     expect(/--background:\s*(#[0-9a-f]{6})/.exec(light?.[1] ?? "")?.[1]).toBe(
       BRAND_DEFAULT_SURFACE,
     );
+  });
+
+  it("offers looks that are valid choices and read in both schemes", () => {
+    for (const look of BRAND_LOOKS) {
+      expect(parseBrandColor(look.color).value).toBe(look.color);
+      expect(BRAND_DISPLAY_FONT_CODES).toContain(look.font);
+    }
   });
 });
