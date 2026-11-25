@@ -151,7 +151,8 @@ function eligibleReferrals(db: DbExecutor, now: Date, buddyBookingId?: string) {
       )
       // diveday:allow-time-id-order: a sweep's drain order, never shown to anyone
       .orderBy(asc(trips.endsAt), asc(bookings.id))
-      .limit(buddyBookingId ? 1 : BUDDY_CREDIT_SWEEP_LIMIT)
+      // A booking id is unique, so the recheck already returns at most one row.
+      .limit(BUDDY_CREDIT_SWEEP_LIMIT)
   );
 }
 
