@@ -619,7 +619,7 @@ for (const scheme of ["light", "dark"] as const) {
 
         await page.goto(`/shop/blue-mantis/trips/${mixedBoat.tripId}`);
         const rider = await rosterRow(page, mixedBoat.rider);
-        await expect(rider.getByText("Rider", { exact: true })).toBeVisible();
+        await expect(rider.getByText("Rider", { exact: true }).first()).toBeVisible();
         await capture(page, "trip-roster-participant-types", scheme);
 
         await openRosterDetails(rider);
