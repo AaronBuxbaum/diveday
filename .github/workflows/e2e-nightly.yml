@@ -63,20 +63,17 @@ jobs:
           }
           cat recent-history.log >> "$GITHUB_STEP_SUMMARY"
           mapfile -t specs < <(jq -r '.specs[]' recent-failures.json)
+          jq -r '.unhunted[]? | "- not hunted, no readable title: `\(.)`"' recent-failures.json >> "$GITHUB_STEP_SUMMARY"
           if [ "${#specs[@]}" -eq 0 ]; then
-            echo "No existing spec was identified in failed CI annotations from the last 7 days." >> "$GITHUB_STEP_SUMMARY"
+            echo "No existing spec with a readable failed-test title was identified in failed CI annotations from the last 7 days." >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
           printf -- '- `%s`\n' "${specs[@]}" >> "$GITHUB_STEP_SUMMARY"
-          # Rerun the tests that failed, by title, inside their specs; a failure with no readable
-          # title reruns its whole file.
-          grep_pattern="$(jq -r '.grep // empty' recent-failures.json)"
-          grep_args=()
-          if [ -n "$grep_pattern" ]; then
-            grep_args=(--grep "$grep_pattern")
-            echo "Rerunning $(jq -r '.tests' recent-failures.json) failed tests by title." >> "$GITHUB_STEP_SUMMARY"
-          fi
-          pnpm exec playwright test --repeat-each=5 "${grep_args[@]}" "${specs[@]}"
+          # Rerun the tests that failed, by title, inside their specs. A failure with no readable
+          # title is named and left out: rerunning its whole file five times is what timed the
+          # step out (#4959).
+          echo "Rerunning $(jq -r '.tests' recent-failures.json) failed tests by title." >> "$GITHUB_STEP_SUMMARY"
+          pnpm exec playwright test --repeat-each=5 --grep "$(jq -r '.grep' recent-failures.json)" "${specs[@]}"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: failure()
         with:

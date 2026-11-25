@@ -4,7 +4,8 @@ name: Simulate a day
 # against the production build with the frozen clock advancing — book, sign,
 # check in, roll call, underway, home, close out, recap — failing on the first
 # state the day cannot reach and leaving a screenshot per state and a transcript
-# behind (`scripts/simulate-day.mjs`, docs/engineering/testing.md).
+# behind (`scripts/simulate-day.mjs`, docs/engineering/testing.md). Then the
+# one-trip trial: paste a list onto an unpriced trip, what went out, who is ready.
 #
 # Nightly rather than on every pull request, deliberately: the day takes minutes
 # of serial browser work that no pull request's diff needs to wait on, and what
@@ -46,6 +47,16 @@ jobs:
       - run: pnpm e2e:build
       - name: Drive the day
         run: pnpm simulate:day --no-build
+      # The one-trip trial ("Try it Saturday"): a shop that keeps its booking tool pastes that
+      # tool's list onto an unpriced trip, reads who each link went to, and lands on who is ready.
+      # The fleet's own specs, against the same build, rather than a second copy of them in the day.
+      # Run even when the day stopped, so one red night names both. A step timeout under the job's
+      # 30 makes an overrun fail the step, which the red-run issue below reads; a job timeout is
+      # `cancelled` and files nothing.
+      - name: Rehearse a trip run beside another booking tool
+        if: ${{ !cancelled() }}
+        timeout-minutes: 12
+        run: pnpm e2e:run e2e/paste-list.spec.ts e2e/sold-elsewhere.spec.ts --reporter=line
       # The rehearsal artifacts V-04 asks for: `day.md` names every state, when
       # on the shop's clock it was reached, and the screenshot it left. Uploaded
       # whether or not the day completed — a failed run's transcript is the one

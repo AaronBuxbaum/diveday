@@ -51,6 +51,7 @@ import {
   scheduleNextBoat,
   scheduleOffSeason,
   schedulePagerHrefs,
+  scheduleRollingWindow,
   scheduleSeatState,
   scheduleTripHref,
   scheduleViewLinks,
@@ -135,7 +136,9 @@ export default async function SchedulePage({
   // the label above the list and the list itself must never disagree.
   const explicitMonth = parseMonthKey(month);
   const monthView = query.view === "month";
-  const listMonthBounds = explicitMonth ? scheduleMonthBounds(explicitMonth, tz) : null;
+  const rolling = scheduleRollingWindow({ monthView, explicitMonth, now, tz, locale });
+  const listMonthBounds =
+    rolling?.bounds ?? (explicitMonth ? scheduleMonthBounds(explicitMonth, tz) : null);
 
   const [
     {
@@ -163,7 +166,7 @@ export default async function SchedulePage({
       hasSpaceFilter,
       partySize: query.partySize ? partySize : undefined,
       tripTypeFilter,
-      limit: monthView && explicitMonth ? 120 : undefined,
+      limit: monthView ? 120 : undefined,
     }),
     listPublicStaffProfiles(db, shop.id),
   ]);
@@ -213,6 +216,7 @@ export default async function SchedulePage({
   const { currentMonth, lastTripMonth, prevMonthKey, nextMonthKey } = scheduleMonthRail({
     range,
     explicitMonth,
+    window: rolling?.window,
     now,
     tz,
   });
@@ -249,13 +253,7 @@ export default async function SchedulePage({
     locale,
     t,
   });
-  /**
-   * **The one gate for the week's list.** The list, or the state standing in
-   * for it, is chosen on this name, and the pager row under it reads the same
-   * name for its margin: the list hands its last row's room back below itself
-   * and only a row under the list takes it back in. Two spellings of the
-   * condition would disagree the day a state is added to one of them.
-   */
+  /** The one gate for the week's list; the pager row's margin below reads the same name. */
   const showsWeekLedger = hasUpcoming && visibleUpcoming.length > 0;
   const pager = schedulePagerHrefs({ view, ...cursors });
 
@@ -351,11 +349,12 @@ export default async function SchedulePage({
           <div className="mb-2">
             <MonthControls
               {...{ t, locale, monthView, currentMonth, dayKeyOf }}
+              weekWindow={rolling?.window}
               weekRows={showsWeekLedger ? weekRows : []}
-              railShown={Boolean(prevMonthKey || nextMonthKey || explicitMonth)}
+              railShown={Boolean(prevMonthKey || nextMonthKey || explicitMonth || rolling)}
               railSides={monthRailSides(prevMonthKey, nextMonthKey, monthHref, t)}
               departures={visibleUpcoming}
-              toggleHref={viewHref(!monthView, monthKey(currentMonth))}
+              toggleHref={viewHref(!monthView, explicitMonth && monthKey(explicitMonth))}
             />
           </div>
 
@@ -388,12 +387,12 @@ export default async function SchedulePage({
               and the middle one is the sentence that reads as a shop which has
               stopped. The widget keeps it: `embed/calendar` renders neither of those
               two, and a blank iframe on a shop's own website says nothing at
-              all. The list itself renders on `showsWeekLedger`, the name the
-              pager row's margin below reads too. */}
+              all. The list renders on `showsWeekLedger`, which the pager's margin reads. */}
           {showsWeekLedger ? (
             <WeekLedger
               rows={weekRows}
               listLabel={t("schedule.tripListLabel")}
+              departedSummary={(count) => t("schedule.departedToday", { count })}
               stickyTop="top-(--chrome-h)"
             />
           ) : (

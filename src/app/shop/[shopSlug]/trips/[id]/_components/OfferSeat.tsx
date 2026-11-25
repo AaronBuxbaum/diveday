@@ -34,6 +34,9 @@ export type OfferSeatCopy = {
 /** The interests an offer may reach, with what the composer fallback needs of each. */
 export type OfferSeatInterest = { interestId: string; name: string; email: string | null };
 
+/** What the held send answered for one interest (`SeatOfferDelivery`). */
+export type OfferSeatResult = { interestId: string; delivery: string };
+
 type Fallback = { interest: OfferSeatInterest; mailto: string | null; message: string };
 
 /** One held `seat_offer` send for the supplied interests, with Undo. Per-interest
@@ -52,6 +55,9 @@ export function OfferSeat({
   tripWhen,
   copy,
   discountFields = null,
+  quiet = false,
+  once = false,
+  onDone,
 }: {
   /** Unique on the page: the tick boxes name it. */
   formId: string;
@@ -70,9 +76,21 @@ export function OfferSeat({
   copy: OfferSeatCopy;
   /** The discount's rider (`OfferDiscountRider`), for a role that may discount. */
   discountFields?: ReactNode;
+  /** Ghost weight, for a list where the button repeats on every row (Filling's fill card). */
+  quiet?: boolean;
+  /**
+   * One press, one batch ("Offer seats"): once the send has answered, the
+   * button is gone, and a diver the server skipped because they were
+   * emailed inside the resend window gets no "write to them yourself" either.
+   * The caller says what the send answered (`onDone`).
+   */
+  once?: boolean;
+  /** Told once the held send has answered, with what it answered for each interest. */
+  onDone?: (results: OfferSeatResult[]) => void;
 }) {
   const router = useRouter();
   const [emailed, setEmailed] = useState(false);
+  const [spent, setSpent] = useState(false);
   const [fallbacks, setFallbacks] = useState<Fallback[]>([]);
   const [copied, setCopied] = useState<Record<string, "copied" | "failed">>({});
 
@@ -107,17 +125,22 @@ export function OfferSeat({
 
   function onOutcome(outcome: HeldSendOutcome & { redirectTo?: string }) {
     const results = outcome.kind === "seat_offer" ? outcome.results : [];
+    // In a batch, "already emailed" is an answer, not a failure to work around.
+    const reached = (delivery: string) =>
+      delivery === "sent" || (once && delivery === "already_sent");
     const failed = results
-      .filter((result) => result.delivery !== "sent")
+      .filter((result) => !reached(result.delivery))
       .flatMap((result) =>
         interests.filter((interest) => interest.interestId === result.interestId),
       );
     const next = failed.map(composerFor);
     setFallbacks(next);
-    if (failed.length < results.length) {
+    if (!once && failed.length < results.length) {
       setEmailed(true);
       setTimeout(() => setEmailed(false), 4000);
     }
+    if (once) setSpent(true);
+    onDone?.(results);
     // A deal's outcome carries the notice the shop answers it with (sent, or
     // why not), on the Details history; follow it unless a composer is open.
     if (outcome.redirectTo && next.length === 0) router.push(outcome.redirectTo);
@@ -153,9 +176,14 @@ export function OfferSeat({
         {discountFields}
         <button
           type="submit"
-          disabled={count === 0 || discountBlank}
+          hidden={spent}
+          disabled={count === 0 || discountBlank || spent}
           aria-label={emailed ? undefined : ariaLabel}
-          className={buttonClass({ variant: "secondary", size: "sm", className: "shrink-0" })}
+          className={buttonClass({
+            variant: quiet ? "ghost" : "secondary",
+            size: "sm",
+            className: "shrink-0",
+          })}
         >
           <span aria-live="polite">{buttonText}</span>
         </button>

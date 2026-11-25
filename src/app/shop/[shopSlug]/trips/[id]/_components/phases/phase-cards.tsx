@@ -35,10 +35,13 @@ function FactList({ rows }: { rows: { key: string; label: string; value: ReactNo
 
 /**
  * **The trip's facts, while it fills** (ADR 20261117-trip-page-clock, Filling):
- * crew, plan, price and who can book, each with its own Edit into Edit trip.
+ * crew, plan, price and who can book, one quiet line under the sentence. Each
+ * value is the door to its own section of Edit trip; nothing is edited here.
+ * What is not set yet is one link naming all of it ("Add crew, plan, and
+ * price"), to the first of those sections, not a "Not set" apiece.
  * Facts only; what is missing for the day is the fix list's, from Getting ready.
  */
-export function TripFactsCard({
+export function TripFactsLine({
   crew,
   plan,
   price,
@@ -56,64 +59,51 @@ export function TripFactsCard({
   locale: string;
   t: StaffTranslator;
 }) {
-  const notSet = <span className="text-muted">{t("trips.clock.filling.notSet")}</span>;
-  const edit = (section: string, label: string) => (
-    <Link
-      href={editHref(section)}
-      className={`${LINK} shrink-0`}
-      aria-label={`${t("trips.clock.filling.edit")} · ${label}`}
-    >
-      {t("trips.clock.filling.edit")}
-    </Link>
-  );
-  const rows = [
-    { key: "crew", section: "crew", label: t("trips.clock.filling.crew"), value: crew },
-    { key: "plan", section: "dives", label: t("trips.clock.filling.plan"), value: plan },
-  ].map((row) => ({
-    key: row.key,
-    label: row.label,
-    value: (
-      <span className="flex items-baseline justify-between gap-x-3">
-        <span className="min-w-0 flex-1">
-          {row.value.length > 0 ? listOf(locale, row.value) : notSet}
-        </span>
-        {edit(row.section, row.label)}
-      </span>
-    ),
-  }));
-  rows.push(
+  const facts = [
+    { section: "crew", label: t("trips.clock.filling.crew"), value: listOf(locale, crew) },
+    { section: "dives", label: t("trips.clock.filling.plan"), value: listOf(locale, plan) },
+    { section: "about", label: t("trips.clock.filling.price"), value: price ?? "" },
     {
-      key: "price",
-      label: t("trips.clock.filling.price"),
-      value: (
-        <span className="flex items-baseline justify-between gap-x-3">
-          <span className="min-w-0 flex-1">{price ?? notSet}</span>
-          {edit("about", t("trips.clock.filling.price"))}
-        </span>
-      ),
-    },
-    {
-      key: "who",
+      section: "requirements",
       label: t("trips.clock.filling.whoCanBook"),
-      value: (
-        <span className="flex items-baseline justify-between gap-x-3">
-          <span className="min-w-0 flex-1">{whoCanBook}</span>
-          {edit("requirements", t("trips.clock.filling.whoCanBook"))}
-        </span>
-      ),
+      value: whoCanBook,
     },
-  );
+  ];
+  const unset = facts.filter((fact) => !fact.value);
   return (
-    <section
-      aria-labelledby="trip-facts-heading"
-      data-trip-facts
-      className={sectionCardClass({ className: "space-y-3" })}
-    >
-      <h2 id="trip-facts-heading" className={HEADING}>
-        {t("trips.clock.filling.heading")}
-      </h2>
-      <FactList rows={rows} />
-    </section>
+    <dl data-trip-facts className="flex max-w-3xl flex-wrap items-baseline gap-x-6 gap-y-1 text-sm">
+      {facts
+        .filter((fact) => fact.value)
+        .map((fact) => (
+          <div key={fact.section} className="flex min-w-0 gap-x-1.5">
+            <dt className="shrink-0 text-muted">{fact.label}</dt>
+            <dd className="min-w-0 [overflow-wrap:anywhere]">
+              <Link
+                href={editHref(fact.section)}
+                aria-label={`${t("trips.clock.filling.edit")} · ${fact.label}: ${fact.value}`}
+                className="hover:underline focus-visible:underline"
+              >
+                {fact.value}
+              </Link>
+            </dd>
+          </div>
+        ))}
+      {unset[0] ? (
+        <div>
+          {/* A term-less group: the link's words are the term. */}
+          <dd>
+            <Link href={editHref(unset[0].section)} className={LINK} data-trip-facts-unset="">
+              {t("trips.clock.filling.addFacts", {
+                facts: listOf(
+                  locale,
+                  unset.map((fact) => fact.label.toLocaleLowerCase(locale)),
+                ),
+              })}
+            </Link>
+          </dd>
+        </div>
+      ) : null}
+    </dl>
   );
 }
 

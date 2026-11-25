@@ -294,6 +294,8 @@ const SENDERS: Record<string, string> = {
   "src/features/after-the-dive/recap/store.ts":
     "the candidate scan carries `notRehearsal()`, so no email or text",
   "src/db/waiver-issue.ts": "a rehearsal's link is hand-over only, never texted or emailed",
+  "src/features/bookings/seat-confirmation-text.ts":
+    "holds the text itself, before any send, for a rehearsal departure, a demo shop or a number a party's lead typed",
   "src/db/crew-notices.ts": "a rehearsal's crew news is never recorded",
   "src/features/bookings/interest-replies.ts":
     "a reply answers a date request, which names no departure, so no rehearsal reaches it",

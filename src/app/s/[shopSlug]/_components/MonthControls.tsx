@@ -7,7 +7,14 @@ import { type MonthRef, monthLabel } from "@/lib/calendar";
 import { DayJumpStrip } from "./DayJumpStrip";
 import { MonthGrid } from "./MonthGrid";
 import { MonthRail } from "./MonthRail";
-import { monthGridWeekdays, monthGridWeeks, weekStartsOnFor } from "./month-grid";
+import {
+  type MonthWindow,
+  monthGridWeekdays,
+  monthGridWeeks,
+  monthSpanLabel,
+  weekStartsOnFor,
+  windowGridWeeks,
+} from "./month-grid";
 
 /**
  * **The month rail and the calendar behind one icon** (issue #4379). The list is the default; the
@@ -18,6 +25,7 @@ export function MonthControls({
   locale,
   monthView,
   currentMonth,
+  weekWindow = null,
   railShown,
   railSides,
   departures,
@@ -29,6 +37,8 @@ export function MonthControls({
   locale: string;
   monthView: boolean;
   currentMonth: MonthRef;
+  /** The grid that starts on this week, or null for a chosen month drawn whole. */
+  weekWindow?: MonthWindow | null;
   railShown: boolean;
   railSides: Pick<Parameters<typeof MonthRail>[0], "previous" | "next">;
   departures: readonly { startsAt: Date; capacity: number; booked: number }[];
@@ -43,7 +53,11 @@ export function MonthControls({
         {railShown ? (
           <MonthRail
             aria-label={t("schedule.monthNav")}
-            month={monthLabel(currentMonth, locale)}
+            month={
+              weekWindow
+                ? monthSpanLabel(weekWindow.first, weekWindow.last, locale)
+                : monthLabel(currentMonth, locale)
+            }
             className=""
             {...railSides}
           />
@@ -64,7 +78,11 @@ export function MonthControls({
         <MonthGrid
           label={t("schedule.monthCalendar")}
           weekdays={monthGridWeekdays(locale, weekStartsOn)}
-          weeks={monthGridWeeks(currentMonth, departures, dayKeyOf, weekStartsOn)}
+          weeks={
+            weekWindow
+              ? windowGridWeeks(weekWindow, departures, dayKeyOf)
+              : monthGridWeeks(currentMonth, departures, dayKeyOf, weekStartsOn)
+          }
           roomLabel={(count) => t("schedule.boatsWithRoom", { count })}
           fullText={t("fallback.full")}
           linkedDays={new Set(weekRows.map((row) => row.dayKey))}

@@ -40,14 +40,6 @@
       "sourceSize": [2731, 1536],
       "reviewed": "2026-10-15"
     },
-    "dive-sites/Benwood-28.jpg": {
-      "subject": "site:benwood-wreck",
-      "source": "File:Benwood-28.JPG",
-      "licence": "CC BY-SA 3.0",
-      "artist": "Elkman",
-      "sourceSize": [3072, 2304],
-      "reviewed": "2026-10-14"
-    },
     "dive-sites/Blue Bay - Curacao.jpg": {
       "subject": "site:blue-bay-wall-curacao",
       "source": "File:Blue Bay - Curacao.jpg",
@@ -57,7 +49,7 @@
       "reviewed": "2026-10-15"
     },
     "dive-sites/Blue Parrotfish on Molasses Outer Reef, Key Largo (15274849398).jpg": {
-      "subject": "site:molasses-reef",
+      "subject": "seed:Blue Parrotfish on Molasses Outer Reef, Key Largo (15274849398)",
       "source": "File:Blue Parrotfish on Molasses Outer Reef, Key Largo (15274849398).jpg",
       "licence": "CC BY-SA 2.0",
       "artist": "Matt Kieffer from London, United Kingdom",
@@ -541,6 +533,14 @@
       "sourceSize": [2736, 3648],
       "reviewed": "2026-10-14"
     },
+    "dive-sites/Shoal of Yellow Snapper with Elkhorn Coral - Molasses Reef (2352449386).jpg": {
+      "subject": "site:molasses-reef",
+      "source": "File:Shoal of Yellow Snapper with Elkhorn Coral - Molasses Reef (2352449386).jpg",
+      "licence": "CC BY-SA 2.0",
+      "artist": "Matt Kieffer from London, United Kingdom",
+      "sourceSize": [2592, 1944],
+      "reviewed": "2026-11-23"
+    },
     "dive-sites/Snorkeling Bachelor Beach, Bonaire (12998055594).jpg": {
       "subject": "site:bachelors-beach-bonaire",
       "source": "File:Snorkeling Bachelor Beach, Bonaire (12998055594).jpg",
@@ -726,6 +726,14 @@
       "artist": "dronepicr",
       "sourceSize": [4000, 3000],
       "reviewed": "2026-10-15"
+    },
+    "dive-sites/Yellow Snapper on Benwood Wreck, Key Largo (15458961361).jpg": {
+      "subject": "site:benwood-wreck",
+      "source": "File:Yellow Snapper on Benwood Wreck, Key Largo (15458961361).jpg",
+      "licence": "CC BY-SA 2.0",
+      "artist": "Matt Kieffer from London, United Kingdom",
+      "sourceSize": [3648, 2736],
+      "reviewed": "2026-11-23"
     },
     "marine-life/almaco-jack.jpg": {
       "subject": "species:almaco-jack",
@@ -3797,6 +3805,10 @@
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
     },
+    "site:baby-stan-roatan": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-19"
+    },
     "site:babylon-grand-cayman": {
       "reason": "Commons has no photo of this site; a name search returns only unrelated books, art and places",
       "checked": "2026-10-15"
@@ -3864,6 +3876,10 @@
     "site:barrel-sponge-wall-grand-cayman": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
       "checked": "2026-10-15"
+    },
+    "site:barrys-reef-roatan": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-19"
     },
     "site:bay-of-pigs-wall": {
       "reason": "Playa Giron hits are beaches and a cenote cave, none shows the Bay of Pigs wall dive.",
@@ -3941,9 +3957,17 @@
       "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
       "checked": "2026-10-15"
     },
+    "site:big-surprise-roatan": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-19"
+    },
     "site:big-tunnels-grand-cayman": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
       "checked": "2026-10-15"
+    },
+    "site:bikini-bottom-roatan": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-19"
     },
     "site:bimini-road": {
       "reason": "The only Commons hit is an aerial of Bimini island, not the Bimini Road stones; nothing shows the formation.",
@@ -4100,6 +4124,10 @@
     "site:brewers-bay-pinnacles-tortola": {
       "reason": "Commons holds no vetted frame recognisably showing this named BVI dive site; searches by name and island returned nothing, or only different places",
       "checked": "2026-10-15"
+    },
+    "site:brick-bay-wall-roatan": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-19"
     },
     "site:brightledge": {
       "reason": "Commons holds no underwater frame that shows this site; searches return unrelated or surface-only photos",
@@ -4377,6 +4405,10 @@
       "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
       "checked": "2026-10-15"
     },
+    "site:chris-fisher-roatan": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-19"
+    },
     "site:chromis-providencia": {
       "reason": "Commons holds no underwater frame of this named San Andres or Providencia site; searches by name and island returned only unrelated places (Cholula, Santiago, maps) or sub-1024px images",
       "checked": "2026-10-15"
@@ -4408,6 +4440,10 @@
     "site:cjs-drop-off-utila": {
       "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
       "checked": "2026-10-15"
+    },
+    "site:cjs-place-roatan": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-19"
     },
     "site:clarkes-bank": {
       "reason": "Commons holds no underwater frame that shows this site; searches return unrelated or surface-only photos",
@@ -4460,6 +4496,14 @@
     "site:congo-cay-st-thomas": {
       "reason": "Commons holds no vetted frame recognisably showing this named US Virgin Islands dive site; searches by name returned only generic island, archive or other-island images",
       "checked": "2026-10-15"
+    },
+    "site:connies-dream-roatan": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-19"
+    },
+    "site:conrad-cave-roatan": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-19"
     },
     "site:convento-providencia": {
       "reason": "Commons holds no underwater frame of this named San Andres or Providencia site; searches by name and island returned only unrelated places (Cholula, Santiago, maps) or sub-1024px images",
@@ -4581,6 +4625,10 @@
       "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
       "checked": "2026-10-15"
     },
+    "site:d2t-roatan": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-19"
+    },
     "site:daini-koyomaru-wreck": {
       "reason": "No Commons image of the Daini Koyomaru wreck off Saint Lucia cleared the rules; searches for its name returned nothing.",
       "checked": "2026-10-15"
@@ -4621,6 +4669,10 @@
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
     },
+    "site:dennis-dropoff-roatan": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-19"
+    },
     "site:destin-east-jetty": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
@@ -4649,6 +4701,10 @@
       "reason": "Commons holds no vetted frame recognisably showing this named BVI dive site; searches by name and island returned nothing, or only different places",
       "checked": "2026-10-15"
     },
+    "site:dianes-delight-roatan": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-19"
+    },
     "site:dive-flag-rock-buck-island": {
       "reason": "Commons holds no vetted frame recognisably showing this named US Virgin Islands dive site; searches by name returned only generic island, archive or other-island images",
       "checked": "2026-10-15"
@@ -4668,6 +4724,10 @@
     "site:doc-poulson": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
       "checked": "2026-10-15"
+    },
+    "site:docs-retreat-roatan": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-19"
     },
     "site:dominicus-reef-bayahibe": {
       "reason": "Commons holds no vetted underwater frame of this named Dominican Republic site; searches by name and island returned only unrelated places, surface shots of other things or sub-1024px images",
@@ -4829,6 +4889,10 @@
       "reason": "Wreck: Commons search by wreck name and alternatives returned no qualifying photo of this wreck.",
       "checked": "2026-10-15"
     },
+    "site:el-aquario-roatan": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-19"
+    },
     "site:el-dorado-wreck": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
@@ -4953,6 +5017,10 @@
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
       "checked": "2026-10-15"
     },
+    "site:french-cay-cut-roatan": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-19"
+    },
     "site:frenchmans-reef-sint-maarten": {
       "reason": "Commons holds no underwater frame of this Sint Maarten site; searches return only unrelated bridges, tugs and ships",
       "checked": "2026-10-15"
@@ -5072,6 +5140,10 @@
     "site:green-outhouse-wall-roatan": {
       "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
       "checked": "2026-10-15"
+    },
+    "site:green-pearl-roatan": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-19"
     },
     "site:green-point-reef": {
       "reason": "Search returned only 1847 letters, unrelated to the site",
@@ -5665,6 +5737,10 @@
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
       "checked": "2026-10-15"
     },
+    "site:litas-hole-roatan": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-19"
+    },
     "site:little-bay-anguilla": {
       "reason": "Commons holds no underwater frame of this Anguilla site; only satellite or surface views, or nothing clearing the rules",
       "checked": "2026-10-15"
@@ -5753,6 +5829,10 @@
       "reason": "Commons has no photograph identified as lynns-reef-cayman-brac; default and Cayman Brac searches return nothing that clears the rules or shows no named site",
       "checked": "2026-10-15"
     },
+    "site:maccallum-girls-roatan": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-19"
+    },
     "site:macs-reef-destin": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
@@ -5808,6 +5888,10 @@
     "site:marilyns-cut-little-cayman": {
       "reason": "Commons has no photograph identified as marilyns-cut-little-cayman; default and Little Cayman searches return nothing that clears the rules or only sub-1024px frames of no named site",
       "checked": "2026-10-15"
+    },
+    "site:marilyns-front-porch-roatan": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-19"
     },
     "site:mariner-ii-barge-and-tug": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
@@ -5941,6 +6025,10 @@
       "reason": "Commons holds no underwater frame that shows this site; searches return unrelated or surface-only photos",
       "checked": "2026-10-15"
     },
+    "site:mora-channel-roatan": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-19"
+    },
     "site:moray-alley-bimini": {
       "reason": "No Commons photo of Moray Alley off Bimini.",
       "checked": "2026-10-15"
@@ -6064,6 +6152,10 @@
     "site:nekton-rorqual": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
+    },
+    "site:nelsons-nest-roatan": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-19"
     },
     "site:new-venture-wreck": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
@@ -6192,6 +6284,10 @@
     "site:oro-verde": {
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
       "checked": "2026-10-15"
+    },
+    "site:osmans-reef-roatan": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-19"
     },
     "site:ottos-limits-saba": {
       "reason": "Commons holds no underwater frame of this Saba Marine Park site; searches return only surface views of the island, rocks and coast",
@@ -6761,6 +6857,10 @@
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
     },
+    "site:sandras-grotto-roatan": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-19"
+    },
     "site:sandy-deep-anguilla": {
       "reason": "Commons holds no underwater frame of this Anguilla site; only satellite or surface views, or nothing clearing the rules",
       "checked": "2026-10-15"
@@ -6809,6 +6909,10 @@
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
       "checked": "2026-10-15"
     },
+    "site:scuba-mermaids-roatan": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-19"
+    },
     "site:sea-barb-paddlewheel": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
@@ -6824,6 +6928,10 @@
     "site:seaquest-deep-roatan": {
       "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
       "checked": "2026-10-15"
+    },
+    "site:seaquest-shallow-roatan": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-19"
     },
     "site:sec-pate": {
       "reason": "Only a Malendure beach view surfaced; Sec Pate is an offshore islet-top and nothing shows it underwater",
@@ -6844,6 +6952,10 @@
     "site:shangri-la-playa-del-carmen": {
       "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
       "checked": "2026-10-15"
+    },
+    "site:shark-bait-deep-roatan": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-19"
     },
     "site:shark-bank": {
       "reason": "Commons holds no underwater frame that shows this site; searches return unrelated or surface-only photos",
@@ -7265,6 +7377,10 @@
       "reason": "Commons holds no vetted frame recognisably showing this named BVI dive site; searches by name and island returned nothing, or only different places",
       "checked": "2026-10-15"
     },
+    "site:the-wife-roatan": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-19"
+    },
     "site:theos-wreck": {
       "reason": "Commons has only a photograph of the ship afloat before she was sunk, not the wreck as a diver meets it.",
       "checked": "2026-10-15"
@@ -7509,6 +7625,10 @@
       "reason": "Commons has no photo of this site; searches for its name and island return nothing that shows it",
       "checked": "2026-10-15"
     },
+    "site:valley-of-the-kings-roatan": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-19"
+    },
     "site:vamar-wreck": {
       "reason": "No Commons photograph taken at the site at 1024px or more (searched by name, area and category, 2026-10-14).",
       "checked": "2026-10-14"
@@ -7516,6 +7636,10 @@
     "site:vanishing-rock-bvi": {
       "reason": "Commons holds no vetted frame recognisably showing this named BVI dive site; searches by name and island returned nothing, or only different places",
       "checked": "2026-10-15"
+    },
+    "site:verns-dropoff-roatan": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-19"
     },
     "site:veronica-l-wreck": {
       "reason": "Commons holds no underwater frame that shows this site; searches return unrelated or surface-only photos",
@@ -7653,6 +7777,10 @@
       "reason": "Wreck: Commons search by wreck name and alternatives returned no qualifying photo of this wreck.",
       "checked": "2026-10-15"
     },
+    "site:wrasse-hole-roatan": {
+      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
+      "checked": "2026-10-19"
+    },
     "site:wreck-alley-cooper-island": {
       "reason": "Commons holds no vetted frame recognisably showing this named BVI dive site; searches by name and island returned nothing, or only different places",
       "checked": "2026-10-15"
@@ -7673,188 +7801,18 @@
       "reason": "Commons searches by site and reef name found no photo that recognisably shows this Cozumel site; the few frames are generic reef, a Palancar swim-through with a date stamp, park or shore views.",
       "checked": "2026-10-15"
     },
-    "site:zingara-wreck-sosua": {
-      "reason": "Commons holds no vetted underwater frame of this named Dominican Republic site; searches by name and island returned only unrelated places, surface shots of other things or sub-1024px images",
-      "checked": "2026-10-15"
-    },
-    "site:sandras-grotto-roatan": {
-      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
-      "checked": "2026-10-19"
-    },
-    "site:seaquest-shallow-roatan": {
-      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
-      "checked": "2026-10-19"
-    },
-    "site:chris-fisher-roatan": {
-      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
-      "checked": "2026-10-19"
-    },
-    "site:bikini-bottom-roatan": {
-      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
-      "checked": "2026-10-19"
-    },
-    "site:el-aquario-roatan": {
-      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
-      "checked": "2026-10-19"
-    },
-    "site:verns-dropoff-roatan": {
-      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
-      "checked": "2026-10-19"
-    },
-    "site:the-wife-roatan": {
-      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
-      "checked": "2026-10-19"
-    },
-    "site:dennis-dropoff-roatan": {
-      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
-      "checked": "2026-10-19"
-    },
-    "site:scuba-mermaids-roatan": {
-      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
-      "checked": "2026-10-19"
-    },
-    "site:dianes-delight-roatan": {
-      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
-      "checked": "2026-10-19"
-    },
-    "site:conrad-cave-roatan": {
-      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
-      "checked": "2026-10-19"
-    },
-    "site:green-pearl-roatan": {
-      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
-      "checked": "2026-10-19"
-    },
     "site:zacks-patch-roatan": {
       "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
       "checked": "2026-10-19"
     },
-    "site:nelsons-nest-roatan": {
-      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
-      "checked": "2026-10-19"
-    },
-    "site:baby-stan-roatan": {
-      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
-      "checked": "2026-10-19"
-    },
-    "site:cjs-place-roatan": {
-      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
-      "checked": "2026-10-19"
-    },
-    "site:wrasse-hole-roatan": {
-      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
-      "checked": "2026-10-19"
-    },
-    "site:barrys-reef-roatan": {
-      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
-      "checked": "2026-10-19"
-    },
-    "site:mora-channel-roatan": {
-      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
-      "checked": "2026-10-19"
-    },
-    "site:big-surprise-roatan": {
-      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
-      "checked": "2026-10-19"
-    },
-    "site:litas-hole-roatan": {
-      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
-      "checked": "2026-10-19"
-    },
-    "site:d2t-roatan": {
-      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
-      "checked": "2026-10-19"
-    },
-    "site:shark-bait-deep-roatan": {
-      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
-      "checked": "2026-10-19"
-    },
-    "site:marilyns-front-porch-roatan": {
-      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
-      "checked": "2026-10-19"
-    },
-    "site:connies-dream-roatan": {
-      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
-      "checked": "2026-10-19"
-    },
-    "site:maccallum-girls-roatan": {
-      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
-      "checked": "2026-10-19"
-    },
-    "site:brick-bay-wall-roatan": {
-      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
-      "checked": "2026-10-19"
-    },
-    "site:docs-retreat-roatan": {
-      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
-      "checked": "2026-10-19"
-    },
-    "site:osmans-reef-roatan": {
-      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
-      "checked": "2026-10-19"
-    },
-    "site:french-cay-cut-roatan": {
-      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
-      "checked": "2026-10-19"
-    },
-    "site:valley-of-the-kings-roatan": {
-      "reason": "Commons searches by site name and the island or atoll found no photo that recognisably shows this site; results were generic beach, surface, map or a different place.",
-      "checked": "2026-10-19"
+    "site:zingara-wreck-sosua": {
+      "reason": "Commons holds no vetted underwater frame of this named Dominican Republic site; searches by name and island returned only unrelated places, surface shots of other things or sub-1024px images",
+      "checked": "2026-10-15"
     }
   },
   "demoPlaceholders": {
-    "demo-shop/generated/porch.webp": {
-      "subject": "demo:porch",
-      "generated": true,
-      "generator": "OpenAI image_gen",
-      "approval": "User request, 2026-11-15",
-      "reviewed": "2026-11-15",
-      "sourceSize": [1536, 1024],
-      "marking": "Visibly painted fictional scene; visible demo artwork disclosure in public shop chrome.",
-      "rights": "Generated original artwork; no Commons licence or documentary-photo claim."
-    },
-    "demo-shop/generated/sunset-boat.webp": {
-      "subject": "demo:sunset-boat",
-      "generated": true,
-      "generator": "OpenAI image_gen",
-      "approval": "User request, 2026-11-15",
-      "reviewed": "2026-11-15",
-      "sourceSize": [1536, 1024],
-      "marking": "Visibly painted fictional scene; visible demo artwork disclosure in public shop chrome.",
-      "rights": "Generated original artwork; no Commons licence or documentary-photo claim."
-    },
     "demo-shop/generated/boat.webp": {
       "subject": "demo:boat",
-      "generated": true,
-      "generator": "OpenAI image_gen",
-      "approval": "https://github.com/AaronBuxbaum/diveday/issues/4381#issuecomment-6814035938",
-      "reviewed": "2026-11-12",
-      "sourceSize": [1536, 1024],
-      "marking": "Visibly painted fictional scene; generated demo illustration in seeded alt text; visible demo artwork disclosure in public shop chrome.",
-      "rights": "Generated original artwork; no Commons licence or documentary-photo claim."
-    },
-    "demo-shop/generated/fleet.webp": {
-      "subject": "demo:fleet",
-      "generated": true,
-      "generator": "OpenAI image_gen",
-      "approval": "User request, 2026-11-14",
-      "reviewed": "2026-11-14",
-      "sourceSize": [1752, 897],
-      "marking": "Visibly painted fictional scene; visible demo artwork disclosure in public shop chrome.",
-      "rights": "Generated original artwork; no Commons licence or documentary-photo claim."
-    },
-    "demo-shop/generated/shopfront.webp": {
-      "subject": "demo:shopfront",
-      "generated": true,
-      "generator": "OpenAI image_gen",
-      "approval": "User request, 2026-11-14",
-      "reviewed": "2026-11-14",
-      "sourceSize": [1672, 941],
-      "marking": "Visibly painted fictional scene; visible demo artwork disclosure in public shop chrome.",
-      "rights": "Generated original artwork; no Commons licence or documentary-photo claim."
-    },
-    "demo-shop/generated/dock.webp": {
-      "subject": "demo:dock",
       "generated": true,
       "generator": "OpenAI image_gen",
       "approval": "https://github.com/AaronBuxbaum/diveday/issues/4381#issuecomment-6814035938",
@@ -7873,14 +7831,44 @@
       "marking": "Visibly painted fictional scene; generated demo illustration in seeded alt text; visible demo artwork disclosure in public shop chrome.",
       "rights": "Generated original artwork; no Commons licence or documentary-photo claim."
     },
-    "demo-shop/generated/student.webp": {
-      "subject": "demo:student",
+    "demo-shop/generated/dock.webp": {
+      "subject": "demo:dock",
       "generated": true,
       "generator": "OpenAI image_gen",
       "approval": "https://github.com/AaronBuxbaum/diveday/issues/4381#issuecomment-6814035938",
       "reviewed": "2026-11-12",
       "sourceSize": [1536, 1024],
       "marking": "Visibly painted fictional scene; generated demo illustration in seeded alt text; visible demo artwork disclosure in public shop chrome.",
+      "rights": "Generated original artwork; no Commons licence or documentary-photo claim."
+    },
+    "demo-shop/generated/fleet.webp": {
+      "subject": "demo:fleet",
+      "generated": true,
+      "generator": "OpenAI image_gen",
+      "approval": "User request, 2026-11-14",
+      "reviewed": "2026-11-14",
+      "sourceSize": [1752, 897],
+      "marking": "Visibly painted fictional scene; visible demo artwork disclosure in public shop chrome.",
+      "rights": "Generated original artwork; no Commons licence or documentary-photo claim."
+    },
+    "demo-shop/generated/oxygen.webp": {
+      "subject": "demo:oxygen",
+      "generated": true,
+      "generator": "OpenAI image_gen",
+      "approval": "https://github.com/AaronBuxbaum/diveday/issues/4381#issuecomment-6814035938",
+      "reviewed": "2026-11-12",
+      "sourceSize": [1536, 1024],
+      "marking": "Visibly painted fictional scene; generated demo illustration in seeded alt text; visible demo artwork disclosure in public shop chrome.",
+      "rights": "Generated original artwork; no Commons licence or documentary-photo claim."
+    },
+    "demo-shop/generated/porch.webp": {
+      "subject": "demo:porch",
+      "generated": true,
+      "generator": "OpenAI image_gen",
+      "approval": "User request, 2026-11-15",
+      "reviewed": "2026-11-15",
+      "sourceSize": [1536, 1024],
+      "marking": "Visibly painted fictional scene; visible demo artwork disclosure in public shop chrome.",
       "rights": "Generated original artwork; no Commons licence or documentary-photo claim."
     },
     "demo-shop/generated/reef.webp": {
@@ -7893,14 +7881,34 @@
       "marking": "Visibly painted fictional scene; generated demo illustration in seeded alt text; visible demo artwork disclosure in public shop chrome.",
       "rights": "Generated original artwork; no Commons licence or documentary-photo claim."
     },
-    "demo-shop/generated/oxygen.webp": {
-      "subject": "demo:oxygen",
+    "demo-shop/generated/shopfront.webp": {
+      "subject": "demo:shopfront",
+      "generated": true,
+      "generator": "OpenAI image_gen",
+      "approval": "User request, 2026-11-14",
+      "reviewed": "2026-11-14",
+      "sourceSize": [1672, 941],
+      "marking": "Visibly painted fictional scene; visible demo artwork disclosure in public shop chrome.",
+      "rights": "Generated original artwork; no Commons licence or documentary-photo claim."
+    },
+    "demo-shop/generated/student.webp": {
+      "subject": "demo:student",
       "generated": true,
       "generator": "OpenAI image_gen",
       "approval": "https://github.com/AaronBuxbaum/diveday/issues/4381#issuecomment-6814035938",
       "reviewed": "2026-11-12",
       "sourceSize": [1536, 1024],
       "marking": "Visibly painted fictional scene; generated demo illustration in seeded alt text; visible demo artwork disclosure in public shop chrome.",
+      "rights": "Generated original artwork; no Commons licence or documentary-photo claim."
+    },
+    "demo-shop/generated/sunset-boat.webp": {
+      "subject": "demo:sunset-boat",
+      "generated": true,
+      "generator": "OpenAI image_gen",
+      "approval": "User request, 2026-11-15",
+      "reviewed": "2026-11-15",
+      "sourceSize": [1536, 1024],
+      "marking": "Visibly painted fictional scene; visible demo artwork disclosure in public shop chrome.",
       "rights": "Generated original artwork; no Commons licence or documentary-photo claim."
     }
   }

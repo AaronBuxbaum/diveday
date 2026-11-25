@@ -665,6 +665,7 @@
       "waiver_request": "Waiver link",
       "booking_handoff": "Booking link",
       "readiness_link": "Trip prep link",
+      "seat_text": "Ready link text",
       "trip_reminder_7d": "7-day reminder",
       "trip_reminder_24h": "24-hour reminder",
       "trip_recap": "Trip recap",

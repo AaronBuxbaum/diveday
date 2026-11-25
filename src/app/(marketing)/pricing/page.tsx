@@ -19,7 +19,6 @@ import { formatMoneyScanned } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { earlyAccessPrice } from "@/lib/marketing";
 import { getMigrationGuide, MIGRATION_GUIDES } from "@/lib/migration-guides";
-import { ONBOARDING_EMAIL } from "@/lib/platform-mail";
 import { FeeComparison } from "./_components/FeeComparison";
 import { PricingExportBand } from "./_components/PricingExportBand";
 import { offerFigure, pricingFaq } from "./faq";
@@ -66,7 +65,7 @@ async function PricingBody({ locale, offer }: { locale: DiverLocale; offer: Plan
   "use cache";
   cacheLife("max");
   const t = diverTranslator(locale);
-  const { figure, cadence } = offerFigure(t, offer, locale);
+  const { figure, cadence, params } = offerFigure(t, offer, locale);
   // Generated from the migration-guides registry, never hand-listed, so a new
   // guide can't be silently omitted from this answer.
   const competitors = cachedListFormat(locale, { type: "conjunction" }).format(
@@ -210,10 +209,10 @@ async function PricingBody({ locale, offer }: { locale: DiverLocale; offer: Plan
                   t("marketing.pricing.notes.note1"),
                   t("marketing.pricing.notes.note2"),
                   ...earlyAccessPrice.includedKeys.map((key) => t(key)),
-                  // The upgrade address, not the support one: marketing.md
-                  // routes "how do I move a trial shop to paid" through its
-                  // own inbox, and this is its one public line.
-                  t("marketing.pricing.trialNote", { email: ONBOARDING_EMAIL }),
+                  // The try-it-on-one-trip line (Aaron, 2026-11-24): its fee
+                  // comes from the configured offer, never a figure in the
+                  // bundle (ADR 20261124-free-shops-no-trial).
+                  t("marketing.pricing.priceNote", params),
                 ]}
               />
               <Link

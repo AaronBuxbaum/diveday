@@ -204,7 +204,7 @@ searching open PRs for a fix in flight, or quarantined; never skipped, never giv
   `DIVEDAY_RUN_QUARANTINE=1` and runs them every night, then runs each spec that failed on CI in
   the last 7 days five times (`--repeat-each=5`, `scripts/e2e-recent-failures.mjs`, at most 8
   specs), rerunning the tests that failed by title (`--grep`) rather than every test in those
-  files; a failure whose title is unreadable reruns its whole file. The history reader paginates failed workflow runs, Playwright and visual jobs, and their
+  files; a failure whose title is unreadable is named in the summary and not rerun (its whole file, five times, timed the step out: #4959). The history reader paginates failed workflow runs, Playwright and visual jobs, and their
   annotations. It resolves helper-thrown failures from the reporter title's spec identity and
   reports the inspected run count and date window. Authentication, API and partial-page failures
   fail the hunt explicitly. An empty result means no existing spec was identified in those
@@ -358,7 +358,12 @@ What it leaves behind (`simulation/`, gitignored): a full-page screenshot per st
 listing each state with the shop-clock time it was reached, how long it really took, and its
 screenshot — with a failed state named and everything after it marked *not attempted*.
 `.github/workflows/simulate-day.yml` runs it every night (and on `workflow_dispatch`), builds
-once, and uploads `simulation/` whether or not the day completed. Options: `--no-build` (reuse
+once, and uploads `simulation/` whether or not the day completed. The same job then rehearses the
+one-trip trial, a shop that keeps its booking tool and runs one trip in DiveDay: it runs
+`e2e/paste-list.spec.ts` and `e2e/sold-elsewhere.spec.ts` (paste a list onto an unpriced trip, read
+what went out to each person, land on who is ready) against that build with `pnpm e2e:run`. They
+are fleet specs, so every pull request runs them too; the nightly run catches what other merges
+break between pull requests, and either step failing turns the night red. Options: `--no-build` (reuse
 the build on disk, as the workflow does), `--keep`, `--out <dir>`, `--start <iso>`.
 
 ### The weekly persona walk

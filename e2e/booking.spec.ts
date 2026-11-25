@@ -622,7 +622,7 @@ test.describe("the shopfront on a phone", () => {
     ).toBeVisible();
 
     const list = page.getByRole("list", { name: "Upcoming trips" });
-    await expect(list.getByText(diver("booking.sailedHeading")).first()).toBeVisible();
+    await expect(list.locator("summary").first()).toBeVisible();
     await openFirstBookableScheduleTrip(page);
 
     await expect(page).toHaveURL(/\/s\/blue-mantis\/trips\/[0-9a-f-]{36}$/);

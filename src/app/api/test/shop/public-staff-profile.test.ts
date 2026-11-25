@@ -27,11 +27,15 @@ const request = (slug: string) =>
     body: JSON.stringify({ slug, facts: ["publicStaffProfile"] }),
   });
 it("refuses the private profile fact on the shared demo without publishing anyone", async () => {
+  // The demo publishes its crew on purpose; the fact must change none of it.
+  const seeded = await listPublicStaffProfiles(ctx.db, ctx.shop.id);
+  expect(seeded.length).toBeGreaterThan(0);
   expect((await POST(request(ctx.shop.slug))).status).toBe(404);
-  expect(await listPublicStaffProfiles(ctx.db, ctx.shop.id)).toEqual([]);
+  expect(await listPublicStaffProfiles(ctx.db, ctx.shop.id)).toEqual(seeded);
 });
 it("publishes explicit fictional content from an available assigned instructor in a private shop", async () => {
   const slug = "private-public-profile-fixture";
+  const seeded = await listPublicStaffProfiles(ctx.db, ctx.shop.id);
   await ctx.db.update(shops).set({ slug }).where(eq(shops.id, ctx.shop.id));
   const response = await POST(request(slug));
   expect(response.status).toBe(200);
@@ -45,9 +49,11 @@ it("publishes explicit fictional content from an available assigned instructor i
   expect(fact.courseSlug).toBeTruthy();
   const [trip] = await ctx.db.select().from(trips).where(eq(trips.id, fact.tripId));
   if (!trip) throw new Error("fixture trip missing");
-  expect(await listPublicStaffProfiles(ctx.db, ctx.shop.id)).toEqual([
+  const published = await listPublicStaffProfiles(ctx.db, ctx.shop.id);
+  expect(published).toContainEqual(
     expect.objectContaining({ description: fact.description, photoUrls: [] }),
-  ]);
+  );
+  expect(published).not.toEqual(seeded);
   expect(
     await assignedPublicStaffProfiles(ctx.db, ctx.shop.id, [trip], ctx.shop.timezone, true),
   ).toEqual([expect.objectContaining({ firstName: fact.firstName })]);

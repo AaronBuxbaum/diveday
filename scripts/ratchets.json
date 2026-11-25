@@ -687,7 +687,7 @@
     "e2e/integrations.spec.ts": 1,
     "e2e/invoicing.spec.ts": 1,
     "e2e/manifest.spec.ts": 2,
-    "e2e/marketing.spec.ts": 7,
+    "e2e/marketing.spec.ts": 6,
     "e2e/nitrox.spec.ts": 1,
     "e2e/onboard.spec.ts": 1,
     "e2e/package-purchase.spec.ts": 1,
@@ -1084,7 +1084,7 @@
       }
     ],
     "src/app/(token)/ready/[token]/page.tsx": 613,
-    "src/app/s/[shopSlug]/page.tsx": 588,
+    "src/app/s/[shopSlug]/page.tsx": 587,
     "src/app/shop/[shopSlug]/gear/[id]/page.tsx": 577,
     "src/app/shop/[shopSlug]/orders/page.tsx": 426,
     "src/app/shop/[shopSlug]/page.tsx": 576,

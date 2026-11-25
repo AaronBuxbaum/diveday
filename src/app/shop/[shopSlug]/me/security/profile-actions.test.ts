@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getAccountSecurityPage } from "@/db/account-security";
 import { people } from "@/db/schema";
 import { fileScopedShopContext } from "@/test/db";
@@ -18,6 +18,14 @@ const { requireShopSurface } = await import("../../../../../features/accounts/se
 const { saveStaffProfileAction } = await import("./staff-profile-actions");
 const { saveCrewPublicConsentAction } = await import("./profile-actions");
 const ctx = fileScopedShopContext();
+
+// The seeded demo crew already carry public profiles (#4928); these cases start from none.
+beforeEach(async () => {
+  await ctx.db
+    .update(people)
+    .set({ publicStaffProfileEnabled: false, publicStaffProfile: null })
+    .where(eq(people.shopId, ctx.shop.id));
+});
 
 async function captain() {
   const { db, shop } = ctx;

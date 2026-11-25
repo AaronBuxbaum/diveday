@@ -349,6 +349,8 @@ export async function AddDiverPanel({
                 add: t("divers.page.party.add"),
                 person: t.raw("divers.page.party.person"),
                 name: t("divers.page.fullNameLabel"),
+                email: t("divers.page.emailLabel"),
+                phone: t("divers.page.phoneLabel"),
                 extras: extrasCopy,
                 remove: t("divers.page.party.remove"),
                 removeFor: t.raw("divers.page.party.removeFor"),

@@ -140,7 +140,9 @@ export async function TripBoatPhoto({
         <PhotoLightbox
           photos={[{ src: boat.photoUrl, alt: boat.name }]}
           words={lightboxWords(t)}
-          sizes="96px"
+          // Twice the 96px box, so a phone at 2x and a desktop at 1x both get a frame with pixels to
+          // spare; at `96px` the srcset's smallest candidates were stretched and the boat blurred (#4931).
+          sizes="192px"
           thumbClassName="size-24 rounded-lg"
         />
       </div>

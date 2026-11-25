@@ -1,6 +1,6 @@
 import { StarRating } from "@/components/StarRating";
 import { StoredPhoto } from "@/components/StoredPhoto";
-import { PAGE_TITLE_CLASS } from "@/components/ui/typography";
+import { PAGE_TITLE_CLASS, SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { DiverTranslator } from "@/i18n/messages";
 import type { BrandBadgeCode } from "@/lib/brand";
 import { cachedFormatter } from "@/lib/intl-cache";
@@ -17,6 +17,7 @@ import { BadgeWall } from "./BadgeWall";
 export function ShopfrontHero({
   name,
   headingLevel: Heading = "h1",
+  sectionTitle = null,
   tagline,
   description = null,
   aggregate,
@@ -29,6 +30,11 @@ export function ShopfrontHero({
 }: {
   name: string;
   headingLevel?: "h1" | "h2";
+  /**
+   * A plain title for the section in place of the name, for the story below a
+   * welcome that already says it (#4933).
+   */
+  sectionTitle?: string | null;
   /**
    * The next-boat card shares the row from `lg` up, so the photograph is the
    * narrower column there and asks for a smaller file.
@@ -88,6 +94,8 @@ export function ShopfrontHero({
             {tagline ? <p className="mt-2 max-w-2xl text-lg text-pretty">{tagline}</p> : null}
           </div>
         </div>
+      ) : sectionTitle ? (
+        <Heading className={SECTION_TITLE_CLASS}>{sectionTitle}</Heading>
       ) : (
         <>
           <Heading className={`font-brand-display ${PAGE_TITLE_CLASS} text-balance sm:text-5xl`}>

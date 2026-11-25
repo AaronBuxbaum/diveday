@@ -4,7 +4,7 @@ import type { GearToPack } from "@/features/trips/trip-prep";
 import { compassText } from "@/i18n/compass-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { DepthUnit } from "@/lib/depth-units";
-import { formatMoneyScanned, formatShortDate } from "@/lib/format";
+import { formatMoneyScanned } from "@/lib/format";
 import type { AutomatedMarineForecast } from "@/lib/marine-forecast";
 import { shopPath } from "@/lib/staff-notices";
 import { type TemperatureUnit, temperatureUnitFor } from "@/lib/temperature-units";
@@ -13,7 +13,7 @@ import { admissionDisplay } from "../admission-display";
 import { blowoutPath } from "../blowout/blowout-path";
 import type { FixListPhase } from "../guest-fix-rows";
 import { tripFixes } from "../trip-fixes";
-import { CheckInQuietLine, GearToPackCard, TomorrowsWaterCard, TripFactsCard } from "./phase-cards";
+import { CheckInQuietLine, GearToPackCard, TomorrowsWaterCard, TripFactsLine } from "./phase-cards";
 
 type Overview = NonNullable<TripOverview>;
 type Water = {
@@ -43,11 +43,11 @@ export function planOf(overview: Pick<Overview, "tripDiveList">): string[] {
 /**
  * **What each phase adds around the guest list** (ADR 20261117-trip-page-clock),
  * composed here so the route stays thin: the trip-level fixes, Filling's trip
- * facts and next step, Getting ready's settled line, gear and water, and
- * Check-in's quiet line.
+ * facts line, Getting ready's settled line, gear and
+ * water, and Check-in's quiet line.
  */
 export function phaseSlots({
-  frame: { shown, current, lookBack, readyFrom, dockBy },
+  frame: { shown, lookBack, dockBy },
   overview,
   shop,
   shopSlug,
@@ -104,9 +104,9 @@ export function phaseSlots({
     now,
     t,
   });
-  const beside =
+  const facts =
     phase === "filling" ? (
-      <TripFactsCard
+      <TripFactsLine
         crew={crew}
         plan={plan}
         price={
@@ -138,18 +138,7 @@ export function phaseSlots({
     depthUnit: shop.depthUnit,
   };
   let panel: ReactNode = null;
-  // "Next" is about the future, so only Filling seen while it is the phase now says it.
-  if (phase === "filling" && current === "filling") {
-    panel = (
-      <p className="text-sm text-muted">
-        <span className="font-medium text-foreground">{t("trips.clock.quiet.next")}</span>
-        {" · "}
-        {t("trips.clock.quiet.gettingReady", {
-          day: formatShortDate(readyFrom, locale, shop.timezone),
-        })}
-      </p>
-    );
-  } else if (phase === "ready") {
+  if (phase === "ready") {
     panel = (
       <div className="grid gap-6 lg:grid-cols-2">
         <Suspense fallback={null}>
@@ -189,7 +178,7 @@ export function phaseSlots({
       </Suspense>
     );
   }
-  return { phase, fixes, beside, afterReady, panel };
+  return { phase, fixes, facts, afterReady, panel };
 }
 
 async function GearToPackSlot({

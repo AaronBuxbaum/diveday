@@ -189,6 +189,7 @@ export function RosterSection({
                 // which is its legend; no other phase is the desk's.
                 top={phase === "checkin" ? arrival?.instrument?.(fixRows.deskWorkOpen) : undefined}
                 addGuest={
+                  // Filling's "Add a guest" is the page's one primary, beside the sentence.
                   addGuestHref && phase !== "filling"
                     ? { href: addGuestHref, label: t("trips.clock.addGuest") }
                     : null

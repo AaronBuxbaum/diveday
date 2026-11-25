@@ -12,6 +12,7 @@ import { publicSchedulePath, publicTripPath } from "@/lib/public-routes";
 import { certificationRank } from "@/lib/readiness";
 import { capacityLabel, nextBookableDeparture, schedulePartySize } from "@/lib/trips";
 import { toDateInputValue, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
+import { currentWeekWindow, type MonthWindow, weekStartsOnFor } from "./month-grid";
 import { offSeasonLine } from "./OffSeasonPanel";
 
 /** A level a diver can say they hold in the schedule's filter row. */
@@ -33,6 +34,43 @@ export function scheduleMonthBounds(ref: MonthRef, tz: string) {
     tz,
   );
   return { monthStart, monthEnd };
+}
+
+/**
+ * **The month view's window** (#4934). `?view=month` with no month starts on the week holding
+ * today in the shop's zone and runs five weeks forward, so a diver never opens three rows of
+ * past days. A chosen month (`?month=`) is the whole calendar month as before. The list under
+ * the grid reads the same bounds, so the two never disagree.
+ */
+export function scheduleRollingWindow({
+  monthView,
+  explicitMonth,
+  now,
+  tz,
+  locale,
+}: {
+  monthView: boolean;
+  explicitMonth: MonthRef | null;
+  now: Date;
+  tz: string;
+  locale: string;
+}) {
+  if (!monthView || explicitMonth) return null;
+  const window = currentWeekWindow(
+    toDateInputValue(utcToWallTime(now, tz)),
+    weekStartsOnFor(locale),
+  );
+  const at = (day: string) => {
+    const [year, month, date] = day.split("-").map(Number);
+    return wallTimeToUtc({ year, month, day: date, hour: 0, minute: 0 }, tz);
+  };
+  return {
+    window,
+    bounds: {
+      monthStart: at(window.start),
+      monthEnd: at(shiftCalendarDate(window.start, window.weeks * 7)),
+    },
+  };
 }
 
 /** Include today's departed trips without consuming the embed's upcoming window. */
@@ -109,14 +147,14 @@ export function scheduleViewLinks(view: ScheduleView) {
     const query = params.toString();
     return `${publicSchedulePath(shopSlug)}${query ? `?${query}` : ""}`;
   };
-  /** The calendar button's two destinations: the month view of this month, and back to the list. */
-  const viewHref = (toMonthView: boolean, monthKey: string) => {
+  /** The calendar button's two destinations: the month view (of a chosen month, else of this week on), and back to the list. */
+  const viewHref = (toMonthView: boolean, monthKey: string | null) => {
     const params = withViewParams(new URLSearchParams());
     params.delete("view");
     params.delete("month");
     if (toMonthView) {
       params.set("view", "month");
-      params.set("month", monthKey);
+      if (monthKey) params.set("month", monthKey);
     } else if (month) {
       params.set("month", month);
     }
@@ -169,11 +207,14 @@ export function aboveStatedLevelIds(
 export function scheduleMonthRail({
   range,
   explicitMonth,
+  window = null,
   now,
   tz,
 }: {
   range: { first: Date | null; last: Date | null };
   explicitMonth: MonthRef | null;
+  /** The month view's grid that starts on this week: the rail steps on from its last month. */
+  window?: MonthWindow | null;
   now: Date;
   tz: string;
 }) {
@@ -188,9 +229,9 @@ export function scheduleMonthRail({
   const currentMonth: MonthRef = explicitMonth ??
     firstTripMonth ?? { year: todayWall.year, month: todayWall.month };
   const prev = addMonths(currentMonth, -1);
-  const next = addMonths(currentMonth, 1);
+  const next = addMonths(window?.last ?? currentMonth, 1);
   const prevMonthKey =
-    firstTripMonth && ordinal(prev) >= ordinal(firstTripMonth) ? monthKey(prev) : null;
+    !window && firstTripMonth && ordinal(prev) >= ordinal(firstTripMonth) ? monthKey(prev) : null;
   const nextMonthKey =
     lastTripMonth && ordinal(next) <= ordinal(lastTripMonth) ? monthKey(next) : null;
   return { currentMonth, lastTripMonth, prevMonthKey, nextMonthKey };

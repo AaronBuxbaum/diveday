@@ -16,6 +16,10 @@ export type PartyCopy = {
   person: string;
   /** "Full name" */
   name: string;
+  /** "Email": optional, so the person gets their own link. */
+  email: string;
+  /** "Phone": optional; the link goes to it by text. */
+  phone: string;
   /** Each row's "Coming as", "Under 18" and date of birth. */
   extras: ExtrasCopy;
   /** "Remove" */
@@ -27,10 +31,11 @@ export type PartyCopy = {
 /**
  * **The rest of a walk-in family, on the same form** (fifth loop, item 9).
  * The form's own fields are the first person; each "Add another person" row
- * is one more, with what they are coming as and the party form's "Under 18"
- * tick (`PersonExtras`), and the whole party is seated together in one
- * transaction (`seatParty`). A row with no name is ignored, so an extra tap
- * costs nothing.
+ * is one more, with their own optional email and phone (so their ready link
+ * reaches them, not only the first person), what they are coming as and the
+ * party form's "Under 18" tick (`PersonExtras`), and the whole party is
+ * seated together in one transaction (`seatParty`). A row with no name is
+ * ignored, so an extra tap costs nothing; a name alone still seats them.
  *
  * Rows are numbered by a counter that never reuses a number, so removing the
  * second of three never shifts a tick onto somebody else's name.
@@ -110,6 +115,28 @@ export function PartyRows({
             >
               {copy.remove}
             </button>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="grid gap-1 text-sm">
+              <span className="font-medium">{copy.email}</span>
+              <input
+                name={partyMemberField(number, "email")}
+                type="email"
+                maxLength={320}
+                autoComplete="off"
+                className={controlClass}
+              />
+            </label>
+            <label className="grid gap-1 text-sm">
+              <span className="font-medium">{copy.phone}</span>
+              <input
+                name={partyMemberField(number, "phone")}
+                type="tel"
+                maxLength={40}
+                autoComplete="off"
+                className={controlClass}
+              />
+            </label>
           </div>
           <PersonExtras
             row={number}

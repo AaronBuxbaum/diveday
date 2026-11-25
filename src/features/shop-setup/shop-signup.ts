@@ -107,13 +107,10 @@ export async function createSignedUpShop(
           // that later imports its real roster never has seeded rows mixed in.
           // See ADR 20260724-per-visitor-demo-shops.
           isDemo: false,
-          // Explicit rather than the column's DB-side `defaultNow()`: this is
-          // the instant the trial clock in src/features/shop-setup/trial.ts counts from, read
-          // back and shown to the owner, so it has to be the same clock every
-          // other render uses (src/lib/clock.ts) — under the e2e/visual
-          // harness that's the one frozen instant, not the database engine's
-          // own wall clock, which would otherwise drift the trial-days-left
-          // math on every run.
+          // Explicit rather than the column's DB-side `defaultNow()`: the
+          // shop's creation is shown back to the owner, so it has to be the
+          // same clock every other render uses (src/lib/clock.ts), the one
+          // frozen instant under the e2e/visual harness.
           createdAt: nowDate(),
         })
         .returning();

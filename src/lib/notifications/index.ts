@@ -80,7 +80,12 @@ export {
   type PublicHostCheck,
   publicAppUrl,
 } from "./app-url";
-export { type CourtesyProvider, sendCourtesyMessage } from "./courtesy";
+export {
+  type CourtesyChannel,
+  type CourtesyProvider,
+  type CourtesyProviders,
+  sendCourtesyMessage,
+} from "./courtesy";
 export { type ProviderEmailStatus, timestampFrom } from "./events";
 export {
   type Notification,
@@ -109,6 +114,7 @@ export {
   replyKeywordText,
 } from "./reply-keyword-text";
 export { type RescheduledTextInput, rescheduledText } from "./rescheduled-text";
+export { seatConfirmationText } from "./seat-confirmation-text";
 export {
   deliverableShopContactEmail,
   type ShopSenderSource,

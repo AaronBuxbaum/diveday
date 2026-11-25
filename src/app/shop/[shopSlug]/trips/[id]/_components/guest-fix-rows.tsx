@@ -16,6 +16,7 @@ import {
   type FixReason,
   type FixRemedy,
   fixListOf,
+  quietOnFilling,
 } from "@/features/trips/trip-fix-list";
 import type { StaffMessageKey } from "@/i18n/staff-messages";
 import { staffParticipantTypeLabel } from "@/i18n/staff-participant-labels";
@@ -24,7 +25,9 @@ import { formatMoneyCents, formatWeekdayTime } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { firstNameOf } from "@/lib/person-name";
 import { diverPhotoDisplayPath } from "@/lib/person-photo";
+import type { ReadinessBlockerCode } from "@/lib/readiness";
 import { rentalFitCompleteness } from "@/lib/rentals";
+import { shopPath } from "@/lib/staff-notices";
 import type { FixListGuest, FixListRow, FixListSection } from "./GuestFixList";
 import { RosterRow, type RosterRowContext } from "./RosterRow";
 import { rowNotices } from "./roster-row-notices";
@@ -105,6 +108,14 @@ type Seat = {
   sendWaiver: ((variant: ControlWeight) => ReactNode) | null;
   /** A link can reach this guest alone, so a group send may include them. */
   waiverSendable: boolean;
+  /** An email or a text can reach the guest; with neither, nothing was sent. */
+  reachable: boolean;
+  /**
+   * Where an unreachable guest signs instead: their party's queue, or their
+   * own one-seat counter queue (issue #3984). Null when a link reaches them
+   * or the seat waits on who it is.
+   */
+  counterHref: string | null;
   /** What a payment fix would take, formatted in the shop's currency. */
   owed: string | null;
   /** The guest's open help request: the row says it and holds the crew choice. */
@@ -117,6 +128,85 @@ type Seat = {
   /** The opened guest draws the desk's tap itself, beside the blockers it answers. */
   panelHoldsArrival: boolean;
 };
+
+/**
+ * The one reminder time every listed guest with a reason shares, or null when
+ * they differ or none is set: Filling says it once on the card's heading row,
+ * not on every line.
+ */
+function sharedReminderOf(
+  items: readonly FixItem[],
+  byId: ReadonlyMap<string, { reminderAt: Date | null }>,
+): Date | null {
+  const times = new Set(
+    items.flatMap((item) => {
+      const at = item.reasons.length > 0 ? byId.get(item.guestId)?.reminderAt : null;
+      return at ? [at.getTime()] : [];
+    }),
+  );
+  const [only] = times;
+  return times.size === 1 && only !== undefined ? new Date(only) : null;
+}
+
+/**
+ * The quiet reason lines (`quietOnFilling`) every booked guest shares, in the
+ * words the rows would say them: Filling says such a line once on the card's
+ * heading row ("Everyone: Check the depth"), and each row keeps only what is
+ * its own. Empty unless every booked guest is listed and there are two or
+ * more, so "Everyone" is true. A warning-colored reason is never folded.
+ */
+function sharedQuietOf(
+  items: readonly FixItem[],
+  fine: number,
+  textOf: (item: FixItem, reason: FixItem["reasons"][number]) => string,
+): string[] {
+  if (fine > 0 || items.length < 2) return [];
+  const [first, ...rest] = items.map(
+    (item) =>
+      new Set(
+        item.reasons.filter((reason) => quietOnFilling([reason])).map((r) => textOf(item, r)),
+      ),
+  );
+  return [...(first ?? [])].filter((text) => rest.every((texts) => texts.has(text)));
+}
+
+/** What the card's heading row already says for every guest, so a row leaves it out. */
+type Said = { reminder?: boolean; lines?: string[] };
+
+/**
+ * **Filling's Booked rows and the note above them.** Days ahead a reason is
+ * said quietly (`quietOnFilling`) and anything else in the warning color; a
+ * reminder time or a quiet line that every guest shares is said once, in the
+ * note. No row carries a remedy button: the guest opens in place.
+ */
+function fillingRows<Row extends { control: unknown; openLabel: string | null }>(input: {
+  list: { blocking: readonly FixItem[]; worthAMinute: readonly FixItem[]; fine: readonly string[] };
+  reminderOf: (guestId: string) => Date | null;
+  textOf: (item: FixItem, reason: FixItem["reasons"][number]) => string;
+  row: (item: FixItem, tone: "warning" | "muted", said: Said) => Row;
+  everyone: (reasons: string) => string;
+  reminderLine: (at: Date) => string;
+}): { rows: Row[]; note: string | undefined } {
+  const { list } = input;
+  const listed = [...list.blocking, ...list.worthAMinute];
+  const reminder = sharedReminderOf(
+    listed,
+    new Map(listed.map((item) => [item.guestId, { reminderAt: input.reminderOf(item.guestId) }])),
+  );
+  const quiet = sharedQuietOf(listed, list.fine.length, input.textOf);
+  const said: Said = { reminder: reminder !== null, lines: quiet };
+  const rows = [
+    ...list.blocking.map((item) => input.row(item, "warning", said)),
+    ...list.worthAMinute.map((item) =>
+      input.row(item, quietOnFilling(item.reasons) ? "muted" : "warning", said),
+    ),
+  ].map((row) => ({ ...row, control: null, openLabel: null }));
+  const note = [
+    quiet.length > 0 ? input.everyone(quiet.join(" · ")) : null,
+    reminder ? input.reminderLine(reminder) : null,
+  ].filter(Boolean);
+  return { rows, note: note.length > 0 ? note.join(" · ") : undefined };
+}
 
 /**
  * **One guest, read for the fix list**: the codes behind the reason lines the
@@ -132,12 +222,15 @@ function seatOf(entry: RosterEntry, context: RosterRowContext): Seat {
   const { reasonLines } = rowReasonLines({ ...seat, ...rowNotices(seat) });
   const blocked = seat.readiness?.status === "blocked";
   // A held seat says only its own reasons (`heldSeatBlockers`); a blocked
-  // reading with none said still blocks.
-  const blockers = blocked
+  // reading with none said still blocks. A seat with no reading at all fails
+  // closed, as the sentence's count does (`tripFrame`): it is never "fine".
+  const blockers: ReadinessBlockerCode[] = blocked
     ? seat.blockerTexts.length
       ? seat.blockerTexts.map(({ blocker }) => blocker.code)
       : (seat.readiness?.blockers.map((blocker) => blocker.code) ?? ["readiness_unavailable"])
-    : [];
+    : seat.readiness
+      ? []
+      : ["readiness_unavailable"];
   const advisories: AdvisoryReason[] = reasonLines.flatMap((line) => {
     const reason = LINE_REASONS[line.key];
     return reason ? [reason] : [];
@@ -166,9 +259,10 @@ function seatOf(entry: RosterEntry, context: RosterRowContext): Seat {
   const partyLead =
     Boolean(booking.partyLeadBookingId) ||
     rows.roster.some((other) => other.booking.partyLeadBookingId === booking.id);
-  // One tap sends the link only to a guest a link can reach; a party's or a
-  // counter guest's release is signed through its queue, on the opened guest.
-  const reachable = Boolean(person.email) || rows.textableBookings.has(booking.id);
+  // One tap sends the link only to a guest a link can reach (the seat's own
+  // word, `rosterSeat`); a party's or a counter guest's release is signed
+  // through its queue, on the opened guest.
+  const { reachable } = seat;
   const control = seat.waiverControl;
   const waiverSendable = Boolean(
     control.action && reachable && !partyLead && !seat.identityUnconfirmed,
@@ -218,6 +312,18 @@ function seatOf(entry: RosterEntry, context: RosterRowContext): Seat {
       : null,
     sendWaiver,
     waiverSendable,
+    reachable,
+    counterHref:
+      reachable || seat.identityUnconfirmed
+        ? null
+        : shopPath(
+            trip.shopSlug,
+            "trips",
+            trip.tripId,
+            "party",
+            booking.partyLeadBookingId ?? booking.id,
+            "waivers",
+          ),
     owed,
     helpRequest,
     order: rows.openOrderByBooking.get(booking.id) ?? null,
@@ -346,13 +452,17 @@ export function guestFixRows(
       return t(HELP_KIND_KEYS[seat.helpRequest.kind]);
     const ask = seat?.entry.booking.reEntryAsk;
     if (reason === "re_entry_ask" && ask) return t(RE_ENTRY_PHRASE_KEYS[ask]);
+    // Opened for signing, but no email or text could carry it: say so, not "sent".
+    if (reason === "waiver_pending" && seat && !seat.reachable)
+      return t("trips.fixList.reason.waiverNothingSent");
     return t(reasonKey(reason));
   };
 
   /** Every reason the guest has, worst first, each said once. */
-  const phraseOf = (item: FixItem, seat: Seat | undefined): string | null => {
+  const phraseOf = (item: FixItem, seat: Seat | undefined, omit?: string[]): string | null => {
     if (item.reasons.length === 0) return seat ? kindPhrase(seat) : null;
-    return [...new Set(item.reasons.map((reason) => reasonText(reason, seat)))].join(" · ");
+    const lines = [...new Set(item.reasons.map((reason) => reasonText(reason, seat)))];
+    return lines.filter((line) => !omit?.includes(line)).join(" · ");
   };
 
   const callControl = (seat: Seat) => {
@@ -377,6 +487,19 @@ export function guestFixRows(
   } => {
     if (remedy === "send_waiver" && seat?.sendWaiver)
       return { control: seat.sendWaiver, panelHoldsControl: true };
+    // Nothing could be sent: the counter's QR code is the way to sign.
+    if (remedy === "send_waiver" && seat?.counterHref) {
+      const href = seat.counterHref;
+      return {
+        control: (variant) => (
+          <Link href={href} className={buttonClass({ variant, size: "sm" })}>
+            {t("trips.partyWaiverQueue.counter")}
+          </Link>
+        ),
+        // The opened guest draws its own counter link beside the waiver line.
+        panelHoldsControl: true,
+      };
+    }
     if (remedy === "review_cards" && seat)
       return {
         control: (variant) => (
@@ -397,7 +520,9 @@ export function guestFixRows(
     return { openLabel: t(REMEDY_KEYS[remedy === "send_waiver" ? "open" : remedy]) };
   };
 
-  const fixRow = (item: FixItem, tone: FixListRow["tone"]): DraftRow => {
+  const reminderLine = (at: Date) =>
+    t("trips.fixList.reminderAt", { when: formatWeekdayTime(at, trip.locale, trip.shopTimezone) });
+  const fixRow = (item: FixItem, tone: FixListRow["tone"], said: Said = {}): DraftRow => {
     const seat = byId.get(item.guestId);
     const {
       control = null,
@@ -405,12 +530,13 @@ export function guestFixRows(
       panelHoldsControl = false,
     } = remedyControl(item.remedy, seat);
     const reminder =
-      seat?.reminderAt && item.reasons.length > 0 && (phase === "filling" || phase === "ready")
-        ? t("trips.fixList.reminderAt", {
-            when: formatWeekdayTime(seat.reminderAt, trip.locale, trip.shopTimezone),
-          })
+      !said.reminder &&
+      seat?.reminderAt &&
+      item.reasons.length > 0 &&
+      (phase === "filling" || phase === "ready")
+        ? reminderLine(seat.reminderAt)
         : null;
-    const phrase = [phraseOf(item, seat), reminder].filter(Boolean).join(" · ") || null;
+    const phrase = [phraseOf(item, seat, said.lines), reminder].filter(Boolean).join(" · ") || null;
     return {
       key: item.guestId,
       guestIds: [item.guestId],
@@ -514,11 +640,14 @@ export function guestFixRows(
   };
 
   const booked = seats.filter((seat) => !seat.guest.released).map((seat) => seat.guest.id);
-  const quietRows = [...list.blocking, ...list.worthAMinute].map((item) => ({
-    ...fixRow(item, "warning"),
-    control: null,
-    openLabel: null,
-  }));
+  const filling = fillingRows({
+    list: phase === "filling" ? list : { ...list, blocking: [], worthAMinute: [] },
+    reminderOf: (id) => byId.get(id)?.reminderAt ?? null,
+    textOf: (item, reason) => reasonText(reason, byId.get(item.guestId)),
+    row: fixRow,
+    everyone: (reasons) => t("trips.fixList.everyone", { reasons }),
+    reminderLine,
+  });
   const drafts: DraftSection[] =
     phase === "listed"
       ? [folded("booked", t("trips.fixList.booked"), booked, "none"), ...released]
@@ -528,6 +657,7 @@ export function guestFixRows(
               key: "booked",
               label: t("trips.fixList.booked"),
               tone: "default",
+              note: filling.note,
               summary: {
                 label: t("trips.clock.sentence.guestCount", { count: list.fine.length }),
                 phrase: t("trips.fixList.nothingYet"),
@@ -536,7 +666,7 @@ export function guestFixRows(
               },
               // Days ahead a guest's reason is said quietly, opened in place;
               // the trip's own fixes (a hull booked twice) keep their door.
-              rows: [...tripRows("danger"), ...tripRows("warning"), ...quietRows],
+              rows: [...tripRows("danger"), ...tripRows("warning"), ...filling.rows],
             },
             ...released,
           ]

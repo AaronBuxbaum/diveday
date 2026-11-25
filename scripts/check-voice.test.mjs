@@ -741,7 +741,7 @@ describe("the four shapes (2026-09-24)", () => {
     expect(pageOf("marketing.guides.eve.heroLede")).toBe("guides");
     expect(pageOf("marketing.guides.shared.cutover.intro")).toBeNull();
     expect(pageOf("switching.spreadsheet.title")).toBe("switching.spreadsheet");
-    expect(pageOf("account.onboard.trialNote")).toBe("onboard");
+    expect(pageOf("account.onboard.priceNote")).toBe("onboard");
     expect(pageOf("manifest.rollCall.title")).toBeNull();
     expect(pageOf("marketing.featurePages.waivers.lede")).toBe("featurePage.waivers");
     expect(pageOf("marketing.featurePages.rentalGear.faq1A")).toBe("featurePage.rentalGear");

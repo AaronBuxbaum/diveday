@@ -18,26 +18,18 @@ import { DIVER_MESSAGES } from "@/i18n/messages";
  */
 const LOCALES = Object.entries(DIVER_MESSAGES);
 
-describe("the /onboard trial note", () => {
-  it.each(LOCALES)("is exactly one sentence in %s", (_locale, messages) => {
-    const note = messages.account.onboard.trialNote;
-    expect(note.trim()).not.toBe("");
-    // One terminator, and it is the last character — which is the difference
-    // between one sentence and several joined into a paragraph. An em dash is
-    // deliberately not a terminator: the English and the Spanish both use one
-    // to hang the day-15 clause off the first half, and that is still one
-    // sentence.
-    expect(note.match(/[.!?]/g)).toHaveLength(1);
-    expect(note.trimEnd().endsWith(".")).toBe(true);
-  });
-
-  it.each(LOCALES)("answers day 15 rather than stopping at the window in %s", (_l, messages) => {
-    // The half the review found missing: "free for 2 weeks" with no word about
-    // what happens on the 15th day reads, to a burned buyer, as a card wall.
-    // Soft expiry is real (src/features/shop-setup/trial.ts switches nothing off), so the door
-    // is allowed to say it.
-    expect(messages.account.onboard.trialNote).toMatch(/2/);
-    expect(messages.account.onboard.trialNote.length).toBeGreaterThan(40);
+describe("the /onboard price note", () => {
+  it.each(LOCALES)("states the fee only as parameters in %s", (_locale, messages) => {
+    // The price line (Aaron, 2026-11-24): free, no card, and a percent only of
+    // payments taken in DiveDay. Its figures come from the pricing
+    // configuration (ADR 20261124-free-shops-no-trial), so the bundle holds
+    // `{percent}` and `{base}`, never a figure; rendering it for several
+    // configurations, one sentence each, is `../(marketing)/pricing/price-note.test.ts`.
+    const note = messages.account.onboard.priceNote;
+    expect(note).toContain("{percent}");
+    expect(note).toContain("{base}");
+    expect(note).not.toMatch(/\d\s?%|\$\d/);
+    expect(note).not.toMatch(/\b2\b|weeks?\b|semanas?\b|trial|prueba|plan/i);
   });
 
   it.each(LOCALES)("carries no retired reassurance keys in %s", (_locale, messages) => {
@@ -47,6 +39,7 @@ describe("the /onboard trial note", () => {
     // surface to quietly re-list.
     expect(onboard).not.toHaveProperty("reassurance");
     expect(onboard).not.toHaveProperty("trialMeaning");
+    expect(onboard).not.toHaveProperty("trialNote");
   });
 
   it.each(LOCALES)("says where the schedule will live, in %s", (_locale, messages) => {

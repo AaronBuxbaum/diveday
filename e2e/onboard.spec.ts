@@ -37,8 +37,8 @@ test("a freshly onboarded shop sees a first-run checklist on Today, and a step c
   await page
     .locator('input[name="ownerPassword"]')
     .filter({ visible: true })
-    .fill("trial-pass-123");
-  await page.getByRole("button", { name: "Create shop & start trial" }).click();
+    .fill("owner-pass-123");
+  await page.getByRole("button", { name: "Create your shop" }).click();
   await expect(page).toHaveURL(new RegExp(`/shop/${unique}$`));
 
   // The setup ledger is the spine's leading group, under its own group label
@@ -156,8 +156,8 @@ test("a shop outside the curated dive regions can pick its own timezone", async 
   await page
     .locator('input[name="ownerPassword"]')
     .filter({ visible: true })
-    .fill("trial-pass-123");
-  await page.getByRole("button", { name: "Create shop & start trial" }).click();
+    .fill("owner-pass-123");
+  await page.getByRole("button", { name: "Create your shop" }).click();
 
   // The zone was accepted (an invalid one bounces back to the form) and is
   // persisted on the new shop. First-run intentionally leads with its setup
@@ -197,8 +197,8 @@ test("a freshly onboarded shop finds a way forward on its empty Divers and Order
   await page
     .locator('input[name="ownerPassword"]')
     .filter({ visible: true })
-    .fill("trial-pass-123");
-  await page.getByRole("button", { name: "Create shop & start trial" }).click();
+    .fill("owner-pass-123");
+  await page.getByRole("button", { name: "Create your shop" }).click();
   await expect(page).toHaveURL(new RegExp(`/shop/${unique}$`));
 
   // Divers: nobody on file. The roster's search is also the quick-add door;
@@ -273,7 +273,7 @@ test.describe("a shop signing up from the Caribbean", () => {
       .locator('input[name="ownerPassword"]')
       .filter({ visible: true })
       .fill("pass-123-abc");
-    await page.getByRole("button", { name: "Create shop & start trial" }).click();
+    await page.getByRole("button", { name: "Create your shop" }).click();
     await page.waitForURL(new RegExp(`/shop/${unique}$`));
 
     // The checklist names the guess rather than only inviting a look — a step
@@ -310,8 +310,8 @@ test("a setup link opens the form once, and says it no longer works after", asyn
   await page
     .locator('input[name="ownerPassword"]')
     .filter({ visible: true })
-    .fill("trial-pass-123");
-  await page.getByRole("button", { name: "Create shop & start trial" }).click();
+    .fill("owner-pass-123");
+  await page.getByRole("button", { name: "Create your shop" }).click();
   await expect(page).toHaveURL(new RegExp(`/shop/${unique}$`));
 
   await page.goto(link);

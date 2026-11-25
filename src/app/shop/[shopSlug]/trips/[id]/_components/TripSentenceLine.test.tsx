@@ -30,3 +30,24 @@ describe("TripSentenceLine's seat bar", () => {
     expect(container.querySelector("[data-seat-bar]")).toBeNull();
   });
 });
+
+describe("TripSentenceLine's one door", () => {
+  it("draws Filling's primary beside the sentence, to where it is told", () => {
+    const { getByRole } = render(
+      <TripSentenceLine
+        sentence={sentence}
+        rollCall={null}
+        action={{ href: "/trip?phase=filling&add=1#add-a-booking", label: "Add a guest" }}
+      />,
+    );
+    expect(getByRole("link", { name: "Add a guest" })).toHaveAttribute(
+      "href",
+      "/trip?phase=filling&add=1#add-a-booking",
+    );
+  });
+
+  it("draws none when the phase has none", () => {
+    const { queryByRole } = render(<TripSentenceLine sentence={sentence} rollCall={null} />);
+    expect(queryByRole("link")).toBeNull();
+  });
+});

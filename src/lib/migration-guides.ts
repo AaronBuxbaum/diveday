@@ -39,7 +39,7 @@ export type CoexistFraming = {
   replace?: { heading: DiverMessageKey; body: DiverMessageKey };
 };
 
-/** A trial, a booking/balance review and a handover selected after seeing the work. */
+/** One trip first, a booking/balance review and a handover selected after seeing the work. */
 export type CutoverSection = {
   heading: DiverMessageKey;
   intro: DiverMessageKey;

@@ -139,7 +139,7 @@ function vacuumTables(replayed: string[] | null, purged: DemoPurge): string[] | 
  *
  * Asked again on 2026-08-15, about a different suspect, and answered no.
  *
- * Around a dozen specs go through `/onboard` and create a **real** trial shop
+ * Around a dozen specs go through `/onboard` and create a **real** shop
  * (`isDemo: false`). This reset leaves those alone: `resetDemoSchedule` is
  * scoped to blue-mantis and `purgeMintedDemoShops` takes only `isDemo` shops,
  * so an unowned signup remains for the life of the worker's server. Visual
@@ -156,7 +156,7 @@ function vacuumTables(replayed: string[] | null, purged: DemoPurge): string[] | 
  *   1. The accumulation is trivial in the only terms the reset cares about. A
  *      worker that reached 6 shops was carrying 148 people, 97 trips, 576
  *      bookings and 12.2MB of heap, against 142 / 94 / 575 / 11.7MB at one
- *      shop. Six extra `people` rows. A trial shop is a shop nobody dived at.
+ *      shop. Six extra `people` rows. An onboarded shop is a shop nobody dived at.
  *   2. Held at one instant, more shops did not cost more. Comparing workers
  *      inside the same 30-second window (same box, same contention, different
  *      accumulation), the ones carrying 4-6 shops ran 104ms **faster** than the

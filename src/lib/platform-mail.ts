@@ -18,7 +18,7 @@ export const SUPPORT_EMAIL = "support@dive.day";
 export const SWITCH_EMAIL = "switch@dive.day"; // i18n-exempt: a mailbox address
 
 /**
- * Where a shop writes in to be set up, and where a trial shop's owner writes in
+ * Where a shop writes in to be set up, and where a new shop's owner writes in
  * to move to a paid plan. Every shop is opened by hand from this inbox (ADR
  * 20260925-shops-are-set-up-by-hand); the public "Get set up" door is the form
  * at `/get-set-up`, and each request it takes is mailed here (ADR

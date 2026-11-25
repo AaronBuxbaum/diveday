@@ -54,6 +54,52 @@ describe("readParty", () => {
     expect(party.rows[0]?.match).toBe("new");
   });
 
+  it("reads each row's own email and phone, trimmed, and leaves a blank one off", () => {
+    const party = readParty([
+      ["email", "ana@lopez.test"],
+      [partyMemberField(1, "name"), "Mia Lopez"],
+      [partyMemberField(1, "email"), "  mia@lopez.test "],
+      [partyMemberField(1, "phone"), "+1 305 555 0142"],
+      [partyMemberField(2, "name"), "Leo Lopez"],
+      [partyMemberField(2, "email"), "   "],
+      [partyMemberField(2, "phone"), ""],
+    ]);
+    expect(party.invalid).toBe(false);
+    expect(party.rows).toEqual([
+      {
+        row: 1,
+        fullName: "Mia Lopez",
+        email: "mia@lopez.test",
+        phone: "+1 305 555 0142",
+        minor: false,
+      },
+      { row: 2, fullName: "Leo Lopez", minor: false },
+    ]);
+  });
+
+  it("never reads a contact onto row 0: the first person's are the form's own fields", () => {
+    const party = readParty([
+      [partyMemberField(0, "email"), "stray@lopez.test"],
+      [partyMemberField(0, "phone"), "+1 305 555 0100"],
+    ]);
+    expect(party.first).toEqual({ minor: false });
+    expect(party.rows).toEqual([]);
+  });
+
+  it("refuses an address that is not one, or a number too long to be one", () => {
+    for (const [field, value] of [
+      ["email", "mia at lopez"],
+      ["email", `${"m".repeat(320)}@lopez.test`],
+      ["phone", "1".repeat(41)],
+    ] as const) {
+      const party = readParty([
+        [partyMemberField(1, "name"), "Mia"],
+        [partyMemberField(1, field), value],
+      ]);
+      expect(party.invalid, `${field}=${value.slice(0, 12)}`).toBe(true);
+    }
+  });
+
   it("keeps a date only beside a ticked Under 18", () => {
     const party = readParty([
       [partyMemberField(1, "name"), "Mia"],

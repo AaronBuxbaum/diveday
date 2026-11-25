@@ -2,14 +2,14 @@ import type { ReactNode } from "react";
 
 /**
  * **Filling** (ADR 20261117-trip-page-clock): the owner's phase, until the day
- * before. Every way to fill a seat, the booked guests beside the trip's facts,
- * then what comes next.
+ * before. Under the sentence and the trip's facts line (`PhaseHeading`), in
+ * the order the desk asks: who is on the trip and what each still owes, then
+ * the ways to fill a seat (`TripRosterContent` lays them out).
  */
-export function FillingPhase({ guests, next }: { guests: ReactNode; next: ReactNode }) {
+export function FillingPhase({ guests }: { guests: ReactNode }) {
   return (
-    <div data-phase-panel="filling" className="space-y-6">
+    <div data-phase-panel="filling" className="space-y-10">
       {guests}
-      {next}
     </div>
   );
 }

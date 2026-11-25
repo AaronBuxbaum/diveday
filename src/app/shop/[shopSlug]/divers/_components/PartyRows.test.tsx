@@ -12,6 +12,8 @@ const COPY = {
   add: "Add another person",
   person: "Person {n}",
   name: "Full name",
+  email: "Email",
+  phone: "Phone",
   remove: "Remove",
   removeFor: "Remove person {n}",
   extras: {
@@ -44,6 +46,20 @@ describe("PartyRows", () => {
     expect(screen.getByRole("combobox", { name: "Coming as" })).toHaveValue("diver");
   });
 
+  it("asks each person for their own optional email and phone", async () => {
+    const { container } = renderRows(false);
+    await userEvent.click(screen.getByRole("button", { name: "Add another person" }));
+    const email = screen.getByRole("textbox", { name: "Email" });
+    const phone = screen.getByRole("textbox", { name: "Phone" });
+    expect(email).toHaveAttribute("name", partyMemberField(1, "email"));
+    expect(email).toHaveAttribute("type", "email");
+    expect(email).not.toBeRequired();
+    expect(phone).toHaveAttribute("name", partyMemberField(1, "phone"));
+    expect(phone).not.toBeRequired();
+    // A name is still the only thing a row needs.
+    expect(container.querySelector('[name="member-1-name"]')).toBeRequired();
+  });
+
   it("asks for a date of birth only once Under 18 is ticked", async () => {
     renderRows(false);
     await userEvent.click(screen.getByRole("button", { name: "Add another person" }));
@@ -62,7 +78,9 @@ describe("PartyRows", () => {
         fields: {
           [partyMemberField(1, "name")]: "Mia Lopez",
           [partyMemberField(1, "type")]: "snorkeler",
+          [partyMemberField(1, "phone")]: "+1 305 555 0142",
           [partyMemberField(3, "name")]: "Leo Lopez",
+          [partyMemberField(3, "email")]: "leo@lopez.test",
           [partyMemberField(3, "minor")]: "true",
           [partyMemberField(3, "dob")]: "2014-05-06",
         },
@@ -77,6 +95,8 @@ describe("PartyRows", () => {
     const field = (name: string) =>
       container.querySelector<HTMLInputElement | HTMLSelectElement>(`[name="${name}"]`);
     expect(field(partyMemberField(1, "name"))?.value).toBe("Mia Lopez");
+    expect(field(partyMemberField(1, "phone"))?.value).toBe("+1 305 555 0142");
+    expect(field(partyMemberField(3, "email"))?.value).toBe("leo@lopez.test");
     expect((field(partyMemberField(1, "minor")) as HTMLInputElement).checked).toBe(false);
     expect(field(partyMemberField(1, "type"))?.value).toBe("snorkeler");
     expect((field(partyMemberField(3, "minor")) as HTMLInputElement).checked).toBe(true);

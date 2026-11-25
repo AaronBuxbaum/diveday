@@ -1,3 +1,4 @@
+import { diverTranslator } from "../src/i18n/messages";
 import { expect, test } from "./fixtures";
 import { signInAsOwner } from "./helpers";
 import { mintOnboardFormPath } from "./setup-link";
@@ -67,7 +68,7 @@ test("a second shop's owner reaches none of Blue Mantis's staff surfaces", async
   // Mint the second tenant through the real sign-up flow — it ends with us
   // signed in as that shop's owner, which is exactly the actor this spec is
   // about. The slug is unique per run because an onboarded shop is a real
-  // trial shop (`isDemo: false` in src/app/onboard/actions.ts), so unlike a
+  // shop (`isDemo: false` in src/app/onboard/actions.ts), so unlike a
   // minted demo it survives `/api/test/reset`'s `purgeMintedDemoShops`; the
   // worker's database is in-memory and per-run, so it costs nothing to leave
   // behind. Same approach as onboard.spec.ts.
@@ -83,8 +84,8 @@ test("a second shop's owner reaches none of Blue Mantis's staff surfaces", async
   await page
     .locator('input[name="ownerPassword"]')
     .filter({ visible: true })
-    .fill("trial-pass-123");
-  await page.getByRole("button", { name: "Create shop & start trial" }).click();
+    .fill("owner-pass-123");
+  await page.getByRole("button", { name: "Create your shop" }).click();
   await expect(page).toHaveURL(new RegExp(`/shop/${unique}$`));
   // Staff chrome does render — for their *own* shop. Without this the 404s
   // below could just as well mean "this account is not staff anywhere": the
@@ -101,7 +102,9 @@ test("a second shop's owner reaches none of Blue Mantis's staff surfaces", async
   await expect(page).toHaveURL(/\/s\/blue-mantis$/);
   // The public schedule leads with dates; its authored identity remains below the board.
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Schedule");
-  await expect(page.getByRole("heading", { level: 2, name: "Blue Mantis Divers" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { level: 2, name: diverTranslator("en-US")("schedule.aboutShop") }),
+  ).toBeVisible();
   // …and they get the *visitor's* chrome on it: the shop's own public header,
   // never Blue Mantis's staff nav or its pending-work counts.
   await expect(page.getByRole("link", { name: OTHER_SHOP_NAME }).first()).toBeVisible();

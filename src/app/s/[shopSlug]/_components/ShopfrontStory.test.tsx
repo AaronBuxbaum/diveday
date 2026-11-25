@@ -84,7 +84,8 @@ describe("the welcome and the lower shop story", () => {
     expect(screen.getByText("A family-run shop beside the reef.")).toBeInTheDocument();
     expect(screen.getByRole("list", { name: t("schedule.shopPhotos") })).toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Schedule");
-    expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent(SHOP.name);
+    expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent("About the shop");
+    expect(screen.queryByRole("heading", { name: SHOP.name })).not.toBeInTheDocument();
   });
 
   it("omits an empty lower story when its only facts already appear in the welcome", () => {
@@ -105,7 +106,7 @@ describe("the welcome and the lower shop story", () => {
   it("keeps the full description when it also supplies the welcome's short introduction", () => {
     storefront({ ...SHOP, tagline: null, brandHeroImageUrl: null });
     expect(screen.getAllByText("83 ratings")).toHaveLength(1);
-    expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent(SHOP.name);
+    expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent("About the shop");
     expect(screen.getAllByText("A family-run shop beside the reef.")).toHaveLength(2);
   });
 });

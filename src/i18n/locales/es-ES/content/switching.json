@@ -52,7 +52,7 @@
   "hub": {
     "eyebrow": "Cambiarte a DiveDay",
     "title": "Elige cómo preparar tu próxima salida de buceo",
-    "description": "Elige la herramienta que usas para comparar el trabajo del equipo, revisar los datos y planear una prueba antes del cambio.",
+    "description": "Elige la herramienta que usas para comparar el trabajo del equipo, revisar los datos y planear una primera salida antes del cambio.",
     "spreadsheetTitle": "Vienes de una hoja de cálculo",
     "spreadsheetDescription": "Convierte tu lista en reservas, preparación y pase de lista, empezando por una muestra de la hoja.",
     "switchingFrom": "Cambiando desde {competitor}",
@@ -69,7 +69,7 @@
     "closingTitle": "Prueba una salida antes de trasladar tus registros",
     "closingSupport": "Envíanos una muestra de tus registros y revisaremos el traslado contigo. También puedes escribir a {email}.",
     "alongsideTitle": "Conserva tus herramientas y suma DiveDay",
-    "alongsideDescription": "Prueba DiveDay con un solo viaje mientras tu web de reservas, tu caja y tu hoja siguen haciendo su trabajo, y luego decide qué mover."
+    "alongsideDescription": "Empieza por un viaje mientras tu web de reservas, tu caja y tu hoja siguen haciendo su trabajo, y luego decide qué mover."
   },
   "competitor": {
     "keepOrLeaveEyebrow": "Consérvalo, o déjalo",
@@ -185,7 +185,7 @@
   "alongside": {
     "eyebrow": "Junto a tus herramientas",
     "title": "Conserva lo que funciona. Suma lo que le falta a tu día de buceo",
-    "heroLede": "No tienes que dejar nada para empezar. Prueba DiveDay con un solo viaje mientras la web de reservas, la caja y la hoja de cálculo que ya usas siguen haciendo su trabajo, y luego decide qué mover.",
+    "heroLede": "No tienes que dejar nada para empezar. Lleva un único viaje con DiveDay mientras la web de reservas, la caja y la hoja de cálculo que ya usas siguen haciendo su trabajo, y luego decide qué mover.",
     "intro1": "DiveDay no tiene enlace en vivo con otros programas. No tiene caja para la venta minorista y no habla por su cuenta con tu web de reservas. Tiene archivos que entran, archivos que salen, un enlace de reservas que controlas tú y una extensión del navegador que busca tarjetas en la página de tu agencia, así que los dos lados se encuentran donde una persona puede verlos.",
     "intro2": "Por eso la pregunta útil no es a qué se conecta DiveDay. Es qué parte del día debe llevar cada herramienta mientras lo pruebas.",
     "tools": {

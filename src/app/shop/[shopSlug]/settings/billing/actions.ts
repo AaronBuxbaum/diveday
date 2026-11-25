@@ -21,7 +21,6 @@ import {
   snapshotShopPricing,
 } from "@/features/money/shop-subscriptions";
 import { parseForm } from "@/features/platform/form-parse";
-import { trialEndsAt } from "@/features/shop-setup/trial";
 import { freeTimeEndsAt } from "@/lib/billing/standing";
 import { nowDate } from "@/lib/clock";
 import { publicAppUrl } from "@/lib/notifications";
@@ -51,7 +50,6 @@ type BillingContext = {
   email: string;
   isDemo: boolean;
   timezone: string;
-  createdAt: Date;
 };
 
 /**
@@ -75,7 +73,6 @@ async function requireBillingOwner(): Promise<BillingContext> {
     email: session.user.email,
     isDemo: shop.isDemo,
     timezone: shop.timezone,
-    createdAt: shop.createdAt,
   };
 }
 
@@ -93,8 +90,8 @@ function refuse(slug: string, notice: BillingNotice): never {
 /**
  * "Add a card": mint (or reuse) the shop's Stripe Customer, then open
  * Checkout for the shop's agreed terms (or the configured offer),
- * with the first charge deferred to the end
- * of whatever free time the shop has left.
+ * with the first charge deferred to the end of a free term DiveDay granted,
+ * if one is running.
  *
  * Two guards keep a shop to one subscription, both decided on the row rather
  * than on the standing the page shows:
@@ -168,7 +165,6 @@ export async function startBillingCheckoutAction(): Promise<void> {
     firstChargeAt: freeTimeEndsAt({
       now,
       timeZone: context.timezone,
-      trialEndsAt: trialEndsAt(context.createdAt),
       freeTermEndsOn: row?.freeTermEndsOn ?? null,
     }),
     now,

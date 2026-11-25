@@ -162,7 +162,21 @@ test("largest settings pane gives the actual rail and editor a readable measure"
         .soft(await fragmentedWords(page.locator("main h1")), `settings title at ${width}`)
         .toEqual([]);
     if (width === 820 || width === 1024) {
-      const previews = page.locator("main figure p, main figure span");
+      const excerpt = page.locator("main figure p.line-clamp-3").first();
+      await expect(excerpt).toBeVisible();
+      const excerptMeasure = await excerpt.evaluate((element) => ({
+        width: element.getBoundingClientRect().width,
+        font: Number.parseFloat(getComputedStyle(element).fontSize),
+      }));
+      expect
+        .soft(excerptMeasure.width, `welcome excerpt at ${width}`)
+        .toBeGreaterThanOrEqual(excerptMeasure.font * 8);
+      // The welcome excerpt is a deliberate three-line clamp: its last visible line ends in an
+      // ellipsis, which splits the word it cuts into two boxes whatever the width. It is held to
+      // a readable measure above instead of to whole words.
+      const previews = page.locator(
+        "main figure p:not(.line-clamp-3), main figure span:not(.line-clamp-3)",
+      );
       await expect(previews).not.toHaveCount(0);
       for (const sample of await previews.all())
         expect.soft(await fragmentedWords(sample), `brand preview at ${width}`).toEqual([]);
