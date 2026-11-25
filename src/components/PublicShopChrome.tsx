@@ -52,12 +52,18 @@ export function PublicShopHeader({
   languagePickerCopy,
   recoveryLabel,
   recoveryHref = FIND_YOUR_BOOKING_PATH,
+  account,
 }: {
   shop: { slug: string; name: string; logoUrl?: string | null };
   navAriaLabel: string;
   navItems: readonly PublicShopNavItem[];
   recoveryLabel?: string;
   recoveryHref?: string;
+  /**
+   * The diver's own door (ADR 20261125-diver-sign-in): Sign in, or My profile
+   * once signed in, beside the recovery link.
+   */
+  account?: { label: string; href: string };
   /** The language this page was written in — the one marked as in force. */
   locale: string;
   /** That language's own name for itself. */
@@ -100,13 +106,25 @@ export function PublicShopHeader({
             ) : null}
             <span className="line-clamp-2 min-w-[2em] wrap-break-word">{shop.name}</span>
           </Link>
-          {recoveryLabel ? (
-            <a
-              href={recoveryHref}
-              className="device-text-recovery inline-flex min-h-11 min-w-0 items-center text-base text-muted underline-offset-4 hover:underline"
-            >
-              {recoveryLabel}
-            </a>
+          {recoveryLabel || account ? (
+            <span className="flex min-w-0 flex-wrap items-center gap-x-4">
+              {recoveryLabel ? (
+                <a
+                  href={recoveryHref}
+                  className="device-text-recovery inline-flex min-h-11 min-w-0 items-center text-base text-muted underline-offset-4 hover:underline"
+                >
+                  {recoveryLabel}
+                </a>
+              ) : null}
+              {account ? (
+                <Link
+                  href={account.href}
+                  className="device-text-recovery inline-flex min-h-11 min-w-0 items-center text-base font-medium text-primary underline-offset-4 hover:underline"
+                >
+                  {account.label}
+                </Link>
+              ) : null}
+            </span>
           ) : null}
         </div>
       }

@@ -32,6 +32,9 @@ export const CAPABILITY_ROUTE_PREFIXES = [
   "verify",
   "reset-password",
   "email-sign-in",
+  // A diver's emailed sign-in link (ADR 20261125-diver-sign-in): spent by the
+  // tap that signs them in to one shop's pages.
+  "diver-sign-in",
   // Staff-invite acceptance token (20260726-staff-invite-accounts).
   "invite",
   // Shop contact-email confirmation (issue #1288): /confirm-contact/[token]

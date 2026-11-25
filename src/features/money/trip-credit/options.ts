@@ -64,3 +64,35 @@ export async function tripCreditBookingOptions(
       : [];
   });
 }
+
+/**
+ * The full fare of one plain diver seat on this departure, when trip credit
+ * could cover it, or null. Advisory, for the booking form's "Use my trip
+ * credit" (ADR 20261125-diver-sign-in): the redemption after the seat is booked
+ * repeats every check under its locks.
+ */
+export function plainSeatCreditFare(
+  trip: Parameters<typeof seatCheckoutCharge>[0] & {
+    courseId: string | null;
+    isPrivate: boolean;
+    isRehearsal: boolean;
+    status: string;
+    startsAt: Date;
+  },
+  shop: { taxEnabled: boolean; passThroughFee: unknown },
+  now: Date = nowDate(),
+): number | null {
+  if (
+    trip.courseId !== null ||
+    trip.isPrivate ||
+    trip.isRehearsal ||
+    trip.status !== "scheduled" ||
+    trip.startsAt <= now ||
+    shop.taxEnabled ||
+    shop.passThroughFee
+  )
+    return null;
+  const charge = seatCheckoutCharge(trip, null, "diver");
+  const fare = charge ? charge.amountCents + charge.balanceDueCents : null;
+  return fare && fare > 0 ? fare : null;
+}

@@ -37,6 +37,8 @@ const SHOP_ONLY_CHILDREN = new Set([
   "register",
   "packages",
   "availability.json",
+  "sign-in",
+  "me",
 ]);
 
 /** Trip child routes that resolve through the departure row. */

@@ -47,4 +47,5 @@ A row moves between here and AGENTS.md in one commit, never duplicated.
 | DB client / test db factory | `src/db/client.ts` (`getDb()`, `createTestDb()`) |
 | Domain logic (framework-free) | `src/lib/` — capacity in `trips.ts`, dates in `format.ts` |
 | A domain term, or an ADR | `docs/product/glossary/` by domain; ADRs indexed in `docs/architecture/decisions/README.md` (generated; the guard names the command) |
+| Diver sign-in and My profile | `src/app/s/[shopSlug]/sign-in/`, `src/app/(token)/diver-sign-in/[token]/`, `src/app/s/[shopSlug]/me/`; `src/features/accounts/diver-sign-in.ts` and `diver-profile.ts`; rows in `src/db/diver-sign-in.ts` (ADR 20261125-diver-sign-in) |
 | Auth: session, gates, edge check | `src/lib/auth.ts` / `auth-secret.ts` / `authz.ts` + `session.ts`; edge layer `src/proxy.ts` |

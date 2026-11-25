@@ -13,7 +13,8 @@ import { LLMS_TXT_PATH } from "../../lib/public-routes";
  *
  * The tokened surfaces (`/waivers/*`, `/ready/*`, `/recap/*`,
  * `/offline-manifest`, `/verify/*`, `/reset-password/*`, `/email-sign-in/*`,
- * `/invite/*`, `/confirm-contact/*`, `/claim/*`, `/calendar/*`, `/unsubscribe/*`, `/preview/*`) already carry per-page
+ * `/invite/*`, `/confirm-contact/*`, `/claim/*`, `/calendar/*`, `/unsubscribe/*`, `/preview/*`,
+ * `/diver-sign-in/*`) already carry per-page
  * `robots: noindex`
  * (or, for the `/calendar/*` feed route, an `X-Robots-Tag: noindex` response
  * header); disallowing their prefixes here keeps crawlers from fetching
@@ -34,6 +35,7 @@ export const ROBOTS_DISALLOW = [
   "/verify/",
   "/reset-password/",
   "/email-sign-in/",
+  "/diver-sign-in/",
   "/invite/",
   "/confirm-contact/",
   "/claim/",

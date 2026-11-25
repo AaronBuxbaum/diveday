@@ -117,6 +117,25 @@ export async function readKnownDiver(
     .where(and(eq(bookings.id, capability.bookingId), eq(bookings.shopId, input.shopId)))
     .limit(1);
   if (!seat || seat.identityUnconfirmedAt) return null;
+  const known = await readKnownPerson(db, {
+    shopId: input.shopId,
+    personId: capability.personId,
+    now,
+  });
+  return known ? { ...known, bookingId: capability.bookingId } : null;
+}
+
+/**
+ * What the shop already holds about one of its own people, for the booking
+ * form to start from: the handoff's read once it has proved who arrived, and a
+ * signed-in diver's (ADR 20261125-diver-sign-in). Null for a person who is not
+ * a live row of this shop.
+ */
+export async function readKnownPerson(
+  db: AppDb,
+  input: { shopId: string; personId: string; now?: Date },
+): Promise<Omit<KnownDiver, "bookingId"> | null> {
+  const now = input.now ?? nowDate();
   const [person] = await db
     .select({
       id: people.id,
@@ -126,11 +145,7 @@ export async function readKnownDiver(
     })
     .from(people)
     .where(
-      and(
-        eq(people.id, capability.personId),
-        eq(people.shopId, input.shopId),
-        isNull(people.deletedAt),
-      ),
+      and(eq(people.id, input.personId), eq(people.shopId, input.shopId), isNull(people.deletedAt)),
     )
     .limit(1);
   if (!person) return null;
@@ -143,7 +158,6 @@ export async function readKnownDiver(
     lastGearFor(db, { shopId: input.shopId, personId: person.id, now }),
   ]);
   return {
-    bookingId: capability.bookingId,
     personId: person.id,
     fullName: person.fullName,
     email: person.email,

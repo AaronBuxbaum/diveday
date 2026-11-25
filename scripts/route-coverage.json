@@ -7,6 +7,9 @@
     "e2e": ["group-seat-share.spec.ts"],
     "visual": ["group-seat-picker"]
   },
+  "/diver-sign-in/[token]": {
+    "exempt": "Submits itself on arrival and redirects, so it never holds still for a photograph: a capture would show the profile it lands on, which diver-profile photographs. diver-sign-in.spec.ts taps it, spent and unspent."
+  },
   "/email-sign-in": {
     "e2e": ["account-lifecycle.spec.ts"]
   },
@@ -61,6 +64,13 @@
   },
   "/s/[shopSlug]/embed/trip/[id]": {
     "visual": ["booking-confirmed-embed"]
+  },
+  "/s/[shopSlug]/me": {
+    "e2e": ["diver-sign-in.spec.ts"],
+    "visual": ["diver-profile"]
+  },
+  "/s/[shopSlug]/sign-in": {
+    "e2e": ["diver-sign-in.spec.ts"]
   },
   "/shop/[shopSlug]/divers/[personId]/merge/[survivorId]": {
     "visual": ["diver-merge-preview"]

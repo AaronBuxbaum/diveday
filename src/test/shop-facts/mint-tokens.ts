@@ -3,6 +3,7 @@ import { z } from "zod";
 import { issueAccountToken } from "../../db/account-tokens";
 import type { AppDb } from "../../db/client";
 import { issuePersonCourtesyEmailUnsubscribeToken } from "../../db/courtesy-email";
+import { issueDiverSignIn } from "../../db/diver-sign-in";
 import { issueInterestUnsubscribeToken } from "../../db/interests";
 import { issueMagicSignIn } from "../../db/magic-sign-in";
 import { interests, people, setupRequests, shops, userAccounts } from "../../db/schema/index";
@@ -92,6 +93,21 @@ async function personByEmail(db: AppDb, shopId: string, email: string) {
     .limit(1);
   if (!person) throw new FactRefused("person_not_found", 404);
   return person;
+}
+
+/**
+ * **A diver's sign-in link** (`diverSignIn`) for one of the shop's people, the
+ * link a `diver_sign_in_request` email carries to `/diver-sign-in/[token]`
+ * (ADR 20261125-diver-sign-in).
+ */
+export async function mintADiverSignIn(
+  db: AppDb,
+  shopId: string,
+  { email }: z.output<typeof emailArgs>,
+) {
+  const issued = await issueDiverSignIn(db, { shopId, email });
+  if (!issued) throw new FactRefused("person_not_found", 404);
+  return { token: issued.token };
 }
 
 /**

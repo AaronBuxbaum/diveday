@@ -5,8 +5,14 @@ import {
   MAGIC_SIGN_IN_TTL_MS,
   PASSWORD_RESET_TTL_MS,
 } from "./account-tokens";
-import { DAY_MS } from "./clock";
+import { DAY_MS, MINUTE_MS } from "./clock";
 import { SETUP_LINK_TTL_MS } from "./setup-links";
+
+/** A diver's emailed sign-in link lasts as long as the staff one (ADR 20261125-diver-sign-in). */
+export const DIVER_SIGN_IN_TTL_MS = 15 * MINUTE_MS;
+
+/** A signed-in diver stays signed in for half a year on that device. */
+export const DIVER_SESSION_TTL_MS = 180 * DAY_MS;
 
 /**
  * **One table of bearer capabilities, one policy row per purpose** (issue
@@ -59,6 +65,8 @@ export const CAPABILITY_PURPOSES = [
   "calendar_shop_trips",
   "waiver_link",
   "release_link",
+  "diver_sign_in",
+  "diver_session",
 ] as const;
 
 export type CapabilityPurpose = (typeof CAPABILITY_PURPOSES)[number];
@@ -95,9 +103,14 @@ export type CapabilitySubject =
  *
  * `refuse`: a row on either record stops the merge (`staff_record`), as every
  * staff credential does: authority never follows a merge.
+ *
+ * `ends`: the row stays on the merged-away record, which opens nothing once it
+ * is merged, and the merge goes ahead. A diver's own sign-in (ADR
+ * 20261125-diver-sign-in): the person signs in again, one tap, as the kept
+ * record.
  */
 type SubjectFields =
-  | { subject: "person"; merge: "follows" | "refuse" }
+  | { subject: "person"; merge: "follows" | "refuse" | "ends" }
   | { subject: Exclude<CapabilitySubject, "person">; merge?: never };
 
 /**
@@ -174,7 +187,9 @@ export type CapabilityPolicy =
   | (CapabilityPolicyFields & ReissueFields & { use: "once"; lifetime: "never" })
   | (CapabilityPolicyFields & ReissueFields & { use: "once"; lifetime: "expires"; ttlMs: number })
   | (CapabilityPolicyFields & { use: "idempotent"; lifetime: "never"; reissue: "adds" })
-  | (CapabilityPolicyFields & ReissueFields & { use: "reusable"; lifetime: "never" });
+  | (CapabilityPolicyFields & ReissueFields & { use: "reusable"; lifetime: "never" })
+  | (CapabilityPolicyFields &
+      ReissueFields & { use: "reusable"; lifetime: "expires"; ttlMs: number });
 
 export const CAPABILITY_POLICY = {
   // One anytime interest (the last-minute list). Opening it closes that
@@ -379,6 +394,34 @@ export const CAPABILITY_POLICY = {
     reissue: "adds",
     use: "once",
   },
+  // A diver's emailed sign-in link for one shop (ADR 20261125-diver-sign-in):
+  // it names the person row in that shop whose verified email it went to.
+  // Spent by the tap that starts a `diver_session`; a second request adds a
+  // link and leaves the first working, so whichever email the diver opens
+  // signs them in. Short, as the staff link is.
+  diver_sign_in: {
+    subject: "person",
+    merge: "ends",
+    scope: "shop",
+    lifetime: "expires",
+    ttlMs: DIVER_SIGN_IN_TTL_MS,
+    reissue: "adds",
+    use: "once",
+  },
+  // The signed-in diver's session in one shop, held in an HttpOnly cookie
+  // scoped to that shop's `/s/<slug>` pages. Opened on every request and
+  // never spent; each device adds one. It reads only that person's own rows
+  // in that shop and never reaches `/shop/**`. Sign out revokes it; an erasure
+  // deletes it; a merge or a delete leaves it opening nothing.
+  diver_session: {
+    subject: "person",
+    merge: "ends",
+    scope: "shop",
+    lifetime: "expires",
+    ttlMs: DIVER_SESSION_TTL_MS,
+    reissue: "adds",
+    use: "reusable",
+  },
 } as const satisfies Record<CapabilityPurpose, CapabilityPolicy>;
 
 /** The subject a purpose's rows name. */
@@ -398,9 +441,10 @@ export function platformPurposes(): CapabilityPurpose[] {
 
 /**
  * The `person` purposes a diver merge treats as `merge` says: moved to the
- * kept record (`follows`) or refused as a staff credential (`refuse`).
+ * kept record (`follows`), refused as a staff credential (`refuse`), or left
+ * on the merged-away record, which opens nothing (`ends`).
  */
-export function personPurposesThatMerge(merge: "follows" | "refuse"): CapabilityPurpose[] {
+export function personPurposesThatMerge(merge: "follows" | "refuse" | "ends"): CapabilityPurpose[] {
   return CAPABILITY_PURPOSES.filter((purpose) => {
     const policy: CapabilityPolicy = CAPABILITY_POLICY[purpose];
     return policy.subject === "person" && policy.merge === merge;

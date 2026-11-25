@@ -876,6 +876,24 @@ const magicSignInRequestSchema = z.object({
   timezone: z.string().trim().min(1).max(100),
 });
 
+/**
+ * A diver's emailed sign-in link for one shop (ADR 20261125-diver-sign-in):
+ * sent to the address on the person row it names, never to one typed.
+ */
+const diverSignInRequestSchema = z.object({
+  kind: z.literal("diver_sign_in_request"),
+  personId: z.uuid(),
+  tokenId: z.uuid(),
+  shopId: z.uuid(),
+  to: emailAddressSchema,
+  locale: localeSchema,
+  diverName: z.string().trim().min(1).max(120),
+  shopName: z.string().trim().min(1).max(120),
+  signInUrl: z.url().max(2_000),
+  expiresAt: z.date(),
+  timezone: z.string().trim().min(1).max(100),
+});
+
 const passwordResetRequestSchema = z.object({
   kind: z.literal("password_reset_request"),
   userAccountId: z.uuid(),
@@ -2222,6 +2240,7 @@ export const notificationSchema = z
     addressConfirmationSchema,
     passwordResetRequestSchema,
     magicSignInRequestSchema,
+    diverSignInRequestSchema,
     passwordChangedSchema,
     staffInviteSchema,
     checkoutRecoverySchema,
@@ -2514,6 +2533,8 @@ export function notificationIdempotencyKey(notification: Notification): string {
       return `${ADDRESS_CONFIRMATION_KEY_PREFIX[notification.purpose]}/${notification.tokenId}`;
     case "magic_sign_in_request":
       return `magic-sign-in-request/${notification.tokenId}`;
+    case "diver_sign_in_request":
+      return `diver-sign-in-request/${notification.tokenId}`;
     case "password_reset_request":
       return `password-reset-request/${notification.tokenId}`;
     case "staff_invite":

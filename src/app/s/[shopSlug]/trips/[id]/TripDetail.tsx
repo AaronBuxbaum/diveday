@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { signOutDiverAction } from "@/app/actions/diver-sign-out";
 import { FlashParams } from "@/components/FlashParams";
 import { JsonLd } from "@/components/JsonLd";
 import { PhoneFootBar } from "@/components/PhoneFootBar";
@@ -6,12 +7,14 @@ import { ScrollToHash } from "@/components/ScrollToHash";
 import { TripChangeLedger } from "@/components/TripChangeLedger";
 import { getDb } from "@/db/client";
 import { checkoutMode } from "@/db/stripe-accounts";
+import type { KnownDiver } from "@/features/bookings/booking-handoff";
 import { connectionForRoute } from "@/features/platform/render-connection";
 import { shopBySlugCached } from "@/features/platform/shops-cached";
 import { assignedPublicStaffProfiles } from "@/features/public-site/public-staff-profiles";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
-import { diverTranslator } from "@/i18n/messages";
+import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import { requestLocale, requestReaderUnits } from "@/i18n/request";
+import type { DiverLocale } from "@/i18n/settings";
 import { auth } from "@/lib/auth";
 import { nowDate } from "@/lib/clock";
 import { perDiverBookingPriceCents } from "@/lib/courses";
@@ -60,6 +63,7 @@ import { bookingFormTrip, readTripPage } from "./_lib/page-reads";
 import { publicChangeEvents } from "./_lib/public-change-events";
 import { publicForecast } from "./_lib/public-forecast";
 import { requirementSentenceFor } from "./_lib/requirement-sentence";
+import { readSignedInBooker } from "./_lib/signed-in-diver";
 import { offerHandoff } from "./actions";
 
 // The booking form and its sibling notices are Client Components, so the
@@ -217,12 +221,6 @@ export async function TripDetailPage({
   }
   // Public conditions off drops only the automated outlook (`publicForecast`).
   const { crewPrediction, automatedForecast } = publicForecast(shop, trip);
-  const knownDiverPanel = knownDiverPanelFor(knownDiver, t, {
-    handoff: handoffToken,
-    blankHref: `${publicTripPath(shopSlug, tripId)}#book`,
-    locale,
-    timeZone: shop.timezone,
-  });
   const diveBriefings = dayBriefings(tripDives, briefing.extras, t);
   // The dock-day rhythm's full run stays on the thread the diver reaches after
   // booking (ADR 20260827-the-divers-thread, decision 2); "The day" carries its
@@ -246,7 +244,9 @@ export async function TripDetailPage({
   // booking gate (src/lib/trip-admission.ts) — repeating the site's demand here
   // would read as a bar on the very students the course exists to create.
   const combinedRequirement = trip.course ? null : unionRequirements(requirement, siteRequirement);
-  const requirementSentence = requirementSentenceFor(combinedRequirement, t, locale, knownDiver);
+  const skip = isEmbed || confirmed || waitlistConfirmation;
+  const facts = { knownDiver, handoffToken, skip, shop, trip, now, t, locale };
+  const booker = await bookerPanel(db, facts, combinedRequirement);
 
   const inPast = trip.startsAt.getTime() <= now.getTime();
   const logEntry = inPast ? undefined : { startsAt: trip.startsAt, isCourse: !!trip.course };
@@ -324,7 +324,7 @@ export async function TripDetailPage({
           status={inPast ? "sailed" : full ? "full" : null}
           minimumSeats={minimumSeats}
           conditionsLine={conditions(true)}
-          requirementSentence={requirementSentence}
+          requirementSentence={booker.requirementSentence}
           briefings={diveBriefings}
           profile={profile}
           bearer={Boolean(bookingToken || interestId || handoffParam)}
@@ -397,7 +397,7 @@ export async function TripDetailPage({
                 errorMessage={errorMessage}
                 alternatives={alternatives}
                 offerWaitlist={shop.waitlistEnabled}
-                requirement={requirementSentence}
+                requirement={booker.requirementSentence}
                 terms={<BookingFinePrint shop={shop} trip={trip} locale={locale} />}
               />
             ) : (
@@ -427,8 +427,9 @@ export async function TripDetailPage({
                   balanceDueAt: trip.startsAt,
                   terms: <BookingFinePrint shop={shop} trip={trip} locale={locale} />,
                   junior: juniorFacts(trip, diveBriefings, readerUnits.depth ?? shop.depthUnit),
-                  knownDiver: knownDiverPanel,
-                  requirement: requirementSentence,
+                  knownDiver: booker.knownDiverPanel,
+                  tripCredit: booker.tripCredit,
+                  requirement: booker.requirementSentence,
                   offerHandoff: offerHandoff.bind(null, tripRef),
                 }}
               />
@@ -492,4 +493,51 @@ export async function TripDetailPage({
       </main>
     </DiverIntlProvider>
   );
+}
+
+/**
+ * Who the booking form starts from: a handoff's diver, else the signed-in
+ * diver's own record with their trip credit offer and a sign-out (ADR
+ * 20261125-diver-sign-in), and the trip's requirement worded against them. A
+ * handoff, when there is one, already said who.
+ */
+async function bookerPanel(
+  db: Parameters<typeof readSignedInBooker>[0],
+  input: {
+    knownDiver: KnownDiver | null;
+    handoffToken: string | null;
+    skip: unknown;
+    shop: Parameters<typeof readSignedInBooker>[1]["shop"] & { slug: string; timezone: string };
+    trip: Parameters<typeof readSignedInBooker>[1]["trip"] & { id: string };
+    now: Date;
+    t: DiverTranslator;
+    locale: DiverLocale;
+  },
+  requirement: Parameters<typeof requirementSentenceFor>[0],
+) {
+  const { knownDiver, t } = input;
+  const signedIn =
+    knownDiver || input.skip
+      ? null
+      : await readSignedInBooker(db, { shop: input.shop, trip: input.trip, now: input.now });
+  const panelDiver = knownDiver ?? (signedIn ? { ...signedIn.known, bookingId: "" } : null);
+  const knownDiverPanel = knownDiverPanelFor(panelDiver, t, {
+    handoff: knownDiver ? input.handoffToken : null,
+    blankHref: `${publicTripPath(input.shop.slug, input.trip.id)}#book`,
+    locale: input.locale,
+    timeZone: input.shop.timezone,
+  });
+  return {
+    knownDiverPanel:
+      knownDiverPanel && signedIn
+        ? { ...knownDiverPanel, signOut: signOutDiverAction.bind(null, input.shop.slug) }
+        : knownDiverPanel,
+    tripCredit: signedIn?.tripCredit ?? null,
+    requirementSentence: requirementSentenceFor(
+      requirement,
+      t,
+      input.locale,
+      knownDiver ?? signedIn?.known ?? null,
+    ),
+  };
 }

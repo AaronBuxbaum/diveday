@@ -64,7 +64,9 @@
     "deskHours": "Desk open {opens} to {closes}",
     "whatsApp": "Message us on WhatsApp",
     "languageFallback": "DiveDay isn’t in {requested} yet. This page is in {shown}, the language {shop} works in.",
-    "credit": "Bookings by DiveDay"
+    "credit": "Bookings by DiveDay",
+    "signIn": "Sign in",
+    "myProfile": "My profile"
   },
   "schedule": {
     "eyebrow": "Trips",
@@ -386,7 +388,8 @@
       "ownGear": "Own gear, as of {date}",
       "sizes": "Sizes kept {date}",
       "contact": "Emergency contact on file: {name}",
-      "notYou": "Not {name}? <a>Start with a blank form</a>"
+      "notYou": "Not {name}? <a>Start with a blank form</a>",
+      "notYouSignedIn": "Not {name}? <button>Sign out</button>"
     },
     "money": {
       "summaryLabel": "Booking summary",
@@ -523,7 +526,10 @@
     "holdGroup": "Hold seats while everyone pays",
     "holdGroupNote": "Each person pays from their own link within 24 hours, or before departure if sooner. Unpaid seats go back on sale.",
     "partyExceedsSeats": "Your party has {requested} people; {remaining, plural, one {# seat is available} other {# seats are available}}.",
-    "waitlistPartyExceedsLimit": "Your party has {requested} people; this wait list accepts up to {limit}."
+    "waitlistPartyExceedsLimit": "Your party has {requested} people; this wait list accepts up to {limit}.",
+    "useTripCredit": "Use my trip credit",
+    "useTripCreditNote": "You have {balance}. This seat is {fare}.",
+    "bookWithTripCredit": "Book with trip credit"
   },
   "bookingGear": {
     "heading": "Rental gear",
@@ -5008,6 +5014,12 @@
       "body": "You requested a link to sign in to DiveDay.",
       "choose": "Sign in",
       "expiry": "This link expires at {expiresAt}. If you didn’t request it, ignore this email."
+    },
+    "diverSignIn": {
+      "subject": "Sign in to {shopName}",
+      "body": "Tap the button to sign in to {shopName}. No password needed.",
+      "choose": "Sign in",
+      "expiry": "This link works until {expiresAt}. If you didn’t ask for it, ignore this email."
     }
   },
   "brand": {
@@ -5156,5 +5168,45 @@
     "endedTitle": "This preview has ended",
     "ended": "Previews stay open for a week. Reply to the email it came in, and we’ll open it again.",
     "home": "See DiveDay"
+  },
+  "diverSignIn": {
+    "metaTitle": "Sign in",
+    "title": "Sign in",
+    "description": "We’ll email you a link. Tap it and you’re in, no password.",
+    "email": "Email",
+    "submit": "Email me a link",
+    "sentTitle": "Check your email",
+    "sent": "If {shopName} has you on file, a sign-in link is on its way. It works for 15 minutes.",
+    "tryAnother": "Use a different email",
+    "linkUnavailable": "That link was already used or has expired. Send yourself a fresh one.",
+    "confirmTitle": "Signing you in",
+    "confirm": "Continue"
+  },
+  "profile": {
+    "metaTitle": "My profile",
+    "description": "What {shopName} has on file for you.",
+    "creditHeading": "Trip credit",
+    "creditBalance": "{amount} to spend on a trip",
+    "creditGranted": "Added {date}",
+    "creditSpent": "Spent {date}",
+    "creditReturned": "Returned {date}",
+    "upcomingHeading": "Coming up",
+    "upcomingNone": "Nothing booked yet.",
+    "seeSchedule": "See the schedule",
+    "pastHeading": "Dived with us",
+    "cardsHeading": "Certifications",
+    "cardsNone": "No cards on file yet. Add yours when you book.",
+    "cardVerified": "Verified",
+    "cardPending": "Being checked",
+    "nitroxCard": "Nitrox",
+    "detailsHeading": "Your details",
+    "emailHint": "To change your email, ask the shop.",
+    "phone": "Phone",
+    "emergencyName": "Emergency contact",
+    "emergencyPhone": "Their phone",
+    "save": "Save",
+    "saved": "Saved.",
+    "emergencyPair": "Add both a name and a phone for your emergency contact, or leave both empty.",
+    "signOut": "Sign out"
   }
 }

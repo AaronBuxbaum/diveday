@@ -12,6 +12,11 @@ export type KnownDiverPanelProps = {
   blankHref: string;
   /** The handoff itself, so the booking that follows consumes it. */
   handoff: string;
+  /**
+   * Set when the panel speaks for a signed-in diver rather than a handoff (ADR
+   * 20261125-diver-sign-in): the way out is signing out, not a blank form.
+   */
+  signOut?: () => Promise<void>;
 };
 
 /**
@@ -26,7 +31,13 @@ export type KnownDiverPanelProps = {
  * A cold visitor never sees this component: the page renders it only off a
  * verified handoff, and the composition test pins that.
  */
-export function KnownDiverPanel({ name, lines, blankHref, handoff }: KnownDiverPanelProps) {
+export function KnownDiverPanel({
+  name,
+  lines,
+  blankHref,
+  handoff,
+  signOut,
+}: KnownDiverPanelProps) {
   const t = useTranslations("booking");
   return (
     <div className="rounded-inset border border-border bg-surface-sunken/60 px-4 py-3 text-sm">
@@ -39,16 +50,34 @@ export function KnownDiverPanel({ name, lines, blankHref, handoff }: KnownDiverP
           ))}
         </ul>
       ) : null}
-      <p className="mt-2 text-muted">
-        {t.rich("knownDiver.notYou", {
-          name,
-          a: (chunks) => (
-            <Link href={blankHref} className="font-medium text-primary hover:underline">
-              {chunks}
-            </Link>
-          ),
-        })}
-      </p>
+      {signOut ? (
+        <p className="mt-2 text-muted">
+          {t.rich("knownDiver.notYouSignedIn", {
+            name,
+            button: (chunks) => (
+              <button
+                type="submit"
+                formAction={signOut}
+                formNoValidate
+                className="font-medium text-primary hover:underline"
+              >
+                {chunks}
+              </button>
+            ),
+          })}
+        </p>
+      ) : (
+        <p className="mt-2 text-muted">
+          {t.rich("knownDiver.notYou", {
+            name,
+            a: (chunks) => (
+              <Link href={blankHref} className="font-medium text-primary hover:underline">
+                {chunks}
+              </Link>
+            ),
+          })}
+        </p>
+      )}
     </div>
   );
 }

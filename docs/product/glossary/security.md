@@ -16,6 +16,13 @@
   since revoked, never satisfies it. Being signed in is not being stepped up; **and step-up is
   only demanded of an account that has enabled two-factor or registered a passkey**, so it is a control a staff member
   opts into rather than a floor under every account.
+- **Diver sign-in** — a diver signs in to one shop's public pages with a link emailed to the
+  address on their person row in that shop: one tap, no password. It leaves a **diver session**, a
+  `diver_session` capability held in the `diveday_diver` cookie scoped to `/s/<slug>`, which reads
+  only that person's own rows in that shop (My profile, the booking form's prefill, their trip
+  credit) and never opens `/shop/**`. Not a staff account and not a booking link; it lasts 180
+  days, and sign out, a delete, a merge or an erasure ends it (ADR
+  [20261125-diver-sign-in](../../architecture/decisions/20261125-diver-sign-in.md)).
 - **Passkey** — a staff-only public-key credential, unlocked by the authenticator’s own face,
   fingerprint or device-PIN check. DiveDay stores only the public key and signature counter; the
   private key remains on the authenticator. A passkey starts the same sign-in flow as a password,

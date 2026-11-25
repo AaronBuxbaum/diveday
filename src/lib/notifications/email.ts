@@ -1705,6 +1705,34 @@ export function magicSignInEmail(input: MagicSignInEmailInput): NotificationEmai
   };
 }
 
+type DiverSignInEmailInput = {
+  locale: DiverLocale;
+  diverName: string;
+  shopName: string;
+  signInUrl: string;
+  expiresAt: Date;
+  timezone: string;
+};
+
+/** A diver's one-tap sign-in to one shop's pages (ADR 20261125-diver-sign-in). */
+export function diverSignInEmail(input: DiverSignInEmailInput): NotificationEmail {
+  const t = diverTranslator(input.locale);
+  const greeting = notificationGreeting(t, input.diverName);
+  const expiresAt = formatDateTimeTz(input.expiresAt, input.locale, input.timezone);
+  const body = t("notifications.diverSignIn.body", { shopName: input.shopName });
+  const bodyHtml = t("notifications.diverSignIn.body", {
+    shopName: `<strong>${escapeHtml(input.shopName)}</strong>`,
+  });
+  const choose = t("notifications.diverSignIn.choose");
+  const expiry = t("notifications.diverSignIn.expiry", { expiresAt });
+
+  return {
+    subject: t("notifications.diverSignIn.subject", { shopName: input.shopName }),
+    text: `${greeting.text}\n\n${body}\n\n${choose}:\n${input.signInUrl}\n\n${expiry}\n`,
+    html: `<p>${greeting.html}</p><p>${bodyHtml}</p>${emailButton(input.signInUrl, choose)}<p>${t("notifications.diverSignIn.expiry", { expiresAt: escapeHtml(expiresAt) })}</p>`,
+  };
+}
+
 type PasswordResetEmailInput = {
   locale: DiverLocale;
   ownerName: string;

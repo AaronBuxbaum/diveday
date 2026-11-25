@@ -375,7 +375,7 @@ export const PRUNE_ARMS = {
   capabilities: {
     from: capabilities,
     id: capabilities.id,
-    clock: sql`case when ${capabilities.purpose} = 'weekly_digest_unsubscribe' then ${capabilities.issuedAt} + make_interval(days => ${sql.raw(String(RETENTION_DAYS.weekly_digest_sends - RETENTION_DAYS.capabilities))}) when ${capabilities.userAccountId} is not null then ${capabilities.expiresAt} + make_interval(days => ${sql.raw(String(ACCOUNT_TOKEN_RETENTION_DAYS - RETENTION_DAYS.capabilities))}) else ${capabilities.issuedAt} end`,
+    clock: sql`case when ${capabilities.purpose} = 'weekly_digest_unsubscribe' then ${capabilities.issuedAt} + make_interval(days => ${sql.raw(String(RETENTION_DAYS.weekly_digest_sends - RETENTION_DAYS.capabilities))}) when ${capabilities.userAccountId} is not null or ${capabilities.purpose} in ('diver_sign_in', 'diver_session') then ${capabilities.expiresAt} + make_interval(days => ${sql.raw(String(ACCOUNT_TOKEN_RETENTION_DAYS - RETENTION_DAYS.capabilities))}) else ${capabilities.issuedAt} end`,
     extraWhere: inArray(capabilities.purpose, [
       ...purposesNaming("shop_address"),
       ...purposesNaming("user_account"),
@@ -384,6 +384,10 @@ export const PRUNE_ARMS = {
       // from its mint.
       ...purposesNaming("waiver_record"),
       "weekly_digest_unsubscribe",
+      // A diver's sign-in link and session (ADR 20261125-diver-sign-in), on
+      // the account tokens' clock: 90 days after each stopped working.
+      "diver_sign_in",
+      "diver_session",
     ]),
   },
   // Booking links (H-20260916-far-deletion-promise-reach, issue #1726), on the same clock as the two token

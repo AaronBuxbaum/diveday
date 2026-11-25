@@ -577,8 +577,15 @@ describe("a capability and the person it opens", () => {
       "calendar_assignments",
       "calendar_shop_trips",
     ]);
+    // A diver's own sign-in stays on the merged-away record, which opens
+    // nothing (ADR 20261125-diver-sign-in): the diver signs in again.
+    expect(personPurposesThatMerge("ends")).toEqual(["diver_sign_in", "diver_session"]);
     expect(
-      [...personPurposesThatMerge("follows"), ...personPurposesThatMerge("refuse")].sort(),
+      [
+        ...personPurposesThatMerge("follows"),
+        ...personPurposesThatMerge("refuse"),
+        ...personPurposesThatMerge("ends"),
+      ].sort(),
     ).toEqual([...personPurposes].sort());
   });
 

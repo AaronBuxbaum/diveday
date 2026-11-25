@@ -4,6 +4,7 @@ import Link from "next/link";
 import { connection } from "next/server";
 import { enterPreviewAction } from "@/app/actions/demo";
 import { EntryDone, EntryShell } from "@/components/account/EntryShell";
+import { OpenOnArrival } from "@/components/OpenOnArrival";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
@@ -18,7 +19,6 @@ import { isQuietDemoDevice, QUIET_DEMO_COOKIE } from "@/features/demo/quiet-demo
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { nowDate } from "@/lib/clock";
-import { OpenOnArrival } from "./_components/OpenOnArrival";
 
 export const metadata: Metadata = {
   title: "Your preview — DiveDay",
