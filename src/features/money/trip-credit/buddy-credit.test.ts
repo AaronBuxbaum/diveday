@@ -134,6 +134,23 @@ describe("buddy credit", () => {
     expect(await referralEntries(second.shop.id)).toHaveLength(1);
   });
 
+  it("does not let a skipped referral mask a later shop's eligible referral", async () => {
+    const first = await referral();
+    const second = await referral();
+    await first.db.update(shops).set({ currency: "USD" }).where(eq(shops.id, first.shop.id));
+    await first.db
+      .update(trips)
+      .set({ endsAt: new Date(first.past.endsAt.getTime() - 60_000) })
+      .where(eq(trips.id, first.past.id));
+    expect(await grantBuddyCredits(first.db, { now: nowDate() })).toEqual({
+      granted: 1,
+      busy: 0,
+      skipped: 1,
+    });
+    expect(await referralEntries(first.shop.id)).toHaveLength(0);
+    expect(await referralEntries(second.shop.id)).toHaveLength(1);
+  });
+
   it("skips a referral when the shop currency cannot be written to the ledger", async () => {
     const { db, shop } = await referral();
     await db.update(shops).set({ currency: "USD" }).where(eq(shops.id, shop.id));
