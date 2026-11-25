@@ -106,6 +106,18 @@ describe("buddy credit", () => {
     expect((await readTripCredit(db, shop.id, referrerId, "usd")).balanceCents).toBe(1);
   });
 
+  it("rechecks each candidate against its own booking when multiple shops have referrals", async () => {
+    const first = await referral();
+    const second = await referral();
+    expect(await grantBuddyCredits(first.db, { now: nowDate() })).toEqual({
+      granted: 2,
+      busy: 0,
+      skipped: 0,
+    });
+    expect(await referralEntries(first.shop.id)).toHaveLength(1);
+    expect(await referralEntries(second.shop.id)).toHaveLength(1);
+  });
+
   it("skips a referral when the shop currency cannot be written to the ledger", async () => {
     const { db, shop } = await referral();
     await db.update(shops).set({ currency: "USD" }).where(eq(shops.id, shop.id));
