@@ -218,9 +218,21 @@ function SortedLines({ recap, time, names, t }: Words & { recap: HowItWent }) {
           })}
         </li>
       ))}
-      {recap.turnedAway.map((row) => (
-        <li key={`away-${row.name}`}>
-          {t("howItWent.sorted.turnedAway", { name: row.name, reason: row.reason ?? "other" })}
+      {recap.turnedAway.map((row, index) => (
+        <li
+          // biome-ignore lint/suspicious/noArrayIndexKey: two divers can share a name and the list is static
+          key={`away-${index}-${row.name}`}
+          {...(row.thenBoarded && row.reason === "medical" ? { "data-print-critical": true } : {})}
+        >
+          {t(
+            row.thenBoarded
+              ? "howItWent.sorted.turnedAwayThenBoarded"
+              : "howItWent.sorted.turnedAway",
+            {
+              name: row.name,
+              reason: row.reason ?? "other",
+            },
+          )}
         </li>
       ))}
       {recap.boardedBlocked.map((row) => (

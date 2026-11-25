@@ -422,4 +422,56 @@ describe("seatsTurnedAway", () => {
       { bookingId: "b-priya", fullName: "Priya Sharma", reason: null },
     ]);
   });
+
+  it("names a seat the desk turned away and the crew then boarded, with the original reason", () => {
+    const boarded = {
+      ...priya,
+      rollCall: [
+        {
+          checkpoint: "departure",
+          label: "boarded",
+          occurredAt: "2026-11-28T15:00:00Z",
+          recordedByName: "Sam",
+        },
+      ],
+    } as unknown as IncidentRosterEntry;
+    const refused = new Map([
+      ["b-priya", { reason: "card" as const, at: new Date("2026-11-28T14:00:00Z") }],
+    ]);
+    expect(
+      seatsTurnedAway([], [boarded, sam], [{ bookingId: "b-priya", turnedAway: false }], refused),
+    ).toEqual([
+      { bookingId: "b-priya", fullName: "Priya Sharma", reason: "card", thenBoarded: true },
+    ]);
+    // Boarded before the refusal, not after: not listed.
+    expect(
+      seatsTurnedAway(
+        [],
+        [
+          {
+            ...boarded,
+            rollCall: [
+              {
+                checkpoint: "departure",
+                label: "boarded",
+                occurredAt: "2026-11-28T13:00:00Z",
+                recordedByName: "Sam",
+              },
+            ],
+          } as unknown as IncidentRosterEntry,
+        ],
+        [],
+        refused,
+      ),
+    ).toEqual([]);
+    // Refused and then reinstated by the desk, never boarded: not listed.
+    expect(
+      seatsTurnedAway(
+        [],
+        [{ ...priya, rollCall: [] } as unknown as IncidentRosterEntry],
+        [],
+        refused,
+      ),
+    ).toEqual([]);
+  });
 });

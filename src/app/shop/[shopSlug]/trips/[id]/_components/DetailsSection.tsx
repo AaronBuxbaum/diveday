@@ -296,7 +296,7 @@ export function DetailsSection({
   const priceStep = digits === 0 ? "1" : `0.${"0".repeat(digits - 1)}1`;
   const pricePlaceholder = formatMoneyCents(0, currency, locale);
   return (
-    <form action={action} encType="multipart/form-data" className="flex flex-col gap-5 pt-1">
+    <form action={action} className="flex flex-col gap-5 pt-1">
       {section === "departure" ? (
         <>
           <TitleAndDescription trip={trip} assist={context.descriptionAssist} t={t} />

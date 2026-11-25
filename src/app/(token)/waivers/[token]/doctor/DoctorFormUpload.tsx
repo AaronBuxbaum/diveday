@@ -64,11 +64,7 @@ export function DoctorFormUpload({
 
   return (
     <>
-      <form
-        action={formAction}
-        encType="multipart/form-data"
-        className="mt-4 flex flex-wrap items-end gap-3"
-      >
+      <form action={formAction} className="mt-4 flex flex-wrap items-end gap-3">
         <Field label={copy.label} error={refusal} htmlFor="doctorForm" className="min-w-56">
           {/* The clearance control's file picker, for the same reason: a bare
             `<input type="file">` speaks the device's language, not the
