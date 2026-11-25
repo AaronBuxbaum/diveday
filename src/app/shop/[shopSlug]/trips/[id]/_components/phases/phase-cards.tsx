@@ -1,7 +1,4 @@
 import Link from "next/link";
-import type { ReactNode } from "react";
-import { buttonClass } from "@/components/ui/button";
-import { sectionCardClass } from "@/components/ui/card";
 import type { GearToPack } from "@/features/trips/trip-prep";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { DepthUnit } from "@/lib/depth-units";
@@ -10,27 +7,11 @@ import { cachedListFormat } from "@/lib/intl-cache";
 import type { AutomatedMarineForecast } from "@/lib/marine-forecast";
 import type { TemperatureUnit } from "@/lib/temperature-units";
 import { ConditionsOutlook } from "../ConditionsSection";
-
-const LINK = buttonClass({ variant: "link", size: "sm", flush: true });
-const HEADING = "font-semibold";
+import { type Fact, FactList, QUIET_ACTION, TripCard } from "../trip-ink";
 
 /** "Sal, Ana and Joe", in the reader's language. */
 function listOf(locale: string, items: readonly string[]): string {
   return cachedListFormat(locale, { style: "long", type: "conjunction" }).format(items);
-}
-
-/** A labelled list of short facts: the label column, then the value. */
-function FactList({ rows }: { rows: { key: string; label: string; value: ReactNode }[] }) {
-  return (
-    <dl className="grid grid-cols-[minmax(5.5rem,auto)_minmax(0,1fr)] items-baseline gap-x-6 gap-y-2 text-sm">
-      {rows.map((row) => (
-        <div key={row.key} className="contents">
-          <dt className="text-muted">{row.label}</dt>
-          <dd className="[overflow-wrap:anywhere]">{row.value}</dd>
-        </div>
-      ))}
-    </dl>
-  );
 }
 
 /**
@@ -71,7 +52,7 @@ export function TripFactsLine({
   ];
   const unset = facts.filter((fact) => !fact.value);
   return (
-    <dl data-trip-facts className="flex max-w-3xl flex-wrap items-baseline gap-x-6 gap-y-1 text-sm">
+    <dl data-trip-facts className="flex flex-wrap items-baseline gap-x-6 gap-y-1 text-sm">
       {facts
         .filter((fact) => fact.value)
         .map((fact) => (
@@ -81,7 +62,7 @@ export function TripFactsLine({
               <Link
                 href={editHref(fact.section)}
                 aria-label={`${t("trips.clock.filling.edit")} · ${fact.label}: ${fact.value}`}
-                className="hover:underline focus-visible:underline"
+                className={QUIET_ACTION}
               >
                 {fact.value}
               </Link>
@@ -92,7 +73,11 @@ export function TripFactsLine({
         <div>
           {/* A term-less group: the link's words are the term. */}
           <dd>
-            <Link href={editHref(unset[0].section)} className={LINK} data-trip-facts-unset="">
+            <Link
+              href={editHref(unset[0].section)}
+              className={QUIET_ACTION}
+              data-trip-facts-unset=""
+            >
               {t("trips.clock.filling.addFacts", {
                 facts: listOf(
                   locale,
@@ -126,7 +111,7 @@ export function GearToPackCard({
   locale: string;
   t: StaffTranslator;
 }) {
-  const rows: { key: string; label: string; value: ReactNode }[] = [
+  const rows: Fact[] = [
     {
       key: "tanks",
       label: t("trips.clock.ready.tanks"),
@@ -184,28 +169,26 @@ export function GearToPackCard({
     });
   }
   return (
-    <section
-      aria-labelledby="gear-to-pack-heading"
-      data-gear-to-pack
-      className={sectionCardClass({ className: "space-y-3" })}
-    >
-      <div className="flex flex-wrap items-baseline justify-between gap-x-4">
-        <h2 id="gear-to-pack-heading" className={HEADING}>
-          {t("trips.clock.ready.gearHeading")}
-        </h2>
-        <span className="flex flex-wrap gap-x-4">
+    <TripCard
+      heading={t("trips.clock.ready.gearHeading")}
+      headingId="gear-to-pack-heading"
+      data={{ "data-gear-to-pack": "" }}
+      className="pb-1"
+      aside={
+        <>
           {buddyTeamsHref ? (
-            <Link href={buddyTeamsHref} className={LINK}>
+            <Link href={buddyTeamsHref} className={QUIET_ACTION}>
               {t("trips.clock.ready.buddyTeams")}
             </Link>
           ) : null}
-          <Link href={prepHref} className={LINK}>
+          <Link href={prepHref} className={QUIET_ACTION}>
             {t("trips.clock.ready.pullList")}
           </Link>
-        </span>
-      </div>
-      <FactList rows={rows} />
-    </section>
+        </>
+      }
+    >
+      <FactList facts={rows} inset />
+    </TripCard>
   );
 }
 
@@ -237,14 +220,12 @@ export async function TomorrowsWaterCard({
   const [forecast, lines] = await Promise.all([automatedForecast, tideLines]);
   const answered = Boolean(forecast) || lines.length > 0;
   return (
-    <section
-      aria-labelledby="tomorrows-water-heading"
-      data-tomorrows-water
-      className={sectionCardClass({ className: "space-y-2" })}
+    <TripCard
+      heading={t("trips.clock.ready.waterHeading")}
+      headingId="tomorrows-water-heading"
+      data={{ "data-tomorrows-water": "" }}
+      body
     >
-      <h2 id="tomorrows-water-heading" className={HEADING}>
-        {t("trips.clock.ready.waterHeading")}
-      </h2>
       {answered ? (
         <ConditionsOutlook
           locale={locale}
@@ -258,20 +239,18 @@ export async function TomorrowsWaterCard({
         <p className="text-sm text-muted">{t("trips.clock.ready.noForecast")}</p>
       )}
       {callOffHref ? (
-        <Link
-          href={callOffHref}
-          className={buttonClass({ variant: "link", size: "sm", flush: true })}
-        >
+        <Link href={callOffHref} className={QUIET_ACTION}>
           {t("trips.clock.ready.callOff")}
         </Link>
       ) : null}
-    </section>
+    </TripCard>
   );
 }
 
 /**
  * **Check-in's quiet line** (drawing `22-clock-checkin`): gear, crew, the
- * water, and what comes next, one line each at the foot, nothing to do.
+ * water, and what comes next, one fact row each in a card at the foot,
+ * nothing to do.
  */
 export function CheckInQuietLine({
   rentalSets,
@@ -286,7 +265,7 @@ export function CheckInQuietLine({
   rollCall: { at: Date; href: string; locale: string; timeZone: string };
   t: StaffTranslator;
 }) {
-  const rows: { key: string; label: string; value: ReactNode }[] = [
+  const rows: Fact[] = [
     {
       key: "gear",
       label: t("trips.clock.quiet.gear"),
@@ -306,7 +285,7 @@ export function CheckInQuietLine({
     key: "next",
     label: t("trips.clock.quiet.next"),
     value: (
-      <Link href={rollCall.href} className={LINK}>
+      <Link href={rollCall.href} className={QUIET_ACTION}>
         {t("trips.clock.quiet.rollCallAt", {
           time: formatTime(rollCall.at, rollCall.locale, rollCall.timeZone),
         })}
@@ -314,8 +293,8 @@ export function CheckInQuietLine({
     ),
   });
   return (
-    <section data-quiet-line className="border-t border-border pt-4">
-      <FactList rows={rows} />
-    </section>
+    <TripCard data={{ "data-quiet-line": "" }}>
+      <FactList facts={rows} inset />
+    </TripCard>
   );
 }
