@@ -1,4 +1,4 @@
-import { and, eq, isNotNull } from "drizzle-orm";
+import { and, asc, eq, isNotNull } from "drizzle-orm";
 import { canPersonExportIncidentRecord } from "@/db/authz";
 import type { AppDb } from "@/db/client";
 import { getTripManifests, listCountedAboardBlockedByTrip } from "@/db/manifests";
@@ -44,9 +44,13 @@ async function refusalsKept(
   db: AppDb,
   shopId: string,
   tripId: string,
-): Promise<Map<string, TurnAwayReason | null>> {
+): Promise<Map<string, { reason: TurnAwayReason | null; at: Date }>> {
   const rows = await db
-    .select({ bookingId: activityEvents.bookingId, params: activityEvents.params })
+    .select({
+      bookingId: activityEvents.bookingId,
+      params: activityEvents.params,
+      occurredAt: activityEvents.occurredAt,
+    })
     .from(activityEvents)
     // diveday:allow-staff-events: the owner's own account of the departure reads the desk's refusals.
     .where(
@@ -56,12 +60,17 @@ async function refusalsKept(
         eq(activityEvents.code, "booking_turned_away"),
         isNotNull(activityEvents.bookingId),
       ),
-    );
-  const kept = new Map<string, TurnAwayReason | null>();
+    )
+    // The latest refusal wins when a seat was refused twice.
+    .orderBy(asc(activityEvents.occurredAt), asc(activityEvents.seq));
+  const kept = new Map<string, { reason: TurnAwayReason | null; at: Date }>();
   for (const row of rows) {
     if (!row.bookingId) continue;
     const reason = (row.params as { reason?: unknown } | null)?.reason;
-    kept.set(row.bookingId, typeof reason === "string" && isTurnAwayReason(reason) ? reason : null);
+    kept.set(row.bookingId, {
+      reason: typeof reason === "string" && isTurnAwayReason(reason) ? reason : null,
+      at: row.occurredAt,
+    });
   }
   return kept;
 }

@@ -339,7 +339,7 @@ export function seatsTurnedAway(
     turnedAway?: boolean;
     turnedAwayReason?: TurnAwayReason | null;
   }[],
-  refused: ReadonlyMap<string, TurnAwayReason | null> = new Map(),
+  refused: ReadonlyMap<string, { reason: TurnAwayReason | null; at: Date }> = new Map(),
 ): (IncidentTurnedAwayEntry & { thenBoarded?: true })[] {
   const named = new Set(logged.map((seat) => seat.bookingId));
   const now = new Map<string, TurnAwayReason | null>();
@@ -359,12 +359,17 @@ export function seatsTurnedAway(
     } else if (
       !named.has(diver.bookingId) &&
       refused.has(diver.bookingId) &&
-      diver.rollCall.some((result) => result.label === "boarded")
+      diver.rollCall.some(
+        (result) =>
+          result.label === "boarded" &&
+          result.occurredAt !== null &&
+          new Date(result.occurredAt) >= (refused.get(diver.bookingId)?.at ?? new Date(0)),
+      )
     ) {
       out.push({
         bookingId: diver.bookingId,
         fullName: diver.fullName,
-        reason: refused.get(diver.bookingId) ?? null,
+        reason: refused.get(diver.bookingId)?.reason ?? null,
         thenBoarded: true,
       });
     }
