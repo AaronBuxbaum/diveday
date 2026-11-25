@@ -1,0 +1,81 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "915c04af-7d9c-4ebc-9e39-05104aebe221",
+  "prevIds": [
+    "d2e5ce50-7340-4710-9817-38f96cc6c76e"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "demo_previews",
+        "departure_times"
+      ],
+      "writes": [
+        "s|col|public.demo_previews.departure_times",
+        "n|col|public.demo_previews.departure_times",
+        "e|col|public.demo_previews.departure_times"
+      ],
+      "reads": [
+        "n|tbl|public.demo_previews",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "demo_previews",
+        "boat_names"
+      ],
+      "writes": [
+        "s|col|public.demo_previews.boat_names",
+        "n|col|public.demo_previews.boat_names",
+        "e|col|public.demo_previews.boat_names"
+      ],
+      "reads": [
+        "n|tbl|public.demo_previews",
+        "n|sch|public"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "demo_previews",
+        "name": "departure_times",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 1,
+        "default": "'{}'",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "demo_previews",
+        "name": "boat_names",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 1,
+        "default": "'{}'",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    }
+  ]
+}
