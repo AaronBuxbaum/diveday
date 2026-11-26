@@ -25,7 +25,7 @@ pleasant it felt.
    down, ask why, and resist the second question that is secretly an argument.
 4. **Shut up after a question.** The useful sentence is usually the second one they say.
 5. **Never claim a customer, a count, or a pattern.** DiveDay has none. If asked "who else uses it?",
-   the honest answer is "nobody yet — that's why I'm calling you first, and why the pilot is free."
+   the honest answer is "nobody yet — that's why I'm calling you first, and why trying it is free."
    That answer is also the offer.
 6. **Take one ask, at the end.** Not three.
 7. **Twenty minutes.** Say twenty and end at twenty; ask for the next conversation instead of
@@ -192,11 +192,10 @@ These are the ones that should make you walk away, and they are the reason the c
 
 ### E. Only if they ask: the offer
 
-Say it in the [one-pager's exact terms](../stakeholders/design-partner-one-pager.md) — free through
-the pilot, founder-run concierge migration (they send their own export; DiveDay never logs into
-another system on their behalf), a weekly call, a direct line to you, and the founding price with
-its two-year lock if it converts. Speak the price from the live pricing page; it is never a figure
-on paper.
+Say it in the [one-pager's exact terms](../stakeholders/design-partner-one-pager.md) — free to try
+alongside the tool they book with, a founder-run concierge migration (they send their own export;
+DiveDay never logs into another system on their behalf), a weekly call, and a direct line to you.
+Speak what it costs from the live pricing page, in its words; it is never a figure on paper.
 
 In exchange: real dive days, permission to watch, and — only if it goes well — a named quote.
 
