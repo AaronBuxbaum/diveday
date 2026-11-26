@@ -253,7 +253,7 @@ goes, and the price line from the pricing configuration. It speaks as Aaron in t
 and is signed, because the email is his; the rest of the site still says "we"
 (H-20261022-the-site-says-we). Its doors are reply, call, then demo, tagged `hello` and
 `hello-close`; it is the one page that offers the call at its hero as well as its close, since the
-call is its second ask. It is `noindex` and left out of the sitemap, the nav and the footer, so its page
+call is its second ask. Its header is the wordmark alone, with no menu (Aaron, 2026-11-26), so nothing above the fold competes with the reply. It is `noindex` and left out of the sitemap, the nav and the footer, so its page
 views in Vercel Analytics count the email's taps and nothing else.
 
 ## Claims policy (hard rules)

@@ -931,6 +931,8 @@ the footer or the sitemap, and `noindex`, so a visit is a tap on the email.
 - **The question it arrives with:** "what would I have to do, and what does it cost me?" The hero
   answers both: the offer, and the price line (from the pricing configuration) under its doors.
   Three numbered steps repeat the offer in order, saying names and email addresses are enough.
+- **Header:** the wordmark alone (`src/app/(letter)/layout.tsx`), with no menu and no demo
+  button, so the reply is the first door on the page (Aaron, 2026-11-26).
 - **Composition:** a letter column on the shell's left edge (the note line, the offer as the
   heading, the two doors, the founder's address in plain text, the price), the two drawn screens no
   booking tool has side by side with one note each (who is ready to board and what is missing, the
