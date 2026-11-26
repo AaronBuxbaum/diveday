@@ -28,15 +28,12 @@ file, not the other way around.)
 
 ## The offer — free, hands-on, and real
 
-- **Free through the pilot.** No cost, no card, no commitment beyond the conversation below.
+- **Free to try, on the pricing page's terms.** A shop keeps the tool it books with and runs one trip, or more, in DiveDay. It pays nothing for a shop that takes payment elsewhere, and no card is needed to start. What DiveDay keeps when a shop does take payment in it is on the pricing page; say it from there, never from this document.
 - **Founder-run concierge migration.** The shop sends its own export from its current system —
   DiveDay never logs into another system on their behalf, ever. The founder maps the data and
   imports it personally.
 - **A weekly 30-minute call** and a **direct line to the founder** (shared thread), for the length
   of the pilot — not a support ticket queue.
-- **The founding-shop price, locked for two years**, if and when the pilot converts — today's
-  founding price from `earlyAccessPrice` in `src/lib/marketing.ts`; state the live number from that
-  page or the pricing page when presenting this, never a number written down here.
 
 In exchange: the shop runs real dive days on DiveDay, lets the founder watch and learn from what
 breaks, and — if it goes well — agrees to a named quote or case study (consent terms live in the
@@ -64,8 +61,8 @@ pilot agreement, not here).
 
 ## Notes for whoever's presenting this
 
-- State the live price from `src/lib/marketing.ts` / the pricing page in conversation — never read
-  a number off this document, since it isn't the source of truth and can drift.
+- State the terms from the pricing page in conversation — never read a number off this document,
+  since it isn't the source of truth and can drift. The old founding price and two-year lock are no longer part of the offer.
 - Everything above is already authorized (rollout.md, H-20260724-public-founding-shop-price in
   [human-decisions/](../human-decisions/README.md)) — don't improvise a new commitment (a discount, a
   different lock period, a feature promise) in the room. If a shop asks for something not on this
