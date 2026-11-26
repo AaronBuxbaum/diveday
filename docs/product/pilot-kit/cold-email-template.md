@@ -268,6 +268,6 @@ Not knowing something is a fine answer with this audience. An invented one costs
 
 ## Flagged: settle before a shop says yes
 
-- **The commercial terms in older documents may not match the pricing page.** The human-decisions register's row for the public founding-shop price, the design-partner one-pager, and the first-call script still describe a founding price with a two-year lock and a free pilot. The pricing page now says free, with a small percentage of money recorded as received in DiveDay and no monthly fee. Until Aaron settles which governs a pilot shop, say only what the pricing page says, and write down anything else a shop asks for.
+- **The human-decisions register's row for the public founding-shop price still describes the old founding price and two-year lock.** The one-pager and first-call script now follow the pricing page (free to try, terms as the page states them). The register row is Aaron's to update; until then, say only what the pricing page says.
 - **The C-card and waiver wording is safety-adjacent copy** and carries the same `dive-domain-expert` bar as any other surface. Reviewed 2026-08-12; re-run that review if the readiness or cleared-to-board copy in the email is rewritten.
 - **When a shop says yes**, use [the one-trip checklist](one-trip-checklist.md).
